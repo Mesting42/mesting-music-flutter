@@ -23,6 +23,13 @@ flutter pub get
 flutter run
 ```
 
+## 下载 Android APK
+
+最新发布包：**[Mesting Music Flutter v1.0.37](https://github.com/Mesting42/mesting-music-flutter/releases/tag/flutter-music-v1.0.37)**
+
+- Version：`1.0.37`（build `38`）
+- SHA-256：`0E963BEB43C47459EEAE89F536056030ED7EA56E90798B27AED1D0E1C1942832`
+
 ## 开发验证
 
 ```powershell
