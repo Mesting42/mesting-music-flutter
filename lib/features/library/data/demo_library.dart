@@ -1,0 +1,91 @@
+import '../../../shared/models/track.dart';
+
+const demoTracks = <Track>[
+  Track(
+    id: 'local_qi_feng_le',
+    title: '起风了',
+    artist: '买辣椒也用券',
+    album: '本地收藏',
+    duration: Duration(minutes: 5, seconds: 25),
+    audioAsset: 'assets/audio/qi_feng_le.aac',
+    coverAsset: 'assets/images/covers/qi_feng_le.jpg',
+    lyricsAsset: 'assets/lyrics/qi_feng_le.lrc',
+  ),
+  Track(
+    id: 'local_qing_tian',
+    title: '晴天',
+    artist: '周杰伦',
+    album: '本地收藏',
+    duration: Duration(minutes: 4, seconds: 29),
+    audioAsset: 'assets/audio/qing_tian.mp3',
+    coverAsset: 'assets/images/covers/qing_tian.jpg',
+    lyricsAsset: 'assets/lyrics/qing_tian.lrc',
+  ),
+  Track(
+    id: 'local_dao_xiang',
+    title: '稻香',
+    artist: '周杰伦',
+    album: '本地收藏',
+    duration: Duration(minutes: 3, seconds: 43),
+    audioAsset: 'assets/audio/dao_xiang.mp3',
+    coverAsset: 'assets/images/covers/dao_xiang.jpg',
+    lyricsAsset: 'assets/lyrics/dao_xiang.lrc',
+  ),
+  Track(
+    id: 'local_ye_qu',
+    title: '夜曲',
+    artist: '周杰伦',
+    album: '本地收藏',
+    duration: Duration(minutes: 4, seconds: 34),
+    audioAsset: 'assets/audio/ye_qu.mp3',
+    coverAsset: 'assets/images/covers/ye_qu.jpg',
+    lyricsAsset: 'assets/lyrics/ye_qu.lrc',
+  ),
+  Track(
+    id: 'local_qi_li_xiang',
+    title: '七里香',
+    artist: '周杰伦',
+    album: '本地收藏',
+    duration: Duration(minutes: 4, seconds: 59),
+    audioAsset: 'assets/audio/qi_li_xiang.mp3',
+    coverAsset: 'assets/images/covers/qi_li_xiang.jpg',
+    lyricsAsset: 'assets/lyrics/qi_li_xiang.lrc',
+  ),
+  Track(
+    id: 'local_gao_bai_qi_qiu',
+    title: '告白气球',
+    artist: '周杰伦',
+    album: '本地收藏',
+    duration: Duration(minutes: 3, seconds: 35),
+    audioAsset: 'assets/audio/gao_bai_qi_qiu.aac',
+    coverAsset: 'assets/images/covers/gao_bai_qi_qiu.jpg',
+    lyricsAsset: 'assets/lyrics/gao_bai_qi_qiu.lrc',
+  ),
+  Track(
+    id: 'local_qing_hua_ci',
+    title: '青花瓷',
+    artist: '周杰伦',
+    album: '本地收藏',
+    duration: Duration(minutes: 3, seconds: 59),
+    audioAsset: 'assets/audio/qing_hua_ci.mp3',
+    coverAsset: 'assets/images/covers/qing_hua_ci.jpg',
+    lyricsAsset: 'assets/lyrics/qing_hua_ci.lrc',
+  ),
+  Track(
+    id: 'local_hua_hai',
+    title: '花海',
+    artist: '周杰伦',
+    album: '本地收藏',
+    duration: Duration(minutes: 4, seconds: 24),
+    audioAsset: 'assets/audio/hua_hai.m4a',
+    coverAsset: 'assets/images/covers/hua_hai.jpg',
+    lyricsAsset: 'assets/lyrics/hua_hai.lrc',
+  ),
+];
+
+Track trackForMediaItemId(String id) {
+  return demoTracks.firstWhere(
+    (track) => track.id == id,
+    orElse: () => demoTracks.first,
+  );
+}
