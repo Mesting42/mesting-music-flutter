@@ -1,0 +1,799 @@
+import 'dart:async';
+import 'dart:ui' show ImageFilter;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/persistence/app_preferences.dart';
+import '../../../shared/widgets/liquid_glass_sheet.dart';
+import '../../themes/music_theme_tokens.dart';
+
+const disclaimerAcceptedPreferenceKey = 'mesting_disclaimer_accepted_v1';
+const disclaimerReadPreferenceKey = 'mesting_disclaimer_read_v1';
+const liquidGlassDisclaimerSurfaceKey = ValueKey<String>(
+  'liquid-glass-disclaimer-surface',
+);
+const liquidGlassDisclaimerCloseActionKey = ValueKey<String>(
+  'liquid-glass-disclaimer-close-action',
+);
+
+class FirstLaunchDisclaimerCoordinator extends ConsumerStatefulWidget {
+  const FirstLaunchDisclaimerCoordinator({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  ConsumerState<FirstLaunchDisclaimerCoordinator> createState() =>
+      _FirstLaunchDisclaimerCoordinatorState();
+}
+
+class _FirstLaunchDisclaimerCoordinatorState
+    extends ConsumerState<FirstLaunchDisclaimerCoordinator> {
+  late bool _visible;
+
+  @override
+  void initState() {
+    super.initState();
+    _visible =
+        ref
+            .read(sharedPreferencesProvider)
+            .getBool(disclaimerAcceptedPreferenceKey) !=
+        true;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !_visible,
+      child: Stack(
+        children: [
+          widget.child,
+          if (_visible)
+            Positioned.fill(
+              child: _DisclaimerOverlay(
+                requiredAcceptance: true,
+                onResult: _accept,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _accept(bool accepted) async {
+    if (!accepted) return;
+    final preferences = ref.read(sharedPreferencesProvider);
+    await Future.wait([
+      preferences.setBool(disclaimerAcceptedPreferenceKey, true),
+      preferences.setBool(disclaimerReadPreferenceKey, true),
+    ]);
+    if (mounted) setState(() => _visible = false);
+  }
+}
+
+Future<void> showDisclaimerDialog(BuildContext context) {
+  return showGeneralDialog<void>(
+    context: context,
+    useRootNavigator: true,
+    barrierDismissible: true,
+    barrierLabel: '关闭免责声明',
+    barrierColor: Colors.transparent,
+    transitionDuration: const Duration(milliseconds: 280),
+    pageBuilder: (context, animation, secondaryAnimation) => _DisclaimerOverlay(
+      requiredAcceptance: false,
+      onResult: (_) => Navigator.of(context).pop(),
+    ),
+    transitionBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      );
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, .035),
+            end: Offset.zero,
+          ).animate(curved),
+          child: ScaleTransition(
+            scale: Tween(begin: .94, end: 1.0).animate(curved),
+            child: child,
+          ),
+        ),
+      );
+    },
+  );
+}
+
+Future<bool> showRequiredDisclaimerReading(
+  BuildContext context, {
+  Duration minimumReadDuration = const Duration(seconds: 5),
+}) async {
+  final result = await showLiquidGlassBottomSheet<bool>(
+    context: context,
+    useRootNavigator: true,
+    isScrollControlled: true,
+    isDismissible: false,
+    enableDrag: false,
+    builder: (context) =>
+        _TimedDisclaimerSheet(minimumReadDuration: minimumReadDuration),
+  );
+  return result == true;
+}
+
+class _TimedDisclaimerSheet extends StatefulWidget {
+  const _TimedDisclaimerSheet({required this.minimumReadDuration});
+
+  final Duration minimumReadDuration;
+
+  @override
+  State<_TimedDisclaimerSheet> createState() => _TimedDisclaimerSheetState();
+}
+
+class _TimedDisclaimerSheetState extends State<_TimedDisclaimerSheet> {
+  Timer? _timer;
+  late int _secondsRemaining;
+
+  @override
+  void initState() {
+    super.initState();
+    _secondsRemaining = widget.minimumReadDuration.inSeconds;
+    if (_secondsRemaining > 0) {
+      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (!mounted) return;
+        setState(() => _secondsRemaining -= 1);
+        if (_secondsRemaining <= 0) timer.cancel();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.musicThemeTokens;
+    return SafeArea(
+      top: false,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * .8,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: tokens.textMuted.withValues(alpha: .35),
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '免责声明与隐私说明',
+                          style: TextStyle(
+                            color: tokens.textPrimary,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '请完整了解在线音乐、版权与账号数据规则',
+                          style: TextStyle(
+                            color: tokens.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: '暂不阅读',
+                    onPressed: () => Navigator.pop(context, false),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: tokens.border),
+            const Flexible(
+              fit: FlexFit.loose,
+              child: SingleChildScrollView(
+                physics: BouncingScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(18, 16, 18, 12),
+                child: Column(
+                  children: [
+                    _DisclaimerIntro(),
+                    SizedBox(height: 12),
+                    _DisclaimerItem(
+                      number: '01',
+                      title: '项目性质',
+                      content:
+                          'Mesting Music 是个人学习与作品展示项目，并非任何音乐平台的官方客户端，不提供破解会员、规避付费或版权限制的服务。',
+                    ),
+                    _DisclaimerItem(
+                      number: '02',
+                      title: '音乐与素材版权',
+                      content:
+                          '歌曲、歌词、封面及角色素材可能来自本地文件或第三方公开接口，相关权利归原权利人所有，仅供个人体验与功能展示。',
+                    ),
+                    _DisclaimerItem(
+                      number: '03',
+                      title: '在线服务可用性',
+                      content:
+                          '第三方音乐接口可能因网络、地区、会员或版权规则发生变化，应用不保证所有内容持续可搜索、播放或拥有完整歌词。',
+                    ),
+                    _DisclaimerItem(
+                      number: '04',
+                      title: '账号与隐私',
+                      content:
+                          '邮箱和手机号仅用于账号验证；登录凭证会加密保存在当前设备。拒绝读取手机号权限时，仍可手动输入并正常登录。',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 16),
+              child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: FilledButton(
+                  key: const ValueKey('disclaimer-read-confirm'),
+                  onPressed: _secondsRemaining <= 0
+                      ? () => Navigator.pop(context, true)
+                      : null,
+                  child: Text(
+                    _secondsRemaining > 0
+                        ? '请继续阅读 $_secondsRemaining 秒'
+                        : '我已阅读并理解',
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DisclaimerOverlay extends StatelessWidget {
+  const _DisclaimerOverlay({
+    required this.requiredAcceptance,
+    required this.onResult,
+  });
+
+  final bool requiredAcceptance;
+  final ValueChanged<bool> onResult;
+
+  @override
+  Widget build(BuildContext context) {
+    final viewPadding = MediaQuery.viewPaddingOf(context);
+    return Material(
+      color: Colors.transparent,
+      child: Stack(
+        children: [
+          Positioned.fill(child: ColoredBox(color: const Color(0x730A0D14))),
+          SafeArea(
+            minimum: EdgeInsets.fromLTRB(
+              14,
+              requiredAcceptance ? 22 : 14,
+              14,
+              viewPadding.bottom > 0 ? 8 : 14,
+            ),
+            child: Center(
+              child: _DisclaimerCard(
+                requiredAcceptance: requiredAcceptance,
+                onResult: onResult,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DisclaimerCard extends StatelessWidget {
+  const _DisclaimerCard({
+    required this.requiredAcceptance,
+    required this.onResult,
+  });
+
+  final bool requiredAcceptance;
+  final ValueChanged<bool> onResult;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.musicThemeTokens;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final iconBackground = isDark
+        ? const Color(0xFF232833)
+        : const Color(0xFFEFF2F7);
+    final iconForeground = isDark
+        ? const Color(0xFFCFD7E6)
+        : const Color(0xFF4D5E7A);
+    final iconBorder = isDark
+        ? const Color(0xFF48505E)
+        : const Color(0xFFD5DBE5);
+    final size = MediaQuery.sizeOf(context);
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: 430,
+        maxHeight: size.height - (requiredAcceptance ? 68 : 44),
+      ),
+      child: LiquidGlassSurface(
+        key: liquidGlassDisclaimerSurfaceKey,
+        child: Material(
+          type: MaterialType.transparency,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 20, 18, 13),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: iconBackground,
+                        borderRadius: BorderRadius.circular(17),
+                        border: Border.all(color: iconBorder),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(
+                              alpha: isDark ? .18 : .07,
+                            ),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.music_note_rounded,
+                        color: iconForeground,
+                        size: 25,
+                      ),
+                    ),
+                    const SizedBox(width: 13),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            requiredAcceptance ? '使用前请先了解' : '免责声明',
+                            style: TextStyle(
+                              color: tokens.textPrimary,
+                              fontSize: 21,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -.4,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '关于在线音乐、版权与账号数据',
+                            style: TextStyle(
+                              color: tokens.textMuted,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (!requiredAcceptance)
+                      _DisclaimerCloseButton(onTap: () => onResult(false)),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: tokens.border),
+              Flexible(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 13),
+                  child: Column(
+                    children: const [
+                      _DisclaimerIntro(),
+                      SizedBox(height: 12),
+                      _DisclaimerItem(
+                        number: '01',
+                        title: '项目性质',
+                        content:
+                            'Mesting Music 是个人学习与作品展示项目，并非任何音乐平台的官方客户端，不提供破解会员、规避付费或版权限制的服务。',
+                      ),
+                      _DisclaimerItem(
+                        number: '02',
+                        title: '音乐与素材版权',
+                        content:
+                            '歌曲、歌词、封面及角色素材可能来自本地文件或第三方公开接口，相关权利归原权利人所有，仅供个人体验与功能展示，请勿下载后再次传播或用于商业用途。',
+                      ),
+                      _DisclaimerItem(
+                        number: '03',
+                        title: '在线服务可用性',
+                        content:
+                            '第三方音乐接口可能因网络、地区、会员或版权规则发生变化，应用不保证所有内容持续可搜索、播放或拥有完整歌词。',
+                      ),
+                      _DisclaimerItem(
+                        number: '04',
+                        title: '账号与隐私',
+                        content:
+                            '邮箱和手机号仅用于账号验证；登录凭证会安全保存在当前设备。登录后，收藏、歌单和个人资料会同步到账号云端；网络暂不可用时先保存在本机，恢复连接后继续同步。',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
+                child: Column(
+                  children: [
+                    _DisclaimerAction(
+                      label: requiredAcceptance ? '我已阅读，继续使用' : '关闭',
+                      icon: requiredAcceptance
+                          ? Icons.arrow_forward_rounded
+                          : null,
+                      liquidGlass: !requiredAcceptance,
+                      onTap: () => onResult(requiredAcceptance),
+                    ),
+                    if (requiredAcceptance) ...[
+                      const SizedBox(height: 9),
+                      Text(
+                        '之后可在左上角菜单的“免责声明”中再次查看',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: tokens.textMuted, fontSize: 9),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DisclaimerIntro extends StatelessWidget {
+  const _DisclaimerIntro();
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.musicThemeTokens;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surface = isDark ? const Color(0xFF222731) : const Color(0xFFF4F6F9);
+    final border = isDark ? const Color(0xFF48505E) : const Color(0xFFD4DAE4);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: border),
+      ),
+      child: Text(
+        '继续使用即表示你已了解以下内容，并同意仅在合法、个人体验的范围内使用本应用。',
+        style: TextStyle(
+          color: tokens.textSecondary,
+          fontSize: 11,
+          height: 1.55,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _DisclaimerItem extends StatelessWidget {
+  const _DisclaimerItem({
+    required this.number,
+    required this.title,
+    required this.content,
+  });
+
+  final String number;
+  final String title;
+  final String content;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.musicThemeTokens;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final marker = isDark ? const Color(0xFFC8D2E2) : const Color(0xFF536889);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 13),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: marker.withValues(alpha: isDark ? .13 : .1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: marker.withValues(alpha: .2)),
+            ),
+            child: Text(
+              number,
+              style: TextStyle(
+                color: marker,
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+                letterSpacing: .5,
+              ),
+            ),
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: tokens.textPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  content,
+                  style: TextStyle(
+                    color: tokens.textSecondary,
+                    fontSize: 10,
+                    height: 1.55,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DisclaimerAction extends StatefulWidget {
+  const _DisclaimerAction({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+    this.liquidGlass = false,
+  });
+
+  final String label;
+  final IconData? icon;
+  final VoidCallback onTap;
+  final bool liquidGlass;
+
+  @override
+  State<_DisclaimerAction> createState() => _DisclaimerActionState();
+}
+
+class _DisclaimerActionState extends State<_DisclaimerAction> {
+  bool _closing = false;
+
+  Future<void> _handleTap() async {
+    if (_closing) return;
+    if (!widget.liquidGlass) {
+      widget.onTap();
+      return;
+    }
+    setState(() => _closing = true);
+    await Future<void>.delayed(const Duration(milliseconds: 130));
+    if (mounted) widget.onTap();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    if (widget.liquidGlass) {
+      final tokens = context.musicThemeTokens;
+      final radius = BorderRadius.circular(17);
+      final foreground = isDark
+          ? const Color(0xFFF7F9FC)
+          : const Color(0xFF34435D);
+      return AnimatedScale(
+        key: const ValueKey('disclaimer-close-action-transition'),
+        scale: _closing ? .965 : 1,
+        duration: const Duration(milliseconds: 130),
+        curve: Curves.easeOutCubic,
+        child: AnimatedOpacity(
+          opacity: _closing ? .72 : 1,
+          duration: const Duration(milliseconds: 130),
+          curve: Curves.easeOutCubic,
+          child: RepaintBoundary(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: radius,
+                boxShadow: [
+                  BoxShadow(
+                    color: tokens.shadow.withValues(alpha: isDark ? .76 : .6),
+                    blurRadius: 20,
+                    spreadRadius: -5,
+                    offset: const Offset(0, 8),
+                  ),
+                  BoxShadow(
+                    color: const Color(
+                      0xFF6072A3,
+                    ).withValues(alpha: isDark ? .13 : .18),
+                    blurRadius: 26,
+                    spreadRadius: -10,
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: radius,
+                child: BackdropFilter(
+                  key: liquidGlassDisclaimerCloseActionKey,
+                  filter: ImageFilter.blur(
+                    sigmaX: 16,
+                    sigmaY: 16,
+                    tileMode: TileMode.decal,
+                  ),
+                  child: DecoratedBox(
+                    key: const ValueKey('disclaimer-close-action-glass-fill'),
+                    decoration: BoxDecoration(
+                      borderRadius: radius,
+                      border: Border.all(
+                        color: Colors.white.withValues(
+                          alpha: isDark ? .22 : .62,
+                        ),
+                        width: .9,
+                      ),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: isDark
+                            ? const [Color(0xC4475268), Color(0xB828303F)]
+                            : const [Color(0xD9E2E8F5), Color(0xC8CCD7EA)],
+                      ),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        key: const ValueKey('disclaimer-close-action'),
+                        onTap: _handleTap,
+                        child: SizedBox(
+                          height: 50,
+                          child: _DisclaimerActionContent(
+                            label: widget.label,
+                            icon: widget.icon,
+                            color: foreground,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    final buttonColor = isDark
+        ? const Color(0xFFD0D7E4)
+        : const Color(0xFF41526F);
+    final contentColor = isDark
+        ? const Color(0xFF1D222C)
+        : const Color(0xFFFAFBFD);
+    final borderColor = isDark
+        ? const Color(0xFFCBD4E3)
+        : const Color(0xFF637391);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _handleTap,
+        borderRadius: BorderRadius.circular(17),
+        child: Ink(
+          height: 50,
+          decoration: BoxDecoration(
+            color: buttonColor,
+            borderRadius: BorderRadius.circular(17),
+            border: Border.all(color: borderColor),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? .2 : .1),
+                blurRadius: 12,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: _DisclaimerActionContent(
+            label: widget.label,
+            icon: widget.icon,
+            color: contentColor,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DisclaimerActionContent extends StatelessWidget {
+  const _DisclaimerActionContent({
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
+
+  final String label;
+  final IconData? icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        if (icon case final icon?) ...[
+          const SizedBox(width: 8),
+          Icon(icon, color: color, size: 18),
+        ],
+      ],
+    );
+  }
+}
+
+class _DisclaimerCloseButton extends StatelessWidget {
+  const _DisclaimerCloseButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.musicThemeTokens;
+    return Tooltip(
+      message: '关闭免责声明',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Ink(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: tokens.glassSubtle,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: tokens.border),
+            ),
+            child: Icon(
+              Icons.close_rounded,
+              color: tokens.textPrimary,
+              size: 21,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

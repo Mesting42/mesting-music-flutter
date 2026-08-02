@@ -32,12 +32,20 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+.codex-artifacts/
+.codex-temp/
+.visual-reference-runtime/
+test_artifacts/
+assets/design-qa/
 
 # Local Android / signing configuration
 android/local.properties
 android/key.properties
 **/*.keystore
 **/*.jks
+**/*.p12
+**/*.pem
+**/*.key
 
 # Release binaries belong in GitHub Releases, not source control
 *.apk

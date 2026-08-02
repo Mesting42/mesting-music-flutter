@@ -1,0 +1,377 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:mesting_music/features/player/presentation/music_page_transition.dart';
+
+void main() {
+  test('底部栏目按照索引决定左右滑动方向', () {
+    final toRightTab = MusicPageTransitionIntent.betweenTabs(0, 1);
+    final toLeftTab = MusicPageTransitionIntent.betweenTabs(2, 0);
+
+    expect(toRightTab.direction, MusicPageTransitionDirection.forward);
+    expect(toRightTab.horizontalOffset, greaterThan(0));
+    expect(toLeftTab.direction, MusicPageTransitionDirection.backward);
+    expect(toLeftTab.horizontalOffset, lessThan(0));
+  });
+
+  test('下一级页面进入和返回使用相反方向', () {
+    const forward = MusicPageTransitionIntent.forward();
+    const backward = MusicPageTransitionIntent.backward();
+
+    expect(forward.horizontalOffset, musicPageHorizontalOffset);
+    expect(backward.horizontalOffset, -musicPageHorizontalOffset);
+  });
+
+  test('全部歌单使用集合展开动画而不是横向滑动', () {
+    expect(collectionRevealVerticalOffset, greaterThan(0));
+    expect(collectionRevealStartScale, lessThan(1));
+    expect(collectionRevealDuration, const Duration(milliseconds: 380));
+    expect(collectionRevealReverseDuration, const Duration(milliseconds: 340));
+  });
+
+  testWidgets(
+    'transition clips moving content without painting a fake surface',
+    (tester) async {
+      final controller = AnimationController(
+        vsync: tester,
+        duration: const Duration(milliseconds: 300),
+        value: .35,
+      );
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MusicPageTransitionSurface(
+              position: Tween<Offset>(
+                begin: const Offset(.08, 0),
+                end: Offset.zero,
+              ).animate(controller),
+              child: const ColoredBox(
+                key: ValueKey('destination-content'),
+                color: Colors.red,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final clip = find.byKey(
+        const ValueKey('music-page-transition-content-clip'),
+      );
+      final movingContent = find.byKey(
+        const ValueKey('music-page-transition-moving-content'),
+      );
+      expect(clip, findsOneWidget);
+      expect(tester.getSize(clip), tester.getSize(find.byType(Scaffold)));
+      expect(
+        find.descendant(of: clip, matching: movingContent),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('music-page-transition-opaque-surface')),
+        findsNothing,
+      );
+    },
+  );
+
+  test('route progress creates a smooth strict single-layer handoff', () {
+    expect(
+      musicPageLayerIsVisible(
+        primaryStatus: AnimationStatus.completed,
+        primaryValue: 1,
+        secondaryStatus: AnimationStatus.dismissed,
+        secondaryValue: 0,
+      ),
+      isTrue,
+    );
+    expect(
+      musicPageLayerIsVisible(
+        primaryStatus: AnimationStatus.completed,
+        primaryValue: 1,
+        secondaryStatus: AnimationStatus.forward,
+        secondaryValue: .2,
+      ),
+      isTrue,
+    );
+    expect(
+      musicPageLayerIsVisible(
+        primaryStatus: AnimationStatus.completed,
+        primaryValue: 1,
+        secondaryStatus: AnimationStatus.forward,
+        secondaryValue: .5,
+      ),
+      isFalse,
+    );
+    expect(
+      musicPageLayerIsVisible(
+        primaryStatus: AnimationStatus.forward,
+        primaryValue: .2,
+        secondaryStatus: AnimationStatus.dismissed,
+        secondaryValue: 0,
+      ),
+      isFalse,
+    );
+    expect(
+      musicPageLayerIsVisible(
+        primaryStatus: AnimationStatus.forward,
+        primaryValue: .5,
+        secondaryStatus: AnimationStatus.dismissed,
+        secondaryValue: 0,
+      ),
+      isTrue,
+    );
+    expect(
+      musicPageLayerIsVisible(
+        primaryStatus: AnimationStatus.reverse,
+        primaryValue: .8,
+        secondaryStatus: AnimationStatus.dismissed,
+        secondaryValue: 0,
+      ),
+      isTrue,
+    );
+    expect(
+      musicPageLayerIsVisible(
+        primaryStatus: AnimationStatus.reverse,
+        primaryValue: .4,
+        secondaryStatus: AnimationStatus.dismissed,
+        secondaryValue: 0,
+      ),
+      isFalse,
+    );
+  });
+
+  test('push and pop keep one fully opaque page layer without a flash', () {
+    expect(musicPageUsesRouteSnapshotting, isFalse);
+    expect(musicPageLayerOpacityFloor, 1);
+    for (var step = 0; step <= 100; step += 1) {
+      final progress = step / 100;
+      final outgoingPush = musicPageLayerOpacity(
+        primaryStatus: AnimationStatus.completed,
+        primaryValue: 1,
+        secondaryStatus: AnimationStatus.forward,
+        secondaryValue: progress,
+      );
+      final incomingPush = musicPageLayerOpacity(
+        primaryStatus: AnimationStatus.forward,
+        primaryValue: progress,
+        secondaryStatus: AnimationStatus.dismissed,
+        secondaryValue: 0,
+      );
+      expect(
+        outgoingPush > 0 && incomingPush > 0,
+        isFalse,
+        reason: 'push progress $progress overlaps page content',
+      );
+      expect(
+        outgoingPush > 0 ? outgoingPush : incomingPush,
+        1,
+        reason: 'push progress $progress composites a translucent page',
+      );
+
+      final outgoingPop = musicPageLayerOpacity(
+        primaryStatus: AnimationStatus.reverse,
+        primaryValue: 1 - progress,
+        secondaryStatus: AnimationStatus.dismissed,
+        secondaryValue: 0,
+      );
+      final incomingPop = musicPageLayerOpacity(
+        primaryStatus: AnimationStatus.completed,
+        primaryValue: 1,
+        secondaryStatus: AnimationStatus.reverse,
+        secondaryValue: 1 - progress,
+      );
+      expect(
+        outgoingPop > 0 && incomingPop > 0,
+        isFalse,
+        reason: 'pop progress $progress overlaps page content',
+      );
+      expect(
+        outgoingPop > 0 ? outgoingPop : incomingPop,
+        1,
+        reason: 'pop progress $progress composites a translucent page',
+      );
+    }
+  });
+
+  testWidgets(
+    'outgoing page stays opaque before handing off to the next layer',
+    (tester) async {
+      final secondary = AnimationController(
+        vsync: tester,
+        duration: const Duration(milliseconds: 300),
+      );
+      final primary = AnimationController(
+        vsync: tester,
+        duration: const Duration(milliseconds: 300),
+        value: 1,
+      );
+      addTearDown(secondary.dispose);
+      addTearDown(primary.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MusicPageSingleLayerHandoff(
+            primaryAnimation: primary,
+            secondaryAnimation: secondary,
+            child: const ColoredBox(
+              key: ValueKey('outgoing-page'),
+              color: Colors.red,
+            ),
+          ),
+        ),
+      );
+
+      Offstage outgoingLayer() => tester.widget<Offstage>(
+        find.byKey(const ValueKey('music-page-outgoing-layer')),
+      );
+      Opacity layerOpacity() => tester.widget<Opacity>(
+        find.byKey(const ValueKey('music-page-layer-opacity')),
+      );
+
+      expect(outgoingLayer().offstage, isFalse);
+      expect(layerOpacity().opacity, 1);
+      secondary.forward();
+      await tester.pump();
+      expect(secondary.status, AnimationStatus.forward);
+      expect(outgoingLayer().offstage, isFalse);
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(outgoingLayer().offstage, isFalse);
+      expect(layerOpacity().opacity, 1);
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(outgoingLayer().offstage, isTrue);
+
+      await tester.pumpAndSettle();
+      expect(outgoingLayer().offstage, isTrue);
+      secondary.reverse();
+      await tester.pump();
+      expect(outgoingLayer().offstage, isTrue);
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(outgoingLayer().offstage, isFalse);
+      expect(layerOpacity().opacity, 1);
+      await tester.pumpAndSettle();
+      expect(secondary.status, AnimationStatus.dismissed);
+      expect(outgoingLayer().offstage, isFalse);
+      expect(layerOpacity().opacity, 1);
+    },
+  );
+
+  testWidgets(
+    'four bottom tabs keep exactly one painted page while switching',
+    (tester) async {
+      final router = GoRouter(
+        initialLocation: '/tab/0',
+        routes: [
+          for (var index = 0; index < 4; index++)
+            GoRoute(
+              path: '/tab/$index',
+              pageBuilder: (context, state) => _ProbeTransitionPage(
+                key: state.pageKey,
+                child: _TabProbePage(index: index),
+              ),
+            ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpAndSettle();
+
+      for (final target in <int>[1, 2, 3, 0]) {
+        await tester.tap(find.byKey(ValueKey('switch-to-$target')));
+        await tester.pump();
+        expect(_paintedLayerCount(tester), 1, reason: _layerStatuses(tester));
+
+        await tester.pump(const Duration(milliseconds: 150));
+        expect(
+          _paintedLayerCount(tester),
+          1,
+          reason:
+              '切换到第 $target 个底栏页面时只能绘制一个页面内容层：'
+              '${_layerStatuses(tester)}',
+        );
+
+        await tester.pumpAndSettle();
+        expect(find.text('page-$target'), findsOneWidget);
+        expect(_paintedLayerCount(tester), 1);
+      }
+    },
+  );
+}
+
+int _paintedLayerCount(WidgetTester tester) {
+  return tester
+      .widgetList<Offstage>(
+        find.byKey(const ValueKey('music-page-outgoing-layer')),
+      )
+      .where((layer) => !layer.offstage)
+      .length;
+}
+
+String _layerStatuses(WidgetTester tester) {
+  return tester
+      .widgetList<MusicPageSingleLayerHandoff>(
+        find.byType(MusicPageSingleLayerHandoff),
+      )
+      .map(
+        (layer) =>
+            '${layer.primaryAnimation.status.name}/'
+            '${layer.secondaryAnimation.status.name}',
+      )
+      .join(', ');
+}
+
+class _ProbeTransitionPage extends Page<void> {
+  const _ProbeTransitionPage({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Route<void> createRoute(BuildContext context) {
+    return PageRouteBuilder<void>(
+      settings: this,
+      opaque: true,
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, animation, secondaryAnimation) => child,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return MusicPageSingleLayerHandoff(
+          primaryAnimation: animation,
+          secondaryAnimation: secondaryAnimation,
+          child: MusicPageTransitionSurface(
+            position: Tween<Offset>(
+              begin: const Offset(.08, 0),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _TabProbePage extends StatelessWidget {
+  const _TabProbePage({required this.index});
+
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Center(child: Text('page-$index')),
+      bottomNavigationBar: Row(
+        children: [
+          for (var target = 0; target < 4; target++)
+            Expanded(
+              child: TextButton(
+                key: ValueKey('switch-to-$target'),
+                onPressed: () => context.go('/tab/$target'),
+                child: Text('$target'),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}

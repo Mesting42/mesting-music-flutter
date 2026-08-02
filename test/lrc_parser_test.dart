@@ -34,5 +34,21 @@ void main() {
 
       expect(document.lines.single.time, Duration.zero);
     });
+
+    test('同一物理行连续存放多句歌词时逐句拆分', () {
+      final document = parser.parse(
+        '[00:01.00]第一句[00:03.50]第二句[00:05.00][00:07.00]副歌',
+      );
+
+      expect(document.lines, hasLength(4));
+      expect(document.lines.map((line) => line.text), [
+        '第一句',
+        '第二句',
+        '副歌',
+        '副歌',
+      ]);
+      expect(document.lines[1].time, const Duration(milliseconds: 3500));
+      expect(document.lines[3].time, const Duration(seconds: 7));
+    });
   });
 }

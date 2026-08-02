@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 1.0.38+39
 
 environment:
   sdk: ^3.10.7
@@ -48,10 +48,25 @@ dependencies:
   drift: 2.31.0
   drift_flutter: 0.2.8
   shared_preferences: ^2.5.5
+  http: ^1.6.0
+  crypto: 3.0.7
+  pinyin: 3.3.0
+  image_picker: ^1.2.3
+  path_provider: ^2.1.5
+  video_player: ^2.11.1
+  video_thumbnail: ^0.5.6
+  record: ^6.2.1
+  flutter_secure_storage: ^10.3.1
+  # MIT-licensed clean-room Flutter implementation inspired by
+  # PAIDAX01/math-curve-loaders.
+  math_curve_loaders: 0.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
+  video_player_platform_interface: 6.9.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -74,10 +89,18 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/audio/
-    - assets/lyrics/
-    - assets/images/covers/
-    - assets/images/themes/
+    - assets/branding/mesting-mark-master.png
+    - assets/branding/mesting-launch-lockup-master.png
+    - assets/branding/dress-morning-icon-v2.png
+    - assets/branding/dress-morning-launch.webp
+    - assets/branding/dress-midnight-icon-v2.png
+    - assets/branding/dress-midnight-launch-v2.webp
+    - assets/images/playlists/
+    - assets/images/player/netease-style-tonearm.png
+    - assets/images/theme_gallery/
+    - assets/images/theme_playlists/shinchan/
+    - assets/images/theme_playlists/hello_kitty/
+    - assets/images/theme_playlists/kuromi/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

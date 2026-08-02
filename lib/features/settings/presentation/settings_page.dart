@@ -1,0 +1,564 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../auth/auth_providers.dart';
+import '../../auth/domain/auth_models.dart';
+import '../../app_update/app_update_providers.dart';
+import '../../app_update/domain/app_update_models.dart';
+import '../../app_update/presentation/app_update_sheet.dart';
+import '../../themes/music_theme_tokens.dart';
+import '../../themes/theme_gallery_page.dart';
+import '../../../shared/widgets/mesting_loading_indicator.dart';
+import '../../../shared/widgets/music_notice.dart';
+
+class SettingsPage extends ConsumerWidget {
+  const SettingsPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authControllerProvider);
+    final user = auth.value?.user;
+    final backend = ref.watch(authBackendKindProvider);
+    final appVersion = ref.watch(appVersionProvider);
+    final updateState = ref.watch(appUpdateControllerProvider);
+    final topInset = MediaQuery.paddingOf(context).top;
+
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(16, topInset + 12, 16, 42),
+          sliver: SliverList.list(
+            children: [
+              const DressUpAssetWarmup(),
+              const _SettingsHeader(),
+              const SizedBox(height: 24),
+              const _SettingsSectionLabel('外观'),
+              _SettingsSurface(
+                child: _SettingsTile(
+                  key: const ValueKey('settings-theme'),
+                  icon: Icons.palette_outlined,
+                  iconColor: const Color(0xFF745CC7),
+                  title: '装扮',
+                  subtitle: '皮肤、IP 主题、图标与启动页',
+                  highlighted: true,
+                  onTap: () => showDressUpCenterSheet(context),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const _SettingsSectionLabel('账号'),
+              _SettingsSurface(
+                child: auth.isLoading && user == null
+                    ? const _SettingsLoadingTile()
+                    : user == null
+                    ? _SettingsTile(
+                        key: const ValueKey('settings-auth-entry'),
+                        icon: Icons.person_outline_rounded,
+                        iconColor: const Color(0xFF6F83D8),
+                        title: '登录 / 注册',
+                        subtitle: '登录后管理账号绑定与云端数据',
+                        onTap: () => context.push(
+                          '/auth?mode=login&redirect=${Uri.encodeComponent('/music/settings')}',
+                        ),
+                      )
+                    : Column(
+                        children: [
+                          _SettingsTile(
+                            key: const ValueKey('settings-account-bindings'),
+                            icon: Icons.verified_user_rounded,
+                            iconColor: const Color(0xFF4BB58A),
+                            title: '账号与绑定',
+                            subtitle: _bindingSummary(user),
+                            onTap: () => context.push('/profile/account'),
+                          ),
+                          const _SettingsDivider(),
+                          _SettingsTile(
+                            key: const ValueKey('settings-cloud-status'),
+                            icon: Icons.cloud_done_rounded,
+                            iconColor: const Color(0xFF58A7D8),
+                            title: '账号云端状态',
+                            subtitle: authBackendStatusLabel(backend),
+                            status: true,
+                          ),
+                        ],
+                      ),
+              ),
+              const SizedBox(height: 18),
+              const _SettingsSectionLabel('应用'),
+              _SettingsSurface(
+                child: _SettingsTile(
+                  key: const ValueKey('settings-check-update'),
+                  icon: Icons.system_update_rounded,
+                  iconColor: const Color(0xFF4A86D8),
+                  title: '版本更新',
+                  subtitle: _updateSubtitle(appVersion, updateState),
+                  loading: updateState.phase == AppUpdatePhase.checking,
+                  highlighted: updateState.phase == AppUpdatePhase.available,
+                  onTap: updateState.busy
+                      ? null
+                      : () => _checkForUpdates(context, ref),
+                ),
+              ),
+              if (user != null) ...[
+                const SizedBox(height: 18),
+                const _SettingsSectionLabel('登录与安全'),
+                _SettingsSurface(
+                  child: _SettingsTile(
+                    key: const ValueKey('settings-sign-out'),
+                    icon: Icons.logout_rounded,
+                    iconColor: const Color(0xFFC24A34),
+                    title: '退出登录',
+                    subtitle: '退出当前状态，并在本机保留快捷登录账号',
+                    destructive: true,
+                    onTap: () => _confirmSignOut(context, ref),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  static String _bindingSummary(AuthUser user) {
+    final bindings = <String>[
+      if (user.emailMasked?.isNotEmpty == true) user.emailMasked!,
+      if (user.phoneMasked?.isNotEmpty == true) user.phoneMasked!,
+    ];
+    return bindings.isEmpty ? '检查云端绑定状态' : bindings.join(' · ');
+  }
+
+  static String _updateSubtitle(
+    AsyncValue<AppVersionInfo> version,
+    AppUpdateState update,
+  ) {
+    if (update.phase == AppUpdatePhase.checking) return '';
+    if (update.phase == AppUpdatePhase.downloading) {
+      return '正在下载新版本 ${((update.progress ?? 0) * 100).round()}%';
+    }
+    if (update.phase == AppUpdatePhase.paused ||
+        (update.phase == AppUpdatePhase.failed && update.receivedBytes > 0)) {
+      return '新版本已下载 ${((update.progress ?? 0) * 100).round()}%，点击继续';
+    }
+    if (update.phase == AppUpdatePhase.readyToInstall ||
+        update.phase == AppUpdatePhase.permissionRequired) {
+      return '新版本已下载完成，点击继续安装';
+    }
+    if (update.phase == AppUpdatePhase.available && update.manifest != null) {
+      return '发现新版本 v${update.manifest!.versionName}，点击查看';
+    }
+    return version.when(
+      data: (value) => '当前版本 v${value.versionName} · 点击检查',
+      loading: () => '',
+      error: (_, _) => '点击检查最新版本',
+    );
+  }
+
+  static Future<void> _checkForUpdates(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final result = await ref
+        .read(appUpdateControllerProvider.notifier)
+        .check(manual: true);
+    if (!context.mounted) return;
+    if (result?.updateAvailable == true) {
+      await showAppUpdateSheet(context);
+      return;
+    }
+    final state = ref.read(appUpdateControllerProvider);
+    if (state.phase == AppUpdatePhase.upToDate) {
+      showMusicNotice(
+        context,
+        icon: Icons.check_rounded,
+        title: '已是最新版本',
+        message: state.currentVersion == null
+            ? ''
+            : '当前 v${state.currentVersion!.versionName}',
+      );
+      return;
+    }
+    showMusicNotice(
+      context,
+      icon: Icons.error_outline_rounded,
+      title: '检查更新失败',
+      message: state.errorMessage ?? '请稍后重试',
+    );
+  }
+
+  static Future<void> _confirmSignOut(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => const _SignOutDialog(),
+    );
+    if (confirmed != true) return;
+
+    await ref.read(authControllerProvider.notifier).signOut();
+    if (!context.mounted) return;
+    showMusicNotice(
+      context,
+      icon: Icons.logout_rounded,
+      title: '已安全退出',
+      message: '云端数据仍为你保留',
+    );
+  }
+}
+
+class _SettingsHeader extends StatelessWidget {
+  const _SettingsHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.musicThemeTokens;
+    return Row(
+      children: [
+        Tooltip(
+          message: '返回',
+          child: Material(
+            color: tokens.glassStrong,
+            borderRadius: BorderRadius.circular(17),
+            child: InkWell(
+              key: const ValueKey('settings-back'),
+              onTap: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/music/recommend');
+                }
+              },
+              borderRadius: BorderRadius.circular(17),
+              child: Container(
+                width: 48,
+                height: 48,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(17),
+                  border: Border.all(color: tokens.borderStrong),
+                ),
+                child: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: tokens.textPrimary,
+                  size: 21,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '设置',
+                style: TextStyle(
+                  color: tokens.textPrimary,
+                  fontSize: 27,
+                  height: 1.05,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -.7,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                '管理装扮、账号与云端连接',
+                style: TextStyle(
+                  color: tokens.textSecondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SettingsSectionLabel extends StatelessWidget {
+  const _SettingsSectionLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 5, bottom: 9),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: context.musicThemeTokens.textPrimary,
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsSurface extends StatelessWidget {
+  const _SettingsSurface({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.musicThemeTokens;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(23),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: tokens.glassStrong,
+          borderRadius: BorderRadius.circular(23),
+          border: Border.all(color: tokens.borderStrong),
+          boxShadow: [
+            BoxShadow(
+              color: tokens.shadow.withValues(alpha: .52),
+              blurRadius: 22,
+              offset: const Offset(0, 9),
+            ),
+          ],
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  const _SettingsTile({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    this.onTap,
+    this.highlighted = false,
+    this.destructive = false,
+    this.status = false,
+    this.loading = false,
+    super.key,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final VoidCallback? onTap;
+  final bool highlighted;
+  final bool destructive;
+  final bool status;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.musicThemeTokens;
+    final content = Container(
+      constraints: const BoxConstraints(minHeight: 76),
+      padding: const EdgeInsets.fromLTRB(15, 12, 13, 12),
+      decoration: highlighted
+          ? BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  iconColor.withValues(alpha: .15),
+                  tokens.glassSubtle.withValues(alpha: .4),
+                ],
+              ),
+            )
+          : null,
+      child: Row(
+        children: [
+          Container(
+            width: 45,
+            height: 45,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: .13),
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: iconColor.withValues(alpha: .13)),
+            ),
+            child: Icon(icon, color: iconColor, size: 22),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: destructive ? iconColor : tokens.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                if (subtitle.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: tokens.textSecondary,
+                      fontSize: 10,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (loading)
+            const MestingLoadingIndicator(
+              key: ValueKey('settings-tile-loading-animation'),
+              size: 30,
+              semanticLabel: '正在读取版本信息',
+            )
+          else if (status)
+            Container(
+              width: 9,
+              height: 9,
+              decoration: BoxDecoration(
+                color: iconColor,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: iconColor.withValues(alpha: .32),
+                    blurRadius: 8,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+            )
+          else if (onTap != null)
+            Icon(
+              Icons.chevron_right_rounded,
+              color: tokens.textMuted,
+              size: 23,
+            ),
+        ],
+      ),
+    );
+
+    if (onTap == null) return content;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(onTap: onTap, child: content),
+    );
+  }
+}
+
+class _SettingsDivider extends StatelessWidget {
+  const _SettingsDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 73),
+      child: Divider(
+        height: 1,
+        thickness: .7,
+        color: context.musicThemeTokens.border,
+      ),
+    );
+  }
+}
+
+class _SettingsLoadingTile extends StatelessWidget {
+  const _SettingsLoadingTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      height: 76,
+      child: Center(
+        child: MestingLoadingIndicator(
+          key: ValueKey('settings-account-loading-animation'),
+          size: 42,
+          semanticLabel: '正在读取账号信息',
+        ),
+      ),
+    );
+  }
+}
+
+class _SignOutDialog extends StatelessWidget {
+  const _SignOutDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.musicThemeTokens;
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(22, 23, 22, 18),
+        decoration: BoxDecoration(
+          color: Color.alphaBlend(
+            tokens.glassStrong,
+            Theme.of(context).colorScheme.surface,
+          ),
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: tokens.borderStrong),
+          boxShadow: [
+            BoxShadow(
+              color: tokens.shadow,
+              blurRadius: 34,
+              offset: const Offset(0, 16),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '退出登录？',
+              style: TextStyle(
+                color: tokens.textPrimary,
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 9),
+            Text(
+              '云端数据不会删除，本机会加密保留上次账号，之后可在登录页快捷登录。你也可以在登录页移除该账号。',
+              style: TextStyle(
+                color: tokens.textSecondary,
+                fontSize: 12,
+                height: 1.55,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('取消'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('退出登录'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -44,29 +44,34 @@ class LrcParser {
         continue;
       }
 
-      final text = line.substring(matches.last.end).trim();
-      if (text.isEmpty) continue;
-
-      for (final match in matches) {
-        final minutes = int.parse(match.group(1)!);
-        final seconds = int.parse(match.group(2)!);
-        final fraction = match.group(3) ?? '';
-        final fractionMilliseconds = switch (fraction.length) {
-          0 => 0,
-          1 => int.parse(fraction) * 100,
-          2 => int.parse(fraction) * 10,
-          _ => int.parse(fraction.substring(0, 3)),
-        };
-        final totalMilliseconds =
-            (minutes * 60 + seconds) * 1000 +
-            fractionMilliseconds +
-            offsetMilliseconds;
-        timedLines.add(
-          LyricsLine(
-            time: Duration(milliseconds: totalMilliseconds.clamp(0, 1 << 31)),
-            text: text,
-          ),
-        );
+      var index = 0;
+      while (index < matches.length) {
+        final timestampGroup = <RegExpMatch>[matches[index]];
+        var lastTimestamp = matches[index];
+        while (index + 1 < matches.length &&
+            line
+                .substring(lastTimestamp.end, matches[index + 1].start)
+                .trim()
+                .isEmpty) {
+          index++;
+          lastTimestamp = matches[index];
+          timestampGroup.add(lastTimestamp);
+        }
+        final textEnd = index + 1 < matches.length
+            ? matches[index + 1].start
+            : line.length;
+        final text = line.substring(lastTimestamp.end, textEnd).trim();
+        if (text.isNotEmpty) {
+          for (final match in timestampGroup) {
+            timedLines.add(
+              LyricsLine(
+                time: _parseTimestamp(match, offsetMilliseconds),
+                text: text,
+              ),
+            );
+          }
+        }
+        index++;
       }
     }
 
@@ -82,5 +87,22 @@ class LrcParser {
       ],
       isSynced: false,
     );
+  }
+
+  Duration _parseTimestamp(RegExpMatch match, int offsetMilliseconds) {
+    final minutes = int.parse(match.group(1)!);
+    final seconds = int.parse(match.group(2)!);
+    final fraction = match.group(3) ?? '';
+    final fractionMilliseconds = switch (fraction.length) {
+      0 => 0,
+      1 => int.parse(fraction) * 100,
+      2 => int.parse(fraction) * 10,
+      _ => int.parse(fraction.substring(0, 3)),
+    };
+    final totalMilliseconds =
+        (minutes * 60 + seconds) * 1000 +
+        fractionMilliseconds +
+        offsetMilliseconds;
+    return Duration(milliseconds: totalMilliseconds.clamp(0, 1 << 31));
   }
 }
