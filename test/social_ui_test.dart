@@ -9,8 +9,10 @@ import 'package:mesting_music/features/social/domain/social_models.dart';
 import 'package:mesting_music/features/social/presentation/public_profile_page.dart';
 import 'package:mesting_music/features/social/presentation/social_connections_page.dart';
 import 'package:mesting_music/features/social/presentation/social_messages_page.dart';
+import 'package:mesting_music/features/social/presentation/social_widgets.dart';
 import 'package:mesting_music/features/social/social_providers.dart';
 import 'package:mesting_music/features/social/social_attention.dart';
+import 'package:mesting_music/shared/widgets/artwork_image.dart';
 
 void main() {
   const friend = SocialUser(
@@ -128,6 +130,22 @@ void main() {
     expect(find.text('关注'), findsOneWidget);
     expect(find.text('粉丝'), findsOneWidget);
     expect(find.text('推荐'), findsNothing);
+  });
+
+  testWidgets('social avatars use the persistent remote image cache', (
+    tester,
+  ) async {
+    const userWithAvatar = SocialUser(
+      uid: 'friend-with-avatar',
+      nickname: '缓存好友',
+      avatarUrl: 'https://cdn.example/avatars/friend-with-avatar.jpg',
+    );
+    await tester.pumpWidget(
+      const MaterialApp(home: SocialAvatar(user: userWithAvatar)),
+    );
+
+    final image = tester.widget<ArtworkImage>(find.byType(ArtworkImage));
+    expect(image.persistentNetworkCacheKey, 'social-avatar-friend-with-avatar');
   });
 
   testWidgets(

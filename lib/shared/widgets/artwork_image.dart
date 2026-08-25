@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../media/persistent_network_image_cache.dart';
+
 const _legacyArtworkAssetAliases = <String, String>{
   'assets/branding/dress-midnight-launch.png':
       'assets/branding/dress-midnight-launch-v2.webp',
@@ -30,6 +32,8 @@ class ArtworkImage extends StatefulWidget {
     this.decodeHeight,
     this.fit = BoxFit.cover,
     this.retryOnNetworkError = false,
+    this.persistentNetworkCacheKey,
+    this.networkImageCache,
     super.key,
   });
 
@@ -40,6 +44,8 @@ class ArtworkImage extends StatefulWidget {
   final double? decodeHeight;
   final BoxFit fit;
   final bool retryOnNetworkError;
+  final String? persistentNetworkCacheKey;
+  final PersistentNetworkImageCache? networkImageCache;
 
   @override
   State<ArtworkImage> createState() => _ArtworkImageState();
@@ -50,17 +56,29 @@ class _ArtworkImageState extends State<ArtworkImage> {
 
   Timer? _retryTimer;
   int _networkRetry = 0;
+  File? _persistentNetworkFile;
+  String? _persistentNetworkIdentity;
+
+  @override
+  void initState() {
+    super.initState();
+    _resetPersistentNetworkImage();
+  }
 
   @override
   void didUpdateWidget(covariant ArtworkImage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.uri == widget.uri &&
-        oldWidget.retryOnNetworkError == widget.retryOnNetworkError) {
+        oldWidget.retryOnNetworkError == widget.retryOnNetworkError &&
+        oldWidget.persistentNetworkCacheKey ==
+            widget.persistentNetworkCacheKey &&
+        oldWidget.networkImageCache == widget.networkImageCache) {
       return;
     }
     _retryTimer?.cancel();
     _retryTimer = null;
     _networkRetry = 0;
+    _resetPersistentNetworkImage();
   }
 
   @override
@@ -91,6 +109,40 @@ class _ArtworkImageState extends State<ArtworkImage> {
     }
 
     if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      final persistentImage = _persistentNetworkConfig;
+      if (persistentImage != null) {
+        final file = _persistentNetworkFile;
+        if (file == null) {
+          return SizedBox(width: widget.width, height: widget.height);
+        }
+        return Image.file(
+          file,
+          key: ValueKey('cached-network-artwork-$_persistentNetworkIdentity'),
+          width: widget.width,
+          height: widget.height,
+          cacheWidth: cacheWidth,
+          cacheHeight: cacheHeight,
+          fit: widget.fit,
+          gaplessPlayback: true,
+          errorBuilder: (context, error, stackTrace) {
+            unawaited(
+              persistentImage.cache.invalidate(
+                cacheKey: persistentImage.cacheKey,
+                url: persistentImage.uri,
+              ),
+            );
+            _schedulePersistentNetworkRetry();
+            return errorBuilder(context, error, stackTrace);
+          },
+          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+            if (wasSynchronouslyLoaded || frame != null) {
+              _retryTimer?.cancel();
+              _retryTimer = null;
+            }
+            return child;
+          },
+        );
+      }
       final provider = ResizeImage.resizeIfNeeded(
         cacheWidth,
         cacheHeight,
@@ -164,6 +216,76 @@ class _ArtworkImageState extends State<ArtworkImage> {
       await provider.evict();
       if (!mounted) return;
       setState(() => _networkRetry = nextRetry);
+    });
+  }
+
+  ({PersistentNetworkImageCache cache, String cacheKey, String uri})?
+  get _persistentNetworkConfig {
+    final cacheKey = widget.persistentNetworkCacheKey?.trim();
+    final uri = canonicalArtworkUri(widget.uri);
+    if (cacheKey == null ||
+        cacheKey.isEmpty ||
+        (!uri.startsWith('http://') && !uri.startsWith('https://'))) {
+      return null;
+    }
+    return (
+      cache: widget.networkImageCache ?? persistentNetworkImageCache,
+      cacheKey: cacheKey,
+      uri: uri,
+    );
+  }
+
+  void _resetPersistentNetworkImage() {
+    _persistentNetworkFile = null;
+    final config = _persistentNetworkConfig;
+    _persistentNetworkIdentity = config == null
+        ? null
+        : '${config.cacheKey}\n${config.uri}';
+    if (config == null) return;
+
+    final cached = config.cache.peek(
+      cacheKey: config.cacheKey,
+      url: config.uri,
+    );
+    if (cached != null) {
+      _persistentNetworkFile = cached;
+      return;
+    }
+    _loadPersistentNetworkImage();
+  }
+
+  void _loadPersistentNetworkImage() {
+    final identity = _persistentNetworkIdentity;
+    final config = _persistentNetworkConfig;
+    if (identity == null || config == null) return;
+
+    config.cache.resolve(cacheKey: config.cacheKey, url: config.uri).then((
+      file,
+    ) {
+      if (!mounted || identity != _persistentNetworkIdentity) return;
+      if (file != null) {
+        setState(() => _persistentNetworkFile = file);
+        return;
+      }
+      _schedulePersistentNetworkRetry();
+    });
+  }
+
+  void _schedulePersistentNetworkRetry() {
+    if (!widget.retryOnNetworkError ||
+        _networkRetry >= _maxNetworkRetries ||
+        _retryTimer != null) {
+      return;
+    }
+    final nextRetry = _networkRetry + 1;
+    _retryTimer = Timer(Duration(milliseconds: 650 * nextRetry), () {
+      _retryTimer = null;
+      if (!mounted) return;
+      setState(() {
+        _networkRetry = nextRetry;
+        _persistentNetworkFile = null;
+      });
+      _loadPersistentNetworkImage();
     });
   }
 

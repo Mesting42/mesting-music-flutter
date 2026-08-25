@@ -192,6 +192,7 @@ class SocialAvatar extends StatelessWidget {
               height: size,
               fit: BoxFit.cover,
               retryOnNetworkError: true,
+              persistentNetworkCacheKey: 'social-avatar-${user.uid}',
             )
           : Icon(Icons.person_rounded, color: Colors.white, size: size * .52),
     );
