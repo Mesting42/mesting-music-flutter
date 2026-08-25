@@ -34,9 +34,13 @@ migrate_working_dir/
 /coverage/
 .codex-artifacts/
 .codex-temp/
+.codex-*.png
+.codex-*.xml
+.impeccable/mocks/
 .visual-reference-runtime/
 test_artifacts/
 assets/design-qa/
+release/*.apk
 
 # Symbolication related
 app.*.symbols
