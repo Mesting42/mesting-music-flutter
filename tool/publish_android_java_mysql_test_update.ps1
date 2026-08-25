@@ -9,7 +9,7 @@ param(
     [ValidatePattern('^[0-9]+\.[0-9]+\.[0-9]+$')]
     [string]$VersionName = '1.0.38',
     [ValidateRange(1, 2147483647)]
-    [int]$VersionCode = 39,
+    [int]$VersionCode = 40,
     [string]$EnvironmentId = 'mesting-d5gm7tuhxacddccfb',
     [string]$HostingDomain = 'mesting-d5gm7tuhxacddccfb-1331507389.tcloudbaseapp.com'
 )
