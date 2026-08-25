@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.37+42 - stable CloudBase release
+
+- 正式稳定包 `com.mesting.music` 已发布到独立稳定更新清单 `releases/android/latest.json`。
+- 新增账号注销流程：二次确认、身份验证以及本机敏感数据清理。
+- 新增《用户协议》和《隐私政策》；首次使用、注册及登录前均可单独查阅并确认。
+- 优化“我的喜欢”封面和好友头像的本地持久缓存与失败重试，减少切换页面后才显示图片的情况。
+- 优化消息页、头像预览页和编辑资料返回“我的”页面的过渡动画。
+- Java + MySQL 测试包与 UI Beta 通道保持独立，本次稳定发布没有写入它们的更新清单。
+
+对应源码标签：`flutter-music-v1.0.37-build42`。发布与源码对应关系见 [docs/release-history.md](docs/release-history.md)。
+
 ## 1.0.38+39 - source snapshot
 
 - 公开当前 Flutter 客户端源码，并从该版本起重新建立源码、版本与标签的对应关系。

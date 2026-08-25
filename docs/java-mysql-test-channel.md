@@ -4,8 +4,8 @@
 
 | 通道 | 包名 | 更新清单 | 面向对象 |
 | --- | --- | --- | --- |
-| 正式稳定版 `1.0.37+40` | `com.mesting.music` | `releases/android/latest.json` | 已发布的稳定用户 |
-| Java + MySQL 测试版 | `com.mesting.music.javatest` | `releases/android/java-mysql-test/latest.json` | 主动安装测试包的测试者 |
+| 正式稳定版 `1.0.37+42` | `com.mesting.music` | `releases/android/latest.json` | 已发布的稳定用户 |
+| Java + MySQL 测试版 `1.0.38+40` | `com.mesting.music.javatest` | `releases/android/java-mysql-test/latest.json` | 主动安装测试包的测试者 |
 | UI 实验 Beta | `com.mesting.music.beta` | `releases/android/beta/latest.json` | UI/头像实验测试 |
 
 Java + MySQL 测试版使用独立 Android 包名，因此可与稳定版和 Beta 同时安装。稳定版“设置”中提供明确标注风险的下载入口；它绝不写入或读取稳定版的 `releases/android/latest.json`。
@@ -20,7 +20,7 @@ Java + MySQL 测试版使用独立 Android 包名，因此可与稳定版和 Bet
 
 .\tool\publish_android_java_mysql_test_update.ps1 `
   -ChannelAcknowledgement JAVA_MYSQL_TEST_ONLY `
-  -InputApkPath .\build\java_mysql_test_apk\Mesting-Music-Java-MySQL-Test-v1.0.38-build39.apk `
+  -InputApkPath .\build\java_mysql_test_apk\Mesting-Music-Java-MySQL-Test-v1.0.38-build40.apk `
   -ReleaseNotes '验证注册、登录和找回密码'
 ```
 
