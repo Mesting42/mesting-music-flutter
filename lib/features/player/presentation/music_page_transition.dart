@@ -14,6 +14,14 @@ const messagesPageReverseTransitionDuration = Duration(milliseconds: 280);
 const messagesPageHandoffProgress = .18;
 const messagesPageHorizontalOffset = .032;
 const messagesPageStartScale = .992;
+// Keep this aligned with the profile route beneath the editor. A different
+// threshold would briefly hide both page layers while the editor is popped.
+const profileEditPageHandoffProgress = musicPageHandoffProgress;
+const profileEditPageTransitionDuration = Duration(milliseconds: 320);
+const profileEditPageReverseTransitionDuration = Duration(milliseconds: 260);
+const profileEditPageHorizontalOffset = .032;
+const profileEditPageStartScale = .996;
+const profileEditPageReverseMotionCurve = Curves.easeInCubic;
 const collectionRevealDuration = Duration(milliseconds: 380);
 const collectionRevealReverseDuration = Duration(milliseconds: 340);
 const collectionRevealStartScale = .985;

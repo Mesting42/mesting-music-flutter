@@ -106,7 +106,7 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/profile/edit',
-          pageBuilder: (context, state) => _musicSlidePage(
+          pageBuilder: (context, state) => _profileEditTransitionPage(
             state: state,
             child: const SensitiveScreen(
               child: AuthProtectedPage(
@@ -328,6 +328,32 @@ Page<void> _musicSlidePage({
   );
 }
 
+Page<void> _profileEditTransitionPage({
+  required GoRouterState state,
+  required Widget child,
+}) {
+  final intent = state.extra is MusicPageTransitionIntent
+      ? state.extra! as MusicPageTransitionIntent
+      : const MusicPageTransitionIntent.forward();
+  final horizontal = intent.direction == MusicPageTransitionDirection.forward
+      ? profileEditPageHorizontalOffset
+      : -profileEditPageHorizontalOffset;
+  return _SequencedMusicTransitionPage(
+    key: ValueKey(state.uri.toString()),
+    transitionDuration: profileEditPageTransitionDuration,
+    reverseTransitionDuration: profileEditPageReverseTransitionDuration,
+    enterOffset: Offset(horizontal, 0),
+    enterScale: profileEditPageStartScale,
+    scaleAlignment: Alignment.centerRight,
+    // This stays aligned with the profile page's transition. The two routes
+    // trade one opaque layer directly, so backing out never pauses on shell
+    // artwork between the editor and the profile.
+    handoffProgress: profileEditPageHandoffProgress,
+    reverseMotionCurve: profileEditPageReverseMotionCurve,
+    child: child,
+  );
+}
+
 Page<void> _messagesTransitionPage({
   required GoRouterState state,
   required Widget child,
@@ -420,6 +446,7 @@ class _SequencedMusicTransitionPage extends Page<void> {
     this.handoffProgress = musicPageHandoffProgress,
     this.transitionDuration = musicPageTransitionDuration,
     this.reverseTransitionDuration = musicPageReverseTransitionDuration,
+    this.reverseMotionCurve = musicPageMotionCurve,
     super.key,
   });
 
@@ -430,6 +457,7 @@ class _SequencedMusicTransitionPage extends Page<void> {
   final double handoffProgress;
   final Duration transitionDuration;
   final Duration reverseTransitionDuration;
+  final Curve reverseMotionCurve;
 
   @override
   Route<void> createRoute(BuildContext context) {
@@ -446,15 +474,11 @@ class _SequencedMusicTransitionPage extends Page<void> {
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         final movement = CurvedAnimation(
           parent: animation,
-          curve: const Interval(
-            musicPageHandoffProgress,
+          curve: Interval(handoffProgress, 1, curve: musicPageMotionCurve),
+          reverseCurve: Interval(
+            1 - handoffProgress,
             1,
-            curve: musicPageMotionCurve,
-          ),
-          reverseCurve: const Interval(
-            1 - musicPageHandoffProgress,
-            1,
-            curve: musicPageMotionCurve,
+            curve: reverseMotionCurve,
           ),
         );
         final position = Tween<Offset>(

@@ -220,6 +220,46 @@ void main() {
     }
   });
 
+  test('编辑资料页回退使用连续的单层交接', () {
+    expect(profileEditPageHandoffProgress, musicPageHandoffProgress);
+    expect(
+      profileEditPageReverseTransitionDuration,
+      lessThan(musicPageReverseTransitionDuration),
+    );
+    expect(
+      profileEditPageHorizontalOffset,
+      lessThan(musicPageHorizontalOffset),
+    );
+    expect(profileEditPageStartScale, lessThan(1));
+
+    for (var step = 0; step <= 100; step += 1) {
+      final progress = step / 100;
+      final editor = musicPageLayerOpacity(
+        primaryStatus: AnimationStatus.reverse,
+        primaryValue: 1 - progress,
+        secondaryStatus: AnimationStatus.dismissed,
+        secondaryValue: 0,
+        handoffProgress: profileEditPageHandoffProgress,
+      );
+      final profile = musicPageLayerOpacity(
+        primaryStatus: AnimationStatus.completed,
+        primaryValue: 1,
+        secondaryStatus: AnimationStatus.reverse,
+        secondaryValue: 1 - progress,
+      );
+      expect(
+        editor > 0 && profile > 0,
+        isFalse,
+        reason: '回退进度 $progress 重叠绘制了两层页面',
+      );
+      expect(
+        editor > 0 ? editor : profile,
+        1,
+        reason: '回退进度 $progress 暴露了页面背景',
+      );
+    }
+  });
+
   testWidgets(
     'outgoing page stays opaque before handing off to the next layer',
     (tester) async {
