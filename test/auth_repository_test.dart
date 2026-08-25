@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -61,6 +62,31 @@ void main() {
       ),
     );
   });
+
+  test(
+    'custom auth deletes the active account with a recent sudo token',
+    () async {
+      final store = _MemorySessionStore();
+      store.session = _testSession();
+      store.remembered = _testSession();
+      final repository = HttpAuthRepository(
+        baseUrl: 'https://auth.example.test',
+        sessionStore: store,
+        client: MockClient((request) async {
+          expect(request.method, 'DELETE');
+          expect(request.url.path, '/v1/me');
+          expect(request.headers['authorization'], 'Bearer active-access');
+          expect(jsonDecode(request.body), {'sudo_token': 'recent-sudo-token'});
+          return http.Response('{"deleted":true}', 200);
+        }),
+      );
+
+      await repository.deleteAccount(sudoToken: 'recent-sudo-token');
+
+      expect(store.session, isNull);
+      expect(store.remembered, isNull);
+    },
+  );
 
   group('local preview account', () {
     late SharedPreferences preferences;
@@ -133,5 +159,57 @@ void main() {
       expect(signedIn.user.uid, localPreviewUserId);
       expect(signedIn.user.emailMasked, 'l***@example.test');
     });
+
+    test(
+      'deletion removes the device-only account until a new explicit sign in',
+      () async {
+        final repository = createRepository();
+        await repository.restoreSession();
+        final challenge = await repository.requestCurrentIdentityCode(
+          method: AuthMethod.email,
+        );
+        final sudoToken = await repository.verifyCurrentIdentity(
+          verificationId: challenge.verificationId,
+          verificationCode: '123456',
+        );
+
+        await repository.deleteAccount(sudoToken: sudoToken);
+
+        expect(await createRepository().restoreSession(), isNull);
+        final fresh = await createRepository().signInWithEmail(
+          email: 'fresh@example.test',
+          password: 'local-password',
+        );
+        expect(fresh.user.emailMasked, 'f***@example.test');
+      },
+    );
   });
+}
+
+AuthSession _testSession() {
+  return AuthSession(
+    user: const AuthUser(uid: 'user-1', nickname: 'Listener'),
+    accessToken: 'active-access',
+    refreshToken: 'active-refresh',
+    expiresAt: DateTime.now().add(const Duration(hours: 1)),
+  );
+}
+
+class _MemorySessionStore extends SessionStore {
+  AuthSession? session;
+  AuthSession? remembered;
+
+  @override
+  Future<AuthSession?> read() async => session;
+
+  @override
+  Future<void> clear() async {
+    session = null;
+  }
+
+  @override
+  Future<void> clearAll() async {
+    session = null;
+    remembered = null;
+  }
 }

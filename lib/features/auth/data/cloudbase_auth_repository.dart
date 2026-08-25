@@ -597,6 +597,39 @@ class CloudBaseAuthRepository
   }
 
   @override
+  Future<void> deleteAccount({required String sudoToken}) async {
+    final current = await _requireSession();
+    final token = sudoToken.trim();
+    if (token.isEmpty) {
+      throw const AuthRequestException('身份验证已失效，请重新验证');
+    }
+
+    // Account data lives in the social Cloud Function while the identity
+    // itself belongs to CloudBase Auth. The function clears the application
+    // data first and only then invokes CloudBase's authenticated delete-me
+    // endpoint with this short-lived sudo token.
+    await _callAccountFunction('deleteAccount', {
+      'sudo_token': token,
+    }, accessToken: current.accessToken);
+
+    _session = null;
+    _boundEmail = null;
+    _boundPhone = null;
+    _cloudAvatarId = null;
+    _latestAvatarDownloadUrl = null;
+    try {
+      await Future.wait<void>([
+        _sessionStore.clearAll(),
+        _sessionStore.deleteProfile(current.user.uid),
+        _clearAvatarCache(current.user.uid),
+      ]);
+    } on Object {
+      // The server has already deleted the account. Keep the device signed out
+      // even if a stale image cache cannot be removed on this attempt.
+    }
+  }
+
+  @override
   Future<void> signOut() async {
     // This is a device-local sign-out. The encrypted refresh credential is
     // retained separately so the explicitly remembered account can use
@@ -1197,6 +1230,16 @@ class CloudBaseAuthRepository
     );
     await directory.create(recursive: true);
     return directory;
+  }
+
+  Future<void> _clearAvatarCache(String uid) async {
+    final root = await _avatarDirectoryProvider();
+    final safeUid = uid.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+    final directory = Directory(
+      '${root.path}${Platform.pathSeparator}mesting_avatars'
+      '${Platform.pathSeparator}$safeUid',
+    );
+    if (await directory.exists()) await directory.delete(recursive: true);
   }
 
   Future<String?> _resolveCloudAvatar(

@@ -1,10 +1,15 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../core/persistence/app_preferences.dart';
 import '../../core/security/session_store.dart';
+import '../library/library_providers.dart';
 import 'data/auth_repository.dart';
 import 'data/cloudbase_auth_repository.dart';
 import 'domain/auth_models.dart';
@@ -307,6 +312,33 @@ class AuthController extends AsyncNotifier<AuthSession?> {
     return _repository.resetPassword(proof: proof, newPassword: newPassword);
   }
 
+  Future<void> deleteAccount({required String sudoToken}) async {
+    final current = state.value;
+    if (current == null) {
+      throw const AuthRequestException('登录状态已失效，请重新登录');
+    }
+    lastError = null;
+    try {
+      await _repository.deleteAccount(sudoToken: sudoToken);
+    } on Object catch (error, stackTrace) {
+      lastError = error;
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+
+    // The server has already confirmed permanent deletion. Local cleanup must
+    // never revive this session if one non-critical cache entry is unavailable.
+    try {
+      await ref.read(appDatabaseProvider).deleteOwnerData(current.user.uid);
+      await _clearDeletedAccountPreferences(current.user.uid);
+    } on Object {
+      // The server has already completed the irreversible part. Never report
+      // a successful account deletion as failed only because a local cache is
+      // locked or already absent.
+    } finally {
+      state = const AsyncData(null);
+    }
+  }
+
   Future<void> signOut() async {
     state = const AsyncLoading();
     await _repository.signOut();
@@ -315,6 +347,51 @@ class AuthController extends AsyncNotifier<AuthSession?> {
 
   Future<AuthSession?> rememberedAccount() {
     return ref.read(sessionStoreProvider).readRemembered();
+  }
+
+  Future<void> _clearDeletedAccountPreferences(String uid) async {
+    final preferences = ref.read(sharedPreferencesProvider);
+    final encodedUid = Uri.encodeComponent(uid);
+    final backgroundToken = sha256
+        .convert(utf8.encode(uid))
+        .toString()
+        .substring(0, 16);
+    final localBackgroundKey = 'profile_background_v1_${backgroundToken}_value';
+    final localBackgroundPath = preferences.getString(localBackgroundKey);
+    final keys = <String>{
+      'library_cloud_bootstrapped_v2_$encodedUid',
+      'library_cloud_last_pull_v1_$encodedUid',
+      'social_status_snapshot_v1_$uid',
+      'social_attention_known_followers_v1_$uid',
+      'social_attention_pending_followers_v1_$uid',
+      'social_attention_known_messages_v1_$uid',
+      'profile_background_v1_${backgroundToken}_kind',
+      localBackgroundKey,
+      'profile_background_cloud_v1_${backgroundToken}_kind',
+      'profile_background_cloud_v1_${backgroundToken}_value',
+      'profile_background_cloud_v1_${backgroundToken}_ready',
+    };
+    for (final key in keys) {
+      await preferences.remove(key);
+    }
+    await _removeManagedProfileBackground(localBackgroundPath);
+  }
+
+  Future<void> _removeManagedProfileBackground(String? path) async {
+    if (path == null || path.trim().isEmpty) return;
+    try {
+      final root = await getApplicationDocumentsDirectory();
+      final directory = Directory(
+        '${root.path}${Platform.pathSeparator}profile_backgrounds',
+      ).absolute;
+      final file = File(path).absolute;
+      final prefix = '${directory.path}${Platform.pathSeparator}';
+      if (!file.path.startsWith(prefix) || !await file.exists()) return;
+      await file.delete();
+    } on Object {
+      // A stale local preview file must never make a completed cloud deletion
+      // look like a failed account deletion.
+    }
   }
 
   Future<bool> quickSignIn() async {

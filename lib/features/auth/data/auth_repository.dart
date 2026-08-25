@@ -103,6 +103,10 @@ abstract interface class AuthRepository {
     required String newPassword,
   });
 
+  /// Permanently removes the currently authenticated account after a recent
+  /// current-identity verification has yielded [sudoToken].
+  Future<void> deleteAccount({required String sudoToken});
+
   Future<void> signOut();
 }
 
@@ -226,6 +230,10 @@ class UnconfiguredAuthRepository implements AuthRepository {
   }) async => _unavailable();
 
   @override
+  Future<void> deleteAccount({required String sudoToken}) async =>
+      _unavailable();
+
+  @override
   Future<void> signOut() async {}
 }
 
@@ -243,6 +251,7 @@ class LocalPreviewAuthRepository implements AuthRepository {
 
   static const _sessionKey = 'mesting_local_preview_session_v1';
   static const _signedOutKey = 'mesting_local_preview_signed_out_v1';
+  static const _deletedKey = 'mesting_local_preview_deleted_v1';
 
   final SharedPreferences _preferences;
   final Future<Directory> Function() _documentsDirectory;
@@ -250,6 +259,7 @@ class LocalPreviewAuthRepository implements AuthRepository {
 
   @override
   Future<AuthSession?> restoreSession() async {
+    if (_preferences.getBool(_deletedKey) == true) return null;
     final encoded = _preferences.getString(_sessionKey);
     if (encoded != null && encoded.isNotEmpty) {
       try {
@@ -467,6 +477,29 @@ class LocalPreviewAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<void> deleteAccount({required String sudoToken}) async {
+    if (sudoToken != 'local-sudo-token') {
+      throw const AuthRequestException('身份验证已失效，请重新验证');
+    }
+    _session = null;
+    await _preferences.remove(_sessionKey);
+    await _preferences.setBool(_signedOutKey, true);
+    await _preferences.setBool(_deletedKey, true);
+    try {
+      final root = await _documentsDirectory();
+      final avatarDirectory = Directory(
+        '${root.path}${Platform.pathSeparator}mesting_local_profile',
+      );
+      if (await avatarDirectory.exists()) {
+        await avatarDirectory.delete(recursive: true);
+      }
+    } on Object {
+      // The deletion marker and session removal still prevent the local demo
+      // account from being restored if an old image cache cannot be removed.
+    }
+  }
+
+  @override
   Future<void> signOut() async {
     _session = null;
     await _preferences.remove(_sessionKey);
@@ -481,10 +514,16 @@ class LocalPreviewAuthRepository implements AuthRepository {
             user: current.user.copyWith(emailMasked: _maskEmail(email)),
           );
     await _preferences.remove(_signedOutKey);
+    // A new explicit local-preview sign-in starts a fresh device-only demo
+    // account. It never restores the data that was removed on deletion.
+    await _preferences.remove(_deletedKey);
     return _persist(next);
   }
 
   Future<AuthSession> _ensureSession() async {
+    if (_preferences.getBool(_deletedKey) == true) {
+      throw const AuthRequestException('本地体验账号已注销，请先重新登录');
+    }
     final current = _session ?? _readStoredSession();
     if (current != null) return current;
     if (_preferences.getBool(_signedOutKey) == true) {
@@ -885,6 +924,26 @@ class HttpAuthRepository implements AuthRepository, RenewableAuthRepository {
   }
 
   @override
+  Future<void> deleteAccount({required String sudoToken}) async {
+    final current = _session ?? await _sessionStore.read();
+    if (current == null) {
+      throw const AuthRequestException('登录状态已失效，请重新登录');
+    }
+    if (sudoToken.trim().isEmpty) {
+      throw const AuthRequestException('身份验证已失效，请重新验证');
+    }
+    _session = current;
+    await _request(
+      '/v1/me',
+      {'sudo_token': sudoToken.trim()},
+      method: 'DELETE',
+      authenticated: true,
+    );
+    _session = null;
+    await _sessionStore.clearAll();
+  }
+
+  @override
   Future<void> signOut() async {
     // Keep the separately encrypted remembered credential for the explicit
     // quick-login card; only the active session is removed here.
@@ -921,6 +980,7 @@ class HttpAuthRepository implements AuthRepository, RenewableAuthRepository {
       response = switch (method) {
         'GET' => await _client.get(uri, headers: headers),
         'PATCH' => await _client.patch(uri, headers: headers, body: encoded),
+        'DELETE' => await _client.delete(uri, headers: headers, body: encoded),
         _ => await _client.post(uri, headers: headers, body: encoded),
       };
     } on SocketException {

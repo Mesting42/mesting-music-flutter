@@ -960,7 +960,15 @@ void main() {
             .dy,
       ),
     );
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('settings-sign-out')),
+      240,
+    );
     expect(find.text('退出登录'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('settings-delete-account')),
+      findsOneWidget,
+    );
     expect(find.text('CloudBase 身份认证已连接'), findsOneWidget);
     expect(find.text('等待云端环境连接'), findsNothing);
   });
@@ -991,6 +999,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('settings-sign-out')),
+      240,
+    );
     await tester.tap(find.byKey(const ValueKey('settings-sign-out')));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, '退出登录'));

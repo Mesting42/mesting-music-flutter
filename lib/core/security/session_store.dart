@@ -84,6 +84,10 @@ class SessionStore {
     );
   }
 
+  Future<void> deleteProfile(String uid) {
+    return _storage.delete(key: '$_profileKeyPrefix$uid');
+  }
+
   Future<void> writeSessionAndProfile(AuthSession session) async {
     await Future.wait<void>([write(session), writeProfile(session.user)]);
   }

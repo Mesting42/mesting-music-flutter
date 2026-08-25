@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/platform/sensitive_screen.dart';
 import '../../features/auth/presentation/auth_page.dart';
+import '../../features/auth/presentation/account_deletion_page.dart';
 import '../../features/auth/presentation/auth_protected_page.dart';
 import '../../features/auth/presentation/account_bindings_page.dart';
 import '../../features/auth/presentation/forgot_password_page.dart';
@@ -160,6 +161,19 @@ final appRouter = GoRouter(
                 reason: '登录后才能管理账号绑定。',
                 redirect: '/profile/account',
                 child: AccountBindingsPage(),
+              ),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/profile/delete-account',
+          pageBuilder: (context, state) => _musicSlidePage(
+            state: state,
+            child: const SensitiveScreen(
+              child: AuthProtectedPage(
+                reason: '登录后才能注销账号。',
+                redirect: '/profile/delete-account',
+                child: AccountDeletionPage(),
               ),
             ),
           ),

@@ -981,6 +981,7 @@ void main() {
       () async {
         final store = MemorySessionStore();
         await store.write(_activeSession());
+        await store.writeProfile(_activeSession().user);
         final repository = CloudBaseAuthRepository(
           environmentId: 'music-env',
           sessionStore: store,
@@ -1118,6 +1119,37 @@ void main() {
           '/auth/v1/user/contact',
           '/auth/v1/user/me',
         ]);
+      },
+    );
+
+    test(
+      'deletes CloudBase account data through the guarded function',
+      () async {
+        final store = MemorySessionStore();
+        await store.write(_activeSession());
+        final repository = CloudBaseAuthRepository(
+          environmentId: 'music-env',
+          sessionStore: store,
+          client: MockClient((request) async {
+            expect(request.method, 'POST');
+            expect(request.url.path, '/v1/functions/social-api');
+            expect(request.headers['authorization'], 'Bearer active-access');
+            expect(jsonDecode(request.body), {
+              'action': 'deleteAccount',
+              'sudo_token': 'recent-sudo-token',
+            });
+            return _json({
+              'success': true,
+              'data': {'deleted': true},
+            });
+          }),
+        );
+
+        await repository.deleteAccount(sudoToken: 'recent-sudo-token');
+
+        expect(store.session, isNull);
+        expect(store.rememberedSession, isNull);
+        expect(store.profiles, isEmpty);
       },
     );
 
@@ -1332,6 +1364,11 @@ class MemorySessionStore extends SessionStore {
   Future<void> writeProfile(AuthUser user) async {
     profileWriteCount += 1;
     profiles[user.uid] = user;
+  }
+
+  @override
+  Future<void> deleteProfile(String uid) async {
+    profiles.remove(uid);
   }
 }
 

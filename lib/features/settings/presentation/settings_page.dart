@@ -97,7 +97,8 @@ class SettingsPage extends ConsumerWidget {
                       title: '版本更新',
                       subtitle: _updateSubtitle(appVersion, updateState),
                       loading: updateState.phase == AppUpdatePhase.checking,
-                      highlighted: updateState.phase == AppUpdatePhase.available,
+                      highlighted:
+                          updateState.phase == AppUpdatePhase.available,
                       onTap: updateState.busy
                           ? null
                           : () => _checkForUpdates(context, ref),
@@ -126,6 +127,18 @@ class SettingsPage extends ConsumerWidget {
                     subtitle: '退出当前状态，并在本机保留快捷登录账号',
                     destructive: true,
                     onTap: () => _confirmSignOut(context, ref),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _SettingsSurface(
+                  child: _SettingsTile(
+                    key: const ValueKey('settings-delete-account'),
+                    icon: Icons.delete_forever_outlined,
+                    iconColor: const Color(0xFFC24A34),
+                    title: '注销账号',
+                    subtitle: '永久删除账号与云端数据，不可恢复',
+                    destructive: true,
+                    onTap: () => context.push('/profile/delete-account'),
                   ),
                 ),
               ],

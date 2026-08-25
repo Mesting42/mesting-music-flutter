@@ -761,6 +761,34 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  /// Removes all device-local library and playback rows owned by an account
+  /// after the backend has confirmed irreversible account deletion.
+  Future<void> deleteOwnerData(String ownerId) async {
+    await transaction(() async {
+      await (delete(
+        syncMutations,
+      )..where((row) => row.ownerId.equals(ownerId))).go();
+      await (delete(
+        favoriteTracks,
+      )..where((row) => row.ownerId.equals(ownerId))).go();
+      await (delete(
+        userPlaylistTracks,
+      )..where((row) => row.ownerId.equals(ownerId))).go();
+      await (delete(
+        userPlaylists,
+      )..where((row) => row.ownerId.equals(ownerId))).go();
+      await (delete(
+        playbackSessions,
+      )..where((row) => row.ownerId.equals(ownerId))).go();
+      await (delete(
+        playbackHistories,
+      )..where((row) => row.ownerId.equals(ownerId))).go();
+      await (delete(
+        playbackDailyHistories,
+      )..where((row) => row.ownerId.equals(ownerId))).go();
+    });
+  }
+
   Future<void> _replaceLibraryRows(
     String ownerId,
     CloudLibrarySnapshot snapshot,
