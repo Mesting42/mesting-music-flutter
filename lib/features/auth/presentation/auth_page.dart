@@ -81,10 +81,10 @@ class _AuthPageState extends ConsumerState<AuthPage>
     );
     final preferences = ref.read(sharedPreferencesProvider);
     _emailRegistering = widget.initialMode != 'login';
-    final accepted =
-        preferences.getBool(disclaimerAcceptedPreferenceKey) == true;
+    final accepted = hasAcceptedLegalDocuments(preferences);
     final read =
-        accepted || preferences.getBool(disclaimerReadPreferenceKey) == true;
+        accepted ||
+        preferences.getBool(legalDocumentsReadPreferenceKey) == true;
     _acceptedTerms = accepted;
     _disclaimerRead = read;
     _registrationTermsRead = read;
@@ -639,7 +639,7 @@ class _AuthPageState extends ConsumerState<AuthPage>
     if (!mounted || !read) return;
     await ref
         .read(sharedPreferencesProvider)
-        .setBool(disclaimerReadPreferenceKey, true);
+        .setBool(legalDocumentsReadPreferenceKey, true);
     if (!mounted) return;
     setState(() {
       _disclaimerRead = true;
@@ -658,7 +658,7 @@ class _AuthPageState extends ConsumerState<AuthPage>
     if (!mounted || !read) return;
     await ref
         .read(sharedPreferencesProvider)
-        .setBool(disclaimerReadPreferenceKey, true);
+        .setBool(legalDocumentsReadPreferenceKey, true);
     if (!mounted) return;
     setState(() {
       _registrationTermsRead = true;
@@ -676,7 +676,7 @@ class _AuthPageState extends ConsumerState<AuthPage>
     if (!mounted || !read) return;
     await ref
         .read(sharedPreferencesProvider)
-        .setBool(disclaimerReadPreferenceKey, true);
+        .setBool(legalDocumentsReadPreferenceKey, true);
     if (!mounted) return;
     setState(() {
       _registrationTermsRead = true;
@@ -692,7 +692,7 @@ class _AuthPageState extends ConsumerState<AuthPage>
       return false;
     }
     if (_registrationTermsAccepted) return true;
-    setState(() => _localError = '请手动勾选免责声明，并完成 5 秒阅读后再继续注册');
+    setState(() => _localError = '请阅读用户协议与隐私政策，并完成 5 秒阅读后再继续注册');
     _remindDisclaimerAcceptance();
     return false;
   }
@@ -859,10 +859,7 @@ class _AuthPageState extends ConsumerState<AuthPage>
 
   Future<void> _finishAuthentication() async {
     final preferences = ref.read(sharedPreferencesProvider);
-    await Future.wait([
-      preferences.setBool(disclaimerAcceptedPreferenceKey, true),
-      preferences.setBool(disclaimerReadPreferenceKey, true),
-    ]);
+    await saveLegalDocumentConsent(preferences);
     await _offerLegacyLibraryImport();
     if (!mounted) return;
     if (widget.firstLaunch) {
@@ -1275,7 +1272,7 @@ class _DisclaimerAgreement extends StatelessWidget {
               GestureDetector(
                 onTap: onRead,
                 child: Text(
-                  read ? '《免责声明与隐私说明》' : '《免责声明与隐私说明》（需阅读 5 秒）',
+                  read ? '《用户协议》《隐私政策》' : '《用户协议》《隐私政策》（需阅读 5 秒）',
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.primary,
                     fontSize: 12,

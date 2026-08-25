@@ -3,19 +3,42 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/persistence/app_preferences.dart';
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../themes/music_theme_tokens.dart';
+import '../domain/legal_documents.dart';
+import 'legal_documents_page.dart';
 
 const disclaimerAcceptedPreferenceKey = 'mesting_disclaimer_accepted_v1';
 const disclaimerReadPreferenceKey = 'mesting_disclaimer_read_v1';
+const userAgreementAcceptedPreferenceKey = 'mesting_user_agreement_accepted_v1';
+const privacyPolicyAcceptedPreferenceKey = 'mesting_privacy_policy_accepted_v1';
+const legalDocumentsReadPreferenceKey = 'mesting_legal_documents_read_v1';
 const liquidGlassDisclaimerSurfaceKey = ValueKey<String>(
   'liquid-glass-disclaimer-surface',
 );
 const liquidGlassDisclaimerCloseActionKey = ValueKey<String>(
   'liquid-glass-disclaimer-close-action',
 );
+
+bool hasAcceptedLegalDocuments(SharedPreferences preferences) {
+  return preferences.getBool(userAgreementAcceptedPreferenceKey) == true &&
+      preferences.getBool(privacyPolicyAcceptedPreferenceKey) == true;
+}
+
+Future<void> saveLegalDocumentConsent(SharedPreferences preferences) async {
+  await Future.wait([
+    preferences.setBool(userAgreementAcceptedPreferenceKey, true),
+    preferences.setBool(privacyPolicyAcceptedPreferenceKey, true),
+    preferences.setBool(legalDocumentsReadPreferenceKey, true),
+    // Keep the old acknowledgement keys for existing local flows and update
+    // scheduling. They are not used to infer consent to the new documents.
+    preferences.setBool(disclaimerAcceptedPreferenceKey, true),
+    preferences.setBool(disclaimerReadPreferenceKey, true),
+  ]);
+}
 
 class FirstLaunchDisclaimerCoordinator extends ConsumerStatefulWidget {
   const FirstLaunchDisclaimerCoordinator({required this.child, super.key});
@@ -34,11 +57,7 @@ class _FirstLaunchDisclaimerCoordinatorState
   @override
   void initState() {
     super.initState();
-    _visible =
-        ref
-            .read(sharedPreferencesProvider)
-            .getBool(disclaimerAcceptedPreferenceKey) !=
-        true;
+    _visible = !hasAcceptedLegalDocuments(ref.read(sharedPreferencesProvider));
   }
 
   @override
@@ -63,10 +82,7 @@ class _FirstLaunchDisclaimerCoordinatorState
   Future<void> _accept(bool accepted) async {
     if (!accepted) return;
     final preferences = ref.read(sharedPreferencesProvider);
-    await Future.wait([
-      preferences.setBool(disclaimerAcceptedPreferenceKey, true),
-      preferences.setBool(disclaimerReadPreferenceKey, true),
-    ]);
+    await saveLegalDocumentConsent(preferences);
     if (mounted) setState(() => _visible = false);
   }
 }
@@ -184,7 +200,7 @@ class _TimedDisclaimerSheetState extends State<_TimedDisclaimerSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '免责声明与隐私说明',
+                          '用户协议与隐私政策',
                           style: TextStyle(
                             color: tokens.textPrimary,
                             fontSize: 22,
@@ -193,7 +209,7 @@ class _TimedDisclaimerSheetState extends State<_TimedDisclaimerSheet> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '请完整了解在线音乐、版权与账号数据规则',
+                          '请了解服务规则与数据处理方式',
                           style: TextStyle(
                             color: tokens.textSecondary,
                             fontSize: 12,
@@ -211,39 +227,36 @@ class _TimedDisclaimerSheetState extends State<_TimedDisclaimerSheet> {
               ),
             ),
             Divider(height: 1, color: tokens.border),
-            const Flexible(
+            Flexible(
               fit: FlexFit.loose,
               child: SingleChildScrollView(
                 physics: BouncingScrollPhysics(),
                 padding: EdgeInsets.fromLTRB(18, 16, 18, 12),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _DisclaimerIntro(),
-                    SizedBox(height: 12),
-                    _DisclaimerItem(
-                      number: '01',
-                      title: '项目性质',
-                      content:
-                          'Mesting Music 是个人学习与作品展示项目，并非任何音乐平台的官方客户端，不提供破解会员、规避付费或版权限制的服务。',
+                    Text(
+                      '继续前，请分别查看以下文件。阅读后返回本页确认即可；不同意时可关闭并停止登录或注册。',
+                      style: TextStyle(
+                        color: tokens.textSecondary,
+                        fontSize: 12,
+                        height: 1.6,
+                      ),
                     ),
-                    _DisclaimerItem(
-                      number: '02',
-                      title: '音乐与素材版权',
-                      content:
-                          '歌曲、歌词、封面及角色素材可能来自本地文件或第三方公开接口，相关权利归原权利人所有，仅供个人体验与功能展示。',
+                    const SizedBox(height: 12),
+                    _TimedLegalDocumentLink(
+                      document: userAgreementDocument,
+                      onTap: () =>
+                          _openDocument(LegalDocumentType.userAgreement),
                     ),
-                    _DisclaimerItem(
-                      number: '03',
-                      title: '在线服务可用性',
-                      content:
-                          '第三方音乐接口可能因网络、地区、会员或版权规则发生变化，应用不保证所有内容持续可搜索、播放或拥有完整歌词。',
+                    const SizedBox(height: 9),
+                    _TimedLegalDocumentLink(
+                      document: privacyPolicyDocument,
+                      onTap: () =>
+                          _openDocument(LegalDocumentType.privacyPolicy),
                     ),
-                    _DisclaimerItem(
-                      number: '04',
-                      title: '账号与隐私',
-                      content:
-                          '邮箱和手机号仅用于账号验证；登录凭证会加密保存在当前设备。拒绝读取手机号权限时，仍可手动输入并正常登录。',
-                    ),
+                    const SizedBox(height: 16),
+                    const _DisclaimerIntro(),
                   ],
                 ),
               ),
@@ -267,6 +280,17 @@ class _TimedDisclaimerSheetState extends State<_TimedDisclaimerSheet> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openDocument(LegalDocumentType type) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => Material(
+          color: Theme.of(context).colorScheme.surface,
+          child: LegalDocumentPage(documentType: type),
         ),
       ),
     );
@@ -298,13 +322,350 @@ class _DisclaimerOverlay extends StatelessWidget {
               viewPadding.bottom > 0 ? 8 : 14,
             ),
             child: Center(
-              child: _DisclaimerCard(
-                requiredAcceptance: requiredAcceptance,
-                onResult: onResult,
-              ),
+              child: requiredAcceptance
+                  ? _RequiredLegalConsentCard(onResult: onResult)
+                  : _DisclaimerCard(
+                      requiredAcceptance: false,
+                      onResult: onResult,
+                    ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _RequiredLegalConsentCard extends StatefulWidget {
+  const _RequiredLegalConsentCard({required this.onResult});
+
+  final ValueChanged<bool> onResult;
+
+  @override
+  State<_RequiredLegalConsentCard> createState() =>
+      _RequiredLegalConsentCardState();
+}
+
+class _RequiredLegalConsentCardState extends State<_RequiredLegalConsentCard> {
+  LegalDocumentType? _reading;
+  bool _acceptedUserAgreement = false;
+  bool _acceptedPrivacyPolicy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: 430, maxHeight: size.height - 68),
+      child: LiquidGlassSurface(
+        key: liquidGlassDisclaimerSurfaceKey,
+        child: Material(
+          type: MaterialType.transparency,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            child: _reading == null
+                ? _buildConsent(context)
+                : _buildReader(context, legalDocumentFor(_reading!)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConsent(BuildContext context) {
+    final tokens = context.musicThemeTokens;
+    final canContinue = _acceptedUserAgreement && _acceptedPrivacyPolicy;
+    return Column(
+      key: const ValueKey('legal-consent-landing'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(22, 22, 22, 14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: tokens.textPrimary.withValues(alpha: .1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  Icons.music_note_rounded,
+                  color: tokens.textPrimary,
+                  size: 25,
+                ),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '使用前请先了解',
+                      style: TextStyle(
+                        color: tokens.textPrimary,
+                        fontSize: 21,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -.4,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '请分别阅读并确认两份法律文件',
+                      style: TextStyle(color: tokens.textMuted, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Divider(height: 1, color: tokens.border),
+        Flexible(
+          fit: FlexFit.loose,
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '为提供账号、音乐同步与社交服务，我们需要按《隐私政策》处理必要的信息；使用服务还应遵守《用户协议》。不同意时，你可以退出应用。',
+                  style: TextStyle(
+                    color: tokens.textSecondary,
+                    fontSize: 12,
+                    height: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 17),
+                _LegalConsentChoice(
+                  document: userAgreementDocument,
+                  checked: _acceptedUserAgreement,
+                  onChanged: (value) =>
+                      setState(() => _acceptedUserAgreement = value),
+                  onRead: () => setState(
+                    () => _reading = LegalDocumentType.userAgreement,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _LegalConsentChoice(
+                  document: privacyPolicyDocument,
+                  checked: _acceptedPrivacyPolicy,
+                  onChanged: (value) =>
+                      setState(() => _acceptedPrivacyPolicy = value),
+                  onRead: () => setState(
+                    () => _reading = LegalDocumentType.privacyPolicy,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
+          child: Column(
+            children: [
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: FilledButton(
+                  key: const ValueKey('legal-consent-confirm'),
+                  onPressed: canContinue ? () => widget.onResult(true) : null,
+                  child: const Text('同意并继续使用'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '之后可在“设置 > 隐私与协议”中再次查看',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: tokens.textMuted, fontSize: 9),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReader(BuildContext context, LegalDocument document) {
+    final tokens = context.musicThemeTokens;
+    return Column(
+      key: ValueKey('legal-consent-reader-${document.type.name}'),
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 16, 18, 12),
+          child: Row(
+            children: [
+              IconButton(
+                key: const ValueKey('legal-consent-reader-back'),
+                tooltip: '返回同意页',
+                onPressed: () => setState(() => _reading = null),
+                icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      document.title,
+                      style: TextStyle(
+                        color: tokens.textPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      document.effectiveDate,
+                      style: TextStyle(color: tokens.textMuted, fontSize: 10),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Divider(height: 1, color: tokens.border),
+        Flexible(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+            child: LegalDocumentContent(document: document),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TimedLegalDocumentLink extends StatelessWidget {
+  const _TimedLegalDocumentLink({required this.document, required this.onTap});
+
+  final LegalDocument document;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.musicThemeTokens;
+    return Material(
+      color: tokens.glassSubtle,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        key: ValueKey('timed-legal-${document.type.name}-open'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '查看《${document.title}》',
+                      style: TextStyle(
+                        color: tokens.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      document.summary,
+                      style: TextStyle(
+                        color: tokens.textSecondary,
+                        fontSize: 10,
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.open_in_new_rounded,
+                color: tokens.textMuted,
+                size: 19,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LegalConsentChoice extends StatelessWidget {
+  const _LegalConsentChoice({
+    required this.document,
+    required this.checked,
+    required this.onChanged,
+    required this.onRead,
+  });
+
+  final LegalDocument document;
+  final bool checked;
+  final ValueChanged<bool> onChanged;
+  final VoidCallback onRead;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.musicThemeTokens;
+    return Material(
+      color: tokens.glassSubtle,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 10, 11, 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Checkbox(
+              key: ValueKey('legal-consent-${document.type.name}-checkbox'),
+              value: checked,
+              onChanged: (value) => onChanged(value ?? false),
+              visualDensity: VisualDensity.compact,
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: InkWell(
+                key: ValueKey('legal-consent-${document.type.name}-open'),
+                onTap: onRead,
+                borderRadius: BorderRadius.circular(10),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(3, 3, 0, 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '我已阅读并同意《${document.title}》',
+                        style: TextStyle(
+                          color: tokens.textPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        document.summary,
+                        style: TextStyle(
+                          color: tokens.textSecondary,
+                          fontSize: 10,
+                          height: 1.45,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: tokens.textMuted),
+          ],
+        ),
       ),
     );
   }

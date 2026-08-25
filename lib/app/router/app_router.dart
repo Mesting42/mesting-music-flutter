@@ -9,6 +9,8 @@ import '../../features/auth/presentation/account_deletion_page.dart';
 import '../../features/auth/presentation/auth_protected_page.dart';
 import '../../features/auth/presentation/account_bindings_page.dart';
 import '../../features/auth/presentation/forgot_password_page.dart';
+import '../../features/legal/domain/legal_documents.dart';
+import '../../features/legal/presentation/legal_documents_page.dart';
 import '../../features/library/presentation/music_home_page.dart';
 import '../../features/history/presentation/listening_history_page.dart';
 import '../../features/discover/presentation/curated_playlist_page.dart';
@@ -99,6 +101,29 @@ final appRouter = GoRouter(
           path: '/music/settings',
           pageBuilder: (context, state) =>
               _musicSlidePage(state: state, child: const SettingsPage()),
+        ),
+        GoRoute(
+          path: '/legal',
+          pageBuilder: (context, state) =>
+              _musicSlidePage(state: state, child: const LegalDocumentsPage()),
+        ),
+        GoRoute(
+          path: '/legal/user-agreement',
+          pageBuilder: (context, state) => _musicSlidePage(
+            state: state,
+            child: const LegalDocumentPage(
+              documentType: LegalDocumentType.userAgreement,
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/legal/privacy-policy',
+          pageBuilder: (context, state) => _musicSlidePage(
+            state: state,
+            child: const LegalDocumentPage(
+              documentType: LegalDocumentType.privacyPolicy,
+            ),
+          ),
         ),
         GoRoute(
           path: '/profile',

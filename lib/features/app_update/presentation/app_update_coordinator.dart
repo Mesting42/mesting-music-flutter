@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/persistence/app_preferences.dart';
+import '../../auth/presentation/first_launch_auth_coordinator.dart';
 import '../../legal/presentation/disclaimer_dialog.dart';
 import '../app_update_providers.dart';
 import 'app_update_sheet.dart';
@@ -36,11 +37,10 @@ class _AppUpdateCoordinatorState extends ConsumerState<AppUpdateCoordinator> {
 
   Future<void> _checkAfterLaunch() async {
     await Future<void>.delayed(const Duration(milliseconds: 1800));
+    final preferences = ref.read(sharedPreferencesProvider);
     if (!mounted ||
-        ref
-                .read(sharedPreferencesProvider)
-                .getBool(disclaimerAcceptedPreferenceKey) !=
-            true) {
+        !hasAcceptedLegalDocuments(preferences) ||
+        preferences.getBool(firstLaunchAuthCompletedPreferenceKey) != true) {
       return;
     }
     final result = await ref.read(appUpdateControllerProvider.notifier).check();

@@ -7,6 +7,7 @@ import '../features/themes/app_theme.dart';
 import '../features/themes/theme_controller.dart';
 import '../features/auth/auth_providers.dart';
 import '../features/auth/presentation/first_launch_auth_coordinator.dart';
+import '../features/legal/presentation/disclaimer_dialog.dart';
 import '../features/lyrics/presentation/lyrics_overlay_coordinator.dart';
 import '../features/app_update/presentation/app_update_coordinator.dart';
 import '../core/audio/playback_providers.dart';
@@ -61,11 +62,13 @@ class MestingMusicApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: buildMestingTheme(musicTheme),
       routerConfig: appRouter,
-      builder: (context, child) => FirstLaunchAuthCoordinator(
-        child: AppUpdateCoordinator(
-          child: SocialAttentionCoordinator(
-            child: LyricsOverlayCoordinator(
-              child: child ?? const SizedBox.shrink(),
+      builder: (context, child) => FirstLaunchDisclaimerCoordinator(
+        child: FirstLaunchAuthCoordinator(
+          child: AppUpdateCoordinator(
+            child: SocialAttentionCoordinator(
+              child: LyricsOverlayCoordinator(
+                child: child ?? const SizedBox.shrink(),
+              ),
             ),
           ),
         ),

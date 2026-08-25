@@ -315,7 +315,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('disclaimer-read-confirm')));
       await tester.pumpAndSettle();
 
-      expect(preferences.getBool(disclaimerReadPreferenceKey), isTrue);
+      expect(preferences.getBool(legalDocumentsReadPreferenceKey), isTrue);
       expect(preferences.getBool(disclaimerAcceptedPreferenceKey), isNot(true));
       expect(
         tester
@@ -330,9 +330,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('《免责声明与隐私说明》'), findsOneWidget);
+      expect(find.text('《用户协议》《隐私政策》'), findsOneWidget);
       expect(find.textContaining('需阅读 5 秒'), findsNothing);
-      await tester.tap(find.text('《免责声明与隐私说明》'));
+      await tester.tap(find.text('《用户协议》《隐私政策》'));
       await tester.pump(const Duration(milliseconds: 350));
 
       final confirm = tester.widget<FilledButton>(

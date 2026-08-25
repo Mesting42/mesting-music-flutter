@@ -375,6 +375,13 @@ class _MusicHubPanelState extends ConsumerState<_MusicHubPanel> {
                         _PanelSection(
                           children: [
                             _PanelTile(
+                              key: const ValueKey('music-hub-legal-documents'),
+                              icon: Icons.policy_outlined,
+                              title: '用户协议与隐私政策',
+                              subtitle: '服务规则、数据处理与个人权利',
+                              onTap: () => _openLegalDocuments(context),
+                            ),
+                            _PanelTile(
                               icon: Icons.policy_outlined,
                               title: '免责声明',
                               subtitle: '在线音乐、版权与账号数据说明',
@@ -413,6 +420,18 @@ class _MusicHubPanelState extends ConsumerState<_MusicHubPanel> {
       if (widget.pageContext.mounted) {
         widget.pageContext.push(
           '/music/settings',
+          extra: const MusicPageTransitionIntent.forward(),
+        );
+      }
+    });
+  }
+
+  void _openLegalDocuments(BuildContext panelContext) {
+    Navigator.of(panelContext).pop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.pageContext.mounted) {
+        widget.pageContext.push(
+          '/legal',
           extra: const MusicPageTransitionIntent.forward(),
         );
       }

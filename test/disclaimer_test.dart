@@ -25,7 +25,7 @@ void main() {
     );
   }
 
-  testWidgets('首次启动必须确认免责声明并保存结果', (tester) async {
+  testWidgets('首次启动必须分别确认用户协议和隐私政策', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -35,8 +35,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('使用前请先了解'), findsOneWidget);
-    expect(find.text('项目性质'), findsOneWidget);
-    expect(find.text('我已阅读，继续使用'), findsOneWidget);
+    expect(find.text('我已阅读并同意《用户协议》'), findsOneWidget);
+    expect(find.text('我已阅读并同意《隐私政策》'), findsOneWidget);
+    final confirm = tester.widget<FilledButton>(
+      find.byKey(const ValueKey('legal-consent-confirm')),
+    );
+    expect(confirm.onPressed, isNull);
     expect(find.byKey(liquidGlassDisclaimerSurfaceKey), findsOneWidget);
     expect(
       find.descendant(
@@ -46,18 +50,28 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.tap(find.text('我已阅读，继续使用'));
+    await tester.tap(
+      find.byKey(const ValueKey('legal-consent-userAgreement-checkbox')),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('legal-consent-privacyPolicy-checkbox')),
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('legal-consent-confirm')));
     await tester.pumpAndSettle();
 
     expect(find.text('使用前请先了解'), findsNothing);
     expect(find.text('推荐页面'), findsOneWidget);
     expect(preferences.getBool(disclaimerAcceptedPreferenceKey), isTrue);
     expect(preferences.getBool(disclaimerReadPreferenceKey), isTrue);
+    expect(preferences.getBool(userAgreementAcceptedPreferenceKey), isTrue);
+    expect(preferences.getBool(privacyPolicyAcceptedPreferenceKey), isTrue);
     expect(tester.takeException(), isNull);
   });
 
   testWidgets('已经确认后不再自动弹出', (tester) async {
-    await preferences.setBool(disclaimerAcceptedPreferenceKey, true);
+    await preferences.setBool(userAgreementAcceptedPreferenceKey, true);
+    await preferences.setBool(privacyPolicyAcceptedPreferenceKey, true);
 
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
@@ -100,7 +114,8 @@ void main() {
     expect(surface, findsOneWidget);
     expect(tester.getSize(surface).height, lessThan(800));
     expect(find.text('我已阅读并理解'), findsOneWidget);
-    expect(find.text('账号与隐私'), findsOneWidget);
+    expect(find.text('查看《用户协议》'), findsOneWidget);
+    expect(find.text('查看《隐私政策》'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
