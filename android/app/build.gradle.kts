@@ -36,7 +36,6 @@ android {
         create("javaMysqlTest") {
             dimension = "distribution"
             applicationIdSuffix = ".javatest"
-            versionNameSuffix = "-java-test"
         }
     }
 

@@ -16,6 +16,12 @@ void main() {
     final publisher = File(
       'tool/publish_android_java_mysql_test_update.ps1',
     ).readAsStringSync();
+    final settings = File(
+      'lib/features/settings/presentation/settings_page.dart',
+    ).readAsStringSync();
+    final externalInstaller = File(
+      'android/app/src/main/kotlin/com/mesting/mesting_music/MainActivity.kt',
+    ).readAsStringSync();
 
     expect(gradle, contains('create("javaMysqlTest")'));
     expect(gradle, contains('applicationIdSuffix = ".javatest"'));
@@ -29,6 +35,10 @@ void main() {
     expect(publisher, contains("packageName = 'com.mesting.music.javatest'"));
     expect(publisher, contains('JAVA_MYSQL_TEST_ONLY'));
     expect(publisher, isNot(contains("'releases/android'\n")));
+    expect(settings, contains('settings-java-mysql-test-channel'));
+    expect(settings, contains('Java + MySQL 测试版'));
+    expect(externalInstaller, contains('installExternalApk'));
+    expect(externalInstaller, contains('JAVA_MYSQL_TEST_PACKAGE'));
   });
 
   test('Java/MySQL test-channel documentation exposes blocking risks', () {

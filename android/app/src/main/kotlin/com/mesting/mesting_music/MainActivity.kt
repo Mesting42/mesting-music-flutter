@@ -241,6 +241,7 @@ open class MainActivity : AudioServiceActivity() {
                 "canRequestPackageInstalls" -> result.success(canRequestPackageInstalls())
                 "openInstallPermission" -> openInstallPermission(result)
                 "installApk" -> installApk(call, result)
+                "installExternalApk" -> installExternalApk(call, result)
                 else -> result.notImplemented()
             }
         }
@@ -345,6 +346,62 @@ open class MainActivity : AudioServiceActivity() {
         val intent = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
             data = uri
             clipData = ClipData.newRawUri("Mesting 音乐更新", uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        runCatching { startActivity(intent) }
+            .onSuccess { result.success(null) }
+            .onFailure {
+                result.error("installer_unavailable", "系统安装程序不可用", null)
+            }
+    }
+
+    private fun installExternalApk(call: MethodCall, result: MethodChannel.Result) {
+        val expectedPackageName = call.argument<String>("expectedPackageName")
+        if (expectedPackageName != JAVA_MYSQL_TEST_PACKAGE) {
+            result.error("invalid_package", "测试安装包标识无效", null)
+            return
+        }
+        val requestedPath = call.argument<String>("path")
+        if (requestedPath.isNullOrBlank()) {
+            result.error("invalid_path", "安装包路径无效", null)
+            return
+        }
+        val file = runCatching { File(requestedPath).canonicalFile }.getOrNull()
+        val allowedRoots = listOf(cacheDir, filesDir).mapNotNull { root ->
+            runCatching { File(root, "app_updates").canonicalFile }.getOrNull()
+        }
+        val inAllowedRoot = file != null && allowedRoots.any { root ->
+            file.path.startsWith("${root.path}${File.separator}")
+        }
+        if (
+            file == null ||
+            !inAllowedRoot ||
+            !file.isFile ||
+            file.extension.lowercase() != "apk" ||
+            file.length() <= 0 ||
+            file.length() > MAX_UPDATE_APK_BYTES
+        ) {
+            result.error("invalid_path", "安装包路径不安全", null)
+            return
+        }
+        val archiveInfo = archivePackageInfo(file)
+        if (archiveInfo == null || archiveInfo.packageName != expectedPackageName) {
+            result.error("apk_package_mismatch", "测试安装包标识不匹配", null)
+            return
+        }
+        if (!canRequestPackageInstalls()) {
+            result.error("install_permission_required", "尚未允许安装此来源的应用", null)
+            return
+        }
+        val uri = runCatching {
+            FileProvider.getUriForFile(this, "$packageName.update_files", file)
+        }.getOrElse {
+            result.error("invalid_path", "无法安全共享安装包", null)
+            return
+        }
+        val intent = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
+            data = uri
+            clipData = ClipData.newRawUri("Java + MySQL 测试版", uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         runCatching { startActivity(intent) }
@@ -1013,6 +1070,7 @@ open class MainActivity : AudioServiceActivity() {
         private const val SHARE_CHANNEL = "com.mesting.music/share"
         private const val MEDIA_LIBRARY_CHANNEL = "com.mesting.music/media_library"
         private const val APP_UPDATE_CHANNEL = "com.mesting.music/app_update"
+        private const val JAVA_MYSQL_TEST_PACKAGE = "com.mesting.music.javatest"
         private const val SOCIAL_NOTIFICATION_CHANNEL = "com.mesting.music.social"
         private const val NOTIFICATION_REQUEST_CODE = 7102
         private const val IMAGE_SAVE_PERMISSION_REQUEST_CODE = 7103

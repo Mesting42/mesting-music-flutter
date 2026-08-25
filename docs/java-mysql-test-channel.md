@@ -4,11 +4,11 @@
 
 | 通道 | 包名 | 更新清单 | 面向对象 |
 | --- | --- | --- | --- |
-| 正式稳定版 | `com.mesting.music` | `releases/android/latest.json` | 已发布的稳定用户 |
+| 正式稳定版 `1.0.37+40` | `com.mesting.music` | `releases/android/latest.json` | 已发布的稳定用户 |
 | Java + MySQL 测试版 | `com.mesting.music.javatest` | `releases/android/java-mysql-test/latest.json` | 主动安装测试包的测试者 |
 | UI 实验 Beta | `com.mesting.music.beta` | `releases/android/beta/latest.json` | UI/头像实验测试 |
 
-Java + MySQL 测试版使用独立 Android 包名，因此可与稳定版和 Beta 同时安装。它绝不写入或读取稳定版的 `releases/android/latest.json`。
+Java + MySQL 测试版使用独立 Android 包名，因此可与稳定版和 Beta 同时安装。稳定版“设置”中提供明确标注风险的下载入口；它绝不写入或读取稳定版的 `releases/android/latest.json`。
 
 ## 构建与发布
 

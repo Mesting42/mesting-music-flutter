@@ -7,6 +7,7 @@ import '../../auth/domain/auth_models.dart';
 import '../../app_update/app_update_providers.dart';
 import '../../app_update/domain/app_update_models.dart';
 import '../../app_update/presentation/app_update_sheet.dart';
+import '../../app_update/presentation/java_mysql_test_channel_sheet.dart';
 import '../../themes/music_theme_tokens.dart';
 import '../../themes/theme_gallery_page.dart';
 import '../../../shared/widgets/mesting_loading_indicator.dart';
@@ -87,17 +88,30 @@ class SettingsPage extends ConsumerWidget {
               const SizedBox(height: 18),
               const _SettingsSectionLabel('应用'),
               _SettingsSurface(
-                child: _SettingsTile(
-                  key: const ValueKey('settings-check-update'),
-                  icon: Icons.system_update_rounded,
-                  iconColor: const Color(0xFF4A86D8),
-                  title: '版本更新',
-                  subtitle: _updateSubtitle(appVersion, updateState),
-                  loading: updateState.phase == AppUpdatePhase.checking,
-                  highlighted: updateState.phase == AppUpdatePhase.available,
-                  onTap: updateState.busy
-                      ? null
-                      : () => _checkForUpdates(context, ref),
+                child: Column(
+                  children: [
+                    _SettingsTile(
+                      key: const ValueKey('settings-check-update'),
+                      icon: Icons.system_update_rounded,
+                      iconColor: const Color(0xFF4A86D8),
+                      title: '版本更新',
+                      subtitle: _updateSubtitle(appVersion, updateState),
+                      loading: updateState.phase == AppUpdatePhase.checking,
+                      highlighted: updateState.phase == AppUpdatePhase.available,
+                      onTap: updateState.busy
+                          ? null
+                          : () => _checkForUpdates(context, ref),
+                    ),
+                    const _SettingsDivider(),
+                    _SettingsTile(
+                      key: const ValueKey('settings-java-mysql-test-channel'),
+                      icon: Icons.science_outlined,
+                      iconColor: const Color(0xFFBD7B3F),
+                      title: 'Java + MySQL 测试版',
+                      subtitle: '独立安装 · 不影响稳定版 · 仅限自愿测试',
+                      onTap: () => showJavaMysqlTestChannelSheet(context),
+                    ),
+                  ],
                 ),
               ),
               if (user != null) ...[

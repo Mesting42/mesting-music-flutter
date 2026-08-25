@@ -6,6 +6,10 @@ param(
     [string[]]$ReleaseNotes,
     [Parameter(Mandatory = $true)]
     [string]$InputApkPath,
+    [ValidatePattern('^[0-9]+\.[0-9]+\.[0-9]+$')]
+    [string]$VersionName = '1.0.38',
+    [ValidateRange(1, 2147483647)]
+    [int]$VersionCode = 39,
     [string]$EnvironmentId = 'mesting-d5gm7tuhxacddccfb',
     [string]$HostingDomain = 'mesting-d5gm7tuhxacddccfb-1331507389.tcloudbaseapp.com'
 )
@@ -14,17 +18,6 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $appRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
-$pubspecPath = Join-Path $appRoot 'pubspec.yaml'
-$versionMatch = Select-String `
-    -LiteralPath $pubspecPath `
-    -Pattern '^version:\s*([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+)\s*$'
-
-if ($null -eq $versionMatch -or $versionMatch.Matches.Count -ne 1) {
-    throw 'pubspec.yaml must contain exactly one version: x.y.z+build entry.'
-}
-
-$versionName = $versionMatch.Matches[0].Groups[1].Value
-$versionCode = [int]$versionMatch.Matches[0].Groups[2].Value
 $normalizedNotes = @(
     $ReleaseNotes |
         ForEach-Object { $_.Trim() } |
@@ -42,7 +35,7 @@ if (-not (Test-Path -LiteralPath $apkPath -PathType Leaf)) {
 $apk = Get-Item -LiteralPath $apkPath
 $sha256 = (Get-FileHash -LiteralPath $apk.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
 $remoteDirectory = 'releases/android/java-mysql-test'
-$fileName = "mesting-music-java-mysql-test-$versionName-$versionCode.apk"
+$fileName = "mesting-music-java-mysql-test-$VersionName-$VersionCode.apk"
 $remoteApkPath = "$remoteDirectory/$fileName"
 $apkUrl = "https://$HostingDomain/$remoteApkPath"
 $manifestDirectory = Join-Path $appRoot 'build\app_update\java_mysql_test'
@@ -57,8 +50,8 @@ $requiredWarnings = @(
 )
 $manifest = [ordered]@{
     packageName = 'com.mesting.music.javatest'
-    versionName = $versionName
-    versionCode = $versionCode
+    versionName = $VersionName
+    versionCode = $VersionCode
     minimumVersionCode = 1
     mandatory = $false
     title = 'Java + MySQL 测试版'
@@ -80,14 +73,14 @@ $json = $manifest | ConvertTo-Json -Depth 5
 & tcb hosting deploy $apk.FullName $remoteApkPath -e $EnvironmentId --retry-count 3 --json
 if ($LASTEXITCODE -ne 0) { throw 'Test APK upload to CloudBase static hosting failed.' }
 
-$versionManifestPath = "$remoteDirectory/manifests/$versionCode.json"
+$versionManifestPath = "$remoteDirectory/manifests/$VersionCode.json"
 & tcb hosting deploy $manifestPath $versionManifestPath -e $EnvironmentId --retry-count 3 --json
 if ($LASTEXITCODE -ne 0) { throw 'Test archived manifest upload failed.' }
 
 & tcb hosting deploy $manifestPath "$remoteDirectory/latest.json" -e $EnvironmentId --retry-count 3 --json
 if ($LASTEXITCODE -ne 0) { throw 'Test latest manifest publish failed.' }
 
-Write-Output "Published Java/MySQL test $versionName ($versionCode)"
+Write-Output "Published Java/MySQL test $VersionName ($VersionCode)"
 Write-Output "APK: $apkUrl"
 Write-Output "Manifest: https://$HostingDomain/$remoteDirectory/latest.json"
 Write-Output "SHA-256: $sha256"

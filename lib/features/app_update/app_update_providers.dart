@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import '../../core/persistence/app_preferences.dart';
 import 'data/app_update_platform.dart';
 import 'data/app_update_repository.dart';
+import 'data/java_mysql_test_channel_repository.dart';
 import 'domain/app_update_models.dart';
 
 const _snoozedVersionPreference = 'app_update_snoozed_version';
@@ -29,6 +30,14 @@ final appUpdateRepositoryProvider = Provider<AppUpdateRepository>((ref) {
     platform: ref.watch(appUpdatePlatformProvider),
   );
 });
+
+final javaMysqlTestChannelRepositoryProvider =
+    Provider<JavaMysqlTestChannelRepository>((ref) {
+      return JavaMysqlTestChannelRepository(
+        client: ref.watch(appUpdateHttpClientProvider),
+        downloader: ref.watch(appUpdateRepositoryProvider),
+      );
+    });
 
 final appVersionProvider = FutureProvider<AppVersionInfo>((ref) {
   return ref.watch(appUpdateRepositoryProvider).currentVersion();
