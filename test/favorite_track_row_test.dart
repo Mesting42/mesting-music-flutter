@@ -100,6 +100,28 @@ void main() {
     expect(find.text('01'), findsOneWidget);
     expect(find.text('3:12'), findsOneWidget);
     expect(find.text('4:08'), findsOneWidget);
+    final favoriteListArtwork = tester.widgetList<ArtworkImage>(
+      find.descendant(
+        of: find.byKey(const ValueKey('favorite-track-list')),
+        matching: find.byType(ArtworkImage),
+      ),
+    );
+    final favoriteHeroArtwork = tester.widgetList<ArtworkImage>(
+      find.descendant(
+        of: find.byKey(const ValueKey('favorites-artwork-stack')),
+        matching: find.byType(ArtworkImage),
+      ),
+    );
+    expect(favoriteListArtwork, isNotEmpty);
+    expect(favoriteHeroArtwork, isNotEmpty);
+    expect(
+      favoriteListArtwork.every((artwork) => artwork.retryOnNetworkError),
+      isTrue,
+    );
+    expect(
+      favoriteHeroArtwork.every((artwork) => artwork.retryOnNetworkError),
+      isTrue,
+    );
     expect(find.byType(PlayingEqualizer), findsOneWidget);
     final hero = tester.widget<LiquidGlassSurface>(
       find.byKey(const ValueKey('favorites-collection-hero')),
