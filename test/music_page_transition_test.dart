@@ -194,6 +194,32 @@ void main() {
     }
   });
 
+  test('消息页的提前交接仍保持单层内容', () {
+    for (var step = 0; step <= 100; step += 1) {
+      final progress = step / 100;
+      final outgoing = musicPageLayerOpacity(
+        primaryStatus: AnimationStatus.completed,
+        primaryValue: 1,
+        secondaryStatus: AnimationStatus.forward,
+        secondaryValue: progress,
+        handoffProgress: messagesPageHandoffProgress,
+      );
+      final incoming = musicPageLayerOpacity(
+        primaryStatus: AnimationStatus.forward,
+        primaryValue: progress,
+        secondaryStatus: AnimationStatus.dismissed,
+        secondaryValue: 0,
+        handoffProgress: messagesPageHandoffProgress,
+      );
+      expect(
+        outgoing > 0 && incoming > 0,
+        isFalse,
+        reason: 'progress $progress',
+      );
+      expect(outgoing > 0 ? outgoing : incoming, 1);
+    }
+  });
+
   testWidgets(
     'outgoing page stays opaque before handing off to the next layer',
     (tester) async {

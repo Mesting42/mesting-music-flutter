@@ -253,4 +253,56 @@ void main() {
     expect(find.byKey(const ValueKey('settings-back')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('消息入口在侧栏退出完成后再打开消息页', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const Scaffold(
+            body: SafeArea(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: MusicHubTopBar(title: '发现音乐', subtitle: '探索音乐'),
+              ),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/social/messages',
+          builder: (context, state) =>
+              const Scaffold(body: Center(child: Text('消息页已打开'))),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(
+            const UnconfiguredAuthRepository(),
+          ),
+          sharedPreferencesProvider.overrideWithValue(preferences),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.menu_rounded));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('music-hub-my-messages')));
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(find.text('消息页已打开'), findsNothing);
+
+    await tester.pumpAndSettle();
+    expect(find.text('消息页已打开'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

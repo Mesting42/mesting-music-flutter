@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mesting_music/features/player/presentation/music_navigation.dart';
+import 'package:mesting_music/features/player/presentation/music_page_transition.dart';
 import 'package:mesting_music/features/themes/mesting_palette.dart';
 
 void main() {
@@ -17,6 +18,16 @@ void main() {
       musicBottomNavigationSelectedColorFor(Brightness.dark),
       MestingPalette.heartBright,
     );
+  });
+
+  test('消息页在侧栏关闭后以更早的共享轴接管内容', () {
+    expect(messagesPageTransitionDuration, const Duration(milliseconds: 360));
+    expect(
+      messagesPageReverseTransitionDuration,
+      const Duration(milliseconds: 280),
+    );
+    expect(messagesPageHandoffProgress, lessThan(musicPageHandoffProgress));
+    expect(messagesPageStartScale, lessThan(1));
   });
 
   test('底部导航背景不再绘制粉色椭圆或半圆', () async {

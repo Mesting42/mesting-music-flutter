@@ -9,6 +9,11 @@ const musicPageLayerOpacityFloor = 1.0;
 const musicPageUsesRouteSnapshotting = false;
 const musicPageHorizontalOffset = .045;
 const musicPageMotionCurve = Curves.easeInOutCubic;
+const messagesPageTransitionDuration = Duration(milliseconds: 360);
+const messagesPageReverseTransitionDuration = Duration(milliseconds: 280);
+const messagesPageHandoffProgress = .18;
+const messagesPageHorizontalOffset = .032;
+const messagesPageStartScale = .992;
 const collectionRevealDuration = Duration(milliseconds: 380);
 const collectionRevealReverseDuration = Duration(milliseconds: 340);
 const collectionRevealStartScale = .985;
@@ -57,20 +62,21 @@ bool musicPageLayerIsVisible({
   required double primaryValue,
   required AnimationStatus secondaryStatus,
   required double secondaryValue,
+  double handoffProgress = musicPageHandoffProgress,
 }) {
   if (primaryStatus == AnimationStatus.dismissed) return false;
   if (primaryStatus == AnimationStatus.forward) {
-    return primaryValue >= musicPageHandoffProgress;
+    return primaryValue >= handoffProgress;
   }
   if (primaryStatus == AnimationStatus.reverse) {
-    return primaryValue > 1 - musicPageHandoffProgress;
+    return primaryValue > 1 - handoffProgress;
   }
   if (secondaryStatus == AnimationStatus.dismissed) return true;
   if (secondaryStatus == AnimationStatus.forward) {
-    return secondaryValue < musicPageHandoffProgress;
+    return secondaryValue < handoffProgress;
   }
   if (secondaryStatus == AnimationStatus.reverse) {
-    return secondaryValue <= 1 - musicPageHandoffProgress;
+    return secondaryValue <= 1 - handoffProgress;
   }
   return false;
 }
@@ -80,41 +86,35 @@ double musicPageLayerOpacity({
   required double primaryValue,
   required AnimationStatus secondaryStatus,
   required double secondaryValue,
+  double handoffProgress = musicPageHandoffProgress,
 }) {
   if (primaryStatus == AnimationStatus.dismissed) return 0;
   if (primaryStatus == AnimationStatus.forward) {
-    if (primaryValue < musicPageHandoffProgress) return 0;
-    final progress =
-        ((primaryValue - musicPageHandoffProgress) /
-                (1 - musicPageHandoffProgress))
-            .clamp(0.0, 1.0);
+    if (primaryValue < handoffProgress) return 0;
+    final progress = ((primaryValue - handoffProgress) / (1 - handoffProgress))
+        .clamp(0.0, 1.0);
     return musicPageLayerOpacityFloor +
         (1 - musicPageLayerOpacityFloor) *
             musicPageMotionCurve.transform(progress);
   }
   if (primaryStatus == AnimationStatus.reverse) {
-    if (primaryValue <= 1 - musicPageHandoffProgress) return 0;
-    final progress =
-        ((primaryValue - (1 - musicPageHandoffProgress)) /
-                musicPageHandoffProgress)
-            .clamp(0.0, 1.0);
+    if (primaryValue <= 1 - handoffProgress) return 0;
+    final progress = ((primaryValue - (1 - handoffProgress)) / handoffProgress)
+        .clamp(0.0, 1.0);
     return musicPageLayerOpacityFloor +
         (1 - musicPageLayerOpacityFloor) *
             musicPageMotionCurve.transform(progress);
   }
   if (secondaryStatus == AnimationStatus.dismissed) return 1;
   if (secondaryStatus == AnimationStatus.forward) {
-    if (secondaryValue >= musicPageHandoffProgress) return 0;
-    final progress = (secondaryValue / musicPageHandoffProgress).clamp(
-      0.0,
-      1.0,
-    );
+    if (secondaryValue >= handoffProgress) return 0;
+    final progress = (secondaryValue / handoffProgress).clamp(0.0, 1.0);
     return musicPageLayerOpacityFloor +
         (1 - musicPageLayerOpacityFloor) *
             (1 - musicPageMotionCurve.transform(progress));
   }
   if (secondaryStatus == AnimationStatus.reverse) {
-    final reverseHandoff = 1 - musicPageHandoffProgress;
+    final reverseHandoff = 1 - handoffProgress;
     if (secondaryValue > reverseHandoff) return 0;
     final progress = (1 - secondaryValue / reverseHandoff).clamp(0.0, 1.0);
     return musicPageLayerOpacityFloor +
@@ -137,12 +137,14 @@ class MusicPageSingleLayerHandoff extends StatelessWidget {
     required this.primaryAnimation,
     required this.secondaryAnimation,
     required this.child,
+    this.handoffProgress = musicPageHandoffProgress,
     super.key,
   });
 
   final Animation<double> primaryAnimation;
   final Animation<double> secondaryAnimation;
   final Widget child;
+  final double handoffProgress;
 
   @override
   Widget build(BuildContext context) {
@@ -155,12 +157,14 @@ class MusicPageSingleLayerHandoff extends StatelessWidget {
           primaryValue: primaryAnimation.value,
           secondaryStatus: secondaryAnimation.status,
           secondaryValue: secondaryAnimation.value,
+          handoffProgress: handoffProgress,
         );
         final opacity = musicPageLayerOpacity(
           primaryStatus: primaryAnimation.status,
           primaryValue: primaryAnimation.value,
           secondaryStatus: secondaryAnimation.status,
           secondaryValue: secondaryAnimation.value,
+          handoffProgress: handoffProgress,
         );
         return Offstage(
           key: const ValueKey('music-page-outgoing-layer'),

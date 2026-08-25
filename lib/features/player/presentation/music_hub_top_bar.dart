@@ -419,16 +419,15 @@ class _MusicHubPanelState extends ConsumerState<_MusicHubPanel> {
     });
   }
 
-  void _openMessages(BuildContext panelContext) {
+  Future<void> _openMessages(BuildContext panelContext) async {
+    final panelRoute = ModalRoute.of(panelContext);
     Navigator.of(panelContext).pop();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.pageContext.mounted) {
-        widget.pageContext.push(
-          '/social/messages',
-          extra: const MusicPageTransitionIntent.forward(),
-        );
-      }
-    });
+    await panelRoute?.completed;
+    if (!widget.pageContext.mounted) return;
+    widget.pageContext.push(
+      '/social/messages',
+      extra: const MusicPageTransitionIntent.forward(),
+    );
   }
 }
 

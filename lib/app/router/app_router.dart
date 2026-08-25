@@ -121,6 +121,7 @@ final appRouter = GoRouter(
           path: '/profile/avatar',
           pageBuilder: (context, state) => _AvatarPreviewTransitionPage(
             key: ValueKey(state.uri.toString()),
+            avatarFocused: true,
             child: AuthProtectedPage(
               reason: '登录后才能预览和管理头像。',
               redirect: state.uri.toString(),
@@ -179,7 +180,7 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/social/messages',
-          pageBuilder: (context, state) => _musicSlidePage(
+          pageBuilder: (context, state) => _messagesTransitionPage(
             state: state,
             child: AuthProtectedPage(
               reason: '登录后才能查看好友消息。',
@@ -327,27 +328,69 @@ Page<void> _musicSlidePage({
   );
 }
 
+Page<void> _messagesTransitionPage({
+  required GoRouterState state,
+  required Widget child,
+}) {
+  final intent = state.extra is MusicPageTransitionIntent
+      ? state.extra! as MusicPageTransitionIntent
+      : const MusicPageTransitionIntent.forward();
+  final horizontal = intent.direction == MusicPageTransitionDirection.forward
+      ? messagesPageHorizontalOffset
+      : -messagesPageHorizontalOffset;
+  return _SequencedMusicTransitionPage(
+    key: ValueKey(state.uri.toString()),
+    transitionDuration: messagesPageTransitionDuration,
+    reverseTransitionDuration: messagesPageReverseTransitionDuration,
+    enterOffset: Offset(horizontal, 0),
+    enterScale: messagesPageStartScale,
+    scaleAlignment: Alignment.centerRight,
+    handoffProgress: messagesPageHandoffProgress,
+    child: child,
+  );
+}
+
 class _AvatarPreviewTransitionPage extends Page<void> {
-  const _AvatarPreviewTransitionPage({required this.child, super.key});
+  const _AvatarPreviewTransitionPage({
+    required this.child,
+    this.avatarFocused = false,
+    super.key,
+  });
 
   final Widget child;
+  final bool avatarFocused;
 
   @override
   Route<void> createRoute(BuildContext context) {
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     return PageRouteBuilder<void>(
       settings: this,
       opaque: false,
       allowSnapshotting: false,
-      transitionDuration: const Duration(milliseconds: 360),
-      reverseTransitionDuration: const Duration(milliseconds: 320),
+      transitionDuration: reduceMotion
+          ? Duration.zero
+          : const Duration(milliseconds: 420),
+      reverseTransitionDuration: reduceMotion
+          ? Duration.zero
+          : const Duration(milliseconds: 280),
       pageBuilder: (_, _, _) => child,
       transitionsBuilder: (_, animation, _, child) {
+        if (reduceMotion) return child;
         final opacity = CurvedAnimation(
           parent: animation,
-          curve: const Interval(.06, 1, curve: Curves.easeOutCubic),
-          reverseCurve: Curves.easeInCubic,
+          curve: const Interval(.03, .82, curve: Curves.easeOutCubic),
+          reverseCurve: const Interval(0, .78, curve: Curves.easeInCubic),
         );
-        return FadeTransition(opacity: opacity, child: child);
+        Widget transition = FadeTransition(opacity: opacity, child: child);
+        if (avatarFocused) {
+          transition = ScaleTransition(
+            alignment: Alignment.center,
+            scale: Tween<double>(begin: .975, end: 1).animate(opacity),
+            child: transition,
+          );
+        }
+        return transition;
       },
     );
   }
@@ -374,6 +417,7 @@ class _SequencedMusicTransitionPage extends Page<void> {
     required this.enterOffset,
     this.enterScale = 1,
     this.scaleAlignment = Alignment.center,
+    this.handoffProgress = musicPageHandoffProgress,
     this.transitionDuration = musicPageTransitionDuration,
     this.reverseTransitionDuration = musicPageReverseTransitionDuration,
     super.key,
@@ -383,6 +427,7 @@ class _SequencedMusicTransitionPage extends Page<void> {
   final Offset enterOffset;
   final double enterScale;
   final Alignment scaleAlignment;
+  final double handoffProgress;
   final Duration transitionDuration;
   final Duration reverseTransitionDuration;
 
@@ -426,6 +471,7 @@ class _SequencedMusicTransitionPage extends Page<void> {
         return MusicPageSingleLayerHandoff(
           primaryAnimation: animation,
           secondaryAnimation: secondaryAnimation,
+          handoffProgress: handoffProgress,
           child: RepaintBoundary(
             child: MusicPageTransitionSurface(
               position: position,
