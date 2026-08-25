@@ -63,7 +63,10 @@ class AppUpdateRepository {
     defaultValue:
         'https://mesting-d5gm7tuhxacddccfb-1331507389.tcloudbaseapp.com/releases/android/latest.json',
   );
-  static const expectedPackageName = 'com.mesting.music';
+  static const expectedPackageName = String.fromEnvironment(
+    'APP_UPDATE_PACKAGE_NAME',
+    defaultValue: 'com.mesting.music',
+  );
   static const _maxManifestBytes = 1024 * 1024;
   static const _maxApkBytes = 350 * 1024 * 1024;
   static const _progressFlushBytes = 256 * 1024;

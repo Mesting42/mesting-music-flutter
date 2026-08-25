@@ -1078,7 +1078,6 @@ class _MoodGlyphPainter extends CustomPainter {
     final accentFill = Paint()
       ..color = accent.withValues(alpha: .34)
       ..style = PaintingStyle.fill;
-
     switch (visual) {
       case _MoodVisual.commute:
         _paintMomentumRoute(canvas, line, soft, primaryFill, accentFill);
@@ -1114,7 +1113,6 @@ class _MoodGlyphPainter extends CustomPainter {
         ..style = PaintingStyle.stroke,
     );
     canvas.drawPath(route, line);
-
     canvas.drawCircle(const Offset(10.1, 22.7), 3.2, primaryFill);
     canvas.drawCircle(const Offset(10.1, 22.7), 2.2, line);
     canvas.drawCircle(const Offset(25.2, 23.2), 2.8, accentFill);
@@ -1179,7 +1177,6 @@ class _MoodGlyphPainter extends CustomPainter {
       ..close();
     canvas.drawPath(prism, primaryFill);
     canvas.drawPath(prism, line);
-
     final core = Path()
       ..moveTo(21, 12)
       ..lineTo(29, 21)
@@ -1208,69 +1205,36 @@ class _MoodGlyphPainter extends CustomPainter {
       ..cubicTo(6.5, 24.5, 8.2, 20.2, 12.2, 19.8)
       ..cubicTo(13.2, 13.7, 21.7, 11.8, 26, 16.4)
       ..cubicTo(31.2, 15.1, 35.5, 19, 34.6, 23.8)
-      ..cubicTo(34.1, 27.2, 31.2, 29.2, 27.8, 29.2)
-      ..lineTo(14, 29.2)
-      ..cubicTo(11.8, 29.2, 10.1, 28.5, 9, 27)
+      ..cubicTo(36.5, 27.8, 31.7, 31.2, 27.8, 29.7)
+      ..cubicTo(24.4, 33.3, 17.6, 32.5, 15.4, 28.8)
+      ..cubicTo(12.5, 30.5, 9.5, 29.3, 9, 27)
       ..close();
     canvas.drawPath(cloud, primaryFill);
     canvas.drawPath(cloud, line);
-
-    final orbit = Path()
-      ..moveTo(8.5, 15)
-      ..cubicTo(14, 5.8, 27, 4.2, 34.7, 11.8);
-    canvas.drawPath(orbit, soft);
-    canvas.drawCircle(const Offset(10.2, 13.2), 1.7, accentFill);
-    _paintSparkle(canvas, const Offset(30.7, 9.5), 3.2, line);
-    _paintSparkle(canvas, const Offset(35.5, 17), 1.55, soft);
+    canvas.drawArc(
+      const Rect.fromLTWH(17, 8, 11.5, 11.5),
+      .4,
+      4.9,
+      false,
+      soft,
+    );
+    canvas.drawCircle(const Offset(28.8, 9.8), 1.25, accentFill);
     canvas.drawCircle(
-      const Offset(20.5, 7.2),
-      1.15,
-      Paint()..color = accent.withValues(alpha: .72),
+      const Offset(33.4, 14.4),
+      .9,
+      Paint()..color = foreground,
     );
-    canvas.drawLine(const Offset(13, 33.5), const Offset(29, 33.5), soft);
-    canvas.drawLine(const Offset(17, 37), const Offset(25, 37), soft);
-  }
-
-  void _paintSparkle(Canvas canvas, Offset center, double radius, Paint paint) {
-    canvas.drawPath(
-      Path()
-        ..moveTo(center.dx, center.dy - radius)
-        ..quadraticBezierTo(
-          center.dx + radius * .28,
-          center.dy - radius * .28,
-          center.dx + radius,
-          center.dy,
-        )
-        ..quadraticBezierTo(
-          center.dx + radius * .28,
-          center.dy + radius * .28,
-          center.dx,
-          center.dy + radius,
-        )
-        ..quadraticBezierTo(
-          center.dx - radius * .28,
-          center.dy + radius * .28,
-          center.dx - radius,
-          center.dy,
-        )
-        ..quadraticBezierTo(
-          center.dx - radius * .28,
-          center.dy - radius * .28,
-          center.dx,
-          center.dy - radius,
-        )
-        ..close(),
-      paint,
-    );
+    canvas.drawLine(const Offset(13.4, 34.3), const Offset(26.8, 34.3), soft);
+    canvas.drawLine(const Offset(17.2, 37.2), const Offset(29, 37.2), soft);
   }
 
   @override
   bool shouldRepaint(covariant _MoodGlyphPainter oldDelegate) =>
-      oldDelegate.visual != visual ||
-      oldDelegate.foreground != foreground ||
-      oldDelegate.secondary != secondary ||
-      oldDelegate.primary != primary ||
-      oldDelegate.accent != accent;
+      visual != oldDelegate.visual ||
+      foreground != oldDelegate.foreground ||
+      secondary != oldDelegate.secondary ||
+      primary != oldDelegate.primary ||
+      accent != oldDelegate.accent;
 }
 
 class _TrackRail extends StatelessWidget {

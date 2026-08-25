@@ -28,6 +28,18 @@ android {
         versionName = flutter.versionName
     }
 
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("stable") {
+            dimension = "distribution"
+        }
+        create("javaMysqlTest") {
+            dimension = "distribution"
+            applicationIdSuffix = ".javatest"
+            versionNameSuffix = "-java-test"
+        }
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.

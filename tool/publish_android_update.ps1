@@ -46,13 +46,14 @@ try {
         # while excluding emulator-focused x86_64 native libraries.
         & flutter build apk `
             --release `
+            --flavor 'stable' `
             --target-platform 'android-arm,android-arm64'
         if ($LASTEXITCODE -ne 0) {
             throw 'Release APK build failed.'
         }
     }
 
-    $apkPath = Join-Path $appRoot 'build\app\outputs\flutter-apk\app-release.apk'
+    $apkPath = Join-Path $appRoot 'build\app\outputs\flutter-apk\app-stable-release.apk'
     if ($SkipBuild -and $InputApkPath.Trim()) {
         $apkPath = (Resolve-Path -LiteralPath $InputApkPath).Path
     }

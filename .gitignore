@@ -38,35 +38,6 @@ migrate_working_dir/
 test_artifacts/
 assets/design-qa/
 
-# Local Android / signing configuration
-android/local.properties
-android/key.properties
-**/*.keystore
-**/*.jks
-**/*.p12
-**/*.pem
-**/*.key
-
-# Release binaries belong in GitHub Releases, not source control
-*.apk
-*.aab
-*.ipa
-
-# Local environment files
-.env
-.env.*
-!.env.example
-
-# Copyrighted demo media stays local and is not published in the public repo
-/assets/audio/*
-!/assets/audio/.gitkeep
-/assets/lyrics/*
-!/assets/lyrics/.gitkeep
-/assets/images/covers/*
-!/assets/images/covers/.gitkeep
-/assets/images/themes/*
-!/assets/images/themes/.gitkeep
-
 # Symbolication related
 app.*.symbols
 

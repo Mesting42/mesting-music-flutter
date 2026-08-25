@@ -1,93 +1,87 @@
 # Mesting Music
 
-面向 Android 的 Flutter 音乐应用，覆盖在线音乐搜索与播放、全局队列、同步歌词、收藏歌单、播放历史、后台媒体控制、主题换肤、账号与好友互动。
+一款面向 Android 的 Flutter 音乐应用，提供本地与在线音乐浏览、播放控制、歌词、主题换肤，以及好友音乐互动体验。
 
-## 版本状态
+当前源码版本：**1.0.38+39（Java/MySQL 迁移测试版）**  
+公开稳定版本：**1.0.37+38**
 
-当前 `main` 分支对应 **`1.0.38+39` 源码快照**。它是在公开稳定版 `1.0.37+38` 之后继续开发的测试版本，包含 Java/MySQL 账号服务的客户端接入能力。
+从 `1.0.38+39` 起，公开仓库重新建立 `pubspec.yaml`、Git tag 与源码快照之间的可追溯关系。旧 `flutter-music-v1.0.37` 标签保留原发布历史，不伪装成稳定 APK 的逐文件源码快照。
 
-| 引用 | 对应内容 | 状态 |
-| --- | --- | --- |
-| `flutter-music-v1.0.37` | `1.0.37+38` APK 与早期公开开发基线 | APK 已发布；标签中的源码不是该 APK 的逐文件快照 |
-| `flutter-music-v1.0.38-source` | `1.0.38+39` Flutter 客户端源码 | 当前可审查源码；测试版本，未替代 `1.0.37` 稳定版 |
-| `main` | 最新公开源码 | 当前与 `flutter-music-v1.0.38-source` 对齐 |
+## 下载与安装
 
-旧开发目录此前没有完整 Git 历史，因此无法可靠还原生成 `1.0.37` APK 时的逐文件源码。仓库没有通过改版本号或移动旧标签伪造对应关系，而是从 `1.0.38+39` 起重新建立源码、版本和标签的可追溯关系。详细说明见 [CHANGELOG.md](CHANGELOG.md)。
+发布后可在本仓库的 **Releases** 页面下载 Android APK。下载完成后，在 Android 设备上允许“安装未知来源应用”，再打开 APK 安装即可。
 
-稳定版 APK：[Mesting Music Flutter v1.0.37](https://github.com/Mesting42/mesting-music-flutter/releases/tag/flutter-music-v1.0.37)
+> 安装包仅面向 Android。首次安装或更新前，请确认安装包来自本仓库的 Releases 页面。
 
 ## 主要功能
 
-- 本地与在线音乐搜索、播放、队列和失败回退
-- 列表循环、单曲循环、随机播放及真实播放历史
-- LRC 歌词解析、同步滚动和 Android 悬浮歌词
-- Android 后台播放、通知栏、锁屏和耳机媒体控制
-- 收藏、个人歌单、最近播放、每日足迹和重启恢复
-- Riverpod 状态管理、go_router 路由和 Drift / SQLite 本地持久化
-- 账号注册登录、资料、好友、私信及一起听功能
-- CloudBase 稳定链路与 Java/MySQL 测试链路的构建时切换
-- 多套播放器样式、应用主题和角色化视觉方案
+- 音乐首页、推荐内容、歌单与听歌排行
+- 本地音乐与在线音乐搜索、播放和播放队列
+- 中文、拼音、首拼与近似输入的音乐搜索联想
+- 收藏歌曲、创建和管理个人歌单
+- 歌词同步、后台播放、通知栏与锁屏媒体控制
+- 完整播放页：唱片、进度条、音效化主题与胶囊播放器
+- 多套主题及自定义图片、静音视频背景
+- Android 系统悬浮歌词
+- 好友关系、私信、未读提醒与一起听歌同步
+- 账号注册、邮箱/手机号验证码登录与免责声明确认
 
-## 技术结构
+## 技术栈
 
 | 领域 | 技术 |
 | --- | --- |
 | 客户端 | Dart、Flutter、Material / Cupertino |
-| 状态与路由 | Riverpod、go_router |
-| 音频 | just_audio、audio_service、audio_session |
-| 本地数据 | Drift / SQLite、SharedPreferences、Flutter Secure Storage |
-| 网络 | HTTP、Audius、可配置音乐服务接口 |
-| Android | Kotlin / Java、MediaSession、前台服务、通知与悬浮窗 |
+| Android | Gradle、Kotlin/Java Android 运行环境 |
+| 状态与路由 | Riverpod、GoRouter |
+| 音频与媒体 | just_audio、audio_service、audio_session |
+| 本地数据 | Drift (SQLite)、SharedPreferences、Flutter Secure Storage |
+| 网络与搜索 | HTTP、Audius 接口、拼音检索 |
+| 云端能力 | Tencent CloudBase、Node.js / JavaScript 云函数 |
 
-## 本地运行
+## 从源码构建
 
-环境要求：Flutter SDK、Android SDK、JDK 17 或 Android Studio 自带 JBR。
+### 环境要求
+
+- Flutter SDK（项目当前使用 Dart `^3.10.7`）
+- Android Studio 与 Android SDK
+- JDK（建议使用 Android Studio 自带 JBR）
+
+### 运行
 
 ```powershell
 flutter pub get
 flutter run
 ```
 
-默认 Debug 构建使用本地预览账号模式。需要联调云端时，通过构建参数注入地址或环境标识，不要把密钥写入仓库：
+### 构建 Android Release APK
 
 ```powershell
-flutter run `
-  --dart-define=AUTH_API_BASE_URL=https://api.example.com `
-  --dart-define=CLOUDBASE_ENV_ID=your-environment-id
+flutter build apk --release --target-platform android-arm,android-arm64
 ```
 
-## 验证
+输出文件：
 
-```powershell
-dart analyze lib test
-flutter test
-flutter build bundle --debug
+```text
+build/app/outputs/flutter-apk/app-release.apk
 ```
 
-`flutter build bundle` 用于验证 Dart 与资源编译，不生成 APK/AAB。正式发布前还需要配置自己的 Android 签名，不能使用示例或 Debug 签名发布。
-
-## 目录
+## 项目结构
 
 ```text
 lib/
-  app/               # 应用入口与路由
-  core/              # 音频、数据库、安全、网络与持久化
-  features/          # 播放器、曲库、搜索、账号、社交等业务模块
-  shared/            # 公共模型、组件与工具
-android/             # Android 原生工程与媒体服务配置
-assets/              # 运行所需品牌、主题与歌单视觉资源
-integration_test/    # Android 集成与性能回归
-test/                # Dart / Flutter 单元与组件测试
-tool/                # 构建和发布辅助脚本
+  features/       # 音乐、搜索、播放器、社交、账号等功能模块
+  core/           # 主题、网络、基础设施与通用能力
+assets/           # 品牌、主题、歌单与播放器视觉资源
+android/          # Android 原生工程配置
+tool/             # 发布与维护脚本
 ```
 
-## 资源与后端边界
+## 隐私与网络说明
 
-- 仓库不包含本地歌曲、歌词、签名文件、密码、JWT 密钥或云端管理凭据。
-- 部分角色主题、封面和品牌名称可能涉及第三方权利，仅用于个人学习与作品展示，不随源码授予复用或商业分发许可。
-- Java 21 / Spring Boot / MySQL 服务端目前在独立迁移工程中维护，本仓库公开的是 Flutter 客户端及其接口适配代码。
-- 生产稳定版仍为 `1.0.37+38`；`1.0.38+39` 是用于验证 Java/MySQL 迁移的测试源码。
+- 在线音乐、搜索与社交功能需要网络连接。
+- 登录、好友和一起听功能依赖云端服务。
+- 应用仅会在功能需要时请求相应权限；系统悬浮歌词首次开启时，Android 会请求“显示在其他应用上层”权限。
 
-## 开发方式
+## 开源说明
 
-项目由个人主导并使用 Codex、Claude、Cursor 等 AI 编程工具辅助需求拆解、代码实现、排错和测试。功能规则、集成验证、真机回归、版本发布与最终取舍由项目作者负责。
+请在使用、分发或二次开发前确认音乐内容、封面、歌词和第三方接口的授权范围。项目中的 `reference-vue/` 仅作为只读参考，不是应用运行依赖。
