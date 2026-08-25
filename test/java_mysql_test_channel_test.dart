@@ -26,6 +26,7 @@ void main() {
     expect(gradle, contains('create("javaMysqlTest")'));
     expect(gradle, contains('applicationIdSuffix = ".javatest"'));
     expect(manifest, contains('android:label="@string/app_name"'));
+    expect(manifest, isNot(contains('android:label="Mesting 音乐"')));
     expect(testLabel, contains('Mesting 音乐 Java + MySQL 测试版'));
     expect(builder, contains("--flavor 'javaMysqlTest'"));
     expect(builder, contains('--debug'));
