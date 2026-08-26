@@ -41,7 +41,7 @@ void main() {
     );
   }
 
-  testWidgets('左侧菜单提供设置与免责声明入口', (tester) async {
+  testWidgets('左侧菜单提供设置与法律文档入口', (tester) async {
     tester.view.physicalSize = const Size(360, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -57,6 +57,7 @@ void main() {
     expect(find.text('播放列表'), findsNothing);
     expect(find.text('搜索音乐'), findsNothing);
     expect(find.text('设置'), findsOneWidget);
+    expect(find.text('用户协议与隐私政策'), findsOneWidget);
     expect(find.text('免责声明'), findsOneWidget);
     expect(find.text('注册 / 登录'), findsNothing);
     expect(find.textContaining('已统一放在“设置”'), findsOneWidget);
