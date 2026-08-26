@@ -42,6 +42,16 @@ void main() {
     expect(find.byIcon(Icons.favorite_rounded), findsNothing);
     expect(find.byIcon(Icons.favorite_border_rounded), findsNothing);
     expect(find.byIcon(Icons.add_rounded), findsOneWidget);
+    final addButton = find.byKey(
+      const ValueKey('favorite-track-add-test_track_one'),
+    );
+    expect(tester.getSize(addButton), const Size.square(48));
+    expect(
+      tester.getSize(
+        find.descendant(of: addButton, matching: find.byType(IconButton)),
+      ),
+      const Size.square(36),
+    );
 
     await tester.tap(find.bySemanticsLabel('将Test Track One添加至播放列表'));
     await tester.pump();

@@ -36,6 +36,9 @@ const double favoriteArtworkDecodeWidth = 84;
 const double favoriteArtworkSwipeDistanceThreshold = 28;
 const double favoriteArtworkSwipeVelocityThreshold = 420;
 const Duration favoriteArtworkSwitchDuration = Duration(milliseconds: 320);
+const double _songAddButtonTapTargetSize = 48;
+const double _dailySongAddButtonVisualSize = 44;
+const double _favoriteSongAddButtonVisualSize = 36;
 
 Color favoriteCollectionAccentFor(Brightness brightness) =>
     brightness == Brightness.dark
@@ -767,25 +770,71 @@ class FavoriteTrackRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                Semantics(
-                  container: true,
-                  button: true,
-                  label: '将${track.title}添加至播放列表',
-                  child: ExcludeSemantics(
-                    child: SizedBox.square(
-                      dimension: 40,
-                      child: IconButton(
-                        onPressed: onAdd,
-                        icon: const Icon(Icons.add_rounded),
-                        color: tokens.textSecondary,
-                        iconSize: 21,
-                        padding: EdgeInsets.zero,
-                        visualDensity: VisualDensity.compact,
-                      ),
+                _QueueAddButton(
+                  key: ValueKey('favorite-track-add-${track.id}'),
+                  semanticLabel: '将${track.title}添加至播放列表',
+                  onPressed: onAdd,
+                  foregroundColor: tokens.textSecondary,
+                  visualSize: _favoriteSongAddButtonVisualSize,
+                  iconSize: 19,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QueueAddButton extends StatelessWidget {
+  const _QueueAddButton({
+    required this.semanticLabel,
+    required this.onPressed,
+    required this.foregroundColor,
+    required this.visualSize,
+    required this.iconSize,
+    super.key,
+  });
+
+  final String semanticLabel;
+  final VoidCallback onPressed;
+  final Color foregroundColor;
+  final double visualSize;
+  final double iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      button: true,
+      label: semanticLabel,
+      child: ExcludeSemantics(
+        child: SizedBox.square(
+          dimension: _songAddButtonTapTargetSize,
+          child: Material(
+            color: Colors.transparent,
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onPressed,
+              customBorder: const CircleBorder(),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: IgnorePointer(
+                  child: IconButton(
+                    onPressed: onPressed,
+                    icon: Icon(Icons.add_rounded, size: iconSize),
+                    color: foregroundColor,
+                    padding: EdgeInsets.zero,
+                    style: IconButton.styleFrom(
+                      minimumSize: Size.square(visualSize),
+                      maximumSize: Size.square(visualSize),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -1279,6 +1328,7 @@ class _DailyTrackRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final borderRadius = BorderRadius.circular(18);
+    final tokens = context.musicThemeTokens;
     return _GlassSurface(
       radius: 18,
       child: Material(
@@ -1343,13 +1393,13 @@ class _DailyTrackRow extends StatelessWidget {
                     ],
                   ),
                 ),
-                Semantics(
-                  button: true,
-                  label: '将${track.title}加入播放列表',
-                  child: IconButton(
-                    onPressed: onAdd,
-                    icon: const Icon(Icons.add_rounded, size: 20),
-                  ),
+                _QueueAddButton(
+                  key: ValueKey('daily-track-add-$index'),
+                  semanticLabel: '将${track.title}加入播放列表',
+                  onPressed: onAdd,
+                  foregroundColor: tokens.textSecondary,
+                  visualSize: _dailySongAddButtonVisualSize,
+                  iconSize: 20,
                 ),
               ],
             ),

@@ -81,6 +81,14 @@ void main() {
     final firstTrack = find.byKey(const ValueKey('daily-track-0'));
     final firstTrackInkWell = tester.widget<InkWell>(firstTrack);
     expect(firstTrackInkWell.borderRadius, BorderRadius.circular(18));
+    final addButton = find.byKey(const ValueKey('daily-track-add-0'));
+    expect(tester.getSize(addButton), const Size.square(48));
+    expect(
+      tester.getSize(
+        find.descendant(of: addButton, matching: find.byType(IconButton)),
+      ),
+      const Size.square(44),
+    );
     final firstTrackMaterial = tester.widget<Material>(
       find.byKey(const ValueKey('daily-track-material-0')),
     );
