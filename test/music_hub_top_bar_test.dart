@@ -143,17 +143,13 @@ void main() {
     expect(fillDecoration.gradient, isNotNull);
     expect(fillDecoration.color, isNull);
 
-    final transitionFinder = find.byKey(
-      const ValueKey('disclaimer-close-action-transition'),
-    );
-    expect(tester.widget<AnimatedScale>(transitionFinder).scale, 1);
     await tester.tap(find.byKey(const ValueKey('disclaimer-close-action')));
     await tester.pump();
 
-    expect(tester.widget<AnimatedScale>(transitionFinder).scale, lessThan(1));
     expect(find.text('项目性质'), findsOneWidget);
 
-    await tester.pump(const Duration(milliseconds: 140));
+    await tester.pump(const Duration(milliseconds: 160));
+    expect(find.text('项目性质'), findsOneWidget);
     await tester.pumpAndSettle();
     expect(find.text('项目性质'), findsNothing);
     expect(tester.takeException(), isNull);

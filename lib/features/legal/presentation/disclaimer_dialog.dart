@@ -70,6 +70,8 @@ class _FirstLaunchDisclaimerCoordinatorState
           if (_visible)
             Positioned.fill(
               child: _DisclaimerOverlay(
+                animation: const AlwaysStoppedAnimation<double>(1),
+                reduceMotion: true,
                 requiredAcceptance: true,
                 onResult: _accept,
               ),
@@ -88,37 +90,23 @@ class _FirstLaunchDisclaimerCoordinatorState
 }
 
 Future<void> showDisclaimerDialog(BuildContext context) {
+  final reduceMotion = MediaQuery.disableAnimationsOf(context);
   return showGeneralDialog<void>(
     context: context,
     useRootNavigator: true,
     barrierDismissible: true,
     barrierLabel: '关闭免责声明',
     barrierColor: Colors.transparent,
-    transitionDuration: const Duration(milliseconds: 280),
+    transitionDuration: reduceMotion
+        ? Duration.zero
+        : const Duration(milliseconds: 360),
     pageBuilder: (context, animation, secondaryAnimation) => _DisclaimerOverlay(
+      animation: animation,
+      reduceMotion: reduceMotion,
       requiredAcceptance: false,
       onResult: (_) => Navigator.of(context).pop(),
     ),
-    transitionBuilder: (context, animation, secondaryAnimation, child) {
-      final curved = CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOutCubic,
-        reverseCurve: Curves.easeInCubic,
-      );
-      return FadeTransition(
-        opacity: curved,
-        child: SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0, .035),
-            end: Offset.zero,
-          ).animate(curved),
-          child: ScaleTransition(
-            scale: Tween(begin: .94, end: 1.0).animate(curved),
-            child: child,
-          ),
-        ),
-      );
-    },
+    transitionBuilder: (context, animation, secondaryAnimation, child) => child,
   );
 }
 
@@ -299,21 +287,46 @@ class _TimedDisclaimerSheetState extends State<_TimedDisclaimerSheet> {
 
 class _DisclaimerOverlay extends StatelessWidget {
   const _DisclaimerOverlay({
+    required this.animation,
+    required this.reduceMotion,
     required this.requiredAcceptance,
     required this.onResult,
   });
 
+  final Animation<double> animation;
+  final bool reduceMotion;
   final bool requiredAcceptance;
   final ValueChanged<bool> onResult;
 
   @override
   Widget build(BuildContext context) {
     final viewPadding = MediaQuery.viewPaddingOf(context);
+    final scrimMotion = reduceMotion
+        ? const AlwaysStoppedAnimation<double>(1)
+        : CurvedAnimation(
+            parent: animation,
+            curve: const Interval(0, .55, curve: Curves.easeOutCubic),
+            reverseCurve: const Interval(.3, 1, curve: Curves.easeInCubic),
+          );
+    final cardMotion = reduceMotion
+        ? const AlwaysStoppedAnimation<double>(1)
+        : CurvedAnimation(
+            parent: animation,
+            curve: const Interval(.05, 1, curve: Curves.easeOutCubic),
+            reverseCurve: const Interval(.3, 1, curve: Curves.easeInCubic),
+          );
+
     return Material(
       color: Colors.transparent,
       child: Stack(
         children: [
-          Positioned.fill(child: ColoredBox(color: const Color(0x730A0D14))),
+          Positioned.fill(
+            child: FadeTransition(
+              key: const ValueKey('disclaimer-scrim-transition'),
+              opacity: scrimMotion,
+              child: const ColoredBox(color: Color(0x730A0D14)),
+            ),
+          ),
           SafeArea(
             minimum: EdgeInsets.fromLTRB(
               14,
@@ -322,12 +335,28 @@ class _DisclaimerOverlay extends StatelessWidget {
               viewPadding.bottom > 0 ? 8 : 14,
             ),
             child: Center(
-              child: requiredAcceptance
-                  ? _RequiredLegalConsentCard(onResult: onResult)
-                  : _DisclaimerCard(
-                      requiredAcceptance: false,
-                      onResult: onResult,
-                    ),
+              child: FadeTransition(
+                key: const ValueKey('disclaimer-card-transition'),
+                opacity: cardMotion,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, .018),
+                    end: Offset.zero,
+                  ).animate(cardMotion),
+                  child: ScaleTransition(
+                    scale: Tween<double>(
+                      begin: .985,
+                      end: 1,
+                    ).animate(cardMotion),
+                    child: requiredAcceptance
+                        ? _RequiredLegalConsentCard(onResult: onResult)
+                        : _DisclaimerCard(
+                            requiredAcceptance: false,
+                            onResult: onResult,
+                          ),
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -933,7 +962,7 @@ class _DisclaimerItem extends StatelessWidget {
   }
 }
 
-class _DisclaimerAction extends StatefulWidget {
+class _DisclaimerAction extends StatelessWidget {
   const _DisclaimerAction({
     required this.label,
     required this.icon,
@@ -947,101 +976,70 @@ class _DisclaimerAction extends StatefulWidget {
   final bool liquidGlass;
 
   @override
-  State<_DisclaimerAction> createState() => _DisclaimerActionState();
-}
-
-class _DisclaimerActionState extends State<_DisclaimerAction> {
-  bool _closing = false;
-
-  Future<void> _handleTap() async {
-    if (_closing) return;
-    if (!widget.liquidGlass) {
-      widget.onTap();
-      return;
-    }
-    setState(() => _closing = true);
-    await Future<void>.delayed(const Duration(milliseconds: 130));
-    if (mounted) widget.onTap();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    if (widget.liquidGlass) {
+    if (liquidGlass) {
       final tokens = context.musicThemeTokens;
       final radius = BorderRadius.circular(17);
       final foreground = isDark
           ? const Color(0xFFF7F9FC)
           : const Color(0xFF34435D);
-      return AnimatedScale(
-        key: const ValueKey('disclaimer-close-action-transition'),
-        scale: _closing ? .965 : 1,
-        duration: const Duration(milliseconds: 130),
-        curve: Curves.easeOutCubic,
-        child: AnimatedOpacity(
-          opacity: _closing ? .72 : 1,
-          duration: const Duration(milliseconds: 130),
-          curve: Curves.easeOutCubic,
-          child: RepaintBoundary(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: radius,
-                boxShadow: [
-                  BoxShadow(
-                    color: tokens.shadow.withValues(alpha: isDark ? .76 : .6),
-                    blurRadius: 20,
-                    spreadRadius: -5,
-                    offset: const Offset(0, 8),
-                  ),
-                  BoxShadow(
-                    color: const Color(
-                      0xFF6072A3,
-                    ).withValues(alpha: isDark ? .13 : .18),
-                    blurRadius: 26,
-                    spreadRadius: -10,
-                  ),
-                ],
+      return RepaintBoundary(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            boxShadow: [
+              BoxShadow(
+                color: tokens.shadow.withValues(alpha: isDark ? .76 : .6),
+                blurRadius: 20,
+                spreadRadius: -5,
+                offset: const Offset(0, 8),
               ),
-              child: ClipRRect(
-                borderRadius: radius,
-                child: BackdropFilter(
-                  key: liquidGlassDisclaimerCloseActionKey,
-                  filter: ImageFilter.blur(
-                    sigmaX: 16,
-                    sigmaY: 16,
-                    tileMode: TileMode.decal,
+              BoxShadow(
+                color: const Color(
+                  0xFF6072A3,
+                ).withValues(alpha: isDark ? .13 : .18),
+                blurRadius: 26,
+                spreadRadius: -10,
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: radius,
+            child: BackdropFilter(
+              key: liquidGlassDisclaimerCloseActionKey,
+              filter: ImageFilter.blur(
+                sigmaX: 16,
+                sigmaY: 16,
+                tileMode: TileMode.decal,
+              ),
+              child: DecoratedBox(
+                key: const ValueKey('disclaimer-close-action-glass-fill'),
+                decoration: BoxDecoration(
+                  borderRadius: radius,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: isDark ? .22 : .62),
+                    width: .9,
                   ),
-                  child: DecoratedBox(
-                    key: const ValueKey('disclaimer-close-action-glass-fill'),
-                    decoration: BoxDecoration(
-                      borderRadius: radius,
-                      border: Border.all(
-                        color: Colors.white.withValues(
-                          alpha: isDark ? .22 : .62,
-                        ),
-                        width: .9,
-                      ),
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: isDark
-                            ? const [Color(0xC4475268), Color(0xB828303F)]
-                            : const [Color(0xD9E2E8F5), Color(0xC8CCD7EA)],
-                      ),
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        key: const ValueKey('disclaimer-close-action'),
-                        onTap: _handleTap,
-                        child: SizedBox(
-                          height: 50,
-                          child: _DisclaimerActionContent(
-                            label: widget.label,
-                            icon: widget.icon,
-                            color: foreground,
-                          ),
-                        ),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: isDark
+                        ? const [Color(0xC4475268), Color(0xB828303F)]
+                        : const [Color(0xD9E2E8F5), Color(0xC8CCD7EA)],
+                  ),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    key: const ValueKey('disclaimer-close-action'),
+                    onTap: onTap,
+                    child: SizedBox(
+                      height: 50,
+                      child: _DisclaimerActionContent(
+                        label: label,
+                        icon: icon,
+                        color: foreground,
                       ),
                     ),
                   ),
@@ -1064,7 +1062,7 @@ class _DisclaimerActionState extends State<_DisclaimerAction> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: _handleTap,
+        onTap: onTap,
         borderRadius: BorderRadius.circular(17),
         child: Ink(
           height: 50,
@@ -1081,8 +1079,8 @@ class _DisclaimerActionState extends State<_DisclaimerAction> {
             ],
           ),
           child: _DisclaimerActionContent(
-            label: widget.label,
-            icon: widget.icon,
+            label: label,
+            icon: icon,
             color: contentColor,
           ),
         ),
