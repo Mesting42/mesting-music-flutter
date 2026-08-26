@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.37+44 - stable CloudBase release
+
+- 正式稳定包 `com.mesting.music` 发布到独立稳定更新清单 `releases/android/latest.json`。
+- 修复部分在线歌曲在缓冲完成后仍显示播放中、却没有声音和播放进度的问题；失败时会直连重试并切换可用歌曲。
+- 优化好友消息的语音播放、历史消息进入稳定性、歌曲添加按钮点击范围，以及深色界面的细节表现。
+- Java + MySQL 测试包与 UI Beta 通道保持独立，本次稳定发布没有写入它们的更新清单。
+
+对应源码标签：`flutter-music-v1.0.37-build44`。发布与源码对应关系见 [docs/release-history.md](docs/release-history.md)。
+
 ## 1.0.37+43 - stable CloudBase release
 
 - 正式稳定包 `com.mesting.music` 已发布到独立稳定更新清单 `releases/android/latest.json`。
