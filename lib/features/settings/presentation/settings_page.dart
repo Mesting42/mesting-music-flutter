@@ -197,14 +197,7 @@ class SettingsPage extends ConsumerWidget {
     }
     final state = ref.read(appUpdateControllerProvider);
     if (state.phase == AppUpdatePhase.upToDate) {
-      showMusicNotice(
-        context,
-        icon: Icons.check_rounded,
-        title: '已是最新版本',
-        message: state.currentVersion == null
-            ? ''
-            : '当前 v${state.currentVersion!.versionName}',
-      );
+      showMusicNotice(context, icon: null, title: '已是最新版本', message: '');
       return;
     }
     showMusicNotice(

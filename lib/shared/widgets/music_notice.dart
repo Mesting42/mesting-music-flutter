@@ -10,7 +10,7 @@ const double musicNoticeBottomClearance = 144;
 
 void showMusicNotice(
   BuildContext context, {
-  required IconData icon,
+  required IconData? icon,
   required String title,
   required String message,
 }) {
@@ -46,7 +46,7 @@ class _MusicNoticeOverlay extends StatefulWidget {
     required this.onDismissed,
   });
 
-  final IconData icon;
+  final IconData? icon;
   final String title;
   final String message;
   final double bottomInset;
@@ -141,21 +141,25 @@ class _MusicNoticeOverlayState extends State<_MusicNoticeOverlay>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Container(
-                            width: 26,
-                            height: 26,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: success ? const Color(0xFF55A07D) : accent,
-                              shape: BoxShape.circle,
+                          if (widget.icon != null) ...[
+                            Container(
+                              width: 26,
+                              height: 26,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: success
+                                    ? const Color(0xFF55A07D)
+                                    : accent,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                widget.icon,
+                                color: Colors.white,
+                                size: 16,
+                              ),
                             ),
-                            child: Icon(
-                              widget.icon,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ),
-                          const SizedBox(width: 9),
+                            const SizedBox(width: 9),
+                          ],
                           Flexible(
                             child: widget.message.trim().isEmpty
                                 ? Text(

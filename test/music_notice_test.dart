@@ -38,6 +38,33 @@ void main() {
     expect(find.text('随机播放'), findsNothing);
   });
 
+  testWidgets('纯文字版本状态不显示图标或副文案', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => showMusicNotice(
+                context,
+                icon: null,
+                title: '已是最新版本',
+                message: '',
+              ),
+              child: const Text('检查更新'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('检查更新'));
+    await tester.pump();
+
+    expect(find.text('已是最新版本'), findsOneWidget);
+    expect(find.byIcon(Icons.check_rounded), findsNothing);
+    expect(find.textContaining('当前 v'), findsNothing);
+  });
+
   testWidgets('已添加沿用原项目的底部紧凑胶囊样式', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
