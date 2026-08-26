@@ -9,7 +9,7 @@ Java + MySQL 独立测试通道：**1.0.38+40**（不替代正式稳定版）
 
 ## 下载与安装
 
-发布后可在本仓库的 **Releases** 页面下载 Android APK。下载完成后，在 Android 设备上允许“安装未知来源应用”，再打开 APK 安装即可。
+发布后可在本仓库的 **Releases** 页面下载 Android APK。所有现存稳定、Java/MySQL 测试和 UI Beta 历史版本均已在 [APK 下载中心](docs/apk-downloads.md) 分开列出。下载完成后，在 Android 设备上允许“安装未知来源应用”，再打开 APK 安装即可。
 
 > 安装包仅面向 Android。首次安装或更新前，请确认安装包来自本仓库的 Releases 页面。
 
