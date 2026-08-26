@@ -57,6 +57,7 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
     final busy =
         state?.processingState == AudioProcessingState.loading ||
         state?.processingState == AudioProcessingState.buffering;
+    final unavailable = state?.processingState == AudioProcessingState.error;
     final maxMilliseconds = duration.inMilliseconds <= 0
         ? 1.0
         : duration.inMilliseconds.toDouble();
@@ -261,6 +262,18 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
                       ),
                     ),
                   )
+                else if (unavailable)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '音源不可用',
+                      key: const ValueKey('playback-source-unavailable-label'),
+                      style: _metaStyle.copyWith(
+                        color: styleAccent.withValues(alpha: .9),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  )
                 else if (widget.showElapsed)
                   Align(
                     alignment: Alignment.centerLeft,
@@ -273,7 +286,7 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: Text(
-                    busy && duration == Duration.zero
+                    (busy || unavailable) && duration == Duration.zero
                         ? '--:--'
                         : formatDuration(duration),
                     style: _metaStyle,

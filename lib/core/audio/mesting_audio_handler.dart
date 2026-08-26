@@ -14,6 +14,7 @@ import '../../shared/models/track.dart';
 import 'pause_fade_controller.dart';
 import 'playback_completion_gate.dart';
 import 'playback_mode.dart';
+import 'playback_start_guard.dart';
 import 'queue_engine.dart';
 
 typedef RadioTrackLoader =
@@ -41,20 +42,17 @@ class MestingAudioHandler extends BaseAudioHandler
     _player.playbackEventStream.listen(
       _broadcastState,
       onError: (Object error, StackTrace stackTrace) {
-        playbackState.add(
-          playbackState.value.copyWith(
-            processingState: AudioProcessingState.error,
-            playing: false,
-            errorMessage: '音频播放失败：$error',
+        unawaited(
+          _handlePlaybackFailure(
+            error,
+            stackTrace: stackTrace,
+            origin: 'playback-event',
           ),
         );
-        _consecutiveLoadFailures += 1;
-        if (_consecutiveLoadFailures <= 4) {
-          unawaited(_advancePlayback(forward: true, automatic: true));
-        }
       },
     );
     _player.currentIndexStream.listen(_handleCurrentIndex);
+    _player.positionStream.listen(_handlePosition);
     _player.durationStream.listen(_handleDuration);
     _player.processingStateStream.listen((state) {
       if (state == ProcessingState.completed) {
@@ -109,10 +107,15 @@ class MestingAudioHandler extends BaseAudioHandler
   int _queueLoadEpoch = 0;
   int _userCommandEpoch = 0;
   Timer? _consumptionTimer;
+  Timer? _playbackStartTimer;
   String? _confirmedConsumedMediaId;
+  String? _lastFailedTrackId;
+  int? _lastFailedLoadEpoch;
+  bool _handlingPlaybackFailure = false;
   bool? _lastLoggedPlaying;
   ProcessingState? _lastLoggedProcessingState;
   bool _currentSourceFromCache = false;
+  final Set<String> _directRemoteSourceIds = <String>{};
   RadioTrackLoader? _radioTrackLoader;
   Future<void>? _radioLoadInFlight;
   final Set<String> _autoplaySessionTrackKeys = <String>{};
@@ -126,6 +129,7 @@ class MestingAudioHandler extends BaseAudioHandler
     'com.mesting.music/lyrics_overlay',
   );
   static const _maximumRadioPoolSize = 360;
+  static const _playbackStartGuard = PlaybackStartGuard();
 
   static const notificationToggleFavoriteAction = 'notificationToggleFavorite';
   static const notificationToggleLyricsAction = 'notificationToggleLyrics';
@@ -170,6 +174,7 @@ class MestingAudioHandler extends BaseAudioHandler
 
   @visibleForTesting
   Future<void> debugDispose() async {
+    _cancelPlaybackStartGuard();
     await _pauseFadeController.cancel();
     await _userCommandController.close();
     await _player.dispose();
@@ -220,6 +225,7 @@ class MestingAudioHandler extends BaseAudioHandler
     int? requiredUserCommandEpoch,
   }) async {
     final loadEpoch = ++_queueLoadEpoch;
+    _cancelPlaybackStartGuard();
     for (final track in tracks) {
       _knownTracks[track.id] = track;
     }
@@ -332,14 +338,20 @@ class MestingAudioHandler extends BaseAudioHandler
 
   Future<AudioSource> _audioSourceFor(Track track, MediaItem item) async {
     if (track.isRemote) {
-      final cachingSource = LockCachingAudioSource(
-        Uri.parse(track.audioAsset),
-        tag: item,
-      );
+      final remoteUri = Uri.parse(track.audioAsset);
+      if (_directRemoteSourceIds.contains(track.id)) {
+        _currentSourceFromCache = false;
+        _trace('source-remote id=${track.id} strategy=direct');
+        return AudioSource.uri(remoteUri, tag: item);
+      }
+      final cachingSource = LockCachingAudioSource(remoteUri, tag: item);
       _remoteCachingSources[track.id] = cachingSource;
       final resolved = await cachingSource.resolve();
       _currentSourceFromCache = !identical(resolved, cachingSource);
-      _trace('source-remote id=${track.id} cacheHit=$_currentSourceFromCache');
+      _trace(
+        'source-remote id=${track.id} strategy=cache '
+        'cacheHit=$_currentSourceFromCache',
+      );
       return resolved;
     }
     _currentSourceFromCache = false;
@@ -354,7 +366,6 @@ class MestingAudioHandler extends BaseAudioHandler
     final items = queue.value;
     if (index == null || index < 0 || index >= items.length) return;
     final current = items[index];
-    _consecutiveLoadFailures = 0;
     mediaItem.add(current);
     final currentTrack = trackForId(current.id);
     if (!_historyNavigation &&
@@ -442,6 +453,146 @@ class MestingAudioHandler extends BaseAudioHandler
       return;
     }
     mediaItem.add(current.copyWith(duration: duration));
+  }
+
+  void _handlePosition(Duration position) {
+    if (position <= Duration.zero) return;
+    _cancelPlaybackStartGuard();
+    // Source replacement can update the current index before any bytes have
+    // played. Count a failure as recovered only after real progress arrives.
+    _consecutiveLoadFailures = 0;
+  }
+
+  bool _isNetworkTrack(Track track) {
+    final uri = Uri.tryParse(track.audioAsset);
+    return uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
+  }
+
+  void _cancelPlaybackStartGuard() {
+    _playbackStartTimer?.cancel();
+    _playbackStartTimer = null;
+  }
+
+  void _armPlaybackStartGuard() {
+    _cancelPlaybackStartGuard();
+    final trackId = mediaItem.value?.id;
+    final track = trackId == null ? null : trackForId(trackId);
+    if (trackId == null || track == null || !_isNetworkTrack(track)) return;
+
+    final loadEpoch = _queueLoadEpoch;
+    _playbackStartTimer = Timer(_playbackStartGuard.timeout, () {
+      _playbackStartTimer = null;
+      if (mediaItem.value?.id != trackId || _queueLoadEpoch != loadEpoch) {
+        return;
+      }
+      if (!_playbackStartGuard.shouldReportStalled(
+        isNetworkSource: true,
+        playing: _player.playing,
+        processingState: _player.processingState,
+        position: _player.position,
+      )) {
+        return;
+      }
+      _trace('start-watchdog-stalled id=$trackId');
+      unawaited(
+        _handlePlaybackFailure(
+          StateError('音源未返回可播放的音频数据'),
+          origin: 'start-watchdog',
+          expectedTrackId: trackId,
+          expectedLoadEpoch: loadEpoch,
+        ),
+      );
+    });
+  }
+
+  Future<void> _handlePlaybackFailure(
+    Object error, {
+    StackTrace? stackTrace,
+    required String origin,
+    String? expectedTrackId,
+    int? expectedLoadEpoch,
+  }) async {
+    final failedTrackId = expectedTrackId ?? mediaItem.value?.id;
+    final failureEpoch = expectedLoadEpoch ?? _queueLoadEpoch;
+    if (failedTrackId == null ||
+        (expectedTrackId != null && mediaItem.value?.id != expectedTrackId) ||
+        (expectedLoadEpoch != null && _queueLoadEpoch != expectedLoadEpoch) ||
+        _handlingPlaybackFailure ||
+        (_lastFailedTrackId == failedTrackId &&
+            _lastFailedLoadEpoch == failureEpoch)) {
+      return;
+    }
+
+    _handlingPlaybackFailure = true;
+    _lastFailedTrackId = failedTrackId;
+    _lastFailedLoadEpoch = failureEpoch;
+    try {
+      _cancelPlaybackStartGuard();
+      _completionGate.reset();
+      _resetConsumptionConfirmation();
+      final failedTrack = trackForId(failedTrackId);
+      // The cache proxy improves repeat playback, but a few source hosts do
+      // not cooperate with its HTTP/range requests. Retry the same source once
+      // directly before treating the link itself as unavailable.
+      if (failedTrack != null &&
+          _isNetworkTrack(failedTrack) &&
+          _directRemoteSourceIds.add(failedTrackId)) {
+        _trace('playback-retry-direct id=$failedTrackId origin=$origin');
+        try {
+          final applied = await _loadQueue(_tracks);
+          if (applied) {
+            await setPlaybackMode(_mode);
+            _startPlayer();
+            return;
+          }
+        } on Object catch (retryError, retryStackTrace) {
+          developer.log(
+            'direct-playback-retry-failed',
+            name: 'MestingAudio',
+            error: retryError,
+            stackTrace: retryStackTrace,
+          );
+        }
+      }
+
+      if (mediaItem.value?.id != failedTrackId) return;
+      try {
+        await _player.pause();
+      } on Object {
+        // The terminal error state below is still more useful than leaving the
+        // UI looking as though a zero-length song is currently playing.
+      }
+      developer.log(
+        'playback-failed origin=$origin',
+        name: 'MestingAudio',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      playbackState.add(
+        playbackState.value.copyWith(
+          processingState: AudioProcessingState.error,
+          playing: false,
+          errorMessage: '当前音源不可播放，请切换歌曲后重试',
+        ),
+      );
+      _consecutiveLoadFailures += 1;
+      _trace(
+        'playback-failed id=$failedTrackId origin=$origin '
+        'failures=$_consecutiveLoadFailures',
+      );
+      if (_consecutiveLoadFailures <= 4) {
+        // A broken source must not be repeated forever in single-track mode.
+        unawaited(
+          _advancePlayback(
+            forward: true,
+            automatic: true,
+            bypassSingleRepeat: true,
+          ),
+        );
+      }
+    } finally {
+      _handlingPlaybackFailure = false;
+    }
   }
 
   void _broadcastState(PlaybackEvent event) {
@@ -564,23 +715,30 @@ class MestingAudioHandler extends BaseAudioHandler
     _markUserCommand('play');
     await _ready;
     await _pauseFadeController.cancel();
+    _consecutiveLoadFailures = 0;
     _startPlayer();
   }
 
   void _startPlayer() {
     _trace('command-play id=${mediaItem.value?.id}');
     _completionGate.onPlay(_player.position);
+    final expectedTrackId = mediaItem.value?.id;
+    final expectedLoadEpoch = _queueLoadEpoch;
+    _armPlaybackStartGuard();
     // just_audio deliberately completes play() only when playback completes,
     // pauses, or stops. Awaiting that Future while _advancePlayback owns its
     // command lock prevents every later next/previous request for the entire
     // duration of the newly selected track.
     unawaited(
       _player.play().onError((Object error, StackTrace stackTrace) {
-        developer.log(
-          'command-play-failed',
-          name: 'MestingAudio',
-          error: error,
-          stackTrace: stackTrace,
+        unawaited(
+          _handlePlaybackFailure(
+            error,
+            stackTrace: stackTrace,
+            origin: 'play-command',
+            expectedTrackId: expectedTrackId,
+            expectedLoadEpoch: expectedLoadEpoch,
+          ),
         );
       }),
     );
@@ -590,6 +748,7 @@ class MestingAudioHandler extends BaseAudioHandler
   Future<void> pause() async {
     _markUserCommand('pause');
     await _ready;
+    _cancelPlaybackStartGuard();
     if (!_player.playing || _player.processingState != ProcessingState.ready) {
       await _pauseFadeController.cancel();
       _trace(
@@ -610,6 +769,7 @@ class MestingAudioHandler extends BaseAudioHandler
   Future<void> stop() async {
     _markUserCommand('stop');
     await _ready;
+    _cancelPlaybackStartGuard();
     await _pauseFadeController.cancel();
     _resetConsumptionConfirmation();
     _trace('command-stop id=${mediaItem.value?.id}');
@@ -649,6 +809,7 @@ class MestingAudioHandler extends BaseAudioHandler
   Future<void> _skip({required bool forward}) async {
     _markUserCommand(forward ? 'skipNext' : 'skipPrevious');
     await _ready;
+    _consecutiveLoadFailures = 0;
     await _pauseFadeController.cancel();
     await _advancePlayback(forward: forward);
   }
@@ -660,10 +821,12 @@ class MestingAudioHandler extends BaseAudioHandler
   Future<void> _advancePlayback({
     required bool forward,
     bool automatic = false,
+    bool bypassSingleRepeat = false,
   }) async {
     final request = _PendingAdvanceRequest(
       forward: forward,
       automatic: automatic,
+      bypassSingleRepeat: bypassSingleRepeat,
     );
     if (_completionInFlight) {
       _deferAdvance(request);
@@ -672,7 +835,7 @@ class MestingAudioHandler extends BaseAudioHandler
     _completionInFlight = true;
     var advanced = false;
     try {
-      if (automatic && _mode == PlaybackMode.single) {
+      if (automatic && _mode == PlaybackMode.single && !bypassSingleRepeat) {
         await seek(Duration.zero);
         await play();
         return;
@@ -753,7 +916,11 @@ class MestingAudioHandler extends BaseAudioHandler
     if (pending == null) return;
     _pendingAdvanceRequest = null;
     unawaited(
-      _advancePlayback(forward: pending.forward, automatic: pending.automatic),
+      _advancePlayback(
+        forward: pending.forward,
+        automatic: pending.automatic,
+        bypassSingleRepeat: pending.bypassSingleRepeat,
+      ),
     );
   }
 
@@ -1014,6 +1181,7 @@ class MestingAudioHandler extends BaseAudioHandler
   }) async {
     _markUserCommand('playSingleTrack');
     if (!preservePendingAdvance) _pendingAdvanceRequest = null;
+    if (!preservePendingAdvance) _consecutiveLoadFailures = 0;
     if (_mode == PlaybackMode.random) _rememberAutoplaySelection(track);
     if (playbackContext != null) {
       _replacePlaybackContext(playbackContext);
@@ -1143,6 +1311,7 @@ class MestingAudioHandler extends BaseAudioHandler
     bool autoplay = true,
   }) async {
     _markUserCommand('replaceQueue');
+    _consecutiveLoadFailures = 0;
     if (tracks.isNotEmpty) {
       _replacePlaybackContext(tracks);
     }
@@ -1250,8 +1419,10 @@ class _PendingAdvanceRequest {
   const _PendingAdvanceRequest({
     required this.forward,
     required this.automatic,
+    required this.bypassSingleRepeat,
   });
 
   final bool forward;
   final bool automatic;
+  final bool bypassSingleRepeat;
 }

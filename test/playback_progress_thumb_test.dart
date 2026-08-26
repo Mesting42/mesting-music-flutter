@@ -214,6 +214,48 @@ void main() {
     expect(handler.seeks, isEmpty);
   });
 
+  testWidgets('unavailable media is not presented as a zero-length song', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+    final handler = _RecordingHandler();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(preferences),
+          audioHandlerProvider.overrideWithValue(handler),
+          positionProvider.overrideWith((_) => Stream.value(Duration.zero)),
+          durationProvider.overrideWith((_) => Stream<Duration?>.value(null)),
+          playbackStateProvider.overrideWith(
+            (_) => Stream.value(
+              PlaybackState(
+                processingState: AudioProcessingState.error,
+                errorMessage: '当前音源不可播放，请切换歌曲后重试',
+              ),
+            ),
+          ),
+          playbackModeProvider.overrideWith(
+            (_) => Stream.value(PlaybackMode.list),
+          ),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: PlaybackControls(immersive: true)),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('playback-source-unavailable-label')),
+      findsOneWidget,
+    );
+    expect(find.text('--:--'), findsOneWidget);
+    expect(find.text('正在缓冲'), findsNothing);
+  });
+
   testWidgets(
     'lyrics controls restore elapsed time without changing record view',
     (tester) async {
