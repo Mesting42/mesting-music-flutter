@@ -38,6 +38,12 @@ abstract interface class SocialRepository {
     String? thumbnailUrl,
   });
 
+  /// Replaces a message sent by the current user with a recalled marker.
+  Future<SocialMessage> recallMessage(String uid, String messageId);
+
+  /// Hides a message only from the current user's conversation view.
+  Future<void> deleteMessage(String uid, String messageId);
+
   Future<void> markRead(String uid);
 
   Future<SocialUpload> uploadMedia({

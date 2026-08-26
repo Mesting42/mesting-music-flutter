@@ -196,6 +196,7 @@ class SocialMessage {
     this.text = '',
     this.mediaUrl,
     this.thumbnailUrl,
+    this.recalled = false,
   });
 
   final String id;
@@ -205,6 +206,7 @@ class SocialMessage {
   final String text;
   final String? mediaUrl;
   final String? thumbnailUrl;
+  final bool recalled;
   final DateTime sentAt;
 
   factory SocialMessage.fromJson(Map<String, Object?> json) {
@@ -220,7 +222,27 @@ class SocialMessage {
       text: json['text'] as String? ?? '',
       mediaUrl: json['media_url'] as String?,
       thumbnailUrl: json['thumbnail_url'] as String?,
+      recalled: json['recalled'] == true,
       sentAt: _dateValue(json['sent_at']),
+    );
+  }
+
+  SocialMessage copyWith({
+    String? text,
+    String? mediaUrl,
+    String? thumbnailUrl,
+    bool? recalled,
+  }) {
+    return SocialMessage(
+      id: id,
+      senderUid: senderUid,
+      receiverUid: receiverUid,
+      kind: kind,
+      text: text ?? this.text,
+      mediaUrl: mediaUrl ?? this.mediaUrl,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      recalled: recalled ?? this.recalled,
+      sentAt: sentAt,
     );
   }
 
@@ -232,6 +254,7 @@ class SocialMessage {
     'text': text,
     'media_url': mediaUrl,
     'thumbnail_url': thumbnailUrl,
+    'recalled': recalled,
     'sent_at': sentAt.toUtc().toIso8601String(),
   };
 }

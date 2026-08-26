@@ -204,6 +204,14 @@ class _AttentionRepository implements SocialRepository {
       throw UnimplementedError();
 
   @override
+  Future<SocialMessage> recallMessage(String uid, String messageId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> deleteMessage(String uid, String messageId) =>
+      throw UnimplementedError();
+
+  @override
   Future<void> markRead(String uid) => throw UnimplementedError();
 
   @override

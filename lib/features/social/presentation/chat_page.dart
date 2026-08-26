@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:just_audio/just_audio.dart' as just_audio;
@@ -13,11 +15,13 @@ import 'package:video_thumbnail/video_thumbnail.dart';
 
 import '../../../core/errors/user_facing_error.dart';
 import '../../../core/audio/playback_providers.dart';
+import '../../../core/platform/share_bridge.dart';
 import '../../../shared/layout/adaptive_layout.dart';
 import '../../../shared/models/track.dart';
 import '../../../shared/widgets/artwork_image.dart';
 import '../../../shared/widgets/mesting_loading_indicator.dart';
 import '../../../shared/widgets/music_notice.dart';
+import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../auth/auth_providers.dart';
 import '../../themes/mesting_palette.dart';
 import '../domain/listen_together.dart';
@@ -27,6 +31,7 @@ import '../listen_together_providers.dart';
 import '../social_providers.dart';
 import '../social_attention.dart';
 import 'social_widgets.dart';
+import 'friend_profile_actions_sheet.dart';
 
 @visibleForTesting
 TextEditingValue insertChatEmoji(TextEditingValue current, String emoji) {
@@ -136,6 +141,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   bool _stickToLatestMessage = true;
   bool _latestMessageScrollScheduled = false;
   bool _messageLoadInFlight = false;
+  final Set<String> _hiddenMessageIds = <String>{};
+  bool _friendActionWorking = false;
 
   @override
   void initState() {
@@ -176,6 +183,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           child: SocialPageHeader(
             title: peer.value?.displayName ?? '聊天',
             subtitle: peer.value?.isFriend == true ? '互相关注好友' : '好友状态已变化',
+            trailing: peer.value?.isFriend == true
+                ? SocialHeaderButton(
+                    label: '更多操作',
+                    icon: Icons.more_horiz_rounded,
+                    onTap: _friendActionWorking
+                        ? () {}
+                        : () => _showFriendActions(peer.value!),
+                  )
+                : null,
           ),
         ),
         const SizedBox(height: 10),
@@ -303,6 +319,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   onRetry: entry.delivery == _MessageDelivery.failed
                       ? () => _retryMessage(entry)
                       : null,
+                  onLongPress:
+                      entry.delivery == _MessageDelivery.sent &&
+                          !message.recalled
+                      ? () => _showMessageActions(entry, mine: mine)
+                      : null,
                 ),
               ],
             );
@@ -318,9 +339,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final initialLoad = _loading && _messages.isEmpty;
     if (!silent && mounted) setState(() => _loading = true);
     try {
-      final messages = await ref
+      final remoteMessages = await ref
           .read(socialRepositoryProvider)
           .listMessages(widget.uid);
+      final messages = remoteMessages
+          .where((message) => !_hiddenMessageIds.contains(message.id))
+          .toList(growable: false);
       final currentUid = ref.read(currentUserProvider)?.uid;
       final currentRemoteIds = _messages
           .where((entry) => entry.delivery == _MessageDelivery.sent)
@@ -354,6 +378,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       final preservedSent = _messages.where(
         (entry) =>
             entry.delivery == _MessageDelivery.sent &&
+            !_hiddenMessageIds.contains(entry.message.id) &&
             !remoteIds.contains(entry.message.id),
       );
       final localPending = _messages.where(
@@ -754,6 +779,299 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       title: '发送失败',
       message: userFacingErrorMessage(error, fallback: '消息发送失败，请稍后重试'),
     );
+  }
+
+  Future<void> _showFriendActions(SocialUser user) async {
+    final action = await showFriendProfileActions(context, user: user);
+    if (action == null || !mounted) return;
+    switch (action) {
+      case FriendProfileAction.remark:
+        await _editPeerRemark(user);
+      case FriendProfileAction.share:
+        await _sharePeer(user);
+      case FriendProfileAction.removeFollower:
+        await _removePeerFollower(user);
+      case FriendProfileAction.block:
+        await _blockPeer(user);
+    }
+  }
+
+  Future<void> _editPeerRemark(SocialUser user) async {
+    final controller = TextEditingController(text: user.remark);
+    final value = await showLiquidGlassBottomSheet<String>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: SocialGlass(
+          radius: 30,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  '设置备注名',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '备注只对你可见，留空即可恢复显示原昵称。',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  maxLength: 24,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (text) => Navigator.pop(context, text),
+                  decoration: const InputDecoration(hintText: '输入备注名'),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 50,
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(context, controller.text),
+                    child: const Text('保存备注'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    controller.dispose();
+    if (value == null || !mounted) return;
+    await _runFriendAction(
+      () => ref.read(socialRepositoryProvider).setRemark(user.uid, value),
+      successTitle: value.trim().isEmpty ? '已清除备注' : '备注已保存',
+    );
+  }
+
+  Future<void> _sharePeer(SocialUser user) async {
+    final text =
+        '在 Mesting Music 认识 ${user.nickname}\nMesting 用户 ID：${user.uid}';
+    try {
+      await ShareBridge.shareText(text, title: '分享用户主页');
+    } on MissingPluginException {
+      await Clipboard.setData(ClipboardData(text: text));
+      if (mounted) {
+        showMusicNotice(
+          context,
+          icon: Icons.copy_rounded,
+          title: '主页信息已复制',
+          message: '可以粘贴给好友',
+        );
+      }
+    }
+  }
+
+  Future<void> _removePeerFollower(SocialUser user) async {
+    final confirmed = await _confirmFriendAction(
+      title: '移除 ${user.displayName}？',
+      message: '对方会从你的粉丝列表中消失，系统不会发送通知。',
+      action: '移除粉丝',
+    );
+    if (confirmed != true) return;
+    await _runFriendAction(
+      () => ref.read(socialRepositoryProvider).removeFollower(user.uid),
+      successTitle: '已移除粉丝',
+    );
+  }
+
+  Future<void> _blockPeer(SocialUser user) async {
+    final confirmed = await _confirmFriendAction(
+      title: '将 ${user.displayName} 加入黑名单？',
+      message: '双方关注关系会解除，之后不能互相发消息。',
+      action: '加入黑名单',
+    );
+    if (confirmed != true) return;
+    await _runFriendAction(
+      () => ref
+          .read(socialRepositoryProvider)
+          .setBlocked(user.uid, blocked: true),
+      successTitle: '已加入黑名单',
+    );
+  }
+
+  Future<bool?> _confirmFriendAction({
+    required String title,
+    required String message,
+    required String action,
+  }) {
+    return showLiquidGlassBottomSheet<bool>(
+      context: context,
+      useRootNavigator: true,
+      useSafeArea: true,
+      builder: (context) => SocialGlass(
+        radius: 30,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 26),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 9),
+              Text(message),
+              const SizedBox(height: 20),
+              SizedBox(
+                height: 52,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFC24A34),
+                  ),
+                  child: Text(action),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _runFriendAction(
+    Future<Object?> Function() action, {
+    required String successTitle,
+  }) async {
+    setState(() => _friendActionWorking = true);
+    try {
+      await action();
+      ref
+        ..invalidate(socialUserProvider(widget.uid))
+        ..invalidate(socialSummaryProvider)
+        ..invalidate(socialConversationsProvider);
+      if (mounted) {
+        showMusicNotice(
+          context,
+          icon: Icons.check_rounded,
+          title: successTitle,
+          message: '',
+        );
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        showMusicNotice(
+          context,
+          icon: Icons.error_outline_rounded,
+          title: '操作失败',
+          message: userFacingErrorMessage(error, fallback: '请稍后重试'),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _friendActionWorking = false);
+    }
+  }
+
+  Future<void> _showMessageActions(
+    _ChatMessageEntry entry, {
+    required bool mine,
+  }) async {
+    final message = entry.message;
+    final action = await showLiquidGlassBottomSheet<_ChatMessageAction>(
+      context: context,
+      useRootNavigator: true,
+      useSafeArea: true,
+      builder: (context) => SocialGlass(
+        radius: 24,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (message.kind == SocialMessageKind.voice)
+                _ChatMessageActionRow(
+                  icon: Icons.text_fields_rounded,
+                  title: '转文字',
+                  onTap: () =>
+                      Navigator.pop(context, _ChatMessageAction.transcribe),
+                ),
+              if (mine)
+                _ChatMessageActionRow(
+                  icon: Icons.undo_rounded,
+                  title: '撤回消息',
+                  onTap: () =>
+                      Navigator.pop(context, _ChatMessageAction.recall),
+                ),
+              _ChatMessageActionRow(
+                icon: Icons.delete_outline_rounded,
+                title: '删除',
+                destructive: true,
+                onTap: () => Navigator.pop(context, _ChatMessageAction.delete),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (action == null || !mounted) return;
+    switch (action) {
+      case _ChatMessageAction.transcribe:
+        _showTranscriptionUnavailable();
+      case _ChatMessageAction.recall:
+        await _recallMessage(entry);
+      case _ChatMessageAction.delete:
+        await _deleteMessage(entry);
+    }
+  }
+
+  void _showTranscriptionUnavailable() {
+    showMusicNotice(
+      context,
+      icon: Icons.text_fields_rounded,
+      title: '语音转文字尚未配置',
+      message: '需要接入真实语音识别服务后才能转写录音，当前不会生成不准确的伪文字。',
+    );
+  }
+
+  Future<void> _recallMessage(_ChatMessageEntry entry) async {
+    try {
+      final recalled = await ref
+          .read(socialRepositoryProvider)
+          .recallMessage(widget.uid, entry.message.id);
+      if (!mounted) return;
+      _replaceLocalEntry(
+        _ChatMessageEntry.sent(recalled, localId: entry.localId),
+      );
+      ref.invalidate(socialConversationsProvider);
+    } on Object catch (error) {
+      _showError(error);
+    }
+  }
+
+  Future<void> _deleteMessage(_ChatMessageEntry entry) async {
+    try {
+      await ref
+          .read(socialRepositoryProvider)
+          .deleteMessage(widget.uid, entry.message.id);
+      if (!mounted) return;
+      setState(() {
+        _hiddenMessageIds.add(entry.message.id);
+        _messages = _messages
+            .where((candidate) => candidate.message.id != entry.message.id)
+            .toList(growable: false);
+      });
+      ref.invalidate(socialConversationsProvider);
+    } on Object catch (error) {
+      _showError(error);
+    }
   }
 
   bool _handleMessageMetricsChanged(ScrollMetricsNotification notification) {
@@ -1267,6 +1585,8 @@ class _ComposerAction extends StatelessWidget {
 
 enum _MessageDelivery { sending, sent, failed }
 
+enum _ChatMessageAction { transcribe, recall, delete }
+
 @visibleForTesting
 String formatChatMessageTimestamp(DateTime sentAt, {DateTime? now}) {
   final localSentAt = sentAt.toLocal();
@@ -1435,6 +1755,7 @@ class _MessageBubble extends ConsumerWidget {
     required this.onAvatarTap,
     required this.delivery,
     this.onRetry,
+    this.onLongPress,
     super.key,
   });
 
@@ -1444,9 +1765,27 @@ class _MessageBubble extends ConsumerWidget {
   final VoidCallback onAvatarTap;
   final _MessageDelivery delivery;
   final VoidCallback? onRetry;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (message.recalled) {
+      return Align(
+        alignment: Alignment.center,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text(
+            mine ? '你撤回了一条消息' : '对方撤回了一条消息',
+            key: ValueKey('chat-message-recalled-${message.id}'),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
+    }
     final accent = Theme.of(context).colorScheme.primary;
     final togetherInvite = message.kind == SocialMessageKind.text
         ? decodeListenTogetherInvite(message.text)
@@ -1531,47 +1870,78 @@ class _MessageBubble extends ConsumerWidget {
         ),
       },
     );
-    return Align(
-      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: mine
-            ? Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (delivery != _MessageDelivery.sent) ...[
-                    _DeliveryIndicator(
+    return GestureDetector(
+      onLongPress: onLongPress,
+      behavior: HitTestBehavior.opaque,
+      child: Align(
+        alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: mine
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (delivery != _MessageDelivery.sent) ...[
+                      _DeliveryIndicator(
+                        messageId: message.id,
+                        delivery: delivery,
+                        onRetry: onRetry,
+                      ),
+                      const SizedBox(width: 7),
+                    ],
+                    bubble,
+                    const SizedBox(width: 4),
+                    _MessageAvatar(
                       messageId: message.id,
-                      delivery: delivery,
-                      onRetry: onRetry,
+                      user: avatarUser,
+                      mine: true,
+                      onTap: onAvatarTap,
                     ),
-                    const SizedBox(width: 7),
                   ],
-                  bubble,
-                  const SizedBox(width: 4),
-                  _MessageAvatar(
-                    messageId: message.id,
-                    user: avatarUser,
-                    mine: true,
-                    onTap: onAvatarTap,
-                  ),
-                ],
-              )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  _MessageAvatar(
-                    messageId: message.id,
-                    user: avatarUser,
-                    mine: false,
-                    onTap: onAvatarTap,
-                  ),
-                  const SizedBox(width: 4),
-                  bubble,
-                ],
-              ),
+                )
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _MessageAvatar(
+                      messageId: message.id,
+                      user: avatarUser,
+                      mine: false,
+                      onTap: onAvatarTap,
+                    ),
+                    const SizedBox(width: 4),
+                    bubble,
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChatMessageActionRow extends StatelessWidget {
+  const _ChatMessageActionRow({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = destructive ? const Color(0xFFC24A34) : null;
+    return ListTile(
+      onTap: onTap,
+      leading: Icon(icon, color: color),
+      title: Text(
+        title,
+        style: TextStyle(color: color, fontWeight: FontWeight.w800),
       ),
     );
   }
@@ -2230,7 +2600,11 @@ class _VoiceMessageState extends ConsumerState<_VoiceMessage> {
           : File(_stableUrl);
       await player.setFilePath(file.path);
     } else {
-      await player.setUrl(_stableUrl);
+      // Keep remote voice clips on disk after the first successful playback.
+      // Re-entering the chat therefore reuses the local file instead of
+      // rebuilding an HTTP audio source and showing the loading state again.
+      final cachedFile = await _ChatVoiceMediaCache.fileFor(_stableUrl);
+      await player.setFilePath(cachedFile.path);
     }
     _sourceReady = true;
     return player;
@@ -2304,7 +2678,7 @@ class _VoiceMessageState extends ConsumerState<_VoiceMessage> {
   }
 }
 
-class _VoiceWaveform extends StatelessWidget {
+class _VoiceWaveform extends StatefulWidget {
   const _VoiceWaveform({
     required this.active,
     required this.color,
@@ -2316,22 +2690,66 @@ class _VoiceWaveform extends StatelessWidget {
   final int seed;
 
   @override
+  State<_VoiceWaveform> createState() => _VoiceWaveformState();
+}
+
+class _VoiceWaveformState extends State<_VoiceWaveform>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 760),
+    );
+    _syncAnimation();
+  }
+
+  @override
+  void didUpdateWidget(covariant _VoiceWaveform oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.active != widget.active) _syncAnimation();
+  }
+
+  void _syncAnimation() {
+    if (widget.active) {
+      _controller.repeat();
+    } else {
+      _controller
+        ..stop()
+        ..value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     const heights = [8.0, 15.0, 11.0, 20.0, 13.0, 18.0, 9.0, 16.0];
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: List.generate(heights.length, (index) {
-        final shiftedIndex = (index + seed.abs()) % heights.length;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          width: 2.5,
-          height: active ? heights[shiftedIndex] : heights[index] * .72,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: active ? .96 : .66),
-            borderRadius: BorderRadius.circular(99),
-          ),
-        );
-      }),
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) => Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: List.generate(heights.length, (index) {
+          final shiftedIndex = (index + widget.seed.abs()) % heights.length;
+          final pulse = ((_controller.value * 8).floor() + shiftedIndex) % 4;
+          final multiplier = widget.active ? .62 + pulse * .13 : .72;
+          return Container(
+            width: 2.5,
+            height: heights[shiftedIndex] * multiplier,
+            decoration: BoxDecoration(
+              color: widget.color.withValues(alpha: widget.active ? .96 : .66),
+              borderRadius: BorderRadius.circular(99),
+            ),
+          );
+        }),
+      ),
     );
   }
 }
@@ -2340,6 +2758,14 @@ bool _isLocalMediaPath(String value) =>
     value.startsWith('file://') ||
     value.startsWith('/') ||
     RegExp(r'^[A-Za-z]:[\\/]').hasMatch(value);
+
+class _ChatVoiceMediaCache {
+  _ChatVoiceMediaCache._();
+
+  static final BaseCacheManager _manager = DefaultCacheManager();
+
+  static Future<File> fileFor(String url) => _manager.getSingleFile(url);
+}
 
 class _VideoMessage extends StatefulWidget {
   const _VideoMessage({

@@ -675,6 +675,36 @@ void main() {
     expect(find.byType(TextField), findsNothing);
   });
 
+  testWidgets('long pressing a voice message exposes transcript and deletion', (
+    tester,
+  ) async {
+    final repository = _ChatRepository(
+      friend,
+      initialMessages: [
+        SocialMessage(
+          id: 'voice-actions',
+          senderUid: 'friend',
+          receiverUid: 'me',
+          kind: SocialMessageKind.voice,
+          text: '3200',
+          mediaUrl: 'https://example.com/voice.m4a',
+          sentAt: DateTime.now(),
+        ),
+      ],
+    );
+    await tester.pumpWidget(app(repository));
+    await tester.pumpAndSettle();
+
+    await tester.longPress(
+      find.byKey(const ValueKey('chat-voice-message-voice-actions')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('转文字'), findsOneWidget);
+    expect(find.text('删除'), findsOneWidget);
+    expect(find.text('撤回消息'), findsNothing);
+  });
+
   testWidgets('holding the voice button records, uploads and sends once', (
     tester,
   ) async {
@@ -896,6 +926,7 @@ class _ChatRepository extends Fake implements SocialRepository {
   String? lastText;
   int uploadCalls = 0;
   SocialMessageKind? lastUploadKind;
+  int deleteCalls = 0;
 
   @override
   Future<SocialUser> getUser(String uid) async => friend;
@@ -918,6 +949,19 @@ class _ChatRepository extends Fake implements SocialRepository {
     lastKind = kind;
     lastText = text;
     return sendGate.future;
+  }
+
+  @override
+  Future<SocialMessage> recallMessage(String uid, String messageId) async {
+    final message = initialMessages.firstWhere(
+      (candidate) => candidate.id == messageId,
+    );
+    return message.copyWith(text: '', recalled: true);
+  }
+
+  @override
+  Future<void> deleteMessage(String uid, String messageId) async {
+    deleteCalls += 1;
   }
 
   @override

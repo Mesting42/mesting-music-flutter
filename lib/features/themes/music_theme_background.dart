@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:io';
 
@@ -9,6 +10,19 @@ import '../../shared/widgets/mesting_loading_indicator.dart';
 import 'custom_background_controller.dart';
 import 'music_theme_preset.dart';
 import 'theme_controller.dart';
+
+/// Configures a decorative video so it can never compete with music audio.
+@visibleForTesting
+Future<void> configureMutedThemeBackgroundVideo({
+  required Future<void> Function(bool looping) setLooping,
+  required Future<void> Function(double volume) setVolume,
+  required Future<void> Function() play,
+  required bool foreground,
+}) async {
+  await setLooping(true);
+  await setVolume(0);
+  if (foreground) await play();
+}
 
 class MusicThemeBackground extends ConsumerStatefulWidget {
   const MusicThemeBackground({required this.child, super.key});
@@ -48,11 +62,36 @@ class _MusicThemeBackgroundState extends ConsumerState<MusicThemeBackground>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _foreground = state == AppLifecycleState.resumed;
     if (_foreground) {
-      _videoController?.play();
+      unawaited(_resumeMutedVideo());
     } else {
-      _videoController?.pause();
+      unawaited(_pauseVideo());
     }
     _syncTicker();
+  }
+
+  Future<void> _resumeMutedVideo() async {
+    final controller = _videoController;
+    if (controller == null || !controller.value.isInitialized) return;
+    try {
+      // Background videos never join the music audio session, including after
+      // the app returns from the background.
+      await controller.setVolume(0);
+      if (_foreground && identical(controller, _videoController)) {
+        await controller.play();
+      }
+    } on Object {
+      // The selected file can be replaced while a lifecycle callback is busy.
+    }
+  }
+
+  Future<void> _pauseVideo() async {
+    final controller = _videoController;
+    if (controller == null || !controller.value.isInitialized) return;
+    try {
+      await controller.pause();
+    } on Object {
+      // A disposed controller no longer needs lifecycle handling.
+    }
   }
 
   void _syncTicker() {
@@ -86,6 +125,7 @@ class _MusicThemeBackgroundState extends ConsumerState<MusicThemeBackground>
     final preset = _displayedPreset;
     final pureClassic = preset.ip == MusicThemeIp.classic;
     final customBackground = ref.watch(customBackgroundProvider);
+    final hasCustomBackground = customBackground.active;
     final mode = ref.watch(themePerformanceProvider);
     final visualSettings = ref.watch(themeVisualSettingsProvider);
     final media = MediaQuery.of(context);
@@ -120,7 +160,9 @@ class _MusicThemeBackgroundState extends ConsumerState<MusicThemeBackground>
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (!pureClassic && customBackground.active)
+            // A user-selected image or video is an explicit app-wide override,
+            // including the classic light, dark and system appearances.
+            if (hasCustomBackground)
               _buildCustomBackground(
                 customBackground,
                 cacheWidth: (media.size.width * media.devicePixelRatio)
@@ -138,7 +180,10 @@ class _MusicThemeBackgroundState extends ConsumerState<MusicThemeBackground>
                   strength: visualSettings.backgroundStrength,
                 ),
               ),
-            if (!pureClassic && animate && visualSettings.showIpDecoration)
+            if (!hasCustomBackground &&
+                !pureClassic &&
+                animate &&
+                visualSettings.showIpDecoration)
               IgnorePointer(
                 child: RepaintBoundary(
                   child: AnimatedBuilder(
@@ -153,7 +198,7 @@ class _MusicThemeBackgroundState extends ConsumerState<MusicThemeBackground>
                   ),
                 ),
               ),
-            if (!pureClassic)
+            if (!hasCustomBackground && !pureClassic)
               DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -253,9 +298,12 @@ class _MusicThemeBackgroundState extends ConsumerState<MusicThemeBackground>
     _videoController = controller;
     try {
       await controller.initialize();
-      await controller.setLooping(true);
-      await controller.setVolume(0);
-      if (_foreground) await controller.play();
+      await configureMutedThemeBackgroundVideo(
+        setLooping: controller.setLooping,
+        setVolume: controller.setVolume,
+        play: controller.play,
+        foreground: _foreground,
+      );
     } catch (_) {
       await controller.dispose();
       if (_videoController == controller) _videoController = null;

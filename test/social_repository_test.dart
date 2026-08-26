@@ -73,6 +73,37 @@ void main() {
     });
 
     test(
+      'recall replaces a sent message and deletion only hides it locally',
+      () async {
+        const peerUid = 'preview-lin';
+        final sent = await repository.sendMessage(
+          peerUid,
+          kind: SocialMessageKind.voice,
+          text: '2400',
+          mediaUrl: 'file:///preview/voice.m4a',
+        );
+
+        final recalled = await repository.recallMessage(peerUid, sent.id);
+        expect(recalled.recalled, isTrue);
+        expect(recalled.mediaUrl, isNull);
+        expect(
+          (await repository.listMessages(
+            peerUid,
+          )).singleWhere((message) => message.id == sent.id).recalled,
+          isTrue,
+        );
+
+        await repository.deleteMessage(peerUid, sent.id);
+        expect(
+          (await repository.listMessages(
+            peerUid,
+          )).any((message) => message.id == sent.id),
+          isFalse,
+        );
+      },
+    );
+
+    test(
       'remove follower and blacklist update both relationship directions',
       () async {
         await repository.removeFollower('preview-noon');

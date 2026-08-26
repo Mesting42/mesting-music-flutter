@@ -151,6 +151,19 @@ class CloudBaseSocialRepository
   }
 
   @override
+  Future<SocialMessage> recallMessage(String uid, String messageId) async {
+    final payload = await _call('recallMessage', {
+      'uid': uid,
+      'message_id': messageId,
+    });
+    return SocialMessage.fromJson(_map(payload['message']));
+  }
+
+  @override
+  Future<void> deleteMessage(String uid, String messageId) =>
+      _call('deleteMessage', {'uid': uid, 'message_id': messageId});
+
+  @override
   Future<void> markRead(String uid) => _call('markRead', {'uid': uid});
 
   @override
@@ -246,11 +259,7 @@ class CloudBaseSocialRepository
     final extension = _safeExtension(path, kind);
     final mimeType = _mimeType(extension, kind);
     if (_actionPath == '/v1/social/actions') {
-      return _uploadMediaToCustomApi(
-        path: path,
-        kind: kind,
-        session: session,
-      );
+      return _uploadMediaToCustomApi(path: path, kind: kind, session: session);
     }
     final safeUid = session.user.uid.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
     final objectId =
@@ -312,18 +321,17 @@ class CloudBaseSocialRepository
     required AuthSession session,
   }) async {
     try {
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse('$_baseUrl/v1/media/upload'),
-      )
-        ..headers.addAll({
-          'accept': 'application/json',
-          'authorization': 'Bearer ${session.accessToken}',
-        })
-        ..fields['kind'] = kind.name
-        ..files.add(await http.MultipartFile.fromPath('media', path));
-      final response = await http.Response.fromStream(await request.send())
-          .timeout(const Duration(seconds: 90));
+      final request =
+          http.MultipartRequest('POST', Uri.parse('$_baseUrl/v1/media/upload'))
+            ..headers.addAll({
+              'accept': 'application/json',
+              'authorization': 'Bearer ${session.accessToken}',
+            })
+            ..fields['kind'] = kind.name
+            ..files.add(await http.MultipartFile.fromPath('media', path));
+      final response = await http.Response.fromStream(
+        await request.send(),
+      ).timeout(const Duration(seconds: 90));
       final payload = _decode(response);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw SocialRequestException(

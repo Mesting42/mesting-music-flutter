@@ -58,6 +58,7 @@ class LocalPreviewSocialRepository
     ),
   };
   final Map<String, List<SocialMessage>> _messages = {};
+  final Map<String, Set<String>> _hiddenMessageIdsByUser = {};
   final Map<String, ListenTogetherTrackRecord> _togetherRecords = {};
   ListenTogetherSession? _togetherSession;
   SocialStatus _currentStatus = const SocialStatus.empty();
@@ -241,15 +242,19 @@ class LocalPreviewSocialRepository
 
   @override
   Future<List<SocialConversation>> listConversations() async {
-    _requireUser();
+    final current = _requireUser();
+    final hidden = _hiddenMessageIdsByUser[current.uid] ?? const <String>{};
     final conversations = <SocialConversation>[];
     for (final entry in _messages.entries) {
-      if (entry.value.isEmpty) continue;
+      final visible = entry.value
+          .where((message) => !hidden.contains(message.id))
+          .toList(growable: false);
+      if (visible.isEmpty) continue;
       conversations.add(
         SocialConversation(
           peer: _existing(entry.key),
-          lastMessage: entry.value.last,
-          updatedAt: entry.value.last.sentAt,
+          lastMessage: visible.last,
+          updatedAt: visible.last.sentAt,
         ),
       );
     }
@@ -264,20 +269,22 @@ class LocalPreviewSocialRepository
     if (!peer.isFriend) {
       throw const SocialRequestException('双方互相关注后才能发送消息');
     }
+    final allMessages = _messages.putIfAbsent(
+      uid,
+      () => [
+        SocialMessage(
+          id: 'welcome-$uid',
+          senderUid: uid,
+          receiverUid: current.uid,
+          kind: SocialMessageKind.text,
+          text: '嗨，最近有什么好歌推荐吗？',
+          sentAt: DateTime.now().subtract(const Duration(minutes: 18)),
+        ),
+      ],
+    );
+    final hidden = _hiddenMessageIdsByUser[current.uid] ?? const <String>{};
     return List.unmodifiable(
-      _messages.putIfAbsent(
-        uid,
-        () => [
-          SocialMessage(
-            id: 'welcome-$uid',
-            senderUid: uid,
-            receiverUid: current.uid,
-            kind: SocialMessageKind.text,
-            text: '嗨，最近有什么好歌推荐吗？',
-            sentAt: DateTime.now().subtract(const Duration(minutes: 18)),
-          ),
-        ],
-      ),
+      allMessages.where((message) => !hidden.contains(message.id)),
     );
   }
 
@@ -316,6 +323,43 @@ class LocalPreviewSocialRepository
     );
     _messages.putIfAbsent(uid, () => []).add(message);
     return message;
+  }
+
+  @override
+  Future<SocialMessage> recallMessage(String uid, String messageId) async {
+    final current = _requireUser();
+    _existing(uid);
+    final messages = _messages[uid] ?? const <SocialMessage>[];
+    final index = messages.indexWhere((message) => message.id == messageId);
+    if (index < 0) throw const SocialRequestException('消息不存在或已被删除');
+    final original = messages[index];
+    if (original.senderUid != current.uid) {
+      throw const SocialRequestException('只能撤回自己发送的消息');
+    }
+    final recalled = SocialMessage(
+      id: original.id,
+      senderUid: original.senderUid,
+      receiverUid: original.receiverUid,
+      kind: original.kind,
+      text: '',
+      recalled: true,
+      sentAt: original.sentAt,
+    );
+    messages[index] = recalled;
+    return recalled;
+  }
+
+  @override
+  Future<void> deleteMessage(String uid, String messageId) async {
+    final current = _requireUser();
+    _existing(uid);
+    final messages = _messages[uid] ?? const <SocialMessage>[];
+    if (!messages.any((message) => message.id == messageId)) {
+      throw const SocialRequestException('消息不存在或已被删除');
+    }
+    _hiddenMessageIdsByUser
+        .putIfAbsent(current.uid, () => <String>{})
+        .add(messageId);
   }
 
   @override

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mesting_music/core/persistence/app_preferences.dart';
+import 'package:mesting_music/features/themes/custom_background_controller.dart';
 import 'package:mesting_music/features/themes/music_theme_background.dart';
 import 'package:mesting_music/features/themes/music_theme_preset.dart';
 import 'package:mesting_music/features/themes/classic_music_artwork.dart';
@@ -68,5 +69,51 @@ void main() {
       expect(find.byType(ClassicMusicArtwork), findsNothing, reason: id);
       expect(tester.takeException(), isNull, reason: id);
     }
+  });
+
+  testWidgets('custom image background overrides the classic appearance', (
+    tester,
+  ) async {
+    const imagePath = 'assets/branding/mesting-mark-master.png';
+    SharedPreferences.setMockInitialValues({
+      'music_theme_preset': 'classic',
+      'custom_background_path': imagePath,
+      'custom_background_kind': CustomBackgroundKind.image.name,
+      'theme_performance_mode': 'reduced',
+    });
+    final preferences = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
+        child: const MaterialApp(
+          home: MusicThemeBackground(child: SizedBox.expand()),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.byType(Image), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  test('custom video background always loops and remains muted', () async {
+    final loopingCalls = <bool>[];
+    final volumeCalls = <double>[];
+    var playCalls = 0;
+
+    await configureMutedThemeBackgroundVideo(
+      setLooping: (looping) async => loopingCalls.add(looping),
+      setVolume: (volume) async => volumeCalls.add(volume),
+      play: () async {
+        playCalls += 1;
+      },
+      foreground: true,
+    );
+
+    expect(loopingCalls, [true]);
+    expect(volumeCalls, [0]);
+    expect(playCalls, 1);
   });
 }

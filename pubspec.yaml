@@ -49,6 +49,7 @@ dependencies:
   drift_flutter: 0.2.8
   shared_preferences: ^2.5.5
   http: ^1.6.0
+  flutter_cache_manager: ^3.4.1
   crypto: 3.0.7
   pinyin: 3.3.0
   image_picker: ^1.2.3

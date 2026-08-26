@@ -26,6 +26,7 @@ Future<T?> showLiquidGlassBottomSheet<T>({
   bool showShadow = true,
   bool showDecorativeGlow = true,
   double blurSigma = 24,
+  BorderRadius? borderRadius,
   Color? surfaceColor,
   Color Function(BuildContext context)? surfaceColorBuilder,
   Color? barrierColor,
@@ -60,10 +61,12 @@ Future<T?> showLiquidGlassBottomSheet<T>({
         ),
     builder: (sheetContext) => LiquidGlassSurface(
       key: liquidGlassSheetSurfaceKey,
-      borderRadius: const BorderRadius.only(
-        topLeft: Radius.circular(30),
-        topRight: Radius.circular(30),
-      ),
+      borderRadius:
+          borderRadius ??
+          const BorderRadius.only(
+            topLeft: Radius.circular(30),
+            topRight: Radius.circular(30),
+          ),
       showDragHandle: showDragHandle ?? false,
       showTopHighlight: showTopHighlight,
       showShadow: showShadow,

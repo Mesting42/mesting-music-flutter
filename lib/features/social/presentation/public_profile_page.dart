@@ -10,6 +10,7 @@ import '../../../shared/widgets/mesting_loading_indicator.dart';
 import '../../../shared/widgets/music_notice.dart';
 import '../domain/social_models.dart';
 import '../social_providers.dart';
+import 'friend_profile_actions_sheet.dart';
 import 'social_widgets.dart';
 
 class PublicProfilePage extends ConsumerStatefulWidget {
@@ -165,21 +166,16 @@ class _PublicProfilePageState extends ConsumerState<PublicProfilePage> {
   }
 
   Future<void> _showActions(SocialUser user) async {
-    final action = await showLiquidGlassBottomSheet<_ProfileAction>(
-      context: context,
-      useRootNavigator: true,
-      useSafeArea: true,
-      builder: (context) => _ProfileActionsSheet(user: user),
-    );
+    final action = await showFriendProfileActions(context, user: user);
     if (action == null || !mounted) return;
     switch (action) {
-      case _ProfileAction.remark:
+      case FriendProfileAction.remark:
         await _editRemark(user);
-      case _ProfileAction.share:
+      case FriendProfileAction.share:
         await _share(user);
-      case _ProfileAction.removeFollower:
+      case FriendProfileAction.removeFollower:
         await _removeFollower(user);
-      case _ProfileAction.block:
+      case FriendProfileAction.block:
         await _block(user);
     }
   }
@@ -590,89 +586,4 @@ class _InfoLine extends StatelessWidget {
       ),
     ],
   );
-}
-
-enum _ProfileAction { remark, share, removeFollower, block }
-
-class _ProfileActionsSheet extends StatelessWidget {
-  const _ProfileActionsSheet({required this.user});
-
-  final SocialUser user;
-
-  @override
-  Widget build(BuildContext context) {
-    return SocialGlass(
-      radius: 30,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 25),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 44,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 13),
-              decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: .20),
-                borderRadius: BorderRadius.circular(99),
-              ),
-            ),
-            _SheetAction(
-              icon: Icons.edit_note_rounded,
-              title: '设置备注名',
-              onTap: () => Navigator.pop(context, _ProfileAction.remark),
-            ),
-            _SheetAction(
-              icon: Icons.ios_share_rounded,
-              title: '分享',
-              onTap: () => Navigator.pop(context, _ProfileAction.share),
-            ),
-            if (user.followsMe)
-              _SheetAction(
-                icon: Icons.person_remove_alt_1_rounded,
-                title: '移除粉丝',
-                onTap: () =>
-                    Navigator.pop(context, _ProfileAction.removeFollower),
-              ),
-            _SheetAction(
-              icon: Icons.block_rounded,
-              title: '加入黑名单',
-              destructive: true,
-              onTap: () => Navigator.pop(context, _ProfileAction.block),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SheetAction extends StatelessWidget {
-  const _SheetAction({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-    this.destructive = false,
-  });
-
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-  final bool destructive;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = destructive ? const Color(0xFFC24A34) : null;
-    return ListTile(
-      onTap: onTap,
-      leading: Icon(icon, color: color),
-      title: Text(
-        title,
-        style: TextStyle(color: color, fontWeight: FontWeight.w800),
-      ),
-      trailing: const Icon(Icons.chevron_right_rounded),
-    );
-  }
 }
