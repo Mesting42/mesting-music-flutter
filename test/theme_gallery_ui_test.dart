@@ -232,6 +232,10 @@ void main() {
       find.byKey(const ValueKey('player-style-real-preview-lyricStage')),
       findsOneWidget,
     );
+    final classicPreview = find.byKey(const ValueKey('classic-theme-preview'));
+    expect(classicPreview, findsOneWidget);
+    expect(tester.getSize(classicPreview).height, 88);
+    expect(find.text('当前：浅色'), findsOneWidget);
     expect(find.text('星环脉冲'), findsOneWidget);
     expect(find.text('液态频谱'), findsOneWidget);
     expect(find.text('磁带电台'), findsNothing);
@@ -347,4 +351,50 @@ void main() {
     expect(find.text('晨雾律动已保存'), findsOneWidget);
     expect(find.text('下次启动生效'), findsOneWidget);
   });
+
+  testWidgets(
+    'classic appearance preview remains compact for dark and system modes',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      for (final scenario in [
+        (
+          preference: 'classic-dark',
+          brightness: Brightness.light,
+          title: '深色模式',
+          status: '已启用',
+        ),
+        (
+          preference: 'classic-system',
+          brightness: Brightness.dark,
+          title: '跟随系统',
+          status: '当前：深色',
+        ),
+      ]) {
+        SharedPreferences.setMockInitialValues({
+          'music_theme_preset': scenario.preference,
+        });
+        final preferences = await SharedPreferences.getInstance();
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(preferences),
+              systemBrightnessProvider.overrideWithValue(scenario.brightness),
+            ],
+            child: const MaterialApp(home: ThemeGalleryPage()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final preview = find.byKey(const ValueKey('classic-theme-preview'));
+        expect(preview, findsOneWidget);
+        expect(tester.getSize(preview).height, 88);
+        expect(find.text(scenario.title), findsOneWidget);
+        expect(find.text(scenario.status), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
 }

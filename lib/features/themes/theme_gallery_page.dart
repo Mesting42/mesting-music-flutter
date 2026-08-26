@@ -606,6 +606,12 @@ class _ThemePreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (effectivePreset.ip == MusicThemeIp.classic) {
+      return _ClassicThemePreview(
+        preset: preset,
+        effectivePreset: effectivePreset,
+      );
+    }
     return RepaintBoundary(
       child: Container(
         height: 150,
@@ -712,6 +718,99 @@ class _ThemePreview extends StatelessWidget {
                   ),
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ClassicThemePreview extends StatelessWidget {
+  const _ClassicThemePreview({
+    required this.preset,
+    required this.effectivePreset,
+  });
+
+  final MusicThemePreset preset;
+  final MusicThemePreset effectivePreset;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = effectivePreset.dark;
+    final foreground = dark ? Colors.white : const Color(0xFF242329);
+    final supporting = foreground.withValues(alpha: .64);
+    final modeIcon = preset.followsSystem
+        ? Icons.brightness_auto_rounded
+        : dark
+        ? Icons.dark_mode_rounded
+        : Icons.light_mode_rounded;
+    final status = preset.followsSystem ? '当前：${dark ? '深色' : '浅色'}' : '已启用';
+
+    return RepaintBoundary(
+      key: const ValueKey('classic-theme-preview'),
+      child: Container(
+        height: 88,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: effectivePreset.colors.first,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: foreground.withValues(alpha: .12)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: foreground.withValues(alpha: .08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: foreground.withValues(alpha: .12)),
+              ),
+              child: Icon(modeIcon, color: foreground, size: 21),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    preset.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: foreground,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    preset.caption,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: supporting, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+              decoration: BoxDecoration(
+                color: foreground.withValues(alpha: .08),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: foreground.withValues(alpha: .12)),
+              ),
+              child: Text(
+                status,
+                style: TextStyle(
+                  color: foreground,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
           ],
         ),
       ),
