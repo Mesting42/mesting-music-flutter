@@ -13,6 +13,10 @@ typedef UpdateDownloadProgress =
     void Function(int receivedBytes, int totalBytes);
 typedef UpdateDirectoryProvider = Future<Directory> Function();
 
+/// Cancels the active stream read while preserving the verified partial file.
+///
+/// The UI uses this for pause. A later download resumes from the same partial
+/// file instead of treating cancellation as a failed or corrupted APK.
 class UpdateDownloadCancellationToken {
   bool _cancelled = false;
   Future<void> Function()? _cancelActiveRead;
@@ -47,6 +51,11 @@ class AppUpdateDownloadSnapshot {
   bool get isComplete => completedPath != null;
 }
 
+/// Validates, resumes and installs updates for one Android package/channel.
+///
+/// [defaultManifestUrl] and [expectedPackageName] are build-time settings, so
+/// stable, Java/MySQL test and Beta packages never read one another's manifests
+/// or accept one another's APK files.
 class AppUpdateRepository {
   AppUpdateRepository({
     required http.Client client,
@@ -84,6 +93,8 @@ class AppUpdateRepository {
       if (current.packageName != expectedPackageName) {
         throw const AppUpdateException('当前安装包标识不受支持', code: 'package');
       }
+      // Static hosting can cache latest.json. The timestamp only bypasses that
+      // cache; package identity and integrity are still verified below.
       final requestUrl = _manifestUrl.replace(
         queryParameters: {
           ..._manifestUrl.queryParameters,
@@ -123,6 +134,10 @@ class AppUpdateRepository {
     }
   }
 
+  /// Downloads an APK resumably and returns a path only after SHA-256 passes.
+  ///
+  /// Failed network reads leave the `.partial` file in place. Size, range and
+  /// digest failures delete it because resuming untrusted bytes is unsafe.
   Future<String> download(
     AppUpdateManifest manifest, {
     required UpdateDownloadProgress onProgress,
@@ -279,6 +294,10 @@ class AppUpdateRepository {
     }
   }
 
+  /// Inspects an existing target/partial file before a download or resume.
+  ///
+  /// A complete APK is reused only after verifying its digest again; a filename
+  /// or matching byte count alone is never treated as an installed update.
   Future<AppUpdateDownloadSnapshot> inspectDownload(
     AppUpdateManifest manifest,
   ) async {
@@ -352,6 +371,10 @@ class AppUpdateRepository {
 
   Future<void> installApk(String path) => _platform.installApk(path);
 
+  /// Creates deterministic names that include a digest prefix.
+  ///
+  /// This lets a republished version code with different bytes coexist safely
+  /// until stale downloads are removed, rather than resuming the wrong file.
   Future<_UpdateFiles> _filesFor(AppUpdateManifest manifest) async {
     final baseDirectory = await _directoryProvider();
     final directory = Directory(
@@ -374,6 +397,7 @@ class AppUpdateRepository {
     );
   }
 
+  /// Promotes the partial file atomically only after its expected digest wins.
   Future<String> _finalizeDownload(
     AppUpdateManifest manifest,
     _UpdateFiles files,

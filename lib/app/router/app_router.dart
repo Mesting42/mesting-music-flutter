@@ -34,6 +34,11 @@ import '../../features/profile/presentation/profile_background_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/recommendation/presentation/recommendation_page.dart';
 
+/// App navigation graph.
+///
+/// Music routes live inside [MusicShell] so bottom navigation and the mini
+/// player survive child-page transitions. Authentication stays outside the
+/// shell because it is a sensitive, full-screen flow with its own back stack.
 final appRouter = GoRouter(
   initialLocation: '/music/recommend',
   routes: [
@@ -352,6 +357,10 @@ class _NowPlayingRoute extends PageRouteBuilder<void> {
       };
 }
 
+/// Applies the shared directional transition to ordinary music subpages.
+///
+/// Callers can pass [MusicPageTransitionIntent] in route extras; defaulting to
+/// forward motion keeps deep links and system navigation deterministic.
 Page<void> _musicSlidePage({
   required GoRouterState state,
   required Widget child,
@@ -415,6 +424,10 @@ Page<void> _messagesTransitionPage({
   );
 }
 
+/// Fade/scale transition for sensitive avatar and background previews.
+///
+/// The route deliberately honors Android's reduced-motion setting instead of
+/// forcing a zoom animation on users who have disabled system animations.
 class _AvatarPreviewTransitionPage extends Page<void> {
   const _AvatarPreviewTransitionPage({
     required this.child,
@@ -476,6 +489,11 @@ Page<void> _collectionRevealPage({
   );
 }
 
+/// A single-layer handoff used by glass-heavy music pages.
+///
+/// It coordinates the outgoing and incoming routes so they do not paint over
+/// each other, which otherwise produces duplicated content or a dark backdrop
+/// flash on some Android compositors.
 class _SequencedMusicTransitionPage extends Page<void> {
   const _SequencedMusicTransitionPage({
     required this.child,

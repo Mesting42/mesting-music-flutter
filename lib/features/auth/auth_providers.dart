@@ -14,6 +14,10 @@ import 'data/auth_repository.dart';
 import 'data/cloudbase_auth_repository.dart';
 import 'domain/auth_models.dart';
 
+/// Optional build-time override for the Java/MySQL-compatible account API.
+///
+/// Keeping this empty in a normal build prevents a test endpoint from being
+/// selected accidentally by the stable client.
 final authApiBaseUrlProvider = Provider<String>((ref) {
   return const String.fromEnvironment('AUTH_API_BASE_URL').trim();
 });
@@ -32,6 +36,12 @@ const useCloudBaseAuth = bool.fromEnvironment(
 
 final sessionStoreProvider = Provider<SessionStore>((ref) => SessionStore());
 
+/// Chooses exactly one authentication backend for the running build.
+///
+/// Explicit API injection wins for integration testing; otherwise release (or
+/// opted-in) builds use CloudBase and debug builds fall back to device-only
+/// preview data. Do not merge these branches: their account stores are not
+/// interchangeable.
 final authBackendKindProvider = Provider<AuthBackendKind>((ref) {
   final baseUrl = ref.watch(authApiBaseUrlProvider);
   if (baseUrl.isNotEmpty) return AuthBackendKind.customApi;
@@ -49,6 +59,10 @@ String authBackendStatusLabel(AuthBackendKind kind) {
   };
 }
 
+/// Creates the repository matching [authBackendKindProvider].
+///
+/// Downstream UI depends only on [AuthRepository], which keeps credential and
+/// session handling consistent while deployment backends evolve separately.
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return switch (ref.watch(authBackendKindProvider)) {
     AuthBackendKind.customApi => HttpAuthRepository(
@@ -77,9 +91,12 @@ final isAuthenticatedProvider = Provider<bool>((ref) {
   return ref.watch(currentUserProvider) != null;
 });
 
+/// Owns the authenticated UI state and guards refresh-token races.
 class AuthController extends AsyncNotifier<AuthSession?> {
   AuthRepository get _repository => ref.read(authRepositoryProvider);
   Object? lastError;
+  // Refresh-token rotation is single-use on the server. Share an in-flight
+  // renewal so concurrent API calls cannot race and invalidate each other.
   Future<AuthSession?>? _sessionRenewal;
 
   @override
@@ -127,6 +144,7 @@ class AuthController extends AsyncNotifier<AuthSession?> {
 
   Future<bool> refreshAccount() => _run(_repository.refreshAccount);
 
+  /// Returns a usable session, coalescing simultaneous refresh attempts.
   Future<AuthSession?> ensureFreshSession({bool forceRefresh = false}) {
     final current = state.value;
     if (current == null) return Future<AuthSession?>.value();

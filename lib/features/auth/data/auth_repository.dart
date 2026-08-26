@@ -25,6 +25,10 @@ bool isInvalidLoginCredentialsCode(String? code) {
   }.contains(code?.trim().toLowerCase());
 }
 
+/// Backend-neutral account contract consumed by the Flutter UI.
+///
+/// Implementations may use CloudBase, the Java/MySQL HTTP service or a local
+/// preview, but none may expose passwords or verification codes to callers.
 abstract interface class AuthRepository {
   Future<AuthSession?> restoreSession();
 
@@ -607,6 +611,10 @@ class LocalPreviewAuthRepository implements AuthRepository {
   }
 }
 
+/// AuthRepository implementation for the versioned Java/MySQL HTTP API.
+///
+/// It owns only the active encrypted session. Remembered-account UI data is
+/// intentionally managed by [SessionStore] as a separate, explicit feature.
 class HttpAuthRepository implements AuthRepository, RenewableAuthRepository {
   HttpAuthRepository({
     required String baseUrl,
@@ -622,6 +630,10 @@ class HttpAuthRepository implements AuthRepository, RenewableAuthRepository {
   AuthSession? _session;
 
   @override
+  /// Restores a valid cached session or exchanges its refresh token once.
+  ///
+  /// An unsuccessful refresh clears the active session rather than leaving an
+  /// expired token available for subsequent authenticated requests.
   Future<AuthSession?> restoreSession() async {
     final stored = await _sessionStore.read();
     if (stored == null) return null;
@@ -761,6 +773,8 @@ class HttpAuthRepository implements AuthRepository, RenewableAuthRepository {
   }) async {
     var avatarUrl = _session?.user.avatarUrl;
     if (avatarPath != null) {
+      // Media is uploaded before the JSON profile patch so the database only
+      // receives an address returned by the account service.
       final request = http.MultipartRequest(
         'POST',
         Uri.parse('$_baseUrl/v1/me/avatar'),
@@ -951,6 +965,7 @@ class HttpAuthRepository implements AuthRepository, RenewableAuthRepository {
     await _sessionStore.clear();
   }
 
+  /// Parses and persists a complete session only after the server succeeds.
   Future<AuthSession> _sessionRequest(
     String path,
     Map<String, Object?> body,
@@ -966,6 +981,10 @@ class HttpAuthRepository implements AuthRepository, RenewableAuthRepository {
     await _sessionStore.write(session);
   }
 
+  /// Sends one API request and normalizes transport failures for the UI.
+  ///
+  /// Sensitive authorization is attached only for authenticated paths; request
+  /// bodies are never logged here because they can contain passwords or codes.
   Future<Map<String, Object?>> _request(
     String path,
     Map<String, Object?> body, {

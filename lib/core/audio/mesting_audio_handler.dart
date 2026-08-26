@@ -19,6 +19,12 @@ import 'queue_engine.dart';
 typedef RadioTrackLoader =
     Future<List<Track>> Function(Set<String> excludedTrackKeys);
 
+/// The only owner of the active `just_audio` source and media-session state.
+///
+/// The logical queue is held separately from the player's one active source.
+/// In particular, removing a track from the upcoming queue after one second of
+/// real playback must not recreate the current audio source, which would cause
+/// an audible pause on some devices.
 class MestingAudioHandler extends BaseAudioHandler
     with QueueHandler, SeekHandler {
   MestingAudioHandler({required List<Track> tracks, Random? random})
@@ -97,6 +103,9 @@ class MestingAudioHandler extends BaseAudioHandler
   _PendingAdvanceRequest? _pendingAdvanceRequest;
   final PlaybackCompletionGate _completionGate = PlaybackCompletionGate();
   int _consecutiveLoadFailures = 0;
+  // Async artwork/source resolution may finish after a new tap. These epochs
+  // make stale results harmless instead of allowing them to replace a newer
+  // user-selected queue or restored session.
   int _queueLoadEpoch = 0;
   int _userCommandEpoch = 0;
   Timer? _consumptionTimer;
@@ -168,6 +177,11 @@ class MestingAudioHandler extends BaseAudioHandler
 
   List<MediaItem> get upcomingQueue =>
       List<MediaItem>.unmodifiable(_upcomingMediaItems);
+
+  /// Snapshot used for persistence: current track followed by upcoming tracks.
+  ///
+  /// It intentionally excludes historical/fallback pools and de-duplicates by
+  /// id, so restoration reproduces what the listener can actually play next.
   List<Track> get persistedQueue {
     final currentId = mediaItem.value?.id;
     final result = <Track>[];
@@ -193,6 +207,11 @@ class MestingAudioHandler extends BaseAudioHandler
     await setPlaybackMode(_mode);
   }
 
+  /// Replaces the logical queue while protecting against stale async loads.
+  ///
+  /// [requiredUserCommandEpoch] is used by cold-session restoration: if the
+  /// listener taps a track before the restore finishes, the restore is dropped
+  /// rather than taking control back from that explicit command.
   Future<bool> _loadQueue(
     List<Track> tracks, {
     int initialIndex = 0,
@@ -383,6 +402,9 @@ class MestingAudioHandler extends BaseAudioHandler
       _consumedTrackController.add(consumedTrack);
     }
 
+    // Update application-level queue metadata only. Do not call
+    // setAudioSources here: the active source must keep playing while the UI
+    // removes the consumed track from its pending-queue representation.
     final previousUpcomingLength = _upcomingMediaItems.length;
     _upcomingMediaItems = QueueEngine.withoutId(
       _upcomingMediaItems,
@@ -631,6 +653,10 @@ class MestingAudioHandler extends BaseAudioHandler
     await _advancePlayback(forward: forward);
   }
 
+  /// Serializes next/previous/auto-advance decisions into one transition.
+  ///
+  /// Network radio discovery is deferred outside this lock so a slow refill
+  /// cannot discard later next/previous commands from the listener.
   Future<void> _advancePlayback({
     required bool forward,
     bool automatic = false,
@@ -1132,6 +1158,7 @@ class MestingAudioHandler extends BaseAudioHandler
     if (autoplay && tracks.isNotEmpty) _startPlayer();
   }
 
+  /// Restores a persisted queue only if no newer user command has arrived.
   Future<void> restoreSession({
     required List<Track> tracks,
     required int currentIndex,

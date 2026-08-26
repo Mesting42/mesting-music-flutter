@@ -51,6 +51,11 @@ class UserPlaylistTracks extends Table {
   Set<Column<Object>> get primaryKey => {ownerId, playlistId, trackId};
 }
 
+/// Per-account local Outbox.
+///
+/// Library edits are first committed to the device database so the UI can
+/// update immediately. The synchronizer later sends these compact mutations
+/// to the backend and acknowledges them only after the server accepts them.
 class SyncMutations extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get ownerId => text()();
@@ -117,6 +122,11 @@ class PlaybackDailyHistories extends Table {
     PlaybackDailyHistories,
   ],
 )
+/// Device-local source of truth for the music library and playback state.
+///
+/// Every user-owned row carries an [ownerId]. That isolation is essential when
+/// accounts switch on the same device: a cached playlist, listening history or
+/// pending cloud mutation must never become visible to the next account.
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
     : super(executor ?? driftDatabase(name: 'mesting_music'));
@@ -513,6 +523,10 @@ class AppDatabase extends _$AppDatabase {
     return await query.map((row) => row.read(count) ?? 0).getSingle();
   }
 
+  /// Copies pre-account local-library data into [ownerId]'s namespace.
+  ///
+  /// The legacy rows are deliberately retained. They are a migration source,
+  /// while the account copy receives its own Outbox mutations for cloud sync.
   Future<void> importLegacyLibraryTo(String ownerId) async {
     if (ownerId == legacyLibraryOwnerId) return;
     await transaction(() async {
@@ -604,6 +618,10 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  /// Returns the oldest unacknowledged Outbox entries first.
+  ///
+  /// Sending in insertion order preserves the user's edit intent when several
+  /// different library entities are changed while the device is offline.
   Future<List<LibrarySyncMutation>> pendingLibraryMutations(
     String ownerId, {
     int limit = 100,
@@ -637,6 +655,11 @@ class AppDatabase extends _$AppDatabase {
         .toList(growable: false);
   }
 
+  /// Rebuilds an Outbox snapshot when an account needs a first cloud upload.
+  ///
+  /// History rows use replacement mutations because only their newest totals
+  /// matter; favorites and playlist rows retain the normal entity mutation
+  /// semantics used by later incremental edits.
   Future<void> enqueueLibraryCloudBootstrap(String ownerId) async {
     await transaction(() async {
       final favorites =
@@ -742,6 +765,11 @@ class AppDatabase extends _$AppDatabase {
     await transaction(() => _replaceLibraryRows(ownerId, snapshot));
   }
 
+  /// Atomically acknowledges uploaded mutations and applies a cloud snapshot.
+  ///
+  /// A snapshot is authoritative only when no newer local mutation remains.
+  /// Returning `false` tells the caller to upload the newly queued edits first
+  /// instead of accidentally overwriting them with an older server response.
   Future<bool> completeLibrarySync(
     String ownerId, {
     required Iterable<int> acknowledgedMutationIds,
@@ -789,6 +817,10 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  /// Replaces one account's materialized local library from a trusted snapshot.
+  ///
+  /// Callers must run this inside the same transaction that establishes there
+  /// are no newer pending mutations for [ownerId].
   Future<void> _replaceLibraryRows(
     String ownerId,
     CloudLibrarySnapshot snapshot,
@@ -936,6 +968,10 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  /// Stores one resumable playback snapshot per account (`id == 1`).
+  ///
+  /// The queue is stored as track JSON rather than audio-source state so a
+  /// later app version can safely rebuild the audio engine during restoration.
   Future<void> savePlaybackSession({
     required String ownerId,
     required List<Track> queue,

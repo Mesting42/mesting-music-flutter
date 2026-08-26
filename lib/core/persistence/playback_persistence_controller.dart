@@ -15,6 +15,11 @@ final playbackPersistenceControllerProvider =
       throw StateError('PlaybackPersistenceController must be overridden.');
     });
 
+/// Bridges the live audio engine with durable, account-scoped playback data.
+///
+/// It intentionally records only small snapshots and listening deltas. The
+/// handler remains the sole owner of actual audio sources, avoiding persistence
+/// work that could interrupt a playing track.
 class PlaybackPersistenceController with WidgetsBindingObserver {
   static const _playbackCloudSyncInterval = Duration(minutes: 10);
 
@@ -36,6 +41,9 @@ class PlaybackPersistenceController with WidgetsBindingObserver {
   bool _started = false;
   bool _switchingOwner = false;
   String? _ownerId;
+  // Account activation can be requested repeatedly during restore, login and
+  // logout. Serializing it prevents an older async restore from overwriting
+  // the session selected by a newer account switch.
   Future<void> _ownerSwitch = Future<void>.value();
   Future<bool> Function(String ownerId)? _librarySynchronizer;
 
@@ -45,6 +53,10 @@ class PlaybackPersistenceController with WidgetsBindingObserver {
     _librarySynchronizer = synchronizer;
   }
 
+  /// Selects the active account and restores only that account's playback.
+  ///
+  /// Empty identifiers intentionally map to the legacy local-library owner so
+  /// pre-login playback remains separate from authenticated accounts.
   Future<void> activateOwner(String ownerId) {
     final normalizedOwnerId = ownerId.trim().isEmpty
         ? legacyLibraryOwnerId
@@ -118,6 +130,7 @@ class PlaybackPersistenceController with WidgetsBindingObserver {
     }
   }
 
+  /// Starts the single set of audio/lifecycle listeners for this app process.
   void start() {
     if (_started) return;
     _started = true;
@@ -193,6 +206,8 @@ class PlaybackPersistenceController with WidgetsBindingObserver {
   void _synchronizeLibrary(String ownerId) {
     final synchronizer = _librarySynchronizer;
     if (synchronizer == null) return;
+    // Coalesce frequent play-history writes. They stay durable locally, while
+    // the optional cloud synchronizer runs at most once per interval.
     _librarySyncTimer ??= Timer(_playbackCloudSyncInterval, () {
       _librarySyncTimer = null;
       final currentOwnerId = _ownerId;
@@ -200,6 +215,10 @@ class PlaybackPersistenceController with WidgetsBindingObserver {
     });
   }
 
+  /// Persists the current queue without allowing concurrent snapshot writes.
+  ///
+  /// During an owner transition the previous owner is saved explicitly before
+  /// the new owner loads, so this method never writes a mixed-account queue.
   Future<void> saveNow() async {
     final ownerId = _ownerId;
     final persistedQueue = _audioHandler.persistedQueue;
