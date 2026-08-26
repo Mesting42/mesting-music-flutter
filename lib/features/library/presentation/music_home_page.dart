@@ -820,7 +820,7 @@ class _QueueAddButton extends StatelessWidget {
               onTap: onPressed,
               customBorder: const CircleBorder(),
               child: Align(
-                alignment: Alignment.centerRight,
+                alignment: Alignment.center,
                 child: IgnorePointer(
                   child: IconButton(
                     onPressed: onPressed,
