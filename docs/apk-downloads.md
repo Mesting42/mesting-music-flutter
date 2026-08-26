@@ -11,7 +11,7 @@
 
 ## 正式稳定版历史 APK
 
-除 `1.0.37+38` 以外，以下稳定版均在同一个 [稳定历史归档 Release](https://github.com/Mesting42/mesting-music-flutter/releases/tag/historical-stable-apks-2026-08-26) 中；下表提供直接下载链接。
+历史稳定版均在同一个 [稳定历史归档 Release](https://github.com/Mesting42/mesting-music-flutter/releases/tag/historical-stable-apks-2026-08-26) 中；下表提供直接下载链接。当前正式下载地址固定为 [v1.0.37+42](https://github.com/Mesting42/mesting-music-flutter/releases/download/flutter-music-v1.0.37/Mesting-Music-Flutter-v1.0.37.apk)。
 
 | 版本 | 下载 |
 | --- | --- |
@@ -42,7 +42,7 @@
 | `1.0.34+35` | [APK](https://github.com/Mesting42/mesting-music-flutter/releases/download/historical-stable-apks-2026-08-26/Mesting-Music-v1.0.34-build35.apk) |
 | `1.0.35+36` | [APK](https://github.com/Mesting42/mesting-music-flutter/releases/download/historical-stable-apks-2026-08-26/Mesting-Music-v1.0.35-build36.apk) |
 | `1.0.36+37` | [APK](https://github.com/Mesting42/mesting-music-flutter/releases/download/historical-stable-apks-2026-08-26/Mesting-Music-v1.0.36-build37.apk) |
-| `1.0.37+38` | [原正式 Release](https://github.com/Mesting42/mesting-music-flutter/releases/tag/flutter-music-v1.0.37) |
+| `1.0.37+38` | [APK](https://github.com/Mesting42/mesting-music-flutter/releases/download/historical-stable-apks-2026-08-26/Mesting-Music-v1.0.37-build38.apk) |
 | `1.0.37+40` | [APK](https://github.com/Mesting42/mesting-music-flutter/releases/download/historical-stable-apks-2026-08-26/Mesting-Music-v1.0.37-build40.apk) |
 | `1.0.37+41` | [APK](https://github.com/Mesting42/mesting-music-flutter/releases/download/historical-stable-apks-2026-08-26/Mesting-Music-v1.0.37-build41.apk) |
 | `1.0.37+42` | [APK](https://github.com/Mesting42/mesting-music-flutter/releases/download/historical-stable-apks-2026-08-26/Mesting-Music-v1.0.37-build42.apk) |
