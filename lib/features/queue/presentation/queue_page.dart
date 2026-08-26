@@ -10,8 +10,11 @@ import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../themes/music_theme_tokens.dart';
 
 const double playbackQueueSheetHeightFactor = .74;
-const double emptyPlaybackQueueSheetHeightFactor = .46;
 const double minimumPopulatedQueueSheetHeightFactor = .30;
+// Keep the empty state as compact as a one-song queue; additional rows expand
+// the sheet through playbackQueueSheetHeightFactorForCount.
+const double emptyPlaybackQueueSheetHeightFactor =
+    minimumPopulatedQueueSheetHeightFactor;
 const double playbackQueueRowHeight = 64;
 const double playbackQueueSheetChromeHeight = 118;
 const liquidGlassQueuePageSurfaceKey = ValueKey<String>(

@@ -14,10 +14,13 @@ void main() {
       expect(playbackModeIcon(PlaybackMode.random), Icons.shuffle_rounded);
     });
 
-    test('播放列表抽屉会随歌曲数量增长并在大列表时封顶', () {
+    test('播放列表抽屉从空列表的紧凑高度随歌曲数量增长并在大列表时封顶', () {
       expect(playbackQueueSheetHeightFactor, .74);
-      expect(emptyPlaybackQueueSheetHeightFactor, inInclusiveRange(.43, .48));
       expect(minimumPopulatedQueueSheetHeightFactor, .30);
+      expect(
+        emptyPlaybackQueueSheetHeightFactor,
+        minimumPopulatedQueueSheetHeightFactor,
+      );
       expect(
         emptyPlaybackQueueSheetHeightFactor,
         lessThan(playbackQueueSheetHeightFactor),
@@ -56,7 +59,7 @@ void main() {
           viewportHeight: 800,
           bottomInset: 24,
         ),
-        emptyPlaybackQueueSheetHeightFactor,
+        oneTrack,
       );
     });
 
