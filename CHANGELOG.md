@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.37+43 - stable CloudBase release
+
+- 正式稳定包 `com.mesting.music` 已发布到独立稳定更新清单 `releases/android/latest.json`。
+- 更新推荐页通勤、放松、专注和入睡场景图标，并统一适配当前主题配色。
+- 更新播放器缓冲动效，精简版本状态提示、歌曲添加控件与播放列表空状态布局。
+- 优化账户绑定验证底部面板、经典主题预览和免责声明转场等界面细节。
+- Java + MySQL 测试包与 UI Beta 通道保持独立，本次稳定发布没有写入它们的更新清单。
+
+对应源码标签：`flutter-music-v1.0.37-build43`。发布与源码对应关系见 [docs/release-history.md](docs/release-history.md)。
+
 ## 1.0.37+42 - stable CloudBase release
 
 - 正式稳定包 `com.mesting.music` 已发布到独立稳定更新清单 `releases/android/latest.json`。

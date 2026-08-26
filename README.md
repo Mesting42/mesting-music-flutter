@@ -2,7 +2,7 @@
 
 一款面向 Android 的 Flutter 音乐应用，提供本地与在线音乐浏览、播放控制、歌词、主题换肤，以及好友音乐互动体验。
 
-当前稳定源码版本：**1.0.37+42**<br>
+当前稳定源码版本：**1.0.37+43**<br>
 Java + MySQL 独立测试通道：**1.0.38+40**（不替代正式稳定版）
 
 稳定包使用 `com.mesting.music` 和 `releases/android/latest.json`；Java + MySQL 测试包与 UI Beta 分别使用独立包名和更新清单，三条通道不会互相覆盖。完整版本、标签和发布记录见 [docs/release-history.md](docs/release-history.md)。旧 `flutter-music-v1.0.37` 标签保留原发布历史，不伪装成稳定 APK 的逐文件源码快照。

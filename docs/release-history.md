@@ -1,6 +1,6 @@
 # Mesting Music 发布与源码记录
 
-最后核对：2026-08-26（北京时间）。本文件记录 Android 发布版本、源码标签和更新通道的对应关系；APK 本体不提交进 Git。
+最后核对：2026-08-27（北京时间）。本文件记录 Android 发布版本、源码标签和更新通道的对应关系；APK 本体不提交进 Git。
 
 `1.0.0` 至 `1.0.37` 的逐版本历史台账见 [historical-releases-1.0.0-to-1.0.37.md](historical-releases-1.0.0-to-1.0.37.md)。该台账明确区分“有 APK 或不可变清单可核验”和“没有留存证据”的版本槽位，避免把未知历史伪造成源码版本。
 
@@ -8,7 +8,7 @@
 
 | 通道 | Android 包名 | 更新清单 | 当前记录 | 用途 |
 | --- | --- | --- | --- | --- |
-| 正式稳定版 | `com.mesting.music` | `releases/android/latest.json` | `1.0.37+42` | 面向稳定用户的 CloudBase 更新包 |
+| 正式稳定版 | `com.mesting.music` | `releases/android/latest.json` | `1.0.37+43` | 面向稳定用户的 CloudBase 更新包 |
 | Java + MySQL 测试版 | `com.mesting.music.javatest` | `releases/android/java-mysql-test/latest.json` | `1.0.38+40` | 仅供主动安装的集成测试者 |
 | UI 实验 Beta | `com.mesting.music.beta` | `releases/android/beta/latest.json` | 独立维护 | 不参与正式版发布 |
 
@@ -23,7 +23,8 @@
 | `e89b878` | 本地正式基线 | 2026-08-05 在本机建立的 `checkpoint-before-my-likes-redesign`，用于隔离正式修改；它原先没有远程仓库绑定。 |
 | `1.0.37+40` | 稳定通道恢复 | 恢复 1.37 稳定包，并在设置中显式提供 Java + MySQL 测试下载入口。 |
 | `1.0.37+41` | 稳定体验更新 | 加入封面与好友头像缓存、图片失败重试，以及消息和个人资料页面过渡优化。 |
-| `1.0.37+42` | 当前稳定发布 | 加入用户协议、隐私政策，并在稳定 CloudBase 通道发布。源码标签为 `flutter-music-v1.0.37-build42`。 |
+| `1.0.37+42` | 稳定功能发布 | 加入用户协议、隐私政策，并在稳定 CloudBase 通道发布。源码标签为 `flutter-music-v1.0.37-build42`。 |
+| `1.0.37+43` | 当前稳定发布 | 更新推荐场景图标、播放器缓冲动效与多项界面细节，并在稳定 CloudBase 通道发布。APK SHA-256：`cc1b762bdc43863fbdf546144b41694765484127ab57afeaef80480a5f16cdd3`；不可变清单：`releases/android/manifests/43.json`；源码标签为 `flutter-music-v1.0.37-build43`。 |
 
 ## Git 历史补全方式
 

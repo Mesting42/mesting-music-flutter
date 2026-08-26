@@ -4,7 +4,7 @@
 
 | 通道 | 包名 | 更新清单 | 面向对象 |
 | --- | --- | --- | --- |
-| 正式稳定版 `1.0.37+42` | `com.mesting.music` | `releases/android/latest.json` | 已发布的稳定用户 |
+| 正式稳定版 `1.0.37+43` | `com.mesting.music` | `releases/android/latest.json` | 已发布的稳定用户 |
 | Java + MySQL 测试版 `1.0.38+40` | `com.mesting.music.javatest` | `releases/android/java-mysql-test/latest.json` | 主动安装测试包的测试者 |
 | UI 实验 Beta | `com.mesting.music.beta` | `releases/android/beta/latest.json` | UI/头像实验测试 |
 
