@@ -19,6 +19,7 @@ void main() {
 
       final indicator = find.byType(MestingLoadingIndicator);
       expect(indicator, findsOneWidget);
+      expect(tester.widget<MestingLoadingIndicator>(indicator).size, 60);
       expect(
         find.descendant(of: indicator, matching: find.byType(ShaderMask)),
         findsOneWidget,

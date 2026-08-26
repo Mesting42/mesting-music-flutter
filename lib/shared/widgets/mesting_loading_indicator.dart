@@ -8,7 +8,7 @@ import 'package:math_curve_loaders/math_curve_loaders.dart';
 /// receive useful progress context without adding visual noise.
 class MestingLoadingIndicator extends StatelessWidget {
   const MestingLoadingIndicator({
-    this.size = 76,
+    this.size = 60,
     this.color,
     this.secondaryColor,
     this.semanticLabel = '内容正在加载',
