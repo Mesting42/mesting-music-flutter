@@ -1246,6 +1246,17 @@ void main() {
       tester.widget(find.byKey(const ValueKey('account-binding-flow-sheet'))),
       isA<SingleChildScrollView>(),
     );
+    final sendCodeAction = find.widgetWithText(FilledButton, '发送当前身份验证码');
+    final sendCodeButton = tester.widget<FilledButton>(sendCodeAction);
+    final sendCodeScheme = Theme.of(tester.element(sendCodeAction)).colorScheme;
+    expect(
+      sendCodeButton.style!.backgroundColor!.resolve(const <WidgetState>{}),
+      sendCodeScheme.primary,
+    );
+    expect(
+      sendCodeButton.style!.backgroundColor!.resolve(const <WidgetState>{}),
+      isNot(const Color(0xFFC24A34)),
+    );
 
     await tester.tap(find.text('发送当前身份验证码'));
     await tester.pump();

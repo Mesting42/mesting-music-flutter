@@ -593,6 +593,7 @@ class _StepRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = _BindingFlowPalette.of(context);
     return Row(
       children: [
         _StepDot(label: '1', title: '验证当前身份', active: active == 0),
@@ -600,15 +601,46 @@ class _StepRail extends StatelessWidget {
           child: Container(
             height: 2,
             margin: const EdgeInsets.symmetric(horizontal: 8),
-            color: Theme.of(
-              context,
-            ).colorScheme.primary.withValues(alpha: active == 1 ? .8 : .18),
+            color: active == 1 ? palette.completedRail : palette.idleRail,
           ),
         ),
         _StepDot(label: '2', title: '验证新联系方式', active: active == 1),
       ],
     );
   }
+}
+
+class _BindingFlowPalette {
+  const _BindingFlowPalette({
+    required this.primary,
+    required this.onPrimary,
+    required this.inactiveSurface,
+    required this.inactiveBorder,
+    required this.idleRail,
+    required this.completedRail,
+  });
+
+  factory _BindingFlowPalette.of(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return _BindingFlowPalette(
+      primary: scheme.primary,
+      onPrimary: scheme.onPrimary,
+      inactiveSurface: Color.alphaBlend(
+        scheme.primary.withValues(alpha: .10),
+        scheme.surface,
+      ),
+      inactiveBorder: scheme.primary.withValues(alpha: .18),
+      idleRail: scheme.primary.withValues(alpha: .16),
+      completedRail: scheme.primary.withValues(alpha: .58),
+    );
+  }
+
+  final Color primary;
+  final Color onPrimary;
+  final Color inactiveSurface;
+  final Color inactiveBorder;
+  final Color idleRail;
+  final Color completedRail;
 }
 
 class _StepDot extends StatelessWidget {
@@ -624,27 +656,39 @@ class _StepDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = _BindingFlowPalette.of(context);
+    final scheme = Theme.of(context).colorScheme;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        CircleAvatar(
-          radius: 13,
-          backgroundColor: active
-              ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.primary.withValues(alpha: .12),
+        Container(
+          width: 26,
+          height: 26,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: active ? palette.primary : palette.inactiveSurface,
+            border: Border.all(
+              color: active ? palette.primary : palette.inactiveBorder,
+            ),
+          ),
           child: Text(
             label,
             style: TextStyle(
-              color: active
-                  ? Theme.of(context).colorScheme.onPrimary
-                  : Theme.of(context).colorScheme.primary,
+              color: active ? palette.onPrimary : palette.primary,
               fontSize: 11,
               fontWeight: FontWeight.w900,
             ),
           ),
         ),
         const SizedBox(width: 6),
-        Text(title, style: const TextStyle(fontSize: 10)),
+        Text(
+          title,
+          style: TextStyle(
+            color: active ? scheme.onSurface : scheme.onSurfaceVariant,
+            fontSize: 10,
+          ),
+        ),
       ],
     );
   }
@@ -684,21 +728,25 @@ class _PrimaryAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = _BindingFlowPalette.of(context);
     return SizedBox(
       height: 52,
       child: FilledButton(
         onPressed: busy ? null : onPressed,
         style: FilledButton.styleFrom(
-          backgroundColor: const Color(0xFFC24A34),
+          backgroundColor: palette.primary,
+          foregroundColor: palette.onPrimary,
+          disabledBackgroundColor: palette.primary.withValues(alpha: .38),
+          disabledForegroundColor: palette.onPrimary.withValues(alpha: .72),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(17),
           ),
         ),
         child: busy
-            ? const SizedBox.square(
+            ? SizedBox.square(
                 dimension: 20,
                 child: CircularProgressIndicator(
-                  color: Colors.white,
+                  color: palette.onPrimary,
                   strokeWidth: 2.3,
                 ),
               )
