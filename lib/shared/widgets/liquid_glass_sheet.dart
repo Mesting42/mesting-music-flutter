@@ -236,10 +236,28 @@ class _LiquidGlassSurfaceBody extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: borderRadius,
         color: surfaceColor,
-        border: Border.all(
-          color: Colors.white.withValues(alpha: dark ? 0.15 : 0.48),
-          width: 0.8,
-        ),
+        // A bright top edge reads as an unintended white bar against the
+        // dark app surfaces. Keep the subtle outline on the other edges,
+        // while letting the sheet/card blend into its dark backdrop above.
+        border: dark
+            ? Border(
+                left: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  width: 0.8,
+                ),
+                right: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  width: 0.8,
+                ),
+                bottom: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  width: 0.8,
+                ),
+              )
+            : Border.all(
+                color: Colors.white.withValues(alpha: 0.48),
+                width: 0.8,
+              ),
         gradient: surfaceColor == null
             ? LinearGradient(
                 begin: Alignment.topLeft,
@@ -265,7 +283,9 @@ class _LiquidGlassSurfaceBody extends StatelessWidget {
                 borderRadius: borderRadius,
                 accent: scheme.primary,
                 dark: dark,
-                showTopHighlight: showTopHighlight,
+                // The light-only top gleam preserves the clean separation on
+                // white sheets without leaving a white stripe in dark mode.
+                showTopHighlight: showTopHighlight && !dark,
               ),
               child: body,
             )

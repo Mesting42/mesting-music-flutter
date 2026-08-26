@@ -50,6 +50,31 @@ void main() {
     expect(find.text('液态玻璃抽屉'), findsOneWidget);
   });
 
+  testWidgets('dark liquid glass omits the bright top edge', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(
+          brightness: Brightness.dark,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.pink,
+            brightness: Brightness.dark,
+          ),
+          extensions: [MusicThemeTokens.forBrightness(Brightness.dark)],
+        ),
+        home: const Scaffold(
+          body: LiquidGlassSurface(child: SizedBox(height: 220)),
+        ),
+      ),
+    );
+
+    final surface = tester.widget<DecoratedBox>(
+      find.byKey(liquidGlassSurfaceBodyKey),
+    );
+    final decoration = surface.decoration as BoxDecoration;
+    final border = decoration.border! as Border;
+    expect(border.top, BorderSide.none);
+  });
+
   test('all modal bottom sheets use the shared liquid glass route', () {
     final offenders = <String>[];
     for (final entity in Directory('lib').listSync(recursive: true)) {
