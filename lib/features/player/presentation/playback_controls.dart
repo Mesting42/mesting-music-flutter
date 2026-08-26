@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -141,9 +143,9 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
                       Positioned(
                         left: 10,
                         right: 10,
-                        top: 21,
-                        height: ipProgressTrackHeight,
-                        child: _BufferingProgressTrack(
+                        top: 14,
+                        height: 20,
+                        child: _BufferingPulseTrack(
                           color: effectiveProgressColor,
                         ),
                       )
@@ -367,17 +369,18 @@ const _metaStyle = TextStyle(
   fontWeight: FontWeight.w600,
 );
 
-class _BufferingProgressTrack extends StatefulWidget {
-  const _BufferingProgressTrack({required this.color});
+/// 声波脉冲列表示“音频数据正在抵达”，不把没有确定百分比的缓冲误导成
+/// 下载进度。绘制被限制在进度条区域，避免影响唱片与控制按钮的帧率。
+class _BufferingPulseTrack extends StatefulWidget {
+  const _BufferingPulseTrack({required this.color});
 
   final Color color;
 
   @override
-  State<_BufferingProgressTrack> createState() =>
-      _BufferingProgressTrackState();
+  State<_BufferingPulseTrack> createState() => _BufferingPulseTrackState();
 }
 
-class _BufferingProgressTrackState extends State<_BufferingProgressTrack>
+class _BufferingPulseTrackState extends State<_BufferingPulseTrack>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   bool _reduceMotion = false;
@@ -420,10 +423,11 @@ class _BufferingProgressTrackState extends State<_BufferingProgressTrack>
       value: '加载中',
       liveRegion: true,
       child: RepaintBoundary(
+        key: const ValueKey('playback-buffering-pulse'),
         child: AnimatedBuilder(
           animation: _controller,
           builder: (context, _) => CustomPaint(
-            painter: _BufferingProgressPainter(
+            painter: _BufferingPulsePainter(
               color: widget.color,
               phase: _controller.value,
             ),
@@ -435,51 +439,47 @@ class _BufferingProgressTrackState extends State<_BufferingProgressTrack>
   }
 }
 
-class _BufferingProgressPainter extends CustomPainter {
-  const _BufferingProgressPainter({required this.color, required this.phase});
+class _BufferingPulsePainter extends CustomPainter {
+  const _BufferingPulsePainter({required this.color, required this.phase});
 
   final Color color;
   final double phase;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final track = RRect.fromRectAndRadius(
-      Offset.zero & size,
-      Radius.circular(size.height / 2),
+    final rail = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, size.height / 2 - 1.25, size.width, 2.5),
+      const Radius.circular(99),
     );
     canvas.drawRRect(
-      track,
+      rail,
       Paint()..color = Colors.white.withValues(alpha: .14),
     );
 
-    final segmentWidth = size.width * .34;
-    final segmentLeft = (size.width + segmentWidth) * phase - segmentWidth;
-    final segmentRect = Rect.fromLTWH(
-      segmentLeft,
-      0,
-      segmentWidth,
-      size.height,
-    );
-    final segmentPaint = Paint()
-      ..shader = LinearGradient(
-        colors: [
-          color.withValues(alpha: 0),
-          color.withValues(alpha: .35),
-          color,
-          Colors.white.withValues(alpha: .92),
-          color,
-          color.withValues(alpha: 0),
-        ],
-        stops: const [0, .18, .4, .5, .6, 1],
-      ).createShader(segmentRect);
-    canvas.save();
-    canvas.clipRRect(track);
-    canvas.drawRect(segmentRect, segmentPaint);
-    canvas.restore();
+    const pulseCount = 5;
+    const pulseWidth = 3.2;
+    const pulseGap = 4.6;
+    final groupWidth = pulseCount * pulseWidth + (pulseCount - 1) * pulseGap;
+    final groupLeft = (size.width + groupWidth) * phase - groupWidth;
+    for (var index = 0; index < pulseCount; index++) {
+      final x = groupLeft + index * (pulseWidth + pulseGap);
+      if (x + pulseWidth < 0 || x > size.width) continue;
+      final wave = (math.sin(phase * math.pi * 4 + index * .95) + 1) / 2;
+      final height = 6 + wave * 11;
+      final opacity = .36 + wave * .58;
+      final pulse = RRect.fromRectAndRadius(
+        Rect.fromLTWH(x, (size.height - height) / 2, pulseWidth, height),
+        const Radius.circular(99),
+      );
+      canvas.drawRRect(
+        pulse,
+        Paint()..color = color.withValues(alpha: opacity),
+      );
+    }
   }
 
   @override
-  bool shouldRepaint(covariant _BufferingProgressPainter oldDelegate) {
+  bool shouldRepaint(covariant _BufferingPulsePainter oldDelegate) {
     return oldDelegate.color != color || oldDelegate.phase != phase;
   }
 }

@@ -156,7 +156,7 @@ void main() {
     expect(tester.widget<Slider>(sliderFinder).value, 0);
   });
 
-  testWidgets('buffering media moves loading feedback to the progress track', (
+  testWidgets('buffering media uses an accessible audio pulse loader', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
@@ -191,6 +191,10 @@ void main() {
 
     expect(
       find.byKey(const ValueKey('playback-buffering-progress')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('playback-buffering-pulse')),
       findsOneWidget,
     );
     expect(find.bySemanticsLabel('正在缓冲音乐'), findsOneWidget);
