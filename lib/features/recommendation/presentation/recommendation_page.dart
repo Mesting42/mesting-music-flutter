@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -855,20 +856,20 @@ class _MoodGrid extends StatelessWidget {
 
   static const moods = <_Mood>[
     _Mood('通勤醒脑', '给今天一点速度', _MoodVisual.commute, [
-      Color(0xFF61C4FF),
-      Color(0xFF5969E6),
+      MestingPalette.primaryBright,
+      MestingPalette.primary,
     ], 'editor-1'),
     _Mood('放松一下', '卸下此刻的疲惫', _MoodVisual.unwind, [
-      Color(0xFFD5A44B),
-      Color(0xFF745CC7),
+      Color(0xFF8FC8BB),
+      MestingPalette.teal,
     ], 'featured-4'),
     _Mood('保持专注', '安静进入心流', _MoodVisual.focus, [
-      Color(0xFF4DD0B5),
-      Color(0xFF3475A7),
+      Color(0xFF8295B7),
+      MestingPalette.heart,
     ], 'featured-3'),
     _Mood('准备入睡', '让节奏慢下来', _MoodVisual.sleep, [
-      Color(0xFF8680E2),
-      Color(0xFF493A84),
+      Color(0xFFB0A4DD),
+      MestingPalette.violet,
     ], 'editor-2'),
   ];
 
@@ -991,10 +992,12 @@ class _MoodGlyph extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    // 图标轮廓以页面的深色墨水为基准，只轻微染入状态色。这样靶心的
+    // 红色箭头仍是点睛，而不会把整枚图标的描边染成警示色。
     final foreground = Color.lerp(
-      isDark ? colors.first : colors.last,
-      isDark ? Colors.white : Colors.black,
-      isDark ? .28 : .2,
+      isDark ? Colors.white : MestingPalette.darkInk,
+      colors.last,
+      isDark ? .18 : .12,
     )!;
     return Container(
       key: ValueKey('mood-glyph-${visual.name}'),
@@ -1076,156 +1079,157 @@ class _MoodGlyphPainter extends CustomPainter {
       ..color = primary.withValues(alpha: .2)
       ..style = PaintingStyle.fill;
     final accentFill = Paint()
-      ..color = accent.withValues(alpha: .34)
+      ..color = accent.withValues(alpha: .48)
       ..style = PaintingStyle.fill;
     switch (visual) {
       case _MoodVisual.commute:
-        _paintMomentumRoute(canvas, line, soft, primaryFill, accentFill);
+        _paintCommuteBus(canvas, line, soft, primaryFill, accentFill);
         break;
       case _MoodVisual.unwind:
-        _paintBreathingLeaf(canvas, line, soft, primaryFill, accentFill);
+        _paintRelaxHeadphones(canvas, line, soft, primaryFill, accentFill);
         break;
       case _MoodVisual.focus:
-        _paintFocusPrism(canvas, line, soft, primaryFill, accentFill);
+        _paintFocusTarget(canvas, line, soft, primaryFill, accentFill);
         break;
       case _MoodVisual.sleep:
-        _paintDreamCloud(canvas, line, soft, primaryFill, accentFill);
+        _paintSleepMoon(canvas, line, soft, primaryFill, accentFill);
         break;
     }
   }
 
-  void _paintMomentumRoute(
+  void _paintCommuteBus(
     Canvas canvas,
     Paint line,
     Paint soft,
     Paint primaryFill,
     Paint accentFill,
   ) {
-    final route = Path()
-      ..moveTo(6.5, 29.5)
-      ..cubicTo(11.5, 12.5, 22.5, 33.5, 35.5, 13.5);
-    canvas.drawPath(
-      route,
-      Paint()
-        ..color = primary.withValues(alpha: .17)
-        ..strokeWidth = 6.5
-        ..strokeCap = StrokeCap.round
-        ..style = PaintingStyle.stroke,
+    final body = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(8, 7.5, 26, 25),
+      const Radius.circular(5),
     );
-    canvas.drawPath(route, line);
-    canvas.drawCircle(const Offset(10.1, 22.7), 3.2, primaryFill);
-    canvas.drawCircle(const Offset(10.1, 22.7), 2.2, line);
-    canvas.drawCircle(const Offset(25.2, 23.2), 2.8, accentFill);
-    canvas.drawCircle(const Offset(25.2, 23.2), 1.75, line);
-    canvas.drawPath(
-      Path()
-        ..moveTo(31.2, 11.8)
-        ..lineTo(36.2, 13.3)
-        ..lineTo(34.4, 18.2),
-      line,
+    final window = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(11.4, 11, 19.2, 8.2),
+      const Radius.circular(2.7),
     );
-    canvas.drawLine(const Offset(6.5, 34.8), const Offset(15.5, 34.8), soft);
-    canvas.drawLine(const Offset(9.2, 38), const Offset(18.2, 38), soft);
-    canvas.drawCircle(
-      const Offset(19, 13),
-      1.2,
-      Paint()..color = accent.withValues(alpha: .72),
-    );
+    canvas.drawRRect(body, primaryFill);
+    canvas.drawRRect(body, line);
+    canvas.drawRRect(window, accentFill);
+    canvas.drawRRect(window, soft);
+    canvas.drawLine(const Offset(9.7, 24.2), const Offset(32.3, 24.2), soft);
+    for (final x in [13.1, 28.9]) {
+      canvas.drawCircle(Offset(x, 27.7), 2.1, accentFill);
+      canvas.drawCircle(Offset(x, 27.7), 2.1, line);
+    }
+    canvas.drawLine(const Offset(11.2, 33.2), const Offset(17.3, 33.2), line);
+    canvas.drawLine(const Offset(24.7, 33.2), const Offset(30.8, 33.2), line);
+    canvas.drawLine(const Offset(5.5, 17.2), const Offset(8, 17.2), soft);
+    canvas.drawLine(const Offset(34, 17.2), const Offset(36.5, 17.2), soft);
   }
 
-  void _paintBreathingLeaf(
+  void _paintRelaxHeadphones(
     Canvas canvas,
     Paint line,
     Paint soft,
     Paint primaryFill,
     Paint accentFill,
   ) {
-    final leaf = Path()
-      ..moveTo(10, 24.5)
-      ..cubicTo(12.5, 13.5, 22, 8.2, 33.5, 10.2)
-      ..cubicTo(31.8, 21, 23.5, 28.2, 12.2, 27.5)
-      ..close();
-    canvas.drawPath(leaf, primaryFill);
-    canvas.drawPath(leaf, line);
-    canvas.drawPath(
-      Path()
-        ..moveTo(11.5, 27)
-        ..cubicTo(17.5, 21.5, 24.5, 16.5, 32, 11.2),
-      line,
-    );
-    canvas.drawLine(const Offset(19.7, 20.2), const Offset(18.2, 14.8), soft);
-    canvas.drawLine(const Offset(24.7, 16.8), const Offset(29.5, 17.2), soft);
-    canvas.drawCircle(const Offset(31.7, 10.5), 2.2, accentFill);
-    canvas.drawArc(const Rect.fromLTWH(8, 28, 26, 8), .16, 2.82, false, soft);
-    canvas.drawArc(const Rect.fromLTWH(12, 31.2, 18, 6), .2, 2.74, false, soft);
-  }
-
-  void _paintFocusPrism(
-    Canvas canvas,
-    Paint line,
-    Paint soft,
-    Paint primaryFill,
-    Paint accentFill,
-  ) {
-    final prism = Path()
-      ..moveTo(21, 5.5)
-      ..lineTo(33.5, 13)
-      ..lineTo(33.5, 27.5)
-      ..lineTo(21, 36.5)
-      ..lineTo(8.5, 27.5)
-      ..lineTo(8.5, 13)
-      ..close();
-    canvas.drawPath(prism, primaryFill);
-    canvas.drawPath(prism, line);
-    final core = Path()
-      ..moveTo(21, 12)
-      ..lineTo(29, 21)
-      ..lineTo(21, 30)
-      ..lineTo(13, 21)
-      ..close();
-    canvas.drawPath(core, accentFill);
-    canvas.drawPath(core, line);
-    canvas.drawLine(const Offset(21, 12), const Offset(21, 30), soft);
-    canvas.drawLine(const Offset(13, 21), const Offset(29, 21), soft);
-    canvas.drawCircle(const Offset(21, 21), 2.2, Paint()..color = foreground);
-    canvas.drawLine(const Offset(21, 2.8), const Offset(21, 5.5), soft);
-    canvas.drawLine(const Offset(36.2, 10.7), const Offset(33.5, 13), soft);
-    canvas.drawLine(const Offset(5.8, 31), const Offset(8.5, 27.5), soft);
-  }
-
-  void _paintDreamCloud(
-    Canvas canvas,
-    Paint line,
-    Paint soft,
-    Paint primaryFill,
-    Paint accentFill,
-  ) {
-    final cloud = Path()
-      ..moveTo(9, 27)
-      ..cubicTo(6.5, 24.5, 8.2, 20.2, 12.2, 19.8)
-      ..cubicTo(13.2, 13.7, 21.7, 11.8, 26, 16.4)
-      ..cubicTo(31.2, 15.1, 35.5, 19, 34.6, 23.8)
-      ..cubicTo(36.5, 27.8, 31.7, 31.2, 27.8, 29.7)
-      ..cubicTo(24.4, 33.3, 17.6, 32.5, 15.4, 28.8)
-      ..cubicTo(12.5, 30.5, 9.5, 29.3, 9, 27)
-      ..close();
-    canvas.drawPath(cloud, primaryFill);
-    canvas.drawPath(cloud, line);
+    const arch = Rect.fromLTWH(8.4, 5.3, 25.2, 27.5);
+    canvas.drawArc(arch, math.pi, math.pi, false, line);
     canvas.drawArc(
-      const Rect.fromLTWH(17, 8, 11.5, 11.5),
-      .4,
-      4.9,
+      const Rect.fromLTWH(11.2, 8.1, 19.6, 22),
+      math.pi,
+      math.pi,
       false,
       soft,
     );
-    canvas.drawCircle(const Offset(28.8, 9.8), 1.25, accentFill);
-    canvas.drawCircle(
-      const Offset(33.4, 14.4),
-      .9,
-      Paint()..color = foreground,
+    final leftCup = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(6.4, 21.8, 8.9, 12.1),
+      const Radius.circular(4.1),
     );
-    canvas.drawLine(const Offset(13.4, 34.3), const Offset(26.8, 34.3), soft);
-    canvas.drawLine(const Offset(17.2, 37.2), const Offset(29, 37.2), soft);
+    final rightCup = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(28.7, 21.8, 8.9, 12.1),
+      const Radius.circular(4.1),
+    );
+    canvas.drawRRect(leftCup, primaryFill);
+    canvas.drawRRect(rightCup, primaryFill);
+    canvas.drawRRect(leftCup, line);
+    canvas.drawRRect(rightCup, line);
+    canvas.drawLine(const Offset(11, 24.4), const Offset(11, 31.3), soft);
+    canvas.drawLine(const Offset(33, 24.4), const Offset(33, 31.3), soft);
+    final paddedBand = Paint()
+      ..color = accentFill.color
+      ..strokeWidth = 4.1
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    canvas.drawArc(
+      const Rect.fromLTWH(14.7, 5.2, 12.6, 7),
+      math.pi,
+      math.pi,
+      false,
+      paddedBand,
+    );
+  }
+
+  void _paintFocusTarget(
+    Canvas canvas,
+    Paint line,
+    Paint soft,
+    Paint primaryFill,
+    Paint accentFill,
+  ) {
+    const center = Offset(19.5, 23);
+    canvas.drawCircle(center, 13.2, soft);
+    canvas.drawCircle(center, 8.8, line);
+    canvas.drawCircle(center, 4.2, primaryFill);
+    canvas.drawCircle(center, 4.2, line);
+    canvas.drawLine(const Offset(8.2, 34.3), const Offset(28.6, 13.9), line);
+    final arrow = Path()
+      ..moveTo(26.6, 11.4)
+      ..lineTo(36.5, 7.2)
+      ..lineTo(32.3, 17.1)
+      ..lineTo(30.1, 13.6)
+      ..close();
+    canvas.drawPath(arrow, accentFill);
+    canvas.drawPath(arrow, line);
+    canvas.drawCircle(const Offset(19.5, 23), 1.5, accentFill);
+    canvas.drawLine(const Offset(5.8, 35.8), const Offset(10.5, 35.8), soft);
+  }
+
+  void _paintSleepMoon(
+    Canvas canvas,
+    Paint line,
+    Paint soft,
+    Paint primaryFill,
+    Paint accentFill,
+  ) {
+    final moon = Path()
+      ..moveTo(26.8, 6.8)
+      ..cubicTo(15.1, 7.8, 9.1, 17.4, 12.7, 26.2)
+      ..cubicTo(16.2, 34.5, 27.1, 36.7, 34.1, 29.6)
+      ..cubicTo(26.5, 30.4, 20.3, 26.5, 19.6, 20.4)
+      ..cubicTo(18.8, 13.8, 22.4, 9.3, 26.8, 6.8)
+      ..close();
+    canvas.drawPath(moon, primaryFill);
+    canvas.drawPath(moon, line);
+    canvas.drawPath(
+      Path()
+        ..moveTo(27, 11.2)
+        ..lineTo(31.6, 11.2)
+        ..lineTo(27.7, 15.3)
+        ..lineTo(32.2, 15.3),
+      soft,
+    );
+    canvas.drawPath(
+      Path()
+        ..moveTo(31.4, 18.8)
+        ..lineTo(35.1, 18.8)
+        ..lineTo(32, 22.2)
+        ..lineTo(35.7, 22.2),
+      line,
+    );
+    canvas.drawCircle(const Offset(23, 31.3), 1.5, accentFill);
+    canvas.drawCircle(const Offset(27.2, 33.6), 1, accentFill);
   }
 
   @override
