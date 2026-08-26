@@ -25,7 +25,7 @@
 | `1.0.37+41` | 稳定体验更新 | 加入封面与好友头像缓存、图片失败重试，以及消息和个人资料页面过渡优化。 |
 | `1.0.37+42` | 稳定功能发布 | 加入用户协议、隐私政策，并在稳定 CloudBase 通道发布。源码标签为 `flutter-music-v1.0.37-build42`。 |
 | `1.0.37+43` | 当前稳定发布 | 更新推荐场景图标、播放器缓冲动效与多项界面细节，并在稳定 CloudBase 通道发布。APK SHA-256：`cc1b762bdc43863fbdf546144b41694765484127ab57afeaef80480a5f16cdd3`；不可变清单：`releases/android/manifests/43.json`；源码标签为 `flutter-music-v1.0.37-build43`。 |
-| `1.0.37+44` | 当前稳定发布 | 修复部分在线音源无声、无进度却显示播放中的问题，并合入本轮消息与深色界面稳定性优化。不可变清单：`releases/android/manifests/44.json`；源码标签为 `flutter-music-v1.0.37-build44`。APK SHA-256 将在发布后回填。 |
+| `1.0.37+44` | 当前稳定发布 | 修复部分在线音源无声、无进度却显示播放中的问题，并合入本轮消息与深色界面稳定性优化。APK SHA-256：`c576b804830f2fadfe3df86c5ca4854f4eafa0fc88d5e54ef402a1877f4d6c38`；不可变清单：`releases/android/manifests/44.json`；源码标签为 `flutter-music-v1.0.37-build44`。 |
 
 ## Git 历史补全方式
 
