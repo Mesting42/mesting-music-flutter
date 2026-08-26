@@ -221,6 +221,47 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets(
+    'history remains hidden until the first viewport jump reaches the latest message',
+    (tester) async {
+      final repository = _PendingChatRepository(friend);
+      await tester.pumpWidget(app(repository));
+      await tester.pump();
+
+      repository.messages.complete([
+        for (var index = 0; index < 12; index++)
+          SocialMessage(
+            id: 'history-$index',
+            senderUid: index.isEven ? currentUser.uid : friend.uid,
+            receiverUid: index.isEven ? friend.uid : currentUser.uid,
+            kind: SocialMessageKind.text,
+            text: '历史消息 $index',
+            sentAt: DateTime.now().subtract(Duration(minutes: 12 - index)),
+          ),
+      ]);
+      await tester.pump();
+
+      expect(
+        tester
+            .widget<AnimatedOpacity>(
+              find.byKey(const ValueKey('chat-message-list-reveal')),
+            )
+            .opacity,
+        0,
+      );
+
+      await tester.pump();
+      expect(
+        tester
+            .widget<AnimatedOpacity>(
+              find.byKey(const ValueKey('chat-message-list-reveal')),
+            )
+            .opacity,
+        1,
+      );
+    },
+  );
+
   testWidgets('好友分享的歌曲显示为可播放音乐卡片而不是编码文本', (tester) async {
     const track = Track(
       id: 'friend-shared-track',

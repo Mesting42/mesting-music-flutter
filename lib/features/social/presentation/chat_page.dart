@@ -143,6 +143,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   bool _messageLoadInFlight = false;
   final Set<String> _hiddenMessageIds = <String>{};
   bool _friendActionWorking = false;
+  bool _initialMessageViewportReady = false;
+  bool _revealMessagesAfterNextScroll = false;
 
   @override
   void initState() {
@@ -281,53 +283,59 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       avatarUrl: currentUser?.avatarUrl,
     );
     final peerSocialUser = peer ?? SocialUser(uid: widget.uid, nickname: '好友');
-    return NotificationListener<ScrollMetricsNotification>(
-      onNotification: _handleMessageMetricsChanged,
-      child: NotificationListener<ScrollNotification>(
-        onNotification: _handleMessageScroll,
-        child: ListView.builder(
-          key: const ValueKey('chat-message-list'),
-          controller: _scrollController,
-          padding: const EdgeInsets.fromLTRB(14, 18, 14, 18),
-          itemCount: _messages.length,
-          itemBuilder: (context, index) {
-            final entry = _messages[index];
-            final message = entry.message;
-            final mine = message.senderUid == currentUid;
-            final previousMessage = index > 0
-                ? _messages[index - 1].message
-                : null;
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (shouldShowChatMessageTimestamp(previousMessage, message))
-                  _MessageTimestamp(
-                    key: ValueKey('chat-message-time-${message.id}'),
-                    sentAt: message.sentAt,
+    return AnimatedOpacity(
+      key: const ValueKey('chat-message-list-reveal'),
+      opacity: _initialMessageViewportReady ? 1 : 0,
+      duration: const Duration(milliseconds: 160),
+      curve: Curves.easeOutCubic,
+      child: NotificationListener<ScrollMetricsNotification>(
+        onNotification: _handleMessageMetricsChanged,
+        child: NotificationListener<ScrollNotification>(
+          onNotification: _handleMessageScroll,
+          child: ListView.builder(
+            key: const ValueKey('chat-message-list'),
+            controller: _scrollController,
+            padding: const EdgeInsets.fromLTRB(14, 18, 14, 18),
+            itemCount: _messages.length,
+            itemBuilder: (context, index) {
+              final entry = _messages[index];
+              final message = entry.message;
+              final mine = message.senderUid == currentUid;
+              final previousMessage = index > 0
+                  ? _messages[index - 1].message
+                  : null;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (shouldShowChatMessageTimestamp(previousMessage, message))
+                    _MessageTimestamp(
+                      key: ValueKey('chat-message-time-${message.id}'),
+                      sentAt: message.sentAt,
+                    ),
+                  _MessageBubble(
+                    key: ValueKey(message.id),
+                    message: message,
+                    mine: mine,
+                    avatarUser: mine ? currentSocialUser : peerSocialUser,
+                    onAvatarTap: () => mine
+                        ? context.push('/profile')
+                        : context.push(
+                            '/social/users/${Uri.encodeComponent(widget.uid)}',
+                          ),
+                    delivery: entry.delivery,
+                    onRetry: entry.delivery == _MessageDelivery.failed
+                        ? () => _retryMessage(entry)
+                        : null,
+                    onLongPress:
+                        entry.delivery == _MessageDelivery.sent &&
+                            !message.recalled
+                        ? () => _showMessageActions(entry, mine: mine)
+                        : null,
                   ),
-                _MessageBubble(
-                  key: ValueKey(message.id),
-                  message: message,
-                  mine: mine,
-                  avatarUser: mine ? currentSocialUser : peerSocialUser,
-                  onAvatarTap: () => mine
-                      ? context.push('/profile')
-                      : context.push(
-                          '/social/users/${Uri.encodeComponent(widget.uid)}',
-                        ),
-                  delivery: entry.delivery,
-                  onRetry: entry.delivery == _MessageDelivery.failed
-                      ? () => _retryMessage(entry)
-                      : null,
-                  onLongPress:
-                      entry.delivery == _MessageDelivery.sent &&
-                          !message.recalled
-                      ? () => _showMessageActions(entry, mine: mine)
-                      : null,
-                ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -339,9 +347,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final initialLoad = _loading && _messages.isEmpty;
     if (!silent && mounted) setState(() => _loading = true);
     try {
-      final remoteMessages = await ref
-          .read(socialRepositoryProvider)
-          .listMessages(widget.uid);
+      if (silent) ref.invalidate(socialMessagesProvider(widget.uid));
+      final remoteMessages = await ref.read(
+        socialMessagesProvider(widget.uid).future,
+      );
       final messages = remoteMessages
           .where((message) => !_hiddenMessageIds.contains(message.id))
           .toList(growable: false);
@@ -388,12 +397,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         ..sort(
           (left, right) => left.message.sentAt.compareTo(right.message.sentAt),
         );
+      final needsInitialPosition = initialLoad && messages.isNotEmpty;
       setState(() {
         _messages = merged;
         _loading = false;
         _error = null;
+        _initialMessageViewportReady = !needsInitialPosition;
       });
-      if (changed) _scrollToEnd(immediate: initialLoad);
+      if (changed || needsInitialPosition) {
+        _scrollToEnd(
+          immediate: initialLoad,
+          revealMessagesAfterScroll: needsInitialPosition,
+        );
+      }
     } on Object catch (error) {
       if (!mounted) return;
       setState(() {
@@ -661,7 +677,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       localMediaPath: mediaPath,
       localThumbnailPath: thumbnailPath,
     );
-    setState(() => _messages = [..._messages, entry]);
+    setState(() {
+      _initialMessageViewportReady = true;
+      _messages = [..._messages, entry];
+    });
     _scrollToEnd();
     unawaited(_deliverMessage(entry));
   }
@@ -737,7 +756,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       _replaceLocalEntry(
         _ChatMessageEntry.sent(message, localId: deliveryEntry.localId),
       );
-      ref.invalidate(socialConversationsProvider);
+      ref
+        ..invalidate(socialConversationsProvider)
+        ..invalidate(socialMessagesProvider(widget.uid));
       _scrollToEnd();
     } on Object catch (error) {
       if (!mounted) return;
@@ -1050,7 +1071,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       _replaceLocalEntry(
         _ChatMessageEntry.sent(recalled, localId: entry.localId),
       );
-      ref.invalidate(socialConversationsProvider);
+      ref
+        ..invalidate(socialConversationsProvider)
+        ..invalidate(socialMessagesProvider(widget.uid));
     } on Object catch (error) {
       _showError(error);
     }
@@ -1068,7 +1091,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             .where((candidate) => candidate.message.id != entry.message.id)
             .toList(growable: false);
       });
-      ref.invalidate(socialConversationsProvider);
+      ref
+        ..invalidate(socialConversationsProvider)
+        ..invalidate(socialMessagesProvider(widget.uid));
     } on Object catch (error) {
       _showError(error);
     }
@@ -1088,8 +1113,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return false;
   }
 
-  void _scrollToEnd({bool immediate = false}) {
+  void _scrollToEnd({
+    bool immediate = false,
+    bool revealMessagesAfterScroll = false,
+  }) {
     _stickToLatestMessage = true;
+    _revealMessagesAfterNextScroll |= revealMessagesAfterScroll;
     _scheduleLatestMessageScroll(immediate: immediate);
   }
 
@@ -1101,10 +1130,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       if (!mounted || !_scrollController.hasClients) return;
       final position = _scrollController.position;
       final target = position.maxScrollExtent;
-      if ((position.pixels - target).abs() < .5) return;
-      if (immediate) {
+      if ((position.pixels - target).abs() >= .5 && immediate) {
         position.jumpTo(target);
-      } else {
+      } else if ((position.pixels - target).abs() >= .5) {
         unawaited(
           position.animateTo(
             target,
@@ -1112,6 +1140,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             curve: Curves.easeOutCubic,
           ),
         );
+      }
+      if (_revealMessagesAfterNextScroll) {
+        _revealMessagesAfterNextScroll = false;
+        if (!_initialMessageViewportReady) {
+          setState(() => _initialMessageViewportReady = true);
+        }
       }
     });
   }
