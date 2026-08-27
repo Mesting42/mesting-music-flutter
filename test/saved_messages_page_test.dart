@@ -9,10 +9,28 @@ import 'package:mesting_music/features/social/domain/chat_message_actions.dart';
 import 'package:mesting_music/features/social/domain/social_models.dart';
 import 'package:mesting_music/features/social/domain/track_share.dart';
 import 'package:mesting_music/features/social/presentation/saved_messages_page.dart';
+import 'package:mesting_music/features/social/presentation/social_widgets.dart';
 import 'package:mesting_music/shared/models/track.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  test('saved cloud media waits for its playable download address', () {
+    const cloudObjectId = 'cloud://music-env/social-media/me/voice.m4a';
+
+    expect(playableSavedMessageMediaUrl(cloudObjectId, null), isEmpty);
+    expect(
+      playableSavedMessageMediaUrl(
+        cloudObjectId,
+        'https://cdn.example/social-media/me/voice.m4a',
+      ),
+      'https://cdn.example/social-media/me/voice.m4a',
+    );
+    expect(
+      playableSavedMessageMediaUrl('file:///C:/temp/saved-voice.m4a', null),
+      'file:///C:/temp/saved-voice.m4a',
+    );
+  });
+
   testWidgets('saved messages page exposes the stored message collection', (
     tester,
   ) async {
@@ -47,6 +65,7 @@ void main() {
     expect(find.byKey(const ValueKey('saved-messages-list')), findsOneWidget);
     expect(find.text('Mest'), findsOneWidget);
     expect(find.text('这条消息已经被收藏'), findsOneWidget);
+    expect(find.byType(SocialHeaderButton), findsNothing);
   });
 
   testWidgets('a saved message opens its own detail instead of the chat', (

@@ -357,7 +357,11 @@ class _SavedMessageVoicePreview extends ConsumerWidget {
     final sourceState = rawSource.startsWith('cloud://')
         ? ref.watch(socialMediaUrlProvider(rawSource))
         : null;
-    final source = sourceState?.value ?? rawSource;
+    // A CloudBase object ID is not a media URL a platform player can open.
+    // Do not create a player until its short-lived HTTPS download URL has
+    // arrived; otherwise the player holds on to the failed `cloud://` source
+    // even after the resolver finishes.
+    final source = playableSavedMessageMediaUrl(rawSource, sourceState?.value);
     if (source.isEmpty) {
       final label = rawSource.isEmpty
           ? '未保存语音文件'
@@ -391,10 +395,14 @@ class _SavedMessageVideoPreview extends ConsumerWidget {
     final sourceState = rawSource.startsWith('cloud://')
         ? ref.watch(socialMediaUrlProvider(rawSource))
         : null;
-    final source = sourceState?.value ?? rawSource;
-    final thumbnail = rawThumbnail.startsWith('cloud://')
-        ? ref.watch(socialMediaUrlProvider(rawThumbnail)).value
-        : rawThumbnail;
+    final source = playableSavedMessageMediaUrl(rawSource, sourceState?.value);
+    final thumbnailState = rawThumbnail.startsWith('cloud://')
+        ? ref.watch(socialMediaUrlProvider(rawThumbnail))
+        : null;
+    final thumbnail = playableSavedMessageMediaUrl(
+      rawThumbnail,
+      thumbnailState?.value,
+    );
     if (source.isEmpty) {
       final label = rawSource.isEmpty
           ? '未保存视频文件'
@@ -413,6 +421,20 @@ class _SavedMessageVideoPreview extends ConsumerWidget {
       keyPrefix: 'saved-message',
     );
   }
+}
+
+/// Returns a source that can safely be given to an audio or video player.
+///
+/// Current saved snapshots can contain either a directly playable local/HTTPS
+/// address or CloudBase's stable `cloud://` object ID. The latter must wait for
+/// [resolvedCloudUrl], rather than being forwarded as if it were a network
+/// address. This is intentionally shared by saved voice, video, and video
+/// thumbnail previews so their first controller always receives a valid URL.
+String playableSavedMessageMediaUrl(String rawValue, String? resolvedCloudUrl) {
+  final value = rawValue.trim();
+  if (value.isEmpty) return '';
+  if (!value.startsWith('cloud://')) return value;
+  return resolvedCloudUrl?.trim() ?? '';
 }
 
 class _SavedMessageAttachmentPreview extends StatelessWidget {
