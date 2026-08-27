@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mesting_music/features/social/domain/chat_message_actions.dart';
 import 'package:mesting_music/features/social/domain/social_models.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   test('quoted messages keep a readable fallback and decode safely', () {
@@ -29,4 +30,32 @@ void main() {
     expect(chatMessageQuoteExcerpt(voice), '语音消息');
     expect(savedChatMessageIdsKey(' me '), 'social_saved_message_ids_v1_me');
   });
+
+  test(
+    'saved message snapshots persist enough content for the collection',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final preferences = await SharedPreferences.getInstance();
+      final message = SavedChatMessage(
+        id: 'saved-1',
+        conversationUid: 'friend',
+        senderUid: 'me',
+        authorName: 'Mesting',
+        kind: SocialMessageKind.text,
+        text: '留在收藏中的消息',
+        sentAt: DateTime(2026, 8, 27, 20, 10),
+      );
+
+      await writeSavedChatMessages(preferences, ' me ', [message]);
+
+      expect(savedChatMessagesKey(' me '), 'social_saved_messages_v1_me');
+      expect(
+        readSavedChatMessages(preferences, 'me'),
+        isA<List<SavedChatMessage>>()
+            .having((messages) => messages, 'messages', hasLength(1))
+            .having((messages) => messages.single.id, 'id', 'saved-1')
+            .having((messages) => messages.single.text, 'text', '留在收藏中的消息'),
+      );
+    },
+  );
 }

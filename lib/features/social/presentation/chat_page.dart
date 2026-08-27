@@ -145,6 +145,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   bool _messageLoadInFlight = false;
   final Set<String> _hiddenMessageIds = <String>{};
   Set<String> _savedMessageIds = <String>{};
+  Map<String, SavedChatMessage> _savedMessages = <String, SavedChatMessage>{};
   Set<String> _selectedMessageIds = <String>{};
   ChatMessageQuote? _quoteDraft;
   bool _friendActionWorking = false;
@@ -173,10 +174,67 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         ref.read(sharedPreferencesProvider),
         uid,
       );
-      _savedMessageIds = saved;
+      final savedMessages = readSavedChatMessages(
+        ref.read(sharedPreferencesProvider),
+        uid,
+      );
+      _savedMessages = {
+        for (final message in savedMessages) message.id: message,
+      };
+      _savedMessageIds = {...saved, ..._savedMessages.keys};
     } on Object {
       // Lightweight previews and widget tests may not supply preferences.
     }
+  }
+
+  SavedChatMessage _savedSnapshotFor(_ChatMessageEntry entry) {
+    final currentUser = ref.read(currentUserProvider);
+    final mine = entry.message.senderUid == currentUser?.uid;
+    final authorName = mine
+        ? currentUser?.nickname ?? '我'
+        : ref.read(socialUserProvider(widget.uid)).value?.displayName ?? '好友';
+    return SavedChatMessage.fromMessage(
+      entry.message,
+      conversationUid: widget.uid,
+      authorName: authorName,
+    );
+  }
+
+  Future<void> _persistSavedMessages(
+    String uid,
+    Set<String> messageIds,
+    Map<String, SavedChatMessage> savedMessages,
+  ) async {
+    final preferences = ref.read(sharedPreferencesProvider);
+    await Future.wait([
+      writeSavedChatMessageIds(preferences, uid, messageIds),
+      writeSavedChatMessages(
+        preferences,
+        uid,
+        savedMessages.values.where(
+          (message) => messageIds.contains(message.id),
+        ),
+      ),
+    ]);
+  }
+
+  void _recoverSavedMessageSnapshots(Iterable<_ChatMessageEntry> entries) {
+    final uid = ref.read(currentUserProvider)?.uid;
+    if (uid == null || uid.isEmpty || _savedMessageIds.isEmpty) return;
+    final recovered = Map<String, SavedChatMessage>.from(_savedMessages);
+    for (final entry in entries) {
+      final id = entry.message.id;
+      if (_savedMessageIds.contains(id) && !recovered.containsKey(id)) {
+        recovered[id] = _savedSnapshotFor(entry);
+      }
+    }
+    if (recovered.length == _savedMessages.length) return;
+    setState(() => _savedMessages = recovered);
+    unawaited(_persistSavedMessages(uid, _savedMessageIds, recovered));
+  }
+
+  void _dismissComposerFocus() {
+    FocusManager.instance.primaryFocus?.unfocus();
   }
 
   @override
@@ -450,6 +508,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         _error = null;
         _initialMessageViewportReady = !needsInitialPosition;
       });
+      _recoverSavedMessageSnapshots(merged);
       if (changed || needsInitialPosition) {
         _scrollToEnd(
           immediate: initialLoad,
@@ -1066,6 +1125,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     required bool mine,
     required Offset anchor,
   }) async {
+    _dismissComposerFocus();
     final message = entry.message;
     final supportsCopy =
         message.kind == SocialMessageKind.text ||
@@ -1143,15 +1203,22 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     if (uid == null || uid.isEmpty) return;
     final messageId = entry.message.id;
     final next = {..._savedMessageIds};
+    final nextSavedMessages = Map<String, SavedChatMessage>.from(
+      _savedMessages,
+    );
     final saved = next.add(messageId);
-    if (!saved) next.remove(messageId);
-    setState(() => _savedMessageIds = next);
+    if (saved) {
+      nextSavedMessages[messageId] = _savedSnapshotFor(entry);
+    } else {
+      next.remove(messageId);
+      nextSavedMessages.remove(messageId);
+    }
+    setState(() {
+      _savedMessageIds = next;
+      _savedMessages = nextSavedMessages;
+    });
     try {
-      await writeSavedChatMessageIds(
-        ref.read(sharedPreferencesProvider),
-        uid,
-        next,
-      );
+      await _persistSavedMessages(uid, next, nextSavedMessages);
       if (mounted) {
         showMusicNotice(
           context,
@@ -1218,16 +1285,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       ..._savedMessageIds,
       ...entries.map((entry) => entry.message.id),
     };
+    final nextSavedMessages = Map<String, SavedChatMessage>.from(
+      _savedMessages,
+    );
+    for (final entry in entries) {
+      nextSavedMessages[entry.message.id] = _savedSnapshotFor(entry);
+    }
     setState(() {
       _savedMessageIds = next;
+      _savedMessages = nextSavedMessages;
       _selectedMessageIds = <String>{};
     });
     try {
-      await writeSavedChatMessageIds(
-        ref.read(sharedPreferencesProvider),
-        uid,
-        next,
-      );
+      await _persistSavedMessages(uid, next, nextSavedMessages);
       if (mounted) {
         showMusicNotice(
           context,
@@ -1283,6 +1353,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   void _showTranscriptionUnavailable() {
+    _dismissComposerFocus();
     showMusicNotice(
       context,
       icon: Icons.text_fields_rounded,
@@ -2353,94 +2424,107 @@ class _MessageBubble extends ConsumerWidget {
             maxWidth: maxBubbleWidth,
             bubble: bubble,
           );
+    final alignedMessage = Align(
+      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: mine
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (delivery != _MessageDelivery.sent) ...[
+                    _DeliveryIndicator(
+                      messageId: message.id,
+                      delivery: delivery,
+                      onRetry: onRetry,
+                    ),
+                    const SizedBox(width: 7),
+                  ],
+                  messageContent,
+                  const SizedBox(width: 4),
+                  _MessageAvatar(
+                    messageId: message.id,
+                    user: avatarUser,
+                    mine: true,
+                    onTap: onAvatarTap,
+                  ),
+                ],
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  _MessageAvatar(
+                    messageId: message.id,
+                    user: avatarUser,
+                    mine: false,
+                    onTap: onAvatarTap,
+                  ),
+                  const SizedBox(width: 4),
+                  messageContent,
+                ],
+              ),
+      ),
+    );
     return GestureDetector(
       onTap: onTap,
       onLongPressStart: onLongPressStart == null
           ? null
           : (details) => onLongPressStart!(details.globalPosition),
       behavior: HitTestBehavior.opaque,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Align(
-            alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: mine
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        if (delivery != _MessageDelivery.sent) ...[
-                          _DeliveryIndicator(
-                            messageId: message.id,
-                            delivery: delivery,
-                            onRetry: onRetry,
-                          ),
-                          const SizedBox(width: 7),
-                        ],
-                        messageContent,
-                        const SizedBox(width: 4),
-                        _MessageAvatar(
-                          messageId: message.id,
-                          user: avatarUser,
-                          mine: true,
-                          onTap: onAvatarTap,
-                        ),
-                      ],
-                    )
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        _MessageAvatar(
-                          messageId: message.id,
-                          user: avatarUser,
-                          mine: false,
-                          onTap: onAvatarTap,
-                        ),
-                        const SizedBox(width: 4),
-                        messageContent,
-                      ],
+      child: selectionMode
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 36,
+                  child: Center(
+                    child: _MessageSelectionIndicator(
+                      messageId: message.id,
+                      selected: selected,
                     ),
-            ),
-          ),
-          if (selectionMode)
-            Positioned(
-              top: 0,
-              left: mine ? null : 36,
-              right: mine ? 36 : null,
-              child: _MessageSelectionIndicator(selected: selected),
-            ),
-        ],
-      ),
+                  ),
+                ),
+                Expanded(child: alignedMessage),
+              ],
+            )
+          : alignedMessage,
     );
   }
 }
 
 class _MessageSelectionIndicator extends StatelessWidget {
-  const _MessageSelectionIndicator({required this.selected});
+  const _MessageSelectionIndicator({
+    required this.messageId,
+    required this.selected,
+  });
 
+  final String messageId;
   final bool selected;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    const selectedColor = Color(0xFF61C777);
     return Semantics(
       label: selected ? '已选择此消息' : '未选择此消息',
       child: Container(
-        width: 24,
-        height: 24,
+        key: ValueKey('chat-message-selection-marker-$messageId'),
+        width: 30,
+        height: 30,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: selected ? scheme.primary : scheme.surface,
+          color: selected ? selectedColor : scheme.surfaceContainerHighest,
           border: Border.all(
-            color: selected ? scheme.primary : scheme.outlineVariant,
-            width: 1.5,
+            color: selected
+                ? selectedColor
+                : selectedColor.withValues(alpha: .68),
+            width: 1.4,
           ),
         ),
         child: selected
-            ? Icon(Icons.check_rounded, size: 16, color: scheme.onPrimary)
+            ? const Icon(Icons.check_rounded, size: 19, color: Colors.white)
             : null,
       ),
     );

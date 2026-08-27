@@ -27,6 +27,7 @@ import '../../features/social/presentation/chat_page.dart';
 import '../../features/social/presentation/public_profile_page.dart';
 import '../../features/social/presentation/social_connections_page.dart';
 import '../../features/social/presentation/social_messages_page.dart';
+import '../../features/social/presentation/saved_messages_page.dart';
 import '../../features/themes/theme_gallery_page.dart';
 import '../../features/profile/presentation/profile_edit_page.dart';
 import '../../features/profile/presentation/avatar_preview_page.dart';
@@ -230,6 +231,17 @@ final appRouter = GoRouter(
               reason: '登录后才能查看好友消息。',
               redirect: state.uri.toString(),
               child: const SocialMessagesPage(),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/social/saved-messages',
+          pageBuilder: (context, state) => _messagesTransitionPage(
+            state: state,
+            child: AuthProtectedPage(
+              reason: '登录后才能查看收藏消息。',
+              redirect: state.uri.toString(),
+              child: const SavedMessagesPage(),
             ),
           ),
         ),

@@ -737,6 +737,12 @@ void main() {
     await tester.pumpWidget(app(repository));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus,
+      isTrue,
+    );
     await tester.longPress(
       find.byKey(const ValueKey('chat-voice-message-voice-actions')),
     );
@@ -745,6 +751,19 @@ void main() {
     expect(find.text('转文字'), findsOneWidget);
     expect(find.text('删除'), findsOneWidget);
     expect(find.text('撤回消息'), findsNothing);
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus,
+      isFalse,
+    );
+
+    await tester.tap(find.text('转文字'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('语音转文字尚未配置'), findsOneWidget);
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus,
+      isFalse,
+    );
   });
 
   testWidgets('voice actions enter quote and multi-select modes', (
@@ -788,6 +807,14 @@ void main() {
     expect(find.text('已选 1 项'), findsOneWidget);
     expect(find.text('收藏'), findsOneWidget);
     expect(find.text('删除'), findsOneWidget);
+    final marker = find.byKey(
+      const ValueKey('chat-message-selection-marker-voice-quote-actions'),
+    );
+    expect(marker, findsOneWidget);
+    expect(
+      tester.getCenter(marker).dx,
+      lessThan(tester.getCenter(voiceMessage).dx),
+    );
   });
 
   testWidgets('quoted text keeps the reply bubble separate from its context', (

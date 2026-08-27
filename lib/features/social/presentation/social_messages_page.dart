@@ -19,9 +19,20 @@ class SocialMessagesPage extends ConsumerWidget {
     return Column(
       children: [
         SizedBox(height: top + 12),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: SocialPageHeader(title: '我的消息', subtitle: '只接收互相关注好友的私信'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: SocialPageHeader(
+            title: '我的消息',
+            subtitle: '只接收互相关注好友的私信',
+            trailing: SocialHeaderButton(
+              label: '收藏消息',
+              icon: Icons.bookmarks_outlined,
+              onTap: () => context.push(
+                '/social/saved-messages',
+                extra: const MusicPageTransitionIntent.messagesConversation(),
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 17),
         Expanded(

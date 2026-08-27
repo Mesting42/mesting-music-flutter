@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'social_models.dart';
@@ -5,6 +7,7 @@ import 'social_models.dart';
 const _quotePrefix = '「引用」';
 const _quoteDivider = '\n——\n';
 const _savedMessageIdsPrefix = 'social_saved_message_ids_v1_';
+const _savedMessagesPrefix = 'social_saved_messages_v1_';
 
 /// A compact, readable representation of the message being quoted.
 ///
@@ -18,8 +21,88 @@ class ChatMessageQuote {
   final String content;
 }
 
+/// A local, durable snapshot for a saved chat message.
+///
+/// The chat backend deliberately owns the live conversation. Saved messages,
+/// however, are a personal local collection so that a user can still browse
+/// their saved content after the original conversation has moved on.
+class SavedChatMessage {
+  const SavedChatMessage({
+    required this.id,
+    required this.conversationUid,
+    required this.senderUid,
+    required this.authorName,
+    required this.kind,
+    required this.text,
+    required this.sentAt,
+    this.mediaUrl,
+    this.thumbnailUrl,
+  });
+
+  final String id;
+  final String conversationUid;
+  final String senderUid;
+  final String authorName;
+  final SocialMessageKind kind;
+  final String text;
+  final DateTime sentAt;
+  final String? mediaUrl;
+  final String? thumbnailUrl;
+
+  factory SavedChatMessage.fromMessage(
+    SocialMessage message, {
+    required String conversationUid,
+    required String authorName,
+  }) => SavedChatMessage(
+    id: message.id,
+    conversationUid: conversationUid,
+    senderUid: message.senderUid,
+    authorName: authorName,
+    kind: message.kind,
+    text: message.text,
+    sentAt: message.sentAt,
+    mediaUrl: message.mediaUrl,
+    thumbnailUrl: message.thumbnailUrl,
+  );
+
+  factory SavedChatMessage.fromJson(Map<String, Object?> json) {
+    final rawKind = json['kind']?.toString() ?? SocialMessageKind.text.name;
+    final rawSentAt = json['sent_at']?.toString() ?? '';
+    return SavedChatMessage(
+      id: json['id']?.toString().trim() ?? '',
+      conversationUid: json['conversation_uid']?.toString().trim() ?? '',
+      senderUid: json['sender_uid']?.toString().trim() ?? '',
+      authorName: json['author_name']?.toString().trim() ?? '好友',
+      kind: SocialMessageKind.values.firstWhere(
+        (value) => value.name == rawKind,
+        orElse: () => SocialMessageKind.text,
+      ),
+      text: json['text']?.toString() ?? '',
+      sentAt:
+          DateTime.tryParse(rawSentAt)?.toLocal() ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+      mediaUrl: _optionalText(json['media_url']),
+      thumbnailUrl: _optionalText(json['thumbnail_url']),
+    );
+  }
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'conversation_uid': conversationUid,
+    'sender_uid': senderUid,
+    'author_name': authorName,
+    'kind': kind.name,
+    'text': text,
+    'sent_at': sentAt.toUtc().toIso8601String(),
+    'media_url': mediaUrl,
+    'thumbnail_url': thumbnailUrl,
+  };
+}
+
 String savedChatMessageIdsKey(String uid) =>
     '$_savedMessageIdsPrefix${uid.trim()}';
+
+String savedChatMessagesKey(String uid) => '$_savedMessagesPrefix${uid.trim()}';
 
 Set<String> readSavedChatMessageIds(SharedPreferences preferences, String uid) {
   if (uid.trim().isEmpty) return <String>{};
@@ -42,6 +125,55 @@ Future<void> writeSavedChatMessageIds(
   return preferences.setStringList(
     savedChatMessageIdsKey(normalizedUid),
     values,
+  );
+}
+
+List<SavedChatMessage> readSavedChatMessages(
+  SharedPreferences preferences,
+  String uid,
+) {
+  final normalizedUid = uid.trim();
+  if (normalizedUid.isEmpty) return const <SavedChatMessage>[];
+  final raw = preferences.getString(savedChatMessagesKey(normalizedUid));
+  if (raw == null || raw.isEmpty) return const <SavedChatMessage>[];
+  try {
+    final decoded = jsonDecode(raw);
+    if (decoded is! List) return const <SavedChatMessage>[];
+    final messages = <String, SavedChatMessage>{};
+    for (final item in decoded) {
+      if (item is! Map) continue;
+      final message = SavedChatMessage.fromJson(
+        Map<String, Object?>.from(item),
+      );
+      if (message.id.isNotEmpty && message.conversationUid.isNotEmpty) {
+        messages[message.id] = message;
+      }
+    }
+    final values = messages.values.toList()
+      ..sort((left, right) => right.sentAt.compareTo(left.sentAt));
+    return values;
+  } on FormatException {
+    return const <SavedChatMessage>[];
+  }
+}
+
+Future<void> writeSavedChatMessages(
+  SharedPreferences preferences,
+  String uid,
+  Iterable<SavedChatMessage> messages,
+) {
+  final normalizedUid = uid.trim();
+  if (normalizedUid.isEmpty) return Future<void>.value();
+  final deduplicated = <String, SavedChatMessage>{
+    for (final message in messages)
+      if (message.id.trim().isNotEmpty && message.conversationUid.isNotEmpty)
+        message.id: message,
+  };
+  final values = deduplicated.values.toList()
+    ..sort((left, right) => right.sentAt.compareTo(left.sentAt));
+  return preferences.setString(
+    savedChatMessagesKey(normalizedUid),
+    jsonEncode(values.map((message) => message.toJson()).toList()),
   );
 }
 
@@ -71,4 +203,9 @@ ChatMessageQuote? decodeChatMessageQuote(String raw) {
   final content = raw.substring(dividerIndex + _quoteDivider.length).trim();
   if (excerpt.isEmpty || content.isEmpty) return null;
   return ChatMessageQuote(excerpt: excerpt, content: content);
+}
+
+String? _optionalText(Object? value) {
+  final text = value?.toString().trim() ?? '';
+  return text.isEmpty ? null : text;
 }
