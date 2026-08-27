@@ -246,6 +246,19 @@ final appRouter = GoRouter(
           ),
         ),
         GoRoute(
+          path: '/social/saved-messages/:messageId',
+          pageBuilder: (context, state) => _messagesTransitionPage(
+            state: state,
+            child: AuthProtectedPage(
+              reason: '登录后才能查看收藏消息。',
+              redirect: state.uri.toString(),
+              child: SavedMessageDetailPage(
+                messageId: state.pathParameters['messageId']!,
+              ),
+            ),
+          ),
+        ),
+        GoRoute(
           path: '/social/users/:uid',
           pageBuilder: (context, state) => _musicSlidePage(
             state: state,
