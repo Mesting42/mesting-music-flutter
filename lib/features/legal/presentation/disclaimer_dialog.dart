@@ -10,6 +10,7 @@ import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../themes/music_theme_tokens.dart';
 import '../domain/legal_documents.dart';
 import 'legal_documents_page.dart';
+import '../../player/presentation/music_page_transition.dart';
 
 const disclaimerAcceptedPreferenceKey = 'mesting_disclaimer_accepted_v1';
 const disclaimerReadPreferenceKey = 'mesting_disclaimer_read_v1';
@@ -89,8 +90,12 @@ class _FirstLaunchDisclaimerCoordinatorState
   }
 }
 
-Future<void> showDisclaimerDialog(BuildContext context) {
+Future<void> showDisclaimerDialog(
+  BuildContext context, {
+  bool useMusicHubPanelTransition = false,
+}) {
   final reduceMotion = MediaQuery.disableAnimationsOf(context);
+  final animateLikeMusicHub = useMusicHubPanelTransition && !reduceMotion;
   return showGeneralDialog<void>(
     context: context,
     useRootNavigator: true,
@@ -99,14 +104,22 @@ Future<void> showDisclaimerDialog(BuildContext context) {
     barrierColor: Colors.transparent,
     transitionDuration: reduceMotion
         ? Duration.zero
+        : animateLikeMusicHub
+        ? musicHubPanelTransitionDuration
         : const Duration(milliseconds: 360),
     pageBuilder: (context, animation, secondaryAnimation) => _DisclaimerOverlay(
       animation: animation,
-      reduceMotion: reduceMotion,
+      // The outer route owns this entrance when it comes from the music hub.
+      // Leaving the card static avoids layering a second fade/scale over the
+      // shared drawer motion.
+      reduceMotion: reduceMotion || animateLikeMusicHub,
       requiredAcceptance: false,
       onResult: (_) => Navigator.of(context).pop(),
     ),
-    transitionBuilder: (context, animation, secondaryAnimation, child) => child,
+    transitionBuilder: (context, animation, secondaryAnimation, child) =>
+        animateLikeMusicHub
+        ? MusicHubPanelTransition(animation: animation, child: child)
+        : child,
   );
 }
 

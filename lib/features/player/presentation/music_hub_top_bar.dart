@@ -219,13 +219,16 @@ class _TopActionState extends State<_TopAction> {
 }
 
 Future<void> showMusicHubPanel(BuildContext pageContext) {
+  final reduceMotion = MediaQuery.disableAnimationsOf(pageContext);
   return showGeneralDialog<void>(
     context: pageContext,
     useRootNavigator: true,
     barrierDismissible: true,
     barrierLabel: '关闭个人中心',
     barrierColor: const Color(0x730D0B12),
-    transitionDuration: const Duration(milliseconds: 310),
+    transitionDuration: reduceMotion
+        ? Duration.zero
+        : musicHubPanelTransitionDuration,
     pageBuilder: (dialogContext, animation, secondaryAnimation) => Align(
       alignment: Alignment.centerLeft,
       child: FractionallySizedBox(
@@ -233,20 +236,10 @@ Future<void> showMusicHubPanel(BuildContext pageContext) {
         child: _MusicHubPanel(pageContext: pageContext),
       ),
     ),
-    transitionBuilder: (context, animation, secondaryAnimation, child) {
-      final curved = CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOutCubic,
-        reverseCurve: Curves.easeInCubic,
-      );
-      return SlideTransition(
-        position: Tween(
-          begin: const Offset(-1, 0),
-          end: Offset.zero,
-        ).animate(curved),
-        child: FadeTransition(opacity: curved, child: child),
-      );
-    },
+    transitionBuilder: (context, animation, secondaryAnimation, child) =>
+        reduceMotion
+        ? child
+        : MusicHubPanelTransition(animation: animation, child: child),
   );
 }
 
@@ -385,8 +378,7 @@ class _MusicHubPanelState extends ConsumerState<_MusicHubPanel> {
                               icon: Icons.policy_outlined,
                               title: '免责声明',
                               subtitle: '在线音乐、版权与账号数据说明',
-                              onTap: () =>
-                                  showDisclaimerDialog(widget.pageContext),
+                              onTap: () => _openDisclaimer(context),
                             ),
                           ],
                         ),
@@ -414,44 +406,50 @@ class _MusicHubPanelState extends ConsumerState<_MusicHubPanel> {
     );
   }
 
-  void _openSettings(BuildContext panelContext) {
-    Navigator.of(panelContext).pop();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.pageContext.mounted) {
-        widget.pageContext.push(
-          '/music/settings',
-          extra: const MusicPageTransitionIntent.forward(),
-        );
-      }
-    });
+  Future<void> _openSettings(BuildContext panelContext) {
+    return _dismissPanelThenOpenRoute(panelContext, '/music/settings');
   }
 
-  void _openLegalDocuments(BuildContext panelContext) {
-    Navigator.of(panelContext).pop();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.pageContext.mounted) {
-        widget.pageContext.push(
-          '/legal',
-          extra: const MusicPageTransitionIntent.forward(),
-        );
-      }
-    });
+  Future<void> _openLegalDocuments(BuildContext panelContext) {
+    return _dismissPanelThenOpenRoute(panelContext, '/legal');
   }
 
-  Future<void> _openMessages(BuildContext panelContext) async {
-    final panelRoute = ModalRoute.of(panelContext);
-    Navigator.of(panelContext).pop();
-    await panelRoute?.completed;
-    // Let the drawer's removed overlay commit for one frame before starting the
-    // messages-route transition. Without this boundary, some Android
-    // compositors can briefly retain the drawer and the incoming page in the
-    // same frame.
-    await WidgetsBinding.instance.endOfFrame;
-    if (!widget.pageContext.mounted) return;
-    widget.pageContext.push(
-      '/social/messages',
-      extra: const MusicPageTransitionIntent.forward(),
+  Future<void> _openMessages(BuildContext panelContext) {
+    return _dismissPanelThenOpenRoute(panelContext, '/social/messages');
+  }
+
+  Future<void> _openDisclaimer(BuildContext panelContext) async {
+    final pageContext = widget.pageContext;
+    if (!await _dismissPanelThenWait(panelContext)) return;
+    if (!pageContext.mounted) return;
+    await showDisclaimerDialog(pageContext, useMusicHubPanelTransition: true);
+  }
+
+  Future<void> _dismissPanelThenOpenRoute(
+    BuildContext panelContext,
+    String location,
+  ) async {
+    final pageContext = widget.pageContext;
+    if (!await _dismissPanelThenWait(panelContext)) return;
+    if (!pageContext.mounted) return;
+    pageContext.push(
+      location,
+      extra: const MusicPageTransitionIntent.fromMusicHubPanel(),
     );
+  }
+
+  Future<bool> _dismissPanelThenWait(BuildContext panelContext) async {
+    final panelRoute = ModalRoute.of(panelContext);
+    // The panel is presented on the root navigator. Pop that same navigator,
+    // then wait for its reverse transition plus two committed frames before
+    // mounting the messages route. One frame is not enough on some Android
+    // compositor paths: the removed dialog layer can still be retained while
+    // the new page starts its own transition.
+    Navigator.of(panelContext, rootNavigator: true).pop();
+    await panelRoute?.completed;
+    await WidgetsBinding.instance.endOfFrame;
+    await WidgetsBinding.instance.endOfFrame;
+    return widget.pageContext.mounted;
   }
 }
 

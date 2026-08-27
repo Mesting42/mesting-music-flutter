@@ -51,3 +51,13 @@ abstract interface class SocialRepository {
     required SocialMessageKind kind,
   });
 }
+
+/// Optional capability for backends that store private CloudBase object IDs.
+///
+/// Media messages historically persisted `cloud://` IDs rather than their
+/// playable download URLs. UI surfaces can use this capability to turn those
+/// legacy values into a temporary HTTPS URL without coupling themselves to a
+/// particular backend implementation.
+abstract interface class SocialMediaUrlResolver {
+  Future<String?> resolveMediaUrl(String value);
+}

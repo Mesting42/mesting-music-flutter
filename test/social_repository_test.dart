@@ -477,6 +477,47 @@ void main() {
         );
       },
     );
+
+    test(
+      'resolves a legacy CloudBase media ID to a playable download URL',
+      () async {
+        var downloadInfoCalls = 0;
+        final repository = CloudBaseSocialRepository(
+          environmentId: 'test-env',
+          sessionProvider: () => AuthSession(
+            user: currentUser,
+            accessToken: 'token',
+            refreshToken: 'refresh',
+            expiresAt: DateTime.now().add(const Duration(hours: 1)),
+          ),
+          client: MockClient((request) async {
+            expect(request.url.path, '/v1/storages/get-objects-download-info');
+            expect(request.headers['authorization'], 'Bearer token');
+            expect(jsonDecode(request.body), [
+              {'objectId': 'social-media/me/voice.m4a'},
+            ]);
+            downloadInfoCalls += 1;
+            return http.Response(
+              jsonEncode([
+                {'downloadUrl': 'https://cdn.example/social-media/voice.m4a'},
+              ]),
+              200,
+            );
+          }),
+        );
+
+        const objectId = 'cloud://test-env.bucket/social-media/me/voice.m4a';
+        expect(
+          await repository.resolveMediaUrl(objectId),
+          'https://cdn.example/social-media/voice.m4a',
+        );
+        expect(
+          await repository.resolveMediaUrl(objectId),
+          'https://cdn.example/social-media/voice.m4a',
+        );
+        expect(downloadInfoCalls, 1);
+      },
+    );
   });
 
   group('social provider cache', () {

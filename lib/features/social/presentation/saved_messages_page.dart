@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/persistence/app_preferences.dart';
+import '../../../core/audio/playback_providers.dart';
 import '../../auth/auth_providers.dart';
 import '../domain/chat_message_actions.dart';
 import '../domain/social_models.dart';
 import '../domain/track_share.dart';
+import '../social_providers.dart';
+import 'chat_page.dart';
 import 'social_widgets.dart';
 
 /// Personal message collection backed by the signed-in user's local storage.
@@ -285,65 +288,25 @@ class _SavedMessageDetailMeta extends StatelessWidget {
   }
 }
 
-class _SavedMessageDetailContent extends StatelessWidget {
+class _SavedMessageDetailContent extends ConsumerWidget {
   const _SavedMessageDetailContent({required this.message});
 
   final SavedChatMessage message;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     if (message.kind == SocialMessageKind.text) {
       final track = decodeTrackShareMessage(message.text);
       if (track != null) {
-        return Container(
-          key: const ValueKey('saved-message-track-preview'),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: scheme.primary.withValues(alpha: .10),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: scheme.primary.withValues(alpha: .18),
-                  borderRadius: BorderRadius.circular(13),
-                ),
-                child: Icon(
-                  Icons.music_note_rounded,
-                  color: scheme.primary,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      track.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      track.artist,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+        return SocialSharedTrackMessage(
+          messageId: message.id,
+          track: track,
+          mine: false,
+          keyPrefix: 'saved-message',
+          onPlay: track.isPlayable
+              ? () => ref.read(audioHandlerProvider).playSingleTrack(track)
+              : null,
         );
       }
       final quote = decodeChatMessageQuote(message.text);
@@ -371,16 +334,83 @@ class _SavedMessageDetailContent extends StatelessWidget {
       return Text(message.text, style: const TextStyle(fontSize: 44));
     }
     if (message.kind == SocialMessageKind.voice) {
-      return _SavedMessageAttachmentPreview(
-        icon: Icons.graphic_eq_rounded,
-        label: _savedVoiceDurationLabel(message.text),
-      );
+      return _SavedMessageVoicePreview(message: message);
+    }
+    if (message.kind == SocialMessageKind.video) {
+      return _SavedMessageVideoPreview(message: message);
     }
     return _SavedMessageAttachmentPreview(
-      icon: message.kind == SocialMessageKind.image
-          ? Icons.image_outlined
-          : Icons.videocam_outlined,
-      label: message.kind == SocialMessageKind.image ? '已保存图片' : '已保存视频',
+      icon: Icons.image_outlined,
+      label: '已保存图片',
+    );
+  }
+}
+
+class _SavedMessageVoicePreview extends ConsumerWidget {
+  const _SavedMessageVoicePreview({required this.message});
+
+  final SavedChatMessage message;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rawSource = message.mediaUrl?.trim() ?? '';
+    final sourceState = rawSource.startsWith('cloud://')
+        ? ref.watch(socialMediaUrlProvider(rawSource))
+        : null;
+    final source = sourceState?.value ?? rawSource;
+    if (source.isEmpty) {
+      final label = rawSource.isEmpty
+          ? '未保存语音文件'
+          : sourceState?.isLoading == true
+          ? '正在恢复语音…'
+          : '语音暂时无法恢复';
+      return _SavedMessageAttachmentPreview(
+        icon: Icons.graphic_eq_rounded,
+        label: label,
+      );
+    }
+    return SocialVoiceMessage(
+      messageId: message.id,
+      url: source,
+      duration: chatVoiceDurationFromText(message.text),
+      mine: false,
+      keyPrefix: 'saved-message',
+    );
+  }
+}
+
+class _SavedMessageVideoPreview extends ConsumerWidget {
+  const _SavedMessageVideoPreview({required this.message});
+
+  final SavedChatMessage message;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rawSource = message.mediaUrl?.trim() ?? '';
+    final rawThumbnail = message.thumbnailUrl?.trim() ?? '';
+    final sourceState = rawSource.startsWith('cloud://')
+        ? ref.watch(socialMediaUrlProvider(rawSource))
+        : null;
+    final source = sourceState?.value ?? rawSource;
+    final thumbnail = rawThumbnail.startsWith('cloud://')
+        ? ref.watch(socialMediaUrlProvider(rawThumbnail)).value
+        : rawThumbnail;
+    if (source.isEmpty) {
+      final label = rawSource.isEmpty
+          ? '未保存视频文件'
+          : sourceState?.isLoading == true
+          ? '正在恢复视频…'
+          : '视频暂时无法恢复';
+      return _SavedMessageAttachmentPreview(
+        icon: Icons.videocam_outlined,
+        label: label,
+      );
+    }
+    return SocialVideoMessage(
+      messageId: message.id,
+      url: source,
+      thumbnailUrl: thumbnail,
+      keyPrefix: 'saved-message',
     );
   }
 }
@@ -466,18 +496,6 @@ String _savedMessageDateTime(DateTime value) {
       '${local.day.toString().padLeft(2, '0')} '
       '${local.hour.toString().padLeft(2, '0')}:'
       '${local.minute.toString().padLeft(2, '0')}';
-}
-
-String _savedVoiceDurationLabel(String rawDuration) {
-  final milliseconds = int.tryParse(rawDuration);
-  if (milliseconds == null || milliseconds <= 0) return '语音消息';
-  final totalSeconds = (milliseconds / Duration.millisecondsPerSecond)
-      .ceil()
-      .clamp(1, 3599);
-  final minutes = totalSeconds ~/ 60;
-  final seconds = totalSeconds % 60;
-  return '${minutes.toString().padLeft(2, '0')}:'
-      '${seconds.toString().padLeft(2, '0')}';
 }
 
 String _savedMessageTime(DateTime value) {

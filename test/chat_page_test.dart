@@ -931,6 +931,7 @@ void main() {
     expect(repository.lastUploadKind, SocialMessageKind.voice);
     expect(repository.sendCalls, 1);
     expect(repository.lastKind, SocialMessageKind.voice);
+    expect(repository.lastMediaUrl, 'https://example.com/voice.m4a');
     expect(int.parse(repository.lastText!), greaterThanOrEqualTo(700));
   });
 
@@ -1107,6 +1108,7 @@ class _ChatRepository extends Fake implements SocialRepository {
   int sendCalls = 0;
   SocialMessageKind? lastKind;
   String? lastText;
+  String? lastMediaUrl;
   int uploadCalls = 0;
   SocialMessageKind? lastUploadKind;
   int deleteCalls = 0;
@@ -1131,6 +1133,7 @@ class _ChatRepository extends Fake implements SocialRepository {
     sendCalls += 1;
     lastKind = kind;
     lastText = text;
+    lastMediaUrl = mediaUrl;
     return sendGate.future;
   }
 

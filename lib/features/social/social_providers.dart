@@ -125,6 +125,20 @@ final socialRepositoryProvider = Provider<SocialRepository>((ref) {
   );
 });
 
+/// Resolves a media source just before it is handed to a platform player.
+/// Direct HTTPS and local file URLs pass through immediately; only historical
+/// CloudBase object IDs require a signed download URL.
+final socialMediaUrlProvider = FutureProvider.autoDispose
+    .family<String?, String>((ref, rawValue) {
+      final value = rawValue.trim();
+      if (value.isEmpty) return Future<String?>.value(null);
+      final repository = ref.watch(socialRepositoryProvider);
+      if (repository is SocialMediaUrlResolver) {
+        return (repository as SocialMediaUrlResolver).resolveMediaUrl(value);
+      }
+      return Future<String?>.value(value.startsWith('cloud://') ? null : value);
+    }, retry: _disableSocialRetry);
+
 final socialSummaryProvider = FutureProvider.autoDispose<SocialSummary>((ref) {
   ref.watch(currentUserProvider);
   return _readSocial(ref, ref.watch(socialRepositoryProvider).summary());

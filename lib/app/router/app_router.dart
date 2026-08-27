@@ -393,6 +393,12 @@ Page<void> _musicSlidePage({
   final intent = state.extra is MusicPageTransitionIntent
       ? state.extra! as MusicPageTransitionIntent
       : const MusicPageTransitionIntent.forward();
+  if (intent.usesMusicHubPanelTransition) {
+    return _MusicHubPanelTransitionPage(
+      key: ValueKey(state.uri.toString()),
+      child: child,
+    );
+  }
   final horizontal = intent.horizontalOffset;
   return _SequencedMusicTransitionPage(
     key: ValueKey(state.uri.toString()),
@@ -435,6 +441,12 @@ Page<void> _messagesTransitionPage({
   final intent = state.extra is MusicPageTransitionIntent
       ? state.extra! as MusicPageTransitionIntent
       : const MusicPageTransitionIntent.forward();
+  if (intent.usesMusicHubPanelTransition) {
+    return _MusicHubPanelTransitionPage(
+      key: ValueKey(state.uri.toString()),
+      child: child,
+    );
+  }
   final horizontal = intent.direction == MusicPageTransitionDirection.forward
       ? messagesPageHorizontalOffset
       : -messagesPageHorizontalOffset;
@@ -448,6 +460,38 @@ Page<void> _messagesTransitionPage({
     handoffProgress: messagesPageHandoffProgress,
     child: child,
   );
+}
+
+/// Full-page counterpart of [MusicHubPanelTransition].
+///
+/// The drawer is dismissed before this route is pushed, so this page can use
+/// the same recognisable motion without two drawer/page surfaces compositing
+/// together on Android.
+class _MusicHubPanelTransitionPage extends Page<void> {
+  const _MusicHubPanelTransitionPage({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Route<void> createRoute(BuildContext context) {
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    return PageRouteBuilder<void>(
+      settings: this,
+      allowSnapshotting: musicPageUsesRouteSnapshotting,
+      opaque: true,
+      transitionDuration: reduceMotion
+          ? Duration.zero
+          : musicHubPanelTransitionDuration,
+      reverseTransitionDuration: reduceMotion
+          ? Duration.zero
+          : musicHubPanelTransitionDuration,
+      pageBuilder: (context, animation, secondaryAnimation) => child,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        if (reduceMotion) return child;
+        return MusicHubPanelTransition(animation: animation, child: child);
+      },
+    );
+  }
 }
 
 /// Fade/scale transition for sensitive avatar and background previews.

@@ -22,6 +22,67 @@ void main() {
     expect(backward.horizontalOffset, -musicPageHorizontalOffset);
   });
 
+  test('侧栏入口复用侧栏的左侧滑入转场', () {
+    const fromHub = MusicPageTransitionIntent.fromMusicHubPanel();
+
+    expect(fromHub.usesMusicHubPanelTransition, isTrue);
+    expect(fromHub.direction, MusicPageTransitionDirection.forward);
+    expect(musicHubPanelTransitionDuration, const Duration(milliseconds: 310));
+    expect(musicHubPanelTransitionOffset, const Offset(-1, 0));
+    expect(musicHubPanelTransitionCurve, Curves.easeOutCubic);
+    expect(musicHubPanelReverseTransitionCurve, Curves.easeInCubic);
+  });
+
+  testWidgets('侧栏转场从左侧滑入并同步淡入', (tester) async {
+    final controller = AnimationController(
+      vsync: tester,
+      duration: musicHubPanelTransitionDuration,
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MusicHubPanelTransition(
+            animation: controller,
+            child: const ColoredBox(
+              key: ValueKey('music-hub-transition-destination'),
+              color: Colors.red,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final transition = find.byType(MusicHubPanelTransition);
+    final slideFinder = find.descendant(
+      of: transition,
+      matching: find.byType(SlideTransition),
+    );
+    final fadeFinder = find.descendant(
+      of: transition,
+      matching: find.byType(FadeTransition),
+    );
+    var slide = tester.widget<SlideTransition>(slideFinder);
+    var fade = tester.widget<FadeTransition>(fadeFinder);
+    expect(slide.position.value, musicHubPanelTransitionOffset);
+    expect(fade.opacity.value, 0);
+
+    controller.value = .5;
+    await tester.pump();
+    slide = tester.widget<SlideTransition>(slideFinder);
+    fade = tester.widget<FadeTransition>(fadeFinder);
+    expect(slide.position.value.dx, inInclusiveRange(-1, 0));
+    expect(fade.opacity.value, inInclusiveRange(0, 1));
+
+    controller.value = 1;
+    await tester.pump();
+    slide = tester.widget<SlideTransition>(slideFinder);
+    fade = tester.widget<FadeTransition>(fadeFinder);
+    expect(slide.position.value, Offset.zero);
+    expect(fade.opacity.value, 1);
+  });
+
   test('全部歌单使用集合展开动画而不是横向滑动', () {
     expect(collectionRevealVerticalOffset, greaterThan(0));
     expect(collectionRevealStartScale, lessThan(1));

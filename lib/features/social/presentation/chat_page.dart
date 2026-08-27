@@ -836,7 +836,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         final upload = await ref
             .read(socialRepositoryProvider)
             .uploadMedia(path: path, kind: kind);
-        mediaUrl = upload.cloudObjectId;
+        // CloudBase download links are temporary, so its stable object ID is
+        // kept in the message and resolved to a fresh playable URL on demand.
+        // The independent Java/MySQL and local-preview channels do not expose
+        // that CloudBase resolver, so they retain their direct upload URL.
+        mediaUrl =
+            ref.read(authBackendKindProvider) == AuthBackendKind.cloudBase
+            ? upload.cloudObjectId
+            : upload.downloadUrl;
         deliveryEntry = deliveryEntry.copyWith(uploadedMediaUrl: mediaUrl);
         _replaceLocalEntry(deliveryEntry);
       }
@@ -850,7 +857,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               path: localThumbnailPath,
               kind: SocialMessageKind.image,
             );
-        thumbnailUrl = thumbnailUpload.cloudObjectId;
+        thumbnailUrl =
+            ref.read(authBackendKindProvider) == AuthBackendKind.cloudBase
+            ? thumbnailUpload.cloudObjectId
+            : thumbnailUpload.downloadUrl;
         deliveryEntry = deliveryEntry.copyWith(
           uploadedThumbnailUrl: thumbnailUrl,
         );
@@ -2332,6 +2342,16 @@ class _MessageBubble extends ConsumerWidget {
             togetherInvite == null
         ? decodeTrackShareMessage(message.text)
         : null;
+    final rawMediaUrl = message.mediaUrl?.trim() ?? '';
+    final rawThumbnailUrl = message.thumbnailUrl?.trim() ?? '';
+    // Existing HTTP/file URLs must reach the video controller in its first
+    // build. Only historical CloudBase IDs need an asynchronous resolution.
+    final resolvedMediaUrl = rawMediaUrl.startsWith('cloud://')
+        ? ref.watch(socialMediaUrlProvider(rawMediaUrl)).value ?? ''
+        : rawMediaUrl;
+    final resolvedThumbnailUrl = rawThumbnailUrl.startsWith('cloud://')
+        ? ref.watch(socialMediaUrlProvider(rawThumbnailUrl)).value
+        : rawThumbnailUrl;
     final isMedia =
         message.kind == SocialMessageKind.image ||
         message.kind == SocialMessageKind.video ||
@@ -2384,7 +2404,7 @@ class _MessageBubble extends ConsumerWidget {
                           height: 1.4,
                         ),
                       )
-              : _SharedTrackMessage(
+              : SocialSharedTrackMessage(
                   messageId: message.id,
                   track: sharedTrack,
                   mine: mine,
@@ -2400,16 +2420,16 @@ class _MessageBubble extends ConsumerWidget {
         ),
         SocialMessageKind.image => _ChatImagePreview(
           messageId: message.id,
-          url: message.mediaUrl ?? '',
+          url: resolvedMediaUrl,
         ),
-        SocialMessageKind.video => _VideoMessage(
+        SocialMessageKind.video => SocialVideoMessage(
           messageId: message.id,
-          url: message.mediaUrl ?? '',
-          thumbnailUrl: message.thumbnailUrl,
+          url: resolvedMediaUrl,
+          thumbnailUrl: resolvedThumbnailUrl,
         ),
-        SocialMessageKind.voice => _VoiceMessage(
+        SocialMessageKind.voice => SocialVoiceMessage(
           messageId: message.id,
-          url: message.mediaUrl ?? '',
+          url: resolvedMediaUrl,
           duration: chatVoiceDurationFromText(message.text),
           mine: mine,
         ),
@@ -3005,24 +3025,27 @@ class _ListenTogetherInviteMessageState
   }
 }
 
-class _SharedTrackMessage extends StatelessWidget {
-  const _SharedTrackMessage({
+class SocialSharedTrackMessage extends StatelessWidget {
+  const SocialSharedTrackMessage({
     required this.messageId,
     required this.track,
     required this.mine,
     required this.onPlay,
+    this.keyPrefix = 'chat',
+    super.key,
   });
 
   final String messageId;
   final Track track;
   final bool mine;
   final VoidCallback? onPlay;
+  final String keyPrefix;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      key: ValueKey('chat-shared-track-$messageId'),
+      key: ValueKey('$keyPrefix-shared-track-$messageId'),
       width: 248,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -3090,7 +3113,7 @@ class _SharedTrackMessage extends StatelessWidget {
             button: onPlay != null,
             label: onPlay == null ? '歌曲暂时无法播放' : '播放《${track.title}》',
             child: IconButton.filled(
-              key: ValueKey('chat-shared-track-play-$messageId'),
+              key: ValueKey('$keyPrefix-shared-track-play-$messageId'),
               tooltip: onPlay == null ? '暂时无法播放' : '播放',
               onPressed: onPlay,
               style: IconButton.styleFrom(
@@ -3293,7 +3316,6 @@ class _ImageViewer extends StatelessWidget {
   }
 }
 
-@visibleForTesting
 Duration chatVoiceDurationFromText(String value) {
   final milliseconds = int.tryParse(value) ?? 0;
   return Duration(milliseconds: milliseconds.clamp(0, 3600000));
@@ -3310,25 +3332,28 @@ String formatChatVoiceDuration(Duration duration) {
   return '$minutes:${seconds.toString().padLeft(2, '0')}';
 }
 
-class _VoiceMessage extends ConsumerStatefulWidget {
-  const _VoiceMessage({
+class SocialVoiceMessage extends ConsumerStatefulWidget {
+  const SocialVoiceMessage({
     required this.messageId,
     required this.url,
     required this.duration,
     required this.mine,
+    this.keyPrefix = 'chat',
+    super.key,
   });
 
   final String messageId;
   final String url;
   final Duration duration;
   final bool mine;
+  final String keyPrefix;
 
   @override
-  ConsumerState<_VoiceMessage> createState() => _VoiceMessageState();
+  ConsumerState<SocialVoiceMessage> createState() => _SocialVoiceMessageState();
 }
 
-class _VoiceMessageState extends ConsumerState<_VoiceMessage> {
-  static _VoiceMessageState? _activeVoice;
+class _SocialVoiceMessageState extends ConsumerState<SocialVoiceMessage> {
+  static _SocialVoiceMessageState? _activeVoice;
 
   just_audio.AudioPlayer? _player;
   StreamSubscription<just_audio.PlayerState>? _playerStateSubscription;
@@ -3344,7 +3369,7 @@ class _VoiceMessageState extends ConsumerState<_VoiceMessage> {
   }
 
   @override
-  void didUpdateWidget(covariant _VoiceMessage oldWidget) {
+  void didUpdateWidget(covariant SocialVoiceMessage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (_stableUrl.isEmpty && widget.url.trim().isNotEmpty) {
       _stableUrl = widget.url.trim();
@@ -3448,7 +3473,7 @@ class _VoiceMessageState extends ConsumerState<_VoiceMessage> {
       button: true,
       label: '${_playing ? '暂停' : '播放'}语音消息，时长 $durationLabel',
       child: InkWell(
-        key: ValueKey('chat-voice-message-${widget.messageId}'),
+        key: ValueKey('${widget.keyPrefix}-voice-message-${widget.messageId}'),
         onTap: _stableUrl.isEmpty ? null : _togglePlayback,
         borderRadius: BorderRadius.circular(14),
         child: SizedBox(
@@ -3481,7 +3506,9 @@ class _VoiceMessageState extends ConsumerState<_VoiceMessage> {
               const SizedBox(width: 8),
               Text(
                 durationLabel,
-                key: ValueKey('chat-voice-duration-${widget.messageId}'),
+                key: ValueKey(
+                  '${widget.keyPrefix}-voice-duration-${widget.messageId}',
+                ),
                 style: TextStyle(
                   color: foreground,
                   fontSize: 12,
@@ -3586,22 +3613,25 @@ class _ChatVoiceMediaCache {
   static Future<File> fileFor(String url) => _manager.getSingleFile(url);
 }
 
-class _VideoMessage extends StatefulWidget {
-  const _VideoMessage({
+class SocialVideoMessage extends StatefulWidget {
+  const SocialVideoMessage({
     required this.messageId,
     required this.url,
     this.thumbnailUrl,
+    this.keyPrefix = 'chat',
+    super.key,
   });
 
   final String messageId;
   final String url;
   final String? thumbnailUrl;
+  final String keyPrefix;
 
   @override
-  State<_VideoMessage> createState() => _VideoMessageState();
+  State<SocialVideoMessage> createState() => _SocialVideoMessageState();
 }
 
-class _VideoMessageState extends State<_VideoMessage> {
+class _SocialVideoMessageState extends State<SocialVideoMessage> {
   VideoPlayerController? _controller;
   String? _stableThumbnailUrl;
   Duration? _stableDuration;
@@ -3616,7 +3646,7 @@ class _VideoMessageState extends State<_VideoMessage> {
   }
 
   @override
-  void didUpdateWidget(covariant _VideoMessage oldWidget) {
+  void didUpdateWidget(covariant SocialVideoMessage oldWidget) {
     super.didUpdateWidget(oldWidget);
     _stableThumbnailUrl ??= _usableThumbnail(widget.thumbnailUrl);
     if (oldWidget.url == widget.url) return;
@@ -3662,7 +3692,7 @@ class _VideoMessageState extends State<_VideoMessage> {
     final initialized = controller?.value.isInitialized ?? false;
     final duration = _stableDuration;
     return InkWell(
-      key: ValueKey('chat-video-message-${widget.messageId}'),
+      key: ValueKey('${widget.keyPrefix}-video-message-${widget.messageId}'),
       onTap: widget.url.isEmpty
           ? null
           : () => Navigator.of(context).push(

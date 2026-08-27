@@ -13,7 +13,10 @@ import 'social_repository.dart';
 const _previewProfileFieldUnset = Object();
 
 class LocalPreviewSocialRepository
-    implements SocialRepository, ListenTogetherRepository {
+    implements
+        SocialRepository,
+        ListenTogetherRepository,
+        SocialMediaUrlResolver {
   LocalPreviewSocialRepository({
     required AuthUser? Function() userProvider,
     SharedPreferences? preferences,
@@ -534,6 +537,12 @@ class LocalPreviewSocialRepository
       cloudObjectId: file.uri.toString(),
       downloadUrl: file.uri.toString(),
     );
+  }
+
+  @override
+  Future<String?> resolveMediaUrl(String value) async {
+    final normalized = value.trim();
+    return normalized.isEmpty ? null : normalized;
   }
 
   void _recordPreviewTogetherTrack(Track track, DateTime listenedAt) {

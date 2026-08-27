@@ -9,6 +9,13 @@ const musicPageLayerOpacityFloor = 1.0;
 const musicPageUsesRouteSnapshotting = false;
 const musicPageHorizontalOffset = .045;
 const musicPageMotionCurve = Curves.easeInOutCubic;
+// Keep routes opened from the music hub visually aligned with the hub drawer
+// itself. These values are deliberately shared instead of recreating a near
+// match at each menu destination.
+const musicHubPanelTransitionDuration = Duration(milliseconds: 310);
+const musicHubPanelTransitionOffset = Offset(-1, 0);
+const musicHubPanelTransitionCurve = Curves.easeOutCubic;
+const musicHubPanelReverseTransitionCurve = Curves.easeInCubic;
 const messagesPageTransitionDuration = Duration(milliseconds: 360);
 const messagesPageReverseTransitionDuration = Duration(milliseconds: 280);
 const messagesPageHandoffProgress = .18;
@@ -61,6 +68,36 @@ class MusicPageTransitionSurface extends StatelessWidget {
         key: const ValueKey('music-page-transition-content-clip'),
         child: movingContent,
       ),
+    );
+  }
+}
+
+/// The left-edge slide and fade used by the music hub drawer and by routes
+/// opened from it. Keeping this as one widget prevents motion drift between
+/// the menu and its destinations.
+class MusicHubPanelTransition extends StatelessWidget {
+  const MusicHubPanelTransition({
+    required this.animation,
+    required this.child,
+    super.key,
+  });
+
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final motion = CurvedAnimation(
+      parent: animation,
+      curve: musicHubPanelTransitionCurve,
+      reverseCurve: musicHubPanelReverseTransitionCurve,
+    );
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: musicHubPanelTransitionOffset,
+        end: Offset.zero,
+      ).animate(motion),
+      child: FadeTransition(opacity: motion, child: child),
     );
   }
 }
@@ -195,20 +232,33 @@ class MusicPageSingleLayerHandoff extends StatelessWidget {
 
 @immutable
 class MusicPageTransitionIntent {
-  const MusicPageTransitionIntent(this.direction, {this.handoffProgress});
+  const MusicPageTransitionIntent(
+    this.direction, {
+    this.handoffProgress,
+    this.usesMusicHubPanelTransition = false,
+  });
 
   const MusicPageTransitionIntent.forward({this.handoffProgress})
-    : direction = MusicPageTransitionDirection.forward;
+    : direction = MusicPageTransitionDirection.forward,
+      usesMusicHubPanelTransition = false;
 
   const MusicPageTransitionIntent.backward({this.handoffProgress})
-    : direction = MusicPageTransitionDirection.backward;
+    : direction = MusicPageTransitionDirection.backward,
+      usesMusicHubPanelTransition = false;
+
+  /// Opens a full page with the same left-edge motion as the music hub drawer.
+  const MusicPageTransitionIntent.fromMusicHubPanel()
+    : direction = MusicPageTransitionDirection.forward,
+      handoffProgress = null,
+      usesMusicHubPanelTransition = true;
 
   /// Keeps a conversation opened from the messages list on that list's
   /// earlier handoff boundary. Matching both routes prevents them from
   /// painting together while the conversation is popped.
   const MusicPageTransitionIntent.messagesConversation()
     : direction = MusicPageTransitionDirection.forward,
-      handoffProgress = messagesPageHandoffProgress;
+      handoffProgress = messagesPageHandoffProgress,
+      usesMusicHubPanelTransition = false;
 
   factory MusicPageTransitionIntent.betweenTabs(int from, int to) {
     return MusicPageTransitionIntent(
@@ -220,6 +270,7 @@ class MusicPageTransitionIntent {
 
   final MusicPageTransitionDirection direction;
   final double? handoffProgress;
+  final bool usesMusicHubPanelTransition;
 
   double get horizontalOffset =>
       direction == MusicPageTransitionDirection.forward

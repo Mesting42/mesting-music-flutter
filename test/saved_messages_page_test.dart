@@ -7,7 +7,9 @@ import 'package:mesting_music/features/auth/auth_providers.dart';
 import 'package:mesting_music/features/auth/domain/auth_models.dart';
 import 'package:mesting_music/features/social/domain/chat_message_actions.dart';
 import 'package:mesting_music/features/social/domain/social_models.dart';
+import 'package:mesting_music/features/social/domain/track_share.dart';
 import 'package:mesting_music/features/social/presentation/saved_messages_page.dart';
+import 'package:mesting_music/shared/models/track.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -110,5 +112,118 @@ void main() {
     expect(find.text('收藏详情'), findsOneWidget);
     expect(find.text('这条消息已经被收藏'), findsOneWidget);
     expect(find.text('original-chat-page'), findsNothing);
+  });
+
+  testWidgets('saved song snapshot exposes the real playback action', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final preferences = await SharedPreferences.getInstance();
+    const track = Track(
+      id: 'saved-track',
+      title: '收藏的歌曲',
+      artist: 'Mesti',
+      album: '收藏歌单',
+      duration: Duration(minutes: 3),
+      audioAsset: 'https://example.com/saved-track.mp3',
+      coverAsset: '',
+      lyricsAsset: '',
+    );
+    await writeSavedChatMessages(preferences, 'me', [
+      SavedChatMessage(
+        id: 'saved-track-message',
+        conversationUid: 'friend',
+        senderUid: 'friend',
+        authorName: 'Mest',
+        kind: SocialMessageKind.text,
+        text: encodeTrackShareMessage(track),
+        sentAt: DateTime(2026, 8, 28, 1),
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWithValue(
+            const AuthUser(uid: 'me', nickname: 'Mesting'),
+          ),
+          sharedPreferencesProvider.overrideWithValue(preferences),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: SavedMessageDetailPage(messageId: 'saved-track-message'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(
+        const ValueKey('saved-message-shared-track-play-saved-track-message'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('saved voice and video snapshots expose media playback entries', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final preferences = await SharedPreferences.getInstance();
+
+    Widget detail(String messageId) => ProviderScope(
+      overrides: [
+        currentUserProvider.overrideWithValue(
+          const AuthUser(uid: 'me', nickname: 'Mesting'),
+        ),
+        sharedPreferencesProvider.overrideWithValue(preferences),
+      ],
+      child: MaterialApp(
+        home: Scaffold(body: SavedMessageDetailPage(messageId: messageId)),
+      ),
+    );
+
+    await writeSavedChatMessages(preferences, 'me', [
+      SavedChatMessage(
+        id: 'saved-voice-message',
+        conversationUid: 'friend',
+        senderUid: 'friend',
+        authorName: 'Mest',
+        kind: SocialMessageKind.voice,
+        text: '3200',
+        mediaUrl: 'file:///C:/temp/saved-voice.m4a',
+        sentAt: DateTime(2026, 8, 28, 1),
+      ),
+    ]);
+    await tester.pumpWidget(detail('saved-voice-message'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(
+        const ValueKey('saved-message-voice-message-saved-voice-message'),
+      ),
+      findsOneWidget,
+    );
+
+    await writeSavedChatMessages(preferences, 'me', [
+      SavedChatMessage(
+        id: 'saved-video-message',
+        conversationUid: 'friend',
+        senderUid: 'friend',
+        authorName: 'Mest',
+        kind: SocialMessageKind.video,
+        text: '',
+        mediaUrl: 'file:///C:/temp/saved-video.mp4',
+        sentAt: DateTime(2026, 8, 28, 1),
+      ),
+    ]);
+    await tester.pumpWidget(detail('saved-video-message'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(
+        const ValueKey('saved-message-video-message-saved-video-message'),
+      ),
+      findsOneWidget,
+    );
   });
 }

@@ -11,7 +11,10 @@ import 'listen_together_repository.dart';
 import 'social_repository.dart';
 
 class CloudBaseSocialRepository
-    implements SocialRepository, ListenTogetherRepository {
+    implements
+        SocialRepository,
+        ListenTogetherRepository,
+        SocialMediaUrlResolver {
   CloudBaseSocialRepository({
     String? environmentId,
     String? apiBaseUrl,
@@ -42,6 +45,7 @@ class CloudBaseSocialRepository
   final bool _ownsClient;
   final String _actionPath;
   final Duration _requestTimeout;
+  final Map<String, String> _resolvedMediaUrls = <String, String>{};
 
   @override
   Future<SocialSummary> summary() async {
@@ -313,6 +317,42 @@ class CloudBaseSocialRepository
       throw const SocialRequestException('媒体上传失败，请稍后重试');
     }
     return SocialUpload(cloudObjectId: cloudObjectId, downloadUrl: downloadUrl);
+  }
+
+  @override
+  Future<String?> resolveMediaUrl(String value) async {
+    final normalized = value.trim();
+    if (normalized.isEmpty) return null;
+    if (!normalized.startsWith('cloud://')) return normalized;
+    final cached = _resolvedMediaUrls[normalized];
+    if (cached != null) return cached;
+
+    // The Java/MySQL API returns download URLs when a message is sent. It does
+    // not expose the CloudBase storage gateway, so only resolve legacy IDs on
+    // the CloudBase channel.
+    if (_actionPath == '/v1/social/actions') return null;
+    try {
+      final objectId = Uri.parse(normalized).pathSegments.join('/');
+      if (objectId.isEmpty) return null;
+      final session = await _requireSession();
+      final records = await _storagePost(
+        '/v1/storages/get-objects-download-info',
+        [
+          {'objectId': objectId},
+        ],
+        accessToken: session.accessToken,
+      );
+      if (records.isEmpty || records.first is! Map) return null;
+      final info = Map<String, Object?>.from(records.first! as Map);
+      final downloadUrl =
+          _text(info['downloadUrl']) ?? _text(info['downloadUrlEncoded']);
+      if (downloadUrl != null) _resolvedMediaUrls[normalized] = downloadUrl;
+      return downloadUrl;
+    } on Object {
+      // The text collection remains available if a private file URL cannot be
+      // refreshed right now. A later rebuild can try again.
+      return null;
+    }
   }
 
   Future<SocialUpload> _uploadMediaToCustomApi({
