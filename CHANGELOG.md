@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.37+52 - stable CloudBase release
+
+- 修复收藏消息中的语音和视频无法播放的问题；播放前会刷新 CloudBase 媒体地址并准备本地缓存文件。
+- 移除收藏消息页面切换时残留的空白操作位。
+- 修复从“我的消息”进入“收藏消息”时两个页面内容短暂重叠的问题。
+- Java + MySQL 测试包与 UI Beta 通道保持独立，本次稳定发布不会写入它们的更新清单。
+
+对应源码标签：`flutter-music-v1.0.37-build52`。发布与源码对应关系见 [docs/release-history.md](docs/release-history.md)。
+
 ## 1.0.37+50 - stable CloudBase release
 
 - 收藏消息中的语音、视频和歌曲分享现在可直接播放；历史 CloudBase 媒体链接失效时会安全地重新获取可用地址。

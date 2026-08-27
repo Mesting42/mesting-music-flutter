@@ -59,5 +59,5 @@ abstract interface class SocialRepository {
 /// legacy values into a temporary HTTPS URL without coupling themselves to a
 /// particular backend implementation.
 abstract interface class SocialMediaUrlResolver {
-  Future<String?> resolveMediaUrl(String value);
+  Future<String?> resolveMediaUrl(String value, {bool forceRefresh = false});
 }

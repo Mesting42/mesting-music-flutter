@@ -516,6 +516,11 @@ void main() {
           'https://cdn.example/social-media/voice.m4a',
         );
         expect(downloadInfoCalls, 1);
+        expect(
+          await repository.resolveMediaUrl(objectId, forceRefresh: true),
+          'https://cdn.example/social-media/voice.m4a',
+        );
+        expect(downloadInfoCalls, 2);
       },
     );
   });

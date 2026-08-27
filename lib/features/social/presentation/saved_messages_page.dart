@@ -1,16 +1,84 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/persistence/app_preferences.dart';
 import '../../../core/audio/playback_providers.dart';
 import '../../auth/auth_providers.dart';
+import '../data/social_repository.dart';
 import '../domain/chat_message_actions.dart';
 import '../domain/social_models.dart';
 import '../domain/track_share.dart';
 import '../social_providers.dart';
 import 'chat_page.dart';
 import 'social_widgets.dart';
+
+typedef SavedMessageMediaResolver =
+    Future<String?> Function(String value, {bool forceRefresh});
+typedef SavedMessageMediaDownloader =
+    Future<File> Function(String url, String cacheKey);
+
+final BaseCacheManager _savedMessageMediaCache = DefaultCacheManager();
+
+/// Resolves a fresh signed address and stores the complete media file locally
+/// before handing it to a platform player.
+///
+/// CloudBase download addresses are temporary. Preparing the file at tap time
+/// avoids an expired URL being retained by a long-lived widget or native
+/// controller, and gives audio/video players a stable local source.
+@visibleForTesting
+Future<String> prepareSavedMessageMediaForPlayback({
+  required String rawValue,
+  required SavedMessageMediaResolver resolve,
+  required SavedMessageMediaDownloader download,
+}) async {
+  final value = rawValue.trim();
+  if (value.isEmpty) {
+    throw const SocialRequestException('收藏的媒体文件地址不存在');
+  }
+  if (_isLocalSavedMediaPath(value)) return value;
+
+  final resolved = (await resolve(value, forceRefresh: true))?.trim() ?? '';
+  if (resolved.isEmpty || resolved.startsWith('cloud://')) {
+    throw const SocialRequestException('暂时无法恢复收藏的媒体文件');
+  }
+  if (_isLocalSavedMediaPath(resolved)) return resolved;
+
+  final file = await download(
+    resolved,
+    'saved-message-media-v2:$value',
+  ).timeout(const Duration(seconds: 90));
+  if (!await file.exists() || await file.length() <= 0) {
+    throw const SocialRequestException('收藏的媒体文件下载不完整');
+  }
+  return file.path;
+}
+
+bool _isLocalSavedMediaPath(String value) =>
+    value.startsWith('file://') ||
+    value.startsWith('/') ||
+    RegExp(r'^[A-Za-z]:[\\/]').hasMatch(value);
+
+Future<String> _prepareSavedMessageMedia(WidgetRef ref, String rawValue) {
+  final repository = ref.read(socialRepositoryProvider);
+  return prepareSavedMessageMediaForPlayback(
+    rawValue: rawValue,
+    resolve: (value, {forceRefresh = false}) {
+      if (repository is SocialMediaUrlResolver) {
+        return (repository as SocialMediaUrlResolver).resolveMediaUrl(
+          value,
+          forceRefresh: forceRefresh,
+        );
+      }
+      return Future<String?>.value(value.startsWith('cloud://') ? null : value);
+    },
+    download: (url, cacheKey) =>
+        _savedMessageMediaCache.getSingleFile(url, key: cacheKey),
+  );
+}
 
 /// Personal message collection backed by the signed-in user's local storage.
 ///
@@ -379,6 +447,7 @@ class _SavedMessageVoicePreview extends ConsumerWidget {
       duration: chatVoiceDurationFromText(message.text),
       mine: false,
       keyPrefix: 'saved-message',
+      playbackSourceProvider: () => _prepareSavedMessageMedia(ref, rawSource),
     );
   }
 }
@@ -419,6 +488,7 @@ class _SavedMessageVideoPreview extends ConsumerWidget {
       url: source,
       thumbnailUrl: thumbnail,
       keyPrefix: 'saved-message',
+      playbackSourceProvider: () => _prepareSavedMessageMedia(ref, rawSource),
     );
   }
 }

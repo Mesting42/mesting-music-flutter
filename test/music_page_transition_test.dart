@@ -417,6 +417,50 @@ void main() {
   );
 
   testWidgets(
+    'a hub destination stops painting when its next route takes over',
+    (tester) async {
+      final secondary = AnimationController(
+        vsync: tester,
+        duration: const Duration(milliseconds: 300),
+      );
+      addTearDown(secondary.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MusicPageOutgoingLayerHandoff(
+            secondaryAnimation: secondary,
+            child: const ColoredBox(
+              key: ValueKey('hub-destination'),
+              color: Colors.red,
+            ),
+          ),
+        ),
+      );
+
+      Offstage layer() => tester.widget<Offstage>(
+        find.byKey(const ValueKey('music-page-outgoing-layer')),
+      );
+
+      expect(layer().offstage, isFalse);
+      secondary.forward();
+      secondary.value = .3;
+      await tester.pump();
+      expect(layer().offstage, isFalse);
+      secondary.value = .5;
+      await tester.pump();
+      expect(layer().offstage, isTrue);
+
+      secondary.value = 1;
+      await tester.pump();
+      expect(layer().offstage, isTrue);
+      secondary.reverse(from: .5);
+      await tester.pump();
+      expect(layer().offstage, isFalse);
+      secondary.stop();
+    },
+  );
+
+  testWidgets(
     'four bottom tabs keep exactly one painted page while switching',
     (tester) async {
       final router = GoRouter(

@@ -230,6 +230,50 @@ class MusicPageSingleLayerHandoff extends StatelessWidget {
   }
 }
 
+/// Makes a route opened from the music hub participate in later pushes.
+///
+/// Hub destinations enter with the drawer's own motion, so they do not use
+/// [MusicPageSingleLayerHandoff] for their primary animation. They still need
+/// to stop painting when another route is pushed above them; otherwise their
+/// toolbar and list remain visible under the next transparent music page.
+class MusicPageOutgoingLayerHandoff extends StatelessWidget {
+  const MusicPageOutgoingLayerHandoff({
+    required this.secondaryAnimation,
+    required this.child,
+    this.handoffProgress = musicPageHandoffProgress,
+    super.key,
+  });
+
+  final Animation<double> secondaryAnimation;
+  final Widget child;
+  final double handoffProgress;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: secondaryAnimation,
+      child: child,
+      builder: (context, child) {
+        final visible = musicPageLayerIsVisible(
+          primaryStatus: AnimationStatus.completed,
+          primaryValue: 1,
+          secondaryStatus: secondaryAnimation.status,
+          secondaryValue: secondaryAnimation.value,
+          handoffProgress: handoffProgress,
+        );
+        return Offstage(
+          key: const ValueKey('music-page-outgoing-layer'),
+          offstage: !visible,
+          child: IgnorePointer(
+            ignoring: secondaryAnimation.status != AnimationStatus.dismissed,
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+}
+
 @immutable
 class MusicPageTransitionIntent {
   const MusicPageTransitionIntent(

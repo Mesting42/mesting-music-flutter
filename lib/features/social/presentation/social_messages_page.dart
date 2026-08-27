@@ -27,10 +27,7 @@ class SocialMessagesPage extends ConsumerWidget {
             trailing: SocialHeaderButton(
               label: '收藏消息',
               icon: Icons.bookmarks_outlined,
-              onTap: () => context.push(
-                '/social/saved-messages',
-                extra: const MusicPageTransitionIntent.messagesConversation(),
-              ),
+              onTap: () => context.push('/social/saved-messages'),
             ),
           ),
         ),

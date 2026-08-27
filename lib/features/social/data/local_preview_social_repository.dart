@@ -540,7 +540,10 @@ class LocalPreviewSocialRepository
   }
 
   @override
-  Future<String?> resolveMediaUrl(String value) async {
+  Future<String?> resolveMediaUrl(
+    String value, {
+    bool forceRefresh = false,
+  }) async {
     final normalized = value.trim();
     return normalized.isEmpty ? null : normalized;
   }

@@ -236,7 +236,7 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/social/saved-messages',
-          pageBuilder: (context, state) => _savedMessagesTransitionPage(
+          pageBuilder: (context, state) => _messagesTransitionPage(
             state: state,
             child: AuthProtectedPage(
               reason: '登录后才能查看收藏消息。',
@@ -462,21 +462,6 @@ Page<void> _messagesTransitionPage({
   );
 }
 
-/// Collection pages are opened from the messages toolbar. Unlike a chat
-/// conversation, they replace a dense list with another dense list, so the
-/// incoming route owns an opaque backdrop from its very first frame. That
-/// prevents the outgoing toolbar and rows from briefly showing through the
-/// new page (including the former empty action-shaped remnant at top right).
-Page<void> _savedMessagesTransitionPage({
-  required GoRouterState state,
-  required Widget child,
-}) {
-  return _OpaqueMessagesCollectionTransitionPage(
-    key: ValueKey(state.uri.toString()),
-    child: child,
-  );
-}
-
 /// Full-page counterpart of [MusicHubPanelTransition].
 ///
 /// The drawer is dismissed before this route is pushed, so this page can use
@@ -503,59 +488,9 @@ class _MusicHubPanelTransitionPage extends Page<void> {
       pageBuilder: (context, animation, secondaryAnimation) => child,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         if (reduceMotion) return child;
-        return MusicHubPanelTransition(animation: animation, child: child);
-      },
-    );
-  }
-}
-
-/// A route that covers its predecessor before moving collection content.
-///
-/// Social pages deliberately leave their backgrounds transparent so the music
-/// shell's theme can remain visible. A normal slide between two such pages can
-/// therefore expose the previous page's controls for one compositor frame.
-/// The solid surface below is limited to the saved-message collection where a
-/// complete replacement is clearer than a layered handoff.
-class _OpaqueMessagesCollectionTransitionPage extends Page<void> {
-  const _OpaqueMessagesCollectionTransitionPage({
-    required this.child,
-    super.key,
-  });
-
-  final Widget child;
-
-  @override
-  Route<void> createRoute(BuildContext context) {
-    final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    return PageRouteBuilder<void>(
-      settings: this,
-      allowSnapshotting: musicPageUsesRouteSnapshotting,
-      opaque: true,
-      transitionDuration: reduceMotion
-          ? Duration.zero
-          : const Duration(milliseconds: 300),
-      reverseTransitionDuration: reduceMotion
-          ? Duration.zero
-          : const Duration(milliseconds: 240),
-      pageBuilder: (context, animation, secondaryAnimation) => child,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        final motion = CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutCubic,
-          reverseCurve: Curves.easeInCubic,
-        );
-        return ColoredBox(
-          key: const ValueKey('saved-messages-opaque-transition-backdrop'),
-          color: Theme.of(context).scaffoldBackgroundColor,
-          child: MusicPageTransitionSurface(
-            position: Tween<Offset>(
-              begin: const Offset(.026, 0),
-              end: Offset.zero,
-            ).animate(motion),
-            scale: Tween<double>(begin: .996, end: 1).animate(motion),
-            scaleAlignment: Alignment.centerRight,
-            child: child,
-          ),
+        return MusicPageOutgoingLayerHandoff(
+          secondaryAnimation: secondaryAnimation,
+          child: MusicHubPanelTransition(animation: animation, child: child),
         );
       },
     );

@@ -3339,6 +3339,7 @@ class SocialVoiceMessage extends ConsumerStatefulWidget {
     required this.duration,
     required this.mine,
     this.keyPrefix = 'chat',
+    this.playbackSourceProvider,
     super.key,
   });
 
@@ -3347,6 +3348,7 @@ class SocialVoiceMessage extends ConsumerStatefulWidget {
   final Duration duration;
   final bool mine;
   final String keyPrefix;
+  final Future<String?> Function()? playbackSourceProvider;
 
   @override
   ConsumerState<SocialVoiceMessage> createState() => _SocialVoiceMessageState();
@@ -3385,7 +3387,10 @@ class _SocialVoiceMessageState extends ConsumerState<SocialVoiceMessage> {
   }
 
   Future<void> _togglePlayback() async {
-    if (_busy || _stableUrl.isEmpty) return;
+    if (_busy ||
+        (_stableUrl.isEmpty && widget.playbackSourceProvider == null)) {
+      return;
+    }
     final player = _player;
     if (player?.playing == true) {
       await player!.pause();
@@ -3393,6 +3398,16 @@ class _SocialVoiceMessageState extends ConsumerState<SocialVoiceMessage> {
     }
     setState(() => _busy = true);
     try {
+      final playbackSourceProvider = widget.playbackSourceProvider;
+      if (playbackSourceProvider != null) {
+        final prepared = (await playbackSourceProvider())?.trim() ?? '';
+        if (prepared.isEmpty) {
+          throw const SocialRequestException('暂时无法恢复收藏的语音文件');
+        }
+        if (prepared != _stableUrl) {
+          await _replacePlaybackSource(prepared);
+        }
+      }
       final active = _activeVoice;
       if (active != null && !identical(active, this)) {
         await active._pauseForAnotherVoice();
@@ -3420,6 +3435,16 @@ class _SocialVoiceMessageState extends ConsumerState<SocialVoiceMessage> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _replacePlaybackSource(String value) async {
+    _stableUrl = value;
+    _sourceReady = false;
+    _playing = false;
+    await _playerStateSubscription?.cancel();
+    _playerStateSubscription = null;
+    await _player?.dispose();
+    _player = null;
   }
 
   Future<just_audio.AudioPlayer> _ensurePlayer() async {
@@ -3474,7 +3499,9 @@ class _SocialVoiceMessageState extends ConsumerState<SocialVoiceMessage> {
       label: '${_playing ? '暂停' : '播放'}语音消息，时长 $durationLabel',
       child: InkWell(
         key: ValueKey('${widget.keyPrefix}-voice-message-${widget.messageId}'),
-        onTap: _stableUrl.isEmpty ? null : _togglePlayback,
+        onTap: _stableUrl.isEmpty && widget.playbackSourceProvider == null
+            ? null
+            : _togglePlayback,
         borderRadius: BorderRadius.circular(14),
         child: SizedBox(
           width: width,
@@ -3619,6 +3646,7 @@ class SocialVideoMessage extends StatefulWidget {
     required this.url,
     this.thumbnailUrl,
     this.keyPrefix = 'chat',
+    this.playbackSourceProvider,
     super.key,
   });
 
@@ -3626,6 +3654,7 @@ class SocialVideoMessage extends StatefulWidget {
   final String url;
   final String? thumbnailUrl;
   final String keyPrefix;
+  final Future<String?> Function()? playbackSourceProvider;
 
   @override
   State<SocialVideoMessage> createState() => _SocialVideoMessageState();
@@ -3636,6 +3665,7 @@ class _SocialVideoMessageState extends State<SocialVideoMessage> {
   String? _stableThumbnailUrl;
   Duration? _stableDuration;
   bool _initializationFailed = false;
+  bool _opening = false;
   int _controllerGeneration = 0;
 
   @override
@@ -3686,6 +3716,38 @@ class _SocialVideoMessageState extends State<SocialVideoMessage> {
     super.dispose();
   }
 
+  Future<void> _openVideo() async {
+    if (_opening) return;
+    setState(() => _opening = true);
+    try {
+      var source = widget.url.trim();
+      final playbackSourceProvider = widget.playbackSourceProvider;
+      if (playbackSourceProvider != null) {
+        source = (await playbackSourceProvider())?.trim() ?? '';
+      }
+      if (source.isEmpty) {
+        throw const SocialRequestException('暂时无法恢复收藏的视频文件');
+      }
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => _VideoViewer(url: source),
+        ),
+      );
+    } on Object catch (error) {
+      if (mounted) {
+        showMusicNotice(
+          context,
+          icon: Icons.videocam_off_outlined,
+          title: '视频暂时无法播放',
+          message: userFacingErrorMessage(error, fallback: '请稍后重试'),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _opening = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = _controller;
@@ -3693,13 +3755,9 @@ class _SocialVideoMessageState extends State<SocialVideoMessage> {
     final duration = _stableDuration;
     return InkWell(
       key: ValueKey('${widget.keyPrefix}-video-message-${widget.messageId}'),
-      onTap: widget.url.isEmpty
+      onTap: widget.url.isEmpty && widget.playbackSourceProvider == null
           ? null
-          : () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (context) => _VideoViewer(url: widget.url),
-              ),
-            ),
+          : _openVideo,
       borderRadius: BorderRadius.circular(15),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(15),
@@ -3751,11 +3809,19 @@ class _SocialVideoMessageState extends State<SocialVideoMessage> {
                     shape: BoxShape.circle,
                     border: Border.all(color: const Color(0xCCFFFFFF)),
                   ),
-                  child: const Icon(
-                    Icons.play_arrow_rounded,
-                    color: Colors.white,
-                    size: 31,
-                  ),
+                  child: _opening
+                      ? const Padding(
+                          padding: EdgeInsets.all(14),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.4,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.play_arrow_rounded,
+                          color: Colors.white,
+                          size: 31,
+                        ),
                 ),
               ),
               Positioned(

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,6 +32,49 @@ void main() {
       'file:///C:/temp/saved-voice.m4a',
     );
   });
+
+  test(
+    'saved media refreshes and downloads a stable local playback file',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'mesting-saved-media-test-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final mediaFile = File(
+        '${directory.path}${Platform.pathSeparator}voice.m4a',
+      );
+      var forcedRefresh = false;
+      String? downloadedUrl;
+      String? downloadKey;
+
+      final source = await prepareSavedMessageMediaForPlayback(
+        rawValue: 'cloud://music-env/social-media/me/voice.m4a',
+        resolve: (value, {forceRefresh = false}) async {
+          forcedRefresh = forceRefresh;
+          expect(value, 'cloud://music-env/social-media/me/voice.m4a');
+          return 'https://cdn.example/social-media/me/voice.m4a?signature=fresh';
+        },
+        download: (url, cacheKey) async {
+          downloadedUrl = url;
+          downloadKey = cacheKey;
+          await mediaFile.writeAsBytes(const [0, 1, 2, 3], flush: true);
+          return mediaFile;
+        },
+      );
+
+      expect(forcedRefresh, isTrue);
+      expect(
+        downloadedUrl,
+        'https://cdn.example/social-media/me/voice.m4a?signature=fresh',
+      );
+      expect(
+        downloadKey,
+        'saved-message-media-v2:'
+        'cloud://music-env/social-media/me/voice.m4a',
+      );
+      expect(source, mediaFile.path);
+    },
+  );
 
   testWidgets('saved messages page exposes the stored message collection', (
     tester,

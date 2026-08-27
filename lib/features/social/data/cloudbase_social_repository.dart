@@ -320,11 +320,14 @@ class CloudBaseSocialRepository
   }
 
   @override
-  Future<String?> resolveMediaUrl(String value) async {
+  Future<String?> resolveMediaUrl(
+    String value, {
+    bool forceRefresh = false,
+  }) async {
     final normalized = value.trim();
     if (normalized.isEmpty) return null;
     if (!normalized.startsWith('cloud://')) return normalized;
-    final cached = _resolvedMediaUrls[normalized];
+    final cached = forceRefresh ? null : _resolvedMediaUrls[normalized];
     if (cached != null) return cached;
 
     // The Java/MySQL API returns download URLs when a message is sent. It does
