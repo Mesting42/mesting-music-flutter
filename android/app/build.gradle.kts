@@ -8,6 +8,9 @@ plugins {
 android {
     namespace = "com.mesting.music"
     compileSdk = flutter.compileSdkVersion
+    // integration_test currently requires this newer NDK. Pinning it here
+    // keeps local and CI Release builds on the same compatible toolchain.
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
