@@ -326,10 +326,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                     onRetry: entry.delivery == _MessageDelivery.failed
                         ? () => _retryMessage(entry)
                         : null,
-                    onLongPress:
+                    onLongPressStart:
                         entry.delivery == _MessageDelivery.sent &&
                             !message.recalled
-                        ? () => _showMessageActions(entry, mine: mine)
+                        ? (anchor) => _showMessageActions(
+                            entry,
+                            mine: mine,
+                            anchor: anchor,
+                          )
                         : null,
                   ),
                 ],
@@ -1004,46 +1008,59 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Future<void> _showMessageActions(
     _ChatMessageEntry entry, {
     required bool mine,
+    required Offset anchor,
   }) async {
     final message = entry.message;
-    final action = await showLiquidGlassBottomSheet<_ChatMessageAction>(
+    final supportsCopy =
+        message.kind == SocialMessageKind.text ||
+        message.kind == SocialMessageKind.emoji;
+    final now = DateTime.now();
+    final canRecall =
+        mine &&
+        !message.sentAt.isAfter(now) &&
+        now.difference(message.sentAt) <= const Duration(minutes: 2);
+    final actions = <_ChatMessageAction>[
+      if (supportsCopy) _ChatMessageAction.copy,
+      if (message.kind == SocialMessageKind.voice)
+        _ChatMessageAction.transcribe,
+      if (canRecall) _ChatMessageAction.recall,
+      _ChatMessageAction.delete,
+    ];
+    final action = await showGeneralDialog<_ChatMessageAction>(
       context: context,
       useRootNavigator: true,
-      useSafeArea: true,
-      builder: (context) => SocialGlass(
-        radius: 24,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (message.kind == SocialMessageKind.voice)
-                _ChatMessageActionRow(
-                  icon: Icons.text_fields_rounded,
-                  title: '转文字',
-                  onTap: () =>
-                      Navigator.pop(context, _ChatMessageAction.transcribe),
-                ),
-              if (mine)
-                _ChatMessageActionRow(
-                  icon: Icons.undo_rounded,
-                  title: '撤回消息',
-                  onTap: () =>
-                      Navigator.pop(context, _ChatMessageAction.recall),
-                ),
-              _ChatMessageActionRow(
-                icon: Icons.delete_outline_rounded,
-                title: '删除',
-                destructive: true,
-                onTap: () => Navigator.pop(context, _ChatMessageAction.delete),
+      barrierDismissible: true,
+      barrierLabel: '关闭消息操作',
+      barrierColor: Colors.black.withValues(alpha: .46),
+      transitionDuration: const Duration(milliseconds: 150),
+      pageBuilder: (context, _, _) =>
+          _ChatMessageActionPopover(anchor: anchor, actions: actions),
+      transitionBuilder: (context, animation, _, child) => FadeTransition(
+        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+        child: SlideTransition(
+          position:
+              Tween<Offset>(
+                begin: const Offset(0, .025),
+                end: Offset.zero,
+              ).animate(
+                CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
               ),
-            ],
-          ),
+          child: child,
         ),
       ),
     );
     if (action == null || !mounted) return;
     switch (action) {
+      case _ChatMessageAction.copy:
+        await Clipboard.setData(ClipboardData(text: message.text));
+        if (mounted) {
+          showMusicNotice(
+            context,
+            icon: Icons.content_copy_rounded,
+            title: '已复制',
+            message: '',
+          );
+        }
       case _ChatMessageAction.transcribe:
         _showTranscriptionUnavailable();
       case _ChatMessageAction.recall:
@@ -1619,7 +1636,7 @@ class _ComposerAction extends StatelessWidget {
 
 enum _MessageDelivery { sending, sent, failed }
 
-enum _ChatMessageAction { transcribe, recall, delete }
+enum _ChatMessageAction { copy, transcribe, recall, delete }
 
 @visibleForTesting
 String formatChatMessageTimestamp(DateTime sentAt, {DateTime? now}) {
@@ -1789,7 +1806,7 @@ class _MessageBubble extends ConsumerWidget {
     required this.onAvatarTap,
     required this.delivery,
     this.onRetry,
-    this.onLongPress,
+    this.onLongPressStart,
     super.key,
   });
 
@@ -1799,7 +1816,7 @@ class _MessageBubble extends ConsumerWidget {
   final VoidCallback onAvatarTap;
   final _MessageDelivery delivery;
   final VoidCallback? onRetry;
-  final VoidCallback? onLongPress;
+  final ValueChanged<Offset>? onLongPressStart;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1905,7 +1922,9 @@ class _MessageBubble extends ConsumerWidget {
       },
     );
     return GestureDetector(
-      onLongPress: onLongPress,
+      onLongPressStart: onLongPressStart == null
+          ? null
+          : (details) => onLongPressStart!(details.globalPosition),
       behavior: HitTestBehavior.opaque,
       child: Align(
         alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
@@ -1954,32 +1973,157 @@ class _MessageBubble extends ConsumerWidget {
   }
 }
 
-class _ChatMessageActionRow extends StatelessWidget {
-  const _ChatMessageActionRow({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-    this.destructive = false,
+class _ChatMessageActionPopover extends StatelessWidget {
+  const _ChatMessageActionPopover({
+    required this.anchor,
+    required this.actions,
   });
 
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-  final bool destructive;
+  final Offset anchor;
+  final List<_ChatMessageAction> actions;
 
   @override
   Widget build(BuildContext context) {
-    final color = destructive ? const Color(0xFFC24A34) : null;
-    return ListTile(
-      onTap: onTap,
-      leading: Icon(icon, color: color),
-      title: Text(
-        title,
-        style: TextStyle(color: color, fontWeight: FontWeight.w800),
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = scheme.brightness == Brightness.dark;
+    final popupColor = isDark
+        ? Color.alphaBlend(
+            scheme.primary.withValues(alpha: .12),
+            scheme.surfaceContainerHigh,
+          )
+        : const Color(0xFF2E3038);
+    const popupHeight = 76.0;
+    final preferredWidth = (16 + actions.length * 70)
+        .clamp(130, 300)
+        .toDouble();
+    final viewPadding = MediaQuery.paddingOf(context);
+
+    return Material(
+      color: Colors.transparent,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => Navigator.of(context).pop(),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final width = preferredWidth
+                .clamp(130.0, constraints.maxWidth - 24)
+                .toDouble();
+            final minTop = viewPadding.top + 10;
+            final maxTop =
+                constraints.maxHeight - viewPadding.bottom - popupHeight - 10;
+            final above = anchor.dy - popupHeight - 14;
+            final top = (above >= minTop ? above : anchor.dy + 14)
+                .clamp(minTop, maxTop)
+                .toDouble();
+            final left = (anchor.dx - width / 2)
+                .clamp(12.0, constraints.maxWidth - width - 12)
+                .toDouble();
+            return Stack(
+              children: [
+                Positioned(
+                  key: const ValueKey('chat-message-action-popover'),
+                  left: left,
+                  top: top,
+                  width: width,
+                  height: popupHeight,
+                  child: GestureDetector(
+                    onTap: () {},
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: popupColor,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: Colors.white.withValues(
+                            alpha: isDark ? .12 : .09,
+                          ),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: .30),
+                            offset: const Offset(0, 12),
+                            blurRadius: 28,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          for (final action in actions)
+                            _ChatMessageActionButton(
+                              action: action,
+                              onTap: () => Navigator.of(context).pop(action),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
 }
+
+class _ChatMessageActionButton extends StatelessWidget {
+  const _ChatMessageActionButton({required this.action, required this.onTap});
+
+  final _ChatMessageAction action;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final destructive = action == _ChatMessageAction.delete;
+    final color = destructive ? const Color(0xFFFF8771) : Colors.white;
+    return Semantics(
+      button: true,
+      label: _chatMessageActionLabel(action),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 48, minHeight: 60),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 9),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(_chatMessageActionIcon(action), color: color, size: 21),
+                const SizedBox(height: 5),
+                Text(
+                  _chatMessageActionLabel(action),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+IconData _chatMessageActionIcon(_ChatMessageAction action) => switch (action) {
+  _ChatMessageAction.copy => Icons.content_copy_rounded,
+  _ChatMessageAction.transcribe => Icons.text_fields_rounded,
+  _ChatMessageAction.recall => Icons.undo_rounded,
+  _ChatMessageAction.delete => Icons.delete_outline_rounded,
+};
+
+String _chatMessageActionLabel(_ChatMessageAction action) => switch (action) {
+  _ChatMessageAction.copy => '复制',
+  _ChatMessageAction.transcribe => '转文字',
+  _ChatMessageAction.recall => '撤回',
+  _ChatMessageAction.delete => '删除',
+};
 
 class _ListenTogetherInviteMessage extends ConsumerStatefulWidget {
   const _ListenTogetherInviteMessage({

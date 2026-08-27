@@ -746,6 +746,41 @@ void main() {
     expect(find.text('撤回消息'), findsNothing);
   });
 
+  testWidgets(
+    'long pressing a sent text message opens an anchored action bar',
+    (tester) async {
+      final repository = _ChatRepository(
+        friend,
+        initialMessages: [
+          SocialMessage(
+            id: 'text-actions',
+            senderUid: 'me',
+            receiverUid: 'friend',
+            kind: SocialMessageKind.text,
+            text: '可以复制和撤回的消息',
+            sentAt: DateTime.now(),
+          ),
+        ],
+      );
+      await tester.pumpWidget(app(repository));
+      await tester.pumpAndSettle();
+
+      await tester.longPress(
+        find.byKey(const ValueKey('chat-message-bubble-text-actions')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('chat-message-action-popover')),
+        findsOneWidget,
+      );
+      expect(find.text('复制'), findsOneWidget);
+      expect(find.text('撤回'), findsOneWidget);
+      expect(find.text('删除'), findsOneWidget);
+      expect(find.text('转文字'), findsNothing);
+    },
+  );
+
   testWidgets('holding the voice button records, uploads and sends once', (
     tester,
   ) async {
