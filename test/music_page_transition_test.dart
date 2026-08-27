@@ -220,6 +220,39 @@ void main() {
     }
   });
 
+  test('从消息列表打开会话后，返回时也保持单层内容', () {
+    const conversation = MusicPageTransitionIntent.messagesConversation();
+    expect(conversation.handoffProgress, messagesPageHandoffProgress);
+
+    for (var step = 0; step <= 100; step += 1) {
+      final progress = step / 100;
+      final conversationLayer = musicPageLayerOpacity(
+        primaryStatus: AnimationStatus.reverse,
+        primaryValue: 1 - progress,
+        secondaryStatus: AnimationStatus.dismissed,
+        secondaryValue: 0,
+        handoffProgress: conversation.handoffProgress!,
+      );
+      final messagesLayer = musicPageLayerOpacity(
+        primaryStatus: AnimationStatus.completed,
+        primaryValue: 1,
+        secondaryStatus: AnimationStatus.reverse,
+        secondaryValue: 1 - progress,
+        handoffProgress: messagesPageHandoffProgress,
+      );
+      expect(
+        conversationLayer > 0 && messagesLayer > 0,
+        isFalse,
+        reason: '返回进度 $progress 重叠绘制了会话和消息列表',
+      );
+      expect(
+        conversationLayer > 0 ? conversationLayer : messagesLayer,
+        1,
+        reason: '返回进度 $progress 暴露了页面背景',
+      );
+    }
+  });
+
   test('编辑资料页回退使用连续的单层交接', () {
     expect(profileEditPageHandoffProgress, musicPageHandoffProgress);
     expect(

@@ -6,6 +6,7 @@ import '../domain/social_models.dart';
 import '../domain/listen_together.dart';
 import '../domain/track_share.dart';
 import '../social_providers.dart';
+import '../../player/presentation/music_page_transition.dart';
 import 'social_widgets.dart';
 
 class SocialMessagesPage extends ConsumerWidget {
@@ -80,6 +81,7 @@ class _ConversationRow extends StatelessWidget {
       child: InkWell(
         onTap: () => context.push(
           '/social/chat/${Uri.encodeComponent(conversation.peer.uid)}',
+          extra: const MusicPageTransitionIntent.messagesConversation(),
         ),
         child: Padding(
           padding: const EdgeInsets.all(13),

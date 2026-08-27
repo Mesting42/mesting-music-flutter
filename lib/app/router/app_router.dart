@@ -372,6 +372,7 @@ Page<void> _musicSlidePage({
   return _SequencedMusicTransitionPage(
     key: ValueKey(state.uri.toString()),
     enterOffset: Offset(horizontal, 0),
+    handoffProgress: intent.handoffProgress ?? musicPageHandoffProgress,
     child: child,
   );
 }

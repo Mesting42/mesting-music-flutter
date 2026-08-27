@@ -195,13 +195,20 @@ class MusicPageSingleLayerHandoff extends StatelessWidget {
 
 @immutable
 class MusicPageTransitionIntent {
-  const MusicPageTransitionIntent(this.direction);
+  const MusicPageTransitionIntent(this.direction, {this.handoffProgress});
 
-  const MusicPageTransitionIntent.forward()
+  const MusicPageTransitionIntent.forward({this.handoffProgress})
     : direction = MusicPageTransitionDirection.forward;
 
-  const MusicPageTransitionIntent.backward()
+  const MusicPageTransitionIntent.backward({this.handoffProgress})
     : direction = MusicPageTransitionDirection.backward;
+
+  /// Keeps a conversation opened from the messages list on that list's
+  /// earlier handoff boundary. Matching both routes prevents them from
+  /// painting together while the conversation is popped.
+  const MusicPageTransitionIntent.messagesConversation()
+    : direction = MusicPageTransitionDirection.forward,
+      handoffProgress = messagesPageHandoffProgress;
 
   factory MusicPageTransitionIntent.betweenTabs(int from, int to) {
     return MusicPageTransitionIntent(
@@ -212,6 +219,7 @@ class MusicPageTransitionIntent {
   }
 
   final MusicPageTransitionDirection direction;
+  final double? handoffProgress;
 
   double get horizontalOffset =>
       direction == MusicPageTransitionDirection.forward
