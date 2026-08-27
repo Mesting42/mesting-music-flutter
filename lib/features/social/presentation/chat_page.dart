@@ -15,6 +15,7 @@ import 'package:video_thumbnail/video_thumbnail.dart';
 
 import '../../../core/errors/user_facing_error.dart';
 import '../../../core/audio/playback_providers.dart';
+import '../../../core/persistence/app_preferences.dart';
 import '../../../core/platform/share_bridge.dart';
 import '../../../shared/layout/adaptive_layout.dart';
 import '../../../shared/models/track.dart';
@@ -25,6 +26,7 @@ import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../auth/auth_providers.dart';
 import '../../themes/mesting_palette.dart';
 import '../domain/listen_together.dart';
+import '../domain/chat_message_actions.dart';
 import '../domain/social_models.dart';
 import '../domain/track_share.dart';
 import '../listen_together_providers.dart';
@@ -142,6 +144,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   bool _latestMessageScrollScheduled = false;
   bool _messageLoadInFlight = false;
   final Set<String> _hiddenMessageIds = <String>{};
+  Set<String> _savedMessageIds = <String>{};
+  Set<String> _selectedMessageIds = <String>{};
+  ChatMessageQuote? _quoteDraft;
   bool _friendActionWorking = false;
   bool _initialMessageViewportReady = false;
   bool _revealMessagesAfterNextScroll = false;
@@ -150,11 +155,28 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   void initState() {
     super.initState();
     _voiceRecorder = widget.voiceRecorder ?? DeviceChatVoiceRecorder();
+    _restoreSavedMessageIds();
     _loadMessages();
     _pollTimer = Timer.periodic(
       const Duration(seconds: 15),
       (_) => _loadMessages(silent: true),
     );
+  }
+
+  bool get _isSelectingMessages => _selectedMessageIds.isNotEmpty;
+
+  void _restoreSavedMessageIds() {
+    final uid = ref.read(currentUserProvider)?.uid;
+    if (uid == null || uid.isEmpty) return;
+    try {
+      final saved = readSavedChatMessageIds(
+        ref.read(sharedPreferencesProvider),
+        uid,
+      );
+      _savedMessageIds = saved;
+    } on Object {
+      // Lightweight previews and widget tests may not supply preferences.
+    }
   }
 
   @override
@@ -182,45 +204,60 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         SizedBox(height: wide ? 14 : top + 10),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: SocialPageHeader(
-            title: peer.value?.displayName ?? '聊天',
-            subtitle: peer.value?.isFriend == true ? '互相关注好友' : '好友状态已变化',
-            trailing: peer.value?.isFriend == true
-                ? SocialHeaderButton(
-                    label: '更多操作',
-                    icon: Icons.more_horiz_rounded,
-                    onTap: _friendActionWorking
-                        ? () {}
-                        : () => _showFriendActions(peer.value!),
-                  )
-                : null,
-          ),
+          child: _isSelectingMessages
+              ? _MessageSelectionHeader(
+                  selectedCount: _selectedMessageIds.length,
+                  onCancel: _exitMessageSelection,
+                )
+              : SocialPageHeader(
+                  title: peer.value?.displayName ?? '聊天',
+                  subtitle: peer.value?.isFriend == true ? '互相关注好友' : '好友状态已变化',
+                  trailing: peer.value?.isFriend == true
+                      ? SocialHeaderButton(
+                          label: '更多操作',
+                          icon: Icons.more_horiz_rounded,
+                          onTap: _friendActionWorking
+                              ? () {}
+                              : () => _showFriendActions(peer.value!),
+                        )
+                      : null,
+                ),
         ),
         const SizedBox(height: 10),
         Divider(height: 1, color: Theme.of(context).dividerColor),
         Expanded(child: _buildMessages(context, peer.value)),
-        _Composer(
-          controller: _messageController,
-          enabled: peer.value?.isFriend == true,
-          onSend: _sendText,
-          emojiPanelVisible: _emojiPanelVisible,
-          onEmojiToggle: _toggleEmojiPanel,
-          onEmojiSelected: _insertEmoji,
-          onTyping: _hideEmojiPanel,
-          onImage: () => _pickMedia(SocialMessageKind.image),
-          onVideo: () => _pickMedia(SocialMessageKind.video),
-          voiceMode: _voiceMode,
-          voicePreparing: _voicePreparing,
-          voiceRecording: _voiceRecording,
-          voiceCancelPending: _voiceCancelPending,
-          voiceDuration: _voiceDuration,
-          onVoiceToggle: _toggleVoiceMode,
-          onVoiceStart: _startVoiceRecording,
-          onVoiceMove: _updateVoiceCancelState,
-          onVoiceEnd: _endVoiceRecording,
-          onVoiceCancel: _cancelVoiceRecordingGesture,
-          bottomPadding: wide ? 4 : bottom,
-        ),
+        if (_isSelectingMessages)
+          _MessageSelectionToolbar(
+            selectedCount: _selectedMessageIds.length,
+            onSave: _saveSelectedMessages,
+            onDelete: _deleteSelectedMessages,
+            bottomPadding: wide ? 4 : bottom,
+          )
+        else
+          _Composer(
+            controller: _messageController,
+            enabled: peer.value?.isFriend == true,
+            onSend: _sendText,
+            quote: _quoteDraft,
+            onClearQuote: _clearQuoteDraft,
+            emojiPanelVisible: _emojiPanelVisible,
+            onEmojiToggle: _toggleEmojiPanel,
+            onEmojiSelected: _insertEmoji,
+            onTyping: _hideEmojiPanel,
+            onImage: () => _pickMedia(SocialMessageKind.image),
+            onVideo: () => _pickMedia(SocialMessageKind.video),
+            voiceMode: _voiceMode,
+            voicePreparing: _voicePreparing,
+            voiceRecording: _voiceRecording,
+            voiceCancelPending: _voiceCancelPending,
+            voiceDuration: _voiceDuration,
+            onVoiceToggle: _toggleVoiceMode,
+            onVoiceStart: _startVoiceRecording,
+            onVoiceMove: _updateVoiceCancelState,
+            onVoiceEnd: _endVoiceRecording,
+            onVoiceCancel: _cancelVoiceRecordingGesture,
+            bottomPadding: wide ? 4 : bottom,
+          ),
       ],
     );
     if (!wide) return chatContent;
@@ -335,6 +372,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                             anchor: anchor,
                           )
                         : null,
+                    selectionMode: _isSelectingMessages,
+                    selected: _selectedMessageIds.contains(message.id),
+                    onTap: _isSelectingMessages
+                        ? () => _toggleMessageSelection(entry)
+                        : null,
                   ),
                 ],
               );
@@ -439,9 +481,23 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Future<void> _sendText() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
+    final quote = _quoteDraft;
     _messageController.clear();
-    _hideEmojiPanel();
-    _queueMessage(kind: SocialMessageKind.text, text: text);
+    setState(() {
+      _emojiPanelVisible = false;
+      _quoteDraft = null;
+    });
+    _queueMessage(
+      kind: SocialMessageKind.text,
+      text: quote == null
+          ? text
+          : encodeChatMessageQuote(excerpt: quote.excerpt, content: text),
+    );
+  }
+
+  void _clearQuoteDraft() {
+    if (_quoteDraft == null) return;
+    setState(() => _quoteDraft = null);
   }
 
   void _toggleEmojiPanel() {
@@ -1021,10 +1077,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         now.difference(message.sentAt) <= const Duration(minutes: 2);
     final actions = <_ChatMessageAction>[
       if (supportsCopy) _ChatMessageAction.copy,
+      _ChatMessageAction.favorite,
+      _ChatMessageAction.quote,
       if (message.kind == SocialMessageKind.voice)
         _ChatMessageAction.transcribe,
       if (canRecall) _ChatMessageAction.recall,
       _ChatMessageAction.delete,
+      _ChatMessageAction.multiSelect,
     ];
     final action = await showGeneralDialog<_ChatMessageAction>(
       context: context,
@@ -1033,8 +1092,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       barrierLabel: '关闭消息操作',
       barrierColor: Colors.black.withValues(alpha: .46),
       transitionDuration: const Duration(milliseconds: 150),
-      pageBuilder: (context, _, _) =>
-          _ChatMessageActionPopover(anchor: anchor, actions: actions),
+      pageBuilder: (context, _, _) => _ChatMessageActionPopover(
+        anchor: anchor,
+        actions: actions,
+        favorite: _savedMessageIds.contains(message.id),
+      ),
       transitionBuilder: (context, animation, _, child) => FadeTransition(
         opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
         child: SlideTransition(
@@ -1061,12 +1123,157 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             message: '',
           );
         }
+      case _ChatMessageAction.favorite:
+        await _toggleSavedMessage(entry);
+      case _ChatMessageAction.quote:
+        _beginQuote(entry);
       case _ChatMessageAction.transcribe:
         _showTranscriptionUnavailable();
       case _ChatMessageAction.recall:
         await _recallMessage(entry);
       case _ChatMessageAction.delete:
         await _deleteMessage(entry);
+      case _ChatMessageAction.multiSelect:
+        _startMessageSelection(entry);
+    }
+  }
+
+  Future<void> _toggleSavedMessage(_ChatMessageEntry entry) async {
+    final uid = ref.read(currentUserProvider)?.uid;
+    if (uid == null || uid.isEmpty) return;
+    final messageId = entry.message.id;
+    final next = {..._savedMessageIds};
+    final saved = next.add(messageId);
+    if (!saved) next.remove(messageId);
+    setState(() => _savedMessageIds = next);
+    try {
+      await writeSavedChatMessageIds(
+        ref.read(sharedPreferencesProvider),
+        uid,
+        next,
+      );
+      if (mounted) {
+        showMusicNotice(
+          context,
+          icon: saved
+              ? Icons.bookmark_added_rounded
+              : Icons.bookmark_remove_rounded,
+          title: saved ? '已收藏消息' : '已取消收藏',
+          message: '',
+        );
+      }
+    } on Object {
+      // Keep the current session usable even if local preference storage is
+      // unavailable (for example in an isolated preview).
+    }
+  }
+
+  void _beginQuote(_ChatMessageEntry entry) {
+    setState(() {
+      _emojiPanelVisible = false;
+      _voiceMode = false;
+      _quoteDraft = ChatMessageQuote(
+        excerpt: chatMessageQuoteExcerpt(entry.message),
+        content: '',
+      );
+    });
+  }
+
+  void _startMessageSelection(_ChatMessageEntry entry) {
+    setState(() {
+      _emojiPanelVisible = false;
+      _voiceMode = false;
+      _quoteDraft = null;
+      _selectedMessageIds = {entry.message.id};
+    });
+  }
+
+  void _toggleMessageSelection(_ChatMessageEntry entry) {
+    if (entry.delivery != _MessageDelivery.sent || entry.message.recalled) {
+      return;
+    }
+    final next = {..._selectedMessageIds};
+    if (!next.add(entry.message.id)) next.remove(entry.message.id);
+    setState(() => _selectedMessageIds = next);
+  }
+
+  void _exitMessageSelection() {
+    if (!_isSelectingMessages) return;
+    setState(() => _selectedMessageIds = <String>{});
+  }
+
+  Future<void> _saveSelectedMessages() async {
+    final entries = _messages
+        .where((entry) => _selectedMessageIds.contains(entry.message.id))
+        .toList(growable: false);
+    if (entries.isEmpty) return;
+    final uid = ref.read(currentUserProvider)?.uid;
+    if (uid == null || uid.isEmpty) return;
+    final next = {
+      ..._savedMessageIds,
+      ...entries.map((entry) => entry.message.id),
+    };
+    setState(() {
+      _savedMessageIds = next;
+      _selectedMessageIds = <String>{};
+    });
+    try {
+      await writeSavedChatMessageIds(
+        ref.read(sharedPreferencesProvider),
+        uid,
+        next,
+      );
+      if (mounted) {
+        showMusicNotice(
+          context,
+          icon: Icons.bookmark_added_rounded,
+          title: '已收藏 ${entries.length} 条消息',
+          message: '',
+        );
+      }
+    } on Object {
+      // Local preview environments do not always register preferences.
+    }
+  }
+
+  Future<void> _deleteSelectedMessages() async {
+    final entries = _messages
+        .where((entry) => _selectedMessageIds.contains(entry.message.id))
+        .toList(growable: false);
+    if (entries.isEmpty) return;
+    final deletedIds = <String>{};
+    Object? firstError;
+    for (final entry in entries) {
+      try {
+        await ref
+            .read(socialRepositoryProvider)
+            .deleteMessage(widget.uid, entry.message.id);
+        deletedIds.add(entry.message.id);
+      } on Object catch (error) {
+        firstError ??= error;
+      }
+    }
+    if (deletedIds.isNotEmpty && mounted) {
+      setState(() {
+        _hiddenMessageIds.addAll(deletedIds);
+        _messages = _messages
+            .where((entry) => !deletedIds.contains(entry.message.id))
+            .toList(growable: false);
+        _selectedMessageIds.removeAll(deletedIds);
+      });
+      ref
+        ..invalidate(socialConversationsProvider)
+        ..invalidate(socialMessagesProvider(widget.uid));
+    }
+    if (firstError != null) {
+      _showError(firstError);
+    } else if (mounted) {
+      showMusicNotice(
+        context,
+        icon: Icons.delete_outline_rounded,
+        title: '已删除 ${deletedIds.length} 条消息',
+        message: '',
+      );
     }
   }
 
@@ -1184,6 +1391,8 @@ class _Composer extends StatelessWidget {
     required this.controller,
     required this.enabled,
     required this.onSend,
+    required this.quote,
+    required this.onClearQuote,
     required this.emojiPanelVisible,
     required this.onEmojiToggle,
     required this.onEmojiSelected,
@@ -1206,6 +1415,8 @@ class _Composer extends StatelessWidget {
   final TextEditingController controller;
   final bool enabled;
   final VoidCallback onSend;
+  final ChatMessageQuote? quote;
+  final VoidCallback onClearQuote;
   final bool emojiPanelVisible;
   final VoidCallback onEmojiToggle;
   final ValueChanged<String> onEmojiSelected;
@@ -1235,6 +1446,13 @@ class _Composer extends StatelessWidget {
           padding: EdgeInsets.fromLTRB(10, 9, 10, bottomPadding + 9),
           child: Column(
             children: [
+              if (quote != null) ...[
+                _QuoteDraftPreview(
+                  excerpt: quote!.excerpt,
+                  onClear: onClearQuote,
+                ),
+                const SizedBox(height: 7),
+              ],
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -1356,6 +1574,179 @@ class _Composer extends StatelessWidget {
                 child: emojiPanelVisible
                     ? _InlineEmojiPanel(onSelected: onEmojiSelected)
                     : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QuoteDraftPreview extends StatelessWidget {
+  const _QuoteDraftPreview({required this.excerpt, required this.onClear});
+
+  final String excerpt;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      label: '正在引用：$excerpt',
+      child: Container(
+        key: const ValueKey('chat-quote-draft'),
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(12, 8, 7, 8),
+        decoration: BoxDecoration(
+          color: scheme.primary.withValues(alpha: .10),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.format_quote_rounded, color: scheme.primary, size: 19),
+            const SizedBox(width: 7),
+            Expanded(
+              child: Text(
+                '回复：$excerpt',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: scheme.onSurface,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            IconButton(
+              tooltip: '取消引用',
+              onPressed: onClear,
+              icon: const Icon(Icons.close_rounded, size: 19),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MessageSelectionHeader extends StatelessWidget {
+  const _MessageSelectionHeader({
+    required this.selectedCount,
+    required this.onCancel,
+  });
+
+  final int selectedCount;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 48,
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: '取消多选',
+            onPressed: onCancel,
+            icon: const Icon(Icons.close_rounded),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '已选 $selectedCount 项',
+            style: TextStyle(
+              color: scheme.onSurface,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MessageSelectionToolbar extends StatelessWidget {
+  const _MessageSelectionToolbar({
+    required this.selectedCount,
+    required this.onSave,
+    required this.onDelete,
+    required this.bottomPadding,
+  });
+
+  final int selectedCount;
+  final VoidCallback onSave;
+  final VoidCallback onDelete;
+  final double bottomPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      label: '已选择 $selectedCount 条消息',
+      child: SocialGlass(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(20, 11, 20, bottomPadding + 11),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _MessageSelectionAction(
+                icon: Icons.bookmark_add_outlined,
+                label: '收藏',
+                onTap: onSave,
+              ),
+              _MessageSelectionAction(
+                icon: Icons.delete_outline_rounded,
+                label: '删除',
+                color: scheme.error,
+                onTap: onDelete,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MessageSelectionAction extends StatelessWidget {
+  const _MessageSelectionAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color? color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveColor = color ?? Theme.of(context).colorScheme.onSurface;
+    return Semantics(
+      button: true,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          width: 88,
+          height: 54,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 22, color: effectiveColor),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: effectiveColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ],
           ),
@@ -1636,7 +2027,15 @@ class _ComposerAction extends StatelessWidget {
 
 enum _MessageDelivery { sending, sent, failed }
 
-enum _ChatMessageAction { copy, transcribe, recall, delete }
+enum _ChatMessageAction {
+  copy,
+  favorite,
+  quote,
+  transcribe,
+  recall,
+  delete,
+  multiSelect,
+}
 
 @visibleForTesting
 String formatChatMessageTimestamp(DateTime sentAt, {DateTime? now}) {
@@ -1807,6 +2206,9 @@ class _MessageBubble extends ConsumerWidget {
     required this.delivery,
     this.onRetry,
     this.onLongPressStart,
+    this.selectionMode = false,
+    this.selected = false,
+    this.onTap,
     super.key,
   });
 
@@ -1817,6 +2219,9 @@ class _MessageBubble extends ConsumerWidget {
   final _MessageDelivery delivery;
   final VoidCallback? onRetry;
   final ValueChanged<Offset>? onLongPressStart;
+  final bool selectionMode;
+  final bool selected;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1838,11 +2243,17 @@ class _MessageBubble extends ConsumerWidget {
       );
     }
     final accent = Theme.of(context).colorScheme.primary;
-    final togetherInvite = message.kind == SocialMessageKind.text
+    final quote = message.kind == SocialMessageKind.text
+        ? decodeChatMessageQuote(message.text)
+        : null;
+    final togetherInvite =
+        message.kind == SocialMessageKind.text && quote == null
         ? decodeListenTogetherInvite(message.text)
         : null;
     final sharedTrack =
-        message.kind == SocialMessageKind.text && togetherInvite == null
+        message.kind == SocialMessageKind.text &&
+            quote == null &&
+            togetherInvite == null
         ? decodeTrackShareMessage(message.text)
         : null;
     final isMedia =
@@ -1883,13 +2294,15 @@ class _MessageBubble extends ConsumerWidget {
                   mine: mine,
                 )
               : sharedTrack == null
-              ? Text(
-                  message.text,
-                  style: TextStyle(
-                    color: mine ? Colors.white : null,
-                    height: 1.4,
-                  ),
-                )
+              ? quote == null
+                    ? Text(
+                        message.text,
+                        style: TextStyle(
+                          color: mine ? Colors.white : null,
+                          height: 1.4,
+                        ),
+                      )
+                    : _QuotedTextMessage(quote: quote, mine: mine)
               : _SharedTrackMessage(
                   messageId: message.id,
                   track: sharedTrack,
@@ -1922,53 +2335,144 @@ class _MessageBubble extends ConsumerWidget {
       },
     );
     return GestureDetector(
+      onTap: onTap,
       onLongPressStart: onLongPressStart == null
           ? null
           : (details) => onLongPressStart!(details.globalPosition),
       behavior: HitTestBehavior.opaque,
-      child: Align(
-        alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: mine
-              ? Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (delivery != _MessageDelivery.sent) ...[
-                      _DeliveryIndicator(
-                        messageId: message.id,
-                        delivery: delivery,
-                        onRetry: onRetry,
-                      ),
-                      const SizedBox(width: 7),
-                    ],
-                    bubble,
-                    const SizedBox(width: 4),
-                    _MessageAvatar(
-                      messageId: message.id,
-                      user: avatarUser,
-                      mine: true,
-                      onTap: onAvatarTap,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Align(
+            alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: mine
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        if (delivery != _MessageDelivery.sent) ...[
+                          _DeliveryIndicator(
+                            messageId: message.id,
+                            delivery: delivery,
+                            onRetry: onRetry,
+                          ),
+                          const SizedBox(width: 7),
+                        ],
+                        bubble,
+                        const SizedBox(width: 4),
+                        _MessageAvatar(
+                          messageId: message.id,
+                          user: avatarUser,
+                          mine: true,
+                          onTap: onAvatarTap,
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        _MessageAvatar(
+                          messageId: message.id,
+                          user: avatarUser,
+                          mine: false,
+                          onTap: onAvatarTap,
+                        ),
+                        const SizedBox(width: 4),
+                        bubble,
+                      ],
                     ),
-                  ],
-                )
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    _MessageAvatar(
-                      messageId: message.id,
-                      user: avatarUser,
-                      mine: false,
-                      onTap: onAvatarTap,
-                    ),
-                    const SizedBox(width: 4),
-                    bubble,
-                  ],
-                ),
-        ),
+            ),
+          ),
+          if (selectionMode)
+            Positioned(
+              top: 0,
+              left: mine ? null : 36,
+              right: mine ? 36 : null,
+              child: _MessageSelectionIndicator(selected: selected),
+            ),
+        ],
       ),
+    );
+  }
+}
+
+class _MessageSelectionIndicator extends StatelessWidget {
+  const _MessageSelectionIndicator({required this.selected});
+
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      label: selected ? '已选择此消息' : '未选择此消息',
+      child: Container(
+        width: 24,
+        height: 24,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: selected ? scheme.primary : scheme.surface,
+          border: Border.all(
+            color: selected ? scheme.primary : scheme.outlineVariant,
+            width: 1.5,
+          ),
+        ),
+        child: selected
+            ? Icon(Icons.check_rounded, size: 16, color: scheme.onPrimary)
+            : null,
+      ),
+    );
+  }
+}
+
+class _QuotedTextMessage extends StatelessWidget {
+  const _QuotedTextMessage({required this.quote, required this.mine});
+
+  final ChatMessageQuote quote;
+  final bool mine;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final foreground = mine ? Colors.white : scheme.onSurface;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            color: mine
+                ? Colors.black.withValues(alpha: .13)
+                : scheme.onSurface.withValues(alpha: .06),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.format_quote_rounded, size: 16, color: foreground),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  quote.excerpt,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: foreground.withValues(alpha: .82),
+                    fontSize: 12,
+                    height: 1.25,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 7),
+        Text(quote.content, style: TextStyle(color: foreground, height: 1.4)),
+      ],
     );
   }
 }
@@ -1977,10 +2481,12 @@ class _ChatMessageActionPopover extends StatelessWidget {
   const _ChatMessageActionPopover({
     required this.anchor,
     required this.actions,
+    required this.favorite,
   });
 
   final Offset anchor;
   final List<_ChatMessageAction> actions;
+  final bool favorite;
 
   @override
   Widget build(BuildContext context) {
@@ -1992,10 +2498,10 @@ class _ChatMessageActionPopover extends StatelessWidget {
             scheme.surfaceContainerHigh,
           )
         : const Color(0xFF2E3038);
-    const popupHeight = 76.0;
-    final preferredWidth = (16 + actions.length * 70)
-        .clamp(130, 300)
-        .toDouble();
+    final columns = actions.length <= 4 ? actions.length : 3;
+    final rows = (actions.length / columns).ceil();
+    final popupHeight = 12.0 + rows * 66;
+    final preferredWidth = (16 + columns * 78).clamp(130, 300).toDouble();
     final viewPadding = MediaQuery.paddingOf(context);
 
     return Material(
@@ -2045,15 +2551,25 @@ class _ChatMessageActionPopover extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          for (final action in actions)
-                            _ChatMessageActionButton(
-                              action: action,
-                              onTap: () => Navigator.of(context).pop(action),
-                            ),
-                        ],
+                      child: GridView.builder(
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: columns,
+                          mainAxisExtent: 66,
+                        ),
+                        itemCount: actions.length,
+                        itemBuilder: (context, index) {
+                          final action = actions[index];
+                          return _ChatMessageActionButton(
+                            action: action,
+                            favorite: favorite,
+                            onTap: () => Navigator.of(context).pop(action),
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -2068,9 +2584,14 @@ class _ChatMessageActionPopover extends StatelessWidget {
 }
 
 class _ChatMessageActionButton extends StatelessWidget {
-  const _ChatMessageActionButton({required this.action, required this.onTap});
+  const _ChatMessageActionButton({
+    required this.action,
+    required this.favorite,
+    required this.onTap,
+  });
 
   final _ChatMessageAction action;
+  final bool favorite;
   final VoidCallback onTap;
 
   @override
@@ -2079,7 +2600,7 @@ class _ChatMessageActionButton extends StatelessWidget {
     final color = destructive ? const Color(0xFFFF8771) : Colors.white;
     return Semantics(
       button: true,
-      label: _chatMessageActionLabel(action),
+      label: _chatMessageActionLabel(action, favorite: favorite),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -2090,10 +2611,14 @@ class _ChatMessageActionButton extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(_chatMessageActionIcon(action), color: color, size: 21),
+                Icon(
+                  _chatMessageActionIcon(action, favorite: favorite),
+                  color: color,
+                  size: 21,
+                ),
                 const SizedBox(height: 5),
                 Text(
-                  _chatMessageActionLabel(action),
+                  _chatMessageActionLabel(action, favorite: favorite),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -2111,18 +2636,31 @@ class _ChatMessageActionButton extends StatelessWidget {
   }
 }
 
-IconData _chatMessageActionIcon(_ChatMessageAction action) => switch (action) {
+IconData _chatMessageActionIcon(
+  _ChatMessageAction action, {
+  required bool favorite,
+}) => switch (action) {
   _ChatMessageAction.copy => Icons.content_copy_rounded,
+  _ChatMessageAction.favorite =>
+    favorite ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+  _ChatMessageAction.quote => Icons.format_quote_rounded,
   _ChatMessageAction.transcribe => Icons.text_fields_rounded,
   _ChatMessageAction.recall => Icons.undo_rounded,
   _ChatMessageAction.delete => Icons.delete_outline_rounded,
+  _ChatMessageAction.multiSelect => Icons.checklist_rounded,
 };
 
-String _chatMessageActionLabel(_ChatMessageAction action) => switch (action) {
+String _chatMessageActionLabel(
+  _ChatMessageAction action, {
+  required bool favorite,
+}) => switch (action) {
   _ChatMessageAction.copy => '复制',
+  _ChatMessageAction.favorite => favorite ? '取消收藏' : '收藏',
+  _ChatMessageAction.quote => '引用',
   _ChatMessageAction.transcribe => '转文字',
   _ChatMessageAction.recall => '撤回',
   _ChatMessageAction.delete => '删除',
+  _ChatMessageAction.multiSelect => '多选',
 };
 
 class _ListenTogetherInviteMessage extends ConsumerStatefulWidget {

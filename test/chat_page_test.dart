@@ -746,6 +746,49 @@ void main() {
     expect(find.text('撤回消息'), findsNothing);
   });
 
+  testWidgets('voice actions enter quote and multi-select modes', (
+    tester,
+  ) async {
+    final repository = _ChatRepository(
+      friend,
+      initialMessages: [
+        SocialMessage(
+          id: 'voice-quote-actions',
+          senderUid: 'friend',
+          receiverUid: 'me',
+          kind: SocialMessageKind.voice,
+          text: '3200',
+          mediaUrl: 'https://example.com/voice.m4a',
+          sentAt: DateTime.now(),
+        ),
+      ],
+    );
+    await tester.pumpWidget(app(repository));
+    await tester.pumpAndSettle();
+
+    final voiceMessage = find.byKey(
+      const ValueKey('chat-voice-message-voice-quote-actions'),
+    );
+    await tester.longPress(voiceMessage);
+    await tester.pumpAndSettle();
+
+    expect(find.text('收藏'), findsOneWidget);
+    expect(find.text('引用'), findsOneWidget);
+    expect(find.text('多选'), findsOneWidget);
+    await tester.tap(find.text('引用'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('chat-quote-draft')), findsOneWidget);
+    expect(find.text('回复：语音消息'), findsOneWidget);
+
+    await tester.longPress(voiceMessage);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('多选'));
+    await tester.pumpAndSettle();
+    expect(find.text('已选 1 项'), findsOneWidget);
+    expect(find.text('收藏'), findsOneWidget);
+    expect(find.text('删除'), findsOneWidget);
+  });
+
   testWidgets(
     'long pressing a sent text message opens an anchored action bar',
     (tester) async {
