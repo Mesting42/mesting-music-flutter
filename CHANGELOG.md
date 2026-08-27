@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.37+46 - stable CloudBase release
+
+- 优化好友消息引用展示、长按语音转文字操作的输入焦点，以及多选时的左侧勾选交互。
+- 新增“收藏消息”入口；收藏内容可在“我的消息”右上角查看并返回原会话。
+- 语音转文字保留真实识别服务接入边界，当前不会生成不准确的伪转写结果。
+- Java + MySQL 测试包与 UI Beta 通道保持独立，本次稳定发布没有写入它们的更新清单。
+
+对应源码标签：`flutter-music-v1.0.37-build46`。发布与源码对应关系见 [docs/release-history.md](docs/release-history.md)。
+
 ## 1.0.37+44 - stable CloudBase release
 
 - 正式稳定包 `com.mesting.music` 发布到独立稳定更新清单 `releases/android/latest.json`。
