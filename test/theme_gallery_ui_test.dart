@@ -109,6 +109,44 @@ void main() {
     expect(find.byType(BackdropFilter), findsNothing);
   });
 
+  testWidgets('dress-up sheet mounts real choices in its first visible frame', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: FilledButton(
+                  onPressed: () => showDressUpCenterSheet(context),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pump(const Duration(milliseconds: 16));
+
+    expect(
+      find.byKey(const ValueKey('theme-gallery-sheet-content')),
+      findsOneWidget,
+    );
+    expect(find.text('品牌套装'), findsOneWidget);
+    expect(find.text('播放器样式'), findsOneWidget);
+    expect(find.byKey(const ValueKey('player-style-classic')), findsOneWidget);
+  });
+
   testWidgets('dress-up sheet surface follows theme changes while open', (
     tester,
   ) async {

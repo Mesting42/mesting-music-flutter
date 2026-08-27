@@ -129,25 +129,6 @@ class _ThemeSettingsPanel extends ConsumerStatefulWidget {
 class _ThemeSettingsPanelState extends ConsumerState<_ThemeSettingsPanel> {
   MusicThemeIp? _activeIp;
   AppBrandStyle? _applyingBrandStyle;
-  Timer? _deferredContentTimer;
-  late bool _showFullContent;
-
-  @override
-  void initState() {
-    super.initState();
-    _showFullContent = !widget.embeddedInGlassSheet;
-    if (!_showFullContent) {
-      _deferredContentTimer = Timer(const Duration(milliseconds: 420), () {
-        if (mounted) setState(() => _showFullContent = true);
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _deferredContentTimer?.cancel();
-    super.dispose();
-  }
 
   Future<void> _selectBrandStyle(AppBrandStyle style) async {
     if (_applyingBrandStyle != null) return;
@@ -176,12 +157,6 @@ class _ThemeSettingsPanelState extends ConsumerState<_ThemeSettingsPanel> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_showFullContent) {
-      return _ThemeSettingsEntranceShell(
-        onClose: widget.onClose ?? Navigator.of(context).pop,
-      );
-    }
-
     final selected = ref.watch(musicThemeProvider);
     final effectiveTheme = ref.watch(effectiveMusicThemeProvider);
     final performance = ref.watch(themePerformanceProvider);
@@ -452,62 +427,6 @@ class _ThemeSettingsPanelState extends ConsumerState<_ThemeSettingsPanel> {
             ),
           ),
           child: content,
-        ),
-      ),
-    );
-  }
-}
-
-class _ThemeSettingsEntranceShell extends StatelessWidget {
-  const _ThemeSettingsEntranceShell({required this.onClose});
-
-  final VoidCallback onClose;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.musicThemeTokens;
-    return RepaintBoundary(
-      key: const ValueKey('theme-gallery-sheet-content'),
-      child: Material(
-        color: Colors.transparent,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const _PanelHeader(),
-                    const SizedBox(height: 24),
-                    Container(
-                      width: 96,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: tokens.textMuted.withValues(alpha: .16),
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Container(
-                      width: double.infinity,
-                      height: 164,
-                      decoration: BoxDecoration(
-                        color: tokens.glassSubtle.withValues(alpha: .44),
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: tokens.border),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              right: 16,
-              top: 16,
-              child: _FixedCloseButton(onTap: onClose),
-            ),
-          ],
         ),
       ),
     );
