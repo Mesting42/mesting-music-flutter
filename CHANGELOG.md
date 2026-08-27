@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.37+53 - stable CloudBase release
+
+- 收藏语音和视频优先复用好友会话中已经解析、验证或缓存的媒体来源，避免收藏后走一条不同且失效的播放链路。
+- 临时媒体地址失效时会自动刷新地址并换源重试，语音与视频继续使用正式播放器播放真实文件。
+- 修复从“我的消息”进入“收藏消息”时转场交接阈值不一致导致的页面短暂重叠。
+- Java + MySQL 测试包与 UI Beta 通道保持独立，本次稳定发布不会写入它们的更新清单。
+
+对应源码标签：`flutter-music-v1.0.37-build53`。发布与源码对应关系见 [docs/release-history.md](docs/release-history.md)。
+
 ## 1.0.37+52 - stable CloudBase release
 
 - 修复收藏消息中的语音和视频无法播放的问题；播放前会刷新 CloudBase 媒体地址并准备本地缓存文件。

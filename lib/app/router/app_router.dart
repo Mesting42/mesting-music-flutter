@@ -444,6 +444,7 @@ Page<void> _messagesTransitionPage({
   if (intent.usesMusicHubPanelTransition) {
     return _MusicHubPanelTransitionPage(
       key: ValueKey(state.uri.toString()),
+      handoffProgress: messagesPageHandoffProgress,
       child: child,
     );
   }
@@ -468,9 +469,14 @@ Page<void> _messagesTransitionPage({
 /// the same recognisable motion without two drawer/page surfaces compositing
 /// together on Android.
 class _MusicHubPanelTransitionPage extends Page<void> {
-  const _MusicHubPanelTransitionPage({required this.child, super.key});
+  const _MusicHubPanelTransitionPage({
+    required this.child,
+    this.handoffProgress = musicPageHandoffProgress,
+    super.key,
+  });
 
   final Widget child;
+  final double handoffProgress;
 
   @override
   Route<void> createRoute(BuildContext context) {
@@ -490,6 +496,7 @@ class _MusicHubPanelTransitionPage extends Page<void> {
         if (reduceMotion) return child;
         return MusicPageOutgoingLayerHandoff(
           secondaryAnimation: secondaryAnimation,
+          handoffProgress: handoffProgress,
           child: MusicHubPanelTransition(animation: animation, child: child),
         );
       },

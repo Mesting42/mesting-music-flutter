@@ -32,6 +32,7 @@ final BaseCacheManager _savedMessageMediaCache = DefaultCacheManager();
 @visibleForTesting
 Future<String> prepareSavedMessageMediaForPlayback({
   required String rawValue,
+  String? resolvedValue,
   required SavedMessageMediaResolver resolve,
   required SavedMessageMediaDownloader download,
 }) async {
@@ -41,20 +42,52 @@ Future<String> prepareSavedMessageMediaForPlayback({
   }
   if (_isLocalSavedMediaPath(value)) return value;
 
-  final resolved = (await resolve(value, forceRefresh: true))?.trim() ?? '';
-  if (resolved.isEmpty || resolved.startsWith('cloud://')) {
-    throw const SocialRequestException('暂时无法恢复收藏的媒体文件');
+  final candidates = <String>[];
+  void addCandidate(String? candidate) {
+    final normalized = candidate?.trim() ?? '';
+    if (normalized.isEmpty || normalized.startsWith('cloud://')) return;
+    if (!candidates.contains(normalized)) candidates.add(normalized);
   }
-  if (_isLocalSavedMediaPath(resolved)) return resolved;
 
-  final file = await download(
-    resolved,
-    'saved-message-media-v2:$value',
-  ).timeout(const Duration(seconds: 90));
-  if (!await file.exists() || await file.length() <= 0) {
-    throw const SocialRequestException('收藏的媒体文件下载不完整');
+  // Reuse the same already-resolved source that the live conversation can
+  // play. DefaultCacheManager keys remote files by this URL, so this also
+  // reuses a voice file that the chat page has already cached instead of
+  // forcing a second CloudBase request and a separate download.
+  addCandidate(resolvedValue);
+  if (!value.startsWith('cloud://')) addCandidate(value);
+
+  Object? lastFailure;
+  final attemptedCandidates = <String>{};
+  Future<String?> tryCandidates() async {
+    for (final candidate in candidates) {
+      if (!attemptedCandidates.add(candidate)) continue;
+      try {
+        if (_isLocalSavedMediaPath(candidate)) return candidate;
+        final file = await download(
+          candidate,
+          candidate,
+        ).timeout(const Duration(seconds: 90));
+        if (await file.exists() && await file.length() > 0) return file.path;
+        lastFailure = const SocialRequestException('收藏的媒体文件下载不完整');
+      } on Object catch (error) {
+        lastFailure = error;
+      }
+    }
+    return null;
   }
-  return file.path;
+
+  final existing = await tryCandidates();
+  if (existing != null) return existing;
+
+  // A cached/signed URL can expire. Only after the source already used by the
+  // conversation fails do we ask CloudBase for a new one, then retry with a
+  // different cache key derived from that fresh URL.
+  addCandidate(await resolve(value, forceRefresh: true));
+  final refreshed = await tryCandidates();
+  if (refreshed != null) return refreshed;
+
+  if (lastFailure is SocialRequestException) throw lastFailure!;
+  throw const SocialRequestException('暂时无法恢复收藏的媒体文件');
 }
 
 bool _isLocalSavedMediaPath(String value) =>
@@ -62,10 +95,15 @@ bool _isLocalSavedMediaPath(String value) =>
     value.startsWith('/') ||
     RegExp(r'^[A-Za-z]:[\\/]').hasMatch(value);
 
-Future<String> _prepareSavedMessageMedia(WidgetRef ref, String rawValue) {
+Future<String> _prepareSavedMessageMedia(
+  WidgetRef ref,
+  String rawValue, {
+  String? resolvedValue,
+}) {
   final repository = ref.read(socialRepositoryProvider);
   return prepareSavedMessageMediaForPlayback(
     rawValue: rawValue,
+    resolvedValue: resolvedValue,
     resolve: (value, {forceRefresh = false}) {
       if (repository is SocialMediaUrlResolver) {
         return (repository as SocialMediaUrlResolver).resolveMediaUrl(
@@ -447,7 +485,8 @@ class _SavedMessageVoicePreview extends ConsumerWidget {
       duration: chatVoiceDurationFromText(message.text),
       mine: false,
       keyPrefix: 'saved-message',
-      playbackSourceProvider: () => _prepareSavedMessageMedia(ref, rawSource),
+      playbackSourceProvider: () =>
+          _prepareSavedMessageMedia(ref, rawSource, resolvedValue: source),
     );
   }
 }
@@ -488,7 +527,8 @@ class _SavedMessageVideoPreview extends ConsumerWidget {
       url: source,
       thumbnailUrl: thumbnail,
       keyPrefix: 'saved-message',
-      playbackSourceProvider: () => _prepareSavedMessageMedia(ref, rawSource),
+      playbackSourceProvider: () =>
+          _prepareSavedMessageMedia(ref, rawSource, resolvedValue: source),
     );
   }
 }

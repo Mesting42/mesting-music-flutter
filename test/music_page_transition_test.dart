@@ -461,6 +461,43 @@ void main() {
   );
 
   testWidgets(
+    'the messages hub destination hands off at the messages threshold',
+    (tester) async {
+      final secondary = AnimationController(
+        vsync: tester,
+        duration: messagesPageTransitionDuration,
+      );
+      addTearDown(secondary.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MusicPageOutgoingLayerHandoff(
+            secondaryAnimation: secondary,
+            handoffProgress: messagesPageHandoffProgress,
+            child: const ColoredBox(
+              key: ValueKey('messages-hub-destination'),
+              color: Colors.red,
+            ),
+          ),
+        ),
+      );
+
+      Offstage layer() => tester.widget<Offstage>(
+        find.byKey(const ValueKey('music-page-outgoing-layer')),
+      );
+
+      secondary.forward();
+      secondary.value = messagesPageHandoffProgress - .01;
+      await tester.pump();
+      expect(layer().offstage, isFalse);
+      secondary.value = messagesPageHandoffProgress;
+      await tester.pump();
+      expect(layer().offstage, isTrue);
+      secondary.stop();
+    },
+  );
+
+  testWidgets(
     'four bottom tabs keep exactly one painted page while switching',
     (tester) async {
       final router = GoRouter(

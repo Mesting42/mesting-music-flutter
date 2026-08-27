@@ -69,10 +69,77 @@ void main() {
       );
       expect(
         downloadKey,
-        'saved-message-media-v2:'
-        'cloud://music-env/social-media/me/voice.m4a',
+        'https://cdn.example/social-media/me/voice.m4a?signature=fresh',
       );
       expect(source, mediaFile.path);
+    },
+  );
+
+  test(
+    'saved media reuses the source already working in the conversation',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'mesting-saved-media-reuse-test-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final mediaFile = File(
+        '${directory.path}${Platform.pathSeparator}voice.m4a',
+      );
+      await mediaFile.writeAsBytes(const [0, 1, 2, 3], flush: true);
+      var resolverCalls = 0;
+
+      final source = await prepareSavedMessageMediaForPlayback(
+        rawValue: 'cloud://music-env/social-media/me/voice.m4a',
+        resolvedValue: 'https://cdn.example/conversation/voice.m4a',
+        resolve: (_, {forceRefresh = false}) async {
+          resolverCalls++;
+          return null;
+        },
+        download: (url, cacheKey) async {
+          expect(url, 'https://cdn.example/conversation/voice.m4a');
+          expect(cacheKey, url);
+          return mediaFile;
+        },
+      );
+
+      expect(source, mediaFile.path);
+      expect(resolverCalls, 0);
+    },
+  );
+
+  test(
+    'saved media refreshes only after the conversation source fails',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'mesting-saved-media-fallback-test-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final mediaFile = File(
+        '${directory.path}${Platform.pathSeparator}video.mp4',
+      );
+      await mediaFile.writeAsBytes(const [0, 1, 2, 3], flush: true);
+      final downloadedUrls = <String>[];
+
+      final source = await prepareSavedMessageMediaForPlayback(
+        rawValue: 'cloud://music-env/social-media/me/video.mp4',
+        resolvedValue: 'https://cdn.example/expired/video.mp4',
+        resolve: (_, {forceRefresh = false}) async {
+          expect(forceRefresh, isTrue);
+          return 'https://cdn.example/fresh/video.mp4';
+        },
+        download: (url, cacheKey) async {
+          expect(cacheKey, url);
+          downloadedUrls.add(url);
+          if (url.contains('/expired/')) throw Exception('expired');
+          return mediaFile;
+        },
+      );
+
+      expect(source, mediaFile.path);
+      expect(downloadedUrls, [
+        'https://cdn.example/expired/video.mp4',
+        'https://cdn.example/fresh/video.mp4',
+      ]);
     },
   );
 
