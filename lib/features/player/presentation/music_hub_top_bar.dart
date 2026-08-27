@@ -442,6 +442,11 @@ class _MusicHubPanelState extends ConsumerState<_MusicHubPanel> {
     final panelRoute = ModalRoute.of(panelContext);
     Navigator.of(panelContext).pop();
     await panelRoute?.completed;
+    // Let the drawer's removed overlay commit for one frame before starting the
+    // messages-route transition. Without this boundary, some Android
+    // compositors can briefly retain the drawer and the incoming page in the
+    // same frame.
+    await WidgetsBinding.instance.endOfFrame;
     if (!widget.pageContext.mounted) return;
     widget.pageContext.push(
       '/social/messages',

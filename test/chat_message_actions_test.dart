@@ -17,6 +17,18 @@ void main() {
     expect(decodeChatMessageQuote('普通文字'), isNull);
   });
 
+  test('flattened received quotes keep the same reply presentation', () {
+    final compact = decodeChatMessageQuote('「引用」Mesti：😊——你好');
+    final escaped = decodeChatMessageQuote(r'「引用」Mesti：😊\n——\n你好');
+
+    expect(compact, isNotNull);
+    expect(compact!.excerpt, 'Mesti：😊');
+    expect(compact.content, '你好');
+    expect(escaped, isNotNull);
+    expect(escaped!.excerpt, 'Mesti：😊');
+    expect(escaped.content, '你好');
+  });
+
   test('quoted voice uses a concise semantic excerpt', () {
     final voice = SocialMessage(
       id: 'voice',

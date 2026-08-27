@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:mesting_music/features/auth/auth_providers.dart';
 import 'package:mesting_music/features/auth/domain/auth_models.dart';
 import 'package:mesting_music/features/social/data/social_repository.dart';
-import 'package:mesting_music/features/social/domain/chat_message_actions.dart';
 import 'package:mesting_music/features/social/domain/listen_together.dart';
 import 'package:mesting_music/features/social/domain/social_models.dart';
 import 'package:mesting_music/features/social/domain/track_share.dart';
@@ -817,40 +816,42 @@ void main() {
     );
   });
 
-  testWidgets('quoted text keeps the reply bubble separate from its context', (
-    tester,
-  ) async {
-    final repository = _ChatRepository(
-      friend,
-      initialMessages: [
-        SocialMessage(
-          id: 'quoted-text',
-          senderUid: currentUser.uid,
-          receiverUid: friend.uid,
-          kind: SocialMessageKind.text,
-          text: encodeChatMessageQuote(
-            excerpt: 'Mest：吃完我看看你的小肚',
-            content: '嗯嗯',
+  testWidgets(
+    'received flattened quotes keep the reply bubble separate from its context',
+    (tester) async {
+      final repository = _ChatRepository(
+        friend,
+        initialMessages: [
+          SocialMessage(
+            id: 'quoted-text',
+            senderUid: currentUser.uid,
+            receiverUid: friend.uid,
+            kind: SocialMessageKind.text,
+            text: '「引用」Mest：吃完我看看你的小肚——嗯嗯',
+            sentAt: DateTime.now(),
           ),
-          sentAt: DateTime.now(),
-        ),
-      ],
-    );
-    await tester.pumpWidget(app(repository));
-    await tester.pumpAndSettle();
+        ],
+      );
+      await tester.pumpWidget(app(repository));
+      await tester.pumpAndSettle();
 
-    expect(find.text('嗯嗯'), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('chat-message-bubble-quoted-text')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey('chat-quote-context-quoted-text')),
-      findsOneWidget,
-    );
-    expect(find.text('Mest：吃完我看看你的小肚'), findsOneWidget);
-    expect(find.byIcon(Icons.format_quote_rounded), findsNothing);
-  });
+      expect(find.text('嗯嗯'), findsOneWidget);
+      final replyBubble = find.byKey(
+        const ValueKey('chat-message-bubble-quoted-text'),
+      );
+      final quoteContext = find.byKey(
+        const ValueKey('chat-quote-context-quoted-text'),
+      );
+      expect(replyBubble, findsOneWidget);
+      expect(quoteContext, findsOneWidget);
+      final replyRect = tester.getRect(replyBubble);
+      final quoteRect = tester.getRect(quoteContext);
+      expect(replyRect.bottom, lessThanOrEqualTo(quoteRect.top));
+      expect(find.text('Mest：吃完我看看你的小肚'), findsOneWidget);
+      expect(find.text('「引用」Mest：吃完我看看你的小肚——嗯嗯'), findsNothing);
+      expect(find.byIcon(Icons.format_quote_rounded), findsNothing);
+    },
+  );
 
   testWidgets(
     'long pressing a sent text message opens an anchored action bar',

@@ -197,10 +197,21 @@ String encodeChatMessageQuote({
 
 ChatMessageQuote? decodeChatMessageQuote(String raw) {
   if (!raw.startsWith(_quotePrefix)) return null;
-  final dividerIndex = raw.indexOf(_quoteDivider, _quotePrefix.length);
-  if (dividerIndex < 0) return null;
-  final excerpt = raw.substring(_quotePrefix.length, dividerIndex).trim();
-  final content = raw.substring(dividerIndex + _quoteDivider.length).trim();
+  // Messages sent by this client use [_quoteDivider]. Older message records
+  // and some service responses can flatten its line breaks (or return literal
+  // `\\n` sequences), which used to make a sent quote fall back to one large
+  // raw text bubble after the optimistic sending state was replaced.
+  final quotedBody = raw
+      .substring(_quotePrefix.length)
+      .replaceAll(r'\r\n', '\n')
+      .replaceAll(r'\n', '\n')
+      .replaceAll('\r\n', '\n')
+      .replaceAll('\r', '\n');
+  final divider = RegExp(r'\s*——\s*');
+  final match = divider.firstMatch(quotedBody);
+  if (match == null) return null;
+  final excerpt = quotedBody.substring(0, match.start).trim();
+  final content = quotedBody.substring(match.end).trim();
   if (excerpt.isEmpty || content.isEmpty) return null;
   return ChatMessageQuote(excerpt: excerpt, content: content);
 }

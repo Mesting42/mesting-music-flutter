@@ -251,7 +251,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('消息入口在侧栏退出完成后再打开消息页', (tester) async {
+  testWidgets('消息入口在侧栏退出并完成一帧后再打开消息页', (tester) async {
     tester.view.physicalSize = const Size(360, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -298,6 +298,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 150));
     expect(find.text('消息页已打开'), findsNothing);
 
+    await tester.pump(const Duration(milliseconds: 160));
+    expect(find.text('消息页已打开'), findsNothing);
+
+    await tester.pump();
     await tester.pumpAndSettle();
     expect(find.text('消息页已打开'), findsOneWidget);
     expect(tester.takeException(), isNull);
