@@ -1169,11 +1169,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   void _beginQuote(_ChatMessageEntry entry) {
+    final currentUser = ref.read(currentUserProvider);
+    final mine = entry.message.senderUid == currentUser?.uid;
+    final author = mine
+        ? currentUser?.nickname ?? '我'
+        : ref.read(socialUserProvider(widget.uid)).value?.displayName ?? '对方';
     setState(() {
       _emojiPanelVisible = false;
       _voiceMode = false;
       _quoteDraft = ChatMessageQuote(
-        excerpt: chatMessageQuoteExcerpt(entry.message),
+        excerpt: '$author：${chatMessageQuoteExcerpt(entry.message)}',
         content: '',
       );
     });
@@ -2261,13 +2266,12 @@ class _MessageBubble extends ConsumerWidget {
         message.kind == SocialMessageKind.video ||
         togetherInvite != null ||
         sharedTrack != null;
+    final maxBubbleWidth = (MediaQuery.sizeOf(context).width * .62)
+        .clamp(160.0, 520.0)
+        .toDouble();
     final bubble = Container(
       key: ValueKey('chat-message-bubble-${message.id}'),
-      constraints: BoxConstraints(
-        maxWidth: (MediaQuery.sizeOf(context).width * .62)
-            .clamp(160.0, 520.0)
-            .toDouble(),
-      ),
+      constraints: BoxConstraints(maxWidth: maxBubbleWidth),
       padding: isMedia
           ? EdgeInsets.zero
           : const EdgeInsets.symmetric(horizontal: 15, vertical: 11),
@@ -2302,7 +2306,13 @@ class _MessageBubble extends ConsumerWidget {
                           height: 1.4,
                         ),
                       )
-                    : _QuotedTextMessage(quote: quote, mine: mine)
+                    : Text(
+                        quote.content,
+                        style: TextStyle(
+                          color: mine ? Colors.white : null,
+                          height: 1.4,
+                        ),
+                      )
               : _SharedTrackMessage(
                   messageId: message.id,
                   track: sharedTrack,
@@ -2334,6 +2344,15 @@ class _MessageBubble extends ConsumerWidget {
         ),
       },
     );
+    final messageContent = quote == null
+        ? bubble
+        : _QuotedTextMessage(
+            messageId: message.id,
+            quote: quote,
+            mine: mine,
+            maxWidth: maxBubbleWidth,
+            bubble: bubble,
+          );
     return GestureDetector(
       onTap: onTap,
       onLongPressStart: onLongPressStart == null
@@ -2360,7 +2379,7 @@ class _MessageBubble extends ConsumerWidget {
                           ),
                           const SizedBox(width: 7),
                         ],
-                        bubble,
+                        messageContent,
                         const SizedBox(width: 4),
                         _MessageAvatar(
                           messageId: message.id,
@@ -2381,7 +2400,7 @@ class _MessageBubble extends ConsumerWidget {
                           onTap: onAvatarTap,
                         ),
                         const SizedBox(width: 4),
-                        bubble,
+                        messageContent,
                       ],
                     ),
             ),
@@ -2429,49 +2448,49 @@ class _MessageSelectionIndicator extends StatelessWidget {
 }
 
 class _QuotedTextMessage extends StatelessWidget {
-  const _QuotedTextMessage({required this.quote, required this.mine});
+  const _QuotedTextMessage({
+    required this.messageId,
+    required this.quote,
+    required this.mine,
+    required this.maxWidth,
+    required this.bubble,
+  });
 
+  final String messageId;
   final ChatMessageQuote quote;
   final bool mine;
+  final double maxWidth;
+  final Widget bubble;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final foreground = mine ? Colors.white : scheme.onSurface;
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: mine
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          decoration: BoxDecoration(
-            color: mine
-                ? Colors.black.withValues(alpha: .13)
-                : scheme.onSurface.withValues(alpha: .06),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.format_quote_rounded, size: 16, color: foreground),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(
-                  quote.excerpt,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: foreground.withValues(alpha: .82),
-                    fontSize: 12,
-                    height: 1.25,
-                  ),
-                ),
+        bubble,
+        const SizedBox(height: 5),
+        ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxWidth),
+          child: Semantics(
+            label: '引用原消息：${quote.excerpt}',
+            child: Text(
+              quote.excerpt,
+              key: ValueKey('chat-quote-context-$messageId'),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: mine ? TextAlign.right : TextAlign.left,
+              style: TextStyle(
+                color: scheme.onSurfaceVariant.withValues(alpha: .78),
+                fontSize: 12,
+                height: 1.3,
               ),
-            ],
+            ),
           ),
         ),
-        const SizedBox(height: 7),
-        Text(quote.content, style: TextStyle(color: foreground, height: 1.4)),
       ],
     );
   }

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mesting_music/features/auth/auth_providers.dart';
 import 'package:mesting_music/features/auth/domain/auth_models.dart';
 import 'package:mesting_music/features/social/data/social_repository.dart';
+import 'package:mesting_music/features/social/domain/chat_message_actions.dart';
 import 'package:mesting_music/features/social/domain/listen_together.dart';
 import 'package:mesting_music/features/social/domain/social_models.dart';
 import 'package:mesting_music/features/social/domain/track_share.dart';
@@ -778,7 +779,7 @@ void main() {
     await tester.tap(find.text('引用'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('chat-quote-draft')), findsOneWidget);
-    expect(find.text('回复：语音消息'), findsOneWidget);
+    expect(find.text('回复：Mest：语音消息'), findsOneWidget);
 
     await tester.longPress(voiceMessage);
     await tester.pumpAndSettle();
@@ -787,6 +788,41 @@ void main() {
     expect(find.text('已选 1 项'), findsOneWidget);
     expect(find.text('收藏'), findsOneWidget);
     expect(find.text('删除'), findsOneWidget);
+  });
+
+  testWidgets('quoted text keeps the reply bubble separate from its context', (
+    tester,
+  ) async {
+    final repository = _ChatRepository(
+      friend,
+      initialMessages: [
+        SocialMessage(
+          id: 'quoted-text',
+          senderUid: currentUser.uid,
+          receiverUid: friend.uid,
+          kind: SocialMessageKind.text,
+          text: encodeChatMessageQuote(
+            excerpt: 'Mest：吃完我看看你的小肚',
+            content: '嗯嗯',
+          ),
+          sentAt: DateTime.now(),
+        ),
+      ],
+    );
+    await tester.pumpWidget(app(repository));
+    await tester.pumpAndSettle();
+
+    expect(find.text('嗯嗯'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('chat-message-bubble-quoted-text')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('chat-quote-context-quoted-text')),
+      findsOneWidget,
+    );
+    expect(find.text('Mest：吃完我看看你的小肚'), findsOneWidget);
+    expect(find.byIcon(Icons.format_quote_rounded), findsNothing);
   });
 
   testWidgets(
