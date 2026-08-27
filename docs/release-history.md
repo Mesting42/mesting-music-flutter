@@ -8,7 +8,7 @@
 
 | 通道 | Android 包名 | 更新清单 | 当前记录 | 用途 |
 | --- | --- | --- | --- | --- |
-| 正式稳定版 | `com.mesting.music` | `releases/android/latest.json` | `1.0.37+44` | 面向稳定用户的 CloudBase 更新包 |
+| 正式稳定版 | `com.mesting.music` | `releases/android/latest.json` | `1.0.37+45` | 面向稳定用户的 CloudBase 更新包 |
 | Java + MySQL 测试版 | `com.mesting.music.javatest` | `releases/android/java-mysql-test/latest.json` | `1.0.38+40` | 仅供主动安装的集成测试者 |
 | UI 实验 Beta | `com.mesting.music.beta` | `releases/android/beta/latest.json` | 独立维护 | 不参与正式版发布 |
 
@@ -26,6 +26,7 @@
 | `1.0.37+42` | 稳定功能发布 | 加入用户协议、隐私政策，并在稳定 CloudBase 通道发布。源码标签为 `flutter-music-v1.0.37-build42`。 |
 | `1.0.37+43` | 当前稳定发布 | 更新推荐场景图标、播放器缓冲动效与多项界面细节，并在稳定 CloudBase 通道发布。APK SHA-256：`cc1b762bdc43863fbdf546144b41694765484127ab57afeaef80480a5f16cdd3`；不可变清单：`releases/android/manifests/43.json`；源码标签为 `flutter-music-v1.0.37-build43`。 |
 | `1.0.37+44` | 当前稳定发布 | 修复部分在线音源无声、无进度却显示播放中的问题，并合入本轮消息与深色界面稳定性优化。APK SHA-256：`c576b804830f2fadfe3df86c5ca4854f4eafa0fc88d5e54ef402a1877f4d6c38`；不可变清单：`releases/android/manifests/44.json`；源码标签为 `flutter-music-v1.0.37-build44`。 |
+| `1.0.37+45` | 当前稳定发布 | 优化好友消息长按操作，并修复从好友会话返回消息列表时的短暂内容重叠。APK SHA-256：`adbb1760e869b5c2a6dff86b14455d8298f72a4a9454bc77f95f4e7df44327f4`；不可变清单：`releases/android/manifests/45.json`；源码标签为 `flutter-music-v1.0.37-build45`。 |
 
 ## Git 历史补全方式
 
