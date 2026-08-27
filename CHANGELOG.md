@@ -1,12 +1,12 @@
 # Changelog
 
-## 1.0.37+51 - stable CloudBase release
+## 1.0.37+50 - stable CloudBase release
 
 - 收藏消息中的语音、视频和歌曲分享现在可直接播放；历史 CloudBase 媒体链接失效时会安全地重新获取可用地址。
 - 侧边菜单进入“我的消息”、设置、用户协议与隐私政策、免责声明时，统一使用与菜单一致的左侧滑入淡入效果，并继续避免页面短暂重叠。
 - Java + MySQL 测试包与 UI Beta 通道保持独立，本次稳定发布没有写入它们的更新清单。
 
-对应源码标签：`flutter-music-v1.0.37-build51`。发布与源码对应关系见 [docs/release-history.md](docs/release-history.md)。
+对应源码标签：`flutter-music-v1.0.37-build50`。发布与源码对应关系见 [docs/release-history.md](docs/release-history.md)。
 
 ## 1.0.37+46 - stable CloudBase release
 
