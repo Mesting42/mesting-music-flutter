@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mesting_music/core/persistence/app_preferences.dart';
 import 'package:mesting_music/features/auth/auth_providers.dart';
 import 'package:mesting_music/features/auth/data/auth_repository.dart';
+import 'package:mesting_music/features/auth/domain/auth_models.dart';
 import 'package:mesting_music/features/legal/presentation/disclaimer_dialog.dart';
 import 'package:mesting_music/features/player/presentation/music_hub_top_bar.dart';
 import 'package:mesting_music/features/settings/presentation/settings_page.dart';
@@ -60,6 +63,8 @@ void main() {
     expect(find.text('用户协议与隐私政策'), findsOneWidget);
     expect(find.text('免责声明'), findsOneWidget);
     expect(find.text('注册 / 登录'), findsNothing);
+    expect(find.text('登录后收藏你的音乐'), findsOneWidget);
+    expect(find.text('正在恢复账号'), findsNothing);
     expect(find.textContaining('已统一放在“设置”'), findsOneWidget);
     final panel = tester.widget<LiquidGlassSurface>(
       find.byKey(liquidGlassSidePanelSurfaceKey),
@@ -86,6 +91,65 @@ void main() {
       findsNothing,
       reason: '全高侧边菜单在平板滑入时不应逐帧重算背景模糊',
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('账号恢复完成前侧栏不会误显示未登录提示', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = _DelayedRestoreAuthRepository();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(repository),
+          sharedPreferencesProvider.overrideWithValue(preferences),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: SafeArea(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: MusicHubTopBar(title: '发现音乐', subtitle: '探索音乐'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byIcon(Icons.menu_rounded));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 310));
+
+    expect(
+      find.byKey(const ValueKey('music-hub-account-restoring')),
+      findsOneWidget,
+    );
+    expect(find.text('正在恢复账号'), findsOneWidget);
+    expect(find.text('正在读取本机登录状态'), findsOneWidget);
+    expect(find.text('登录后收藏你的音乐'), findsNothing);
+
+    repository.restoreGate.complete(
+      AuthSession(
+        user: const AuthUser(uid: 'restored-user', nickname: 'Mesti'),
+        accessToken: 'restored-access',
+        refreshToken: 'restored-refresh',
+        expiresAt: DateTime.now().add(const Duration(hours: 1)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('music-hub-account-signedIn')),
+      findsOneWidget,
+    );
+    expect(find.text('Mesti'), findsOneWidget);
+    expect(find.text('欢迎回到你的音乐空间'), findsOneWidget);
+    expect(find.text('正在恢复账号'), findsNothing);
+    expect(find.text('登录后收藏你的音乐'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -308,4 +372,11 @@ void main() {
     expect(find.text('消息页已打开'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+}
+
+class _DelayedRestoreAuthRepository extends UnconfiguredAuthRepository {
+  final restoreGate = Completer<AuthSession?>();
+
+  @override
+  Future<AuthSession?> restoreSession() => restoreGate.future;
 }

@@ -180,6 +180,82 @@ void main() {
     expect(find.byType(SocialHeaderButton), findsNothing);
   });
 
+  testWidgets('long press removes a saved entry from both collection stores', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final preferences = await SharedPreferences.getInstance();
+    final savedMessage = SavedChatMessage(
+      id: 'saved-message',
+      conversationUid: 'friend',
+      senderUid: 'friend',
+      authorName: 'Mest',
+      kind: SocialMessageKind.text,
+      text: '需要删除的收藏',
+      sentAt: DateTime(2026, 8, 29, 12, 9),
+    );
+    final remainingMessage = SavedChatMessage(
+      id: 'remaining-message',
+      conversationUid: 'friend',
+      senderUid: 'friend',
+      authorName: 'Mest',
+      kind: SocialMessageKind.text,
+      text: '继续保留的收藏',
+      sentAt: DateTime(2026, 8, 28, 12, 9),
+    );
+    await writeSavedChatMessageIds(preferences, 'me', {
+      savedMessage.id,
+      remainingMessage.id,
+    });
+    await writeSavedChatMessages(preferences, 'me', [
+      savedMessage,
+      remainingMessage,
+    ]);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWithValue(
+            const AuthUser(uid: 'me', nickname: 'Mesting'),
+          ),
+          sharedPreferencesProvider.overrideWithValue(preferences),
+        ],
+        child: const MaterialApp(home: Scaffold(body: SavedMessagesPage())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(
+      find.byKey(const ValueKey('saved-message-row-saved-message')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('收藏操作'), findsOneWidget);
+    expect(find.text('删除收藏'), findsOneWidget);
+    expect(find.textContaining('不会删除好友会话里的原消息'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey('delete-saved-message-saved-message')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('需要删除的收藏'), findsNothing);
+    expect(find.text('继续保留的收藏'), findsOneWidget);
+    expect(find.text('已删除收藏'), findsOneWidget);
+    expect(readSavedChatMessageIds(preferences, 'me'), <String>{
+      remainingMessage.id,
+    });
+    expect(
+      readSavedChatMessages(preferences, 'me').map((message) => message.id),
+      <String>[remainingMessage.id],
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('a saved message opens its own detail instead of the chat', (
     tester,
   ) async {

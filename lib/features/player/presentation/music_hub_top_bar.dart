@@ -269,6 +269,13 @@ class _MusicHubPanelState extends ConsumerState<_MusicHubPanel> {
     final tokens = context.musicThemeTokens;
     final auth = ref.watch(authControllerProvider);
     final user = auth.value?.user;
+    final accountState = user != null
+        ? _PanelAccountState.signedIn
+        : auth.isLoading
+        ? _PanelAccountState.restoring
+        : auth.hasError
+        ? _PanelAccountState.unavailable
+        : _PanelAccountState.signedOut;
     final unreadCount = user == null
         ? 0
         : ref.watch(socialAttentionControllerProvider).unreadCount;
@@ -319,14 +326,28 @@ class _MusicHubPanelState extends ConsumerState<_MusicHubPanel> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: _AccountCard(
-                    nickname: user?.nickname ?? '登录后收藏你的音乐',
-                    caption: user?.bio.trim().isNotEmpty == true
-                        ? user!.bio
-                        : user == null
-                        ? '同步收藏、歌单和个人资料'
-                        : '欢迎回到你的音乐空间',
+                    key: ValueKey('music-hub-account-${accountState.name}'),
+                    nickname: switch (accountState) {
+                      _PanelAccountState.restoring => '正在恢复账号',
+                      _PanelAccountState.unavailable => '账号状态暂不可用',
+                      _PanelAccountState.signedOut => '登录后收藏你的音乐',
+                      _PanelAccountState.signedIn => user!.nickname,
+                    },
+                    caption: switch (accountState) {
+                      _PanelAccountState.restoring => '正在读取本机登录状态',
+                      _PanelAccountState.unavailable => '请稍后重新打开侧边菜单',
+                      _PanelAccountState.signedOut => '同步收藏、歌单和个人资料',
+                      _PanelAccountState.signedIn =>
+                        user!.bio.trim().isNotEmpty ? user.bio : '欢迎回到你的音乐空间',
+                    },
                     avatarUrl: user?.avatarUrl,
-                    signedIn: user != null,
+                    fallbackIcon: switch (accountState) {
+                      _PanelAccountState.restoring =>
+                        Icons.person_search_rounded,
+                      _PanelAccountState.unavailable => Icons.cloud_off_rounded,
+                      _PanelAccountState.signedOut => Icons.music_note_rounded,
+                      _PanelAccountState.signedIn => Icons.person_rounded,
+                    },
                   ),
                 ),
                 const SizedBox(height: 26),
@@ -453,18 +474,21 @@ class _MusicHubPanelState extends ConsumerState<_MusicHubPanel> {
   }
 }
 
+enum _PanelAccountState { restoring, signedIn, signedOut, unavailable }
+
 class _AccountCard extends StatelessWidget {
   const _AccountCard({
     required this.nickname,
     required this.caption,
     required this.avatarUrl,
-    required this.signedIn,
+    required this.fallbackIcon,
+    super.key,
   });
 
   final String nickname;
   final String caption;
   final String? avatarUrl;
-  final bool signedIn;
+  final IconData fallbackIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -496,13 +520,7 @@ class _AccountCard extends StatelessWidget {
                       width: 52,
                       height: 52,
                       color: accent.withValues(alpha: .17),
-                      child: Icon(
-                        signedIn
-                            ? Icons.person_rounded
-                            : Icons.music_note_rounded,
-                        color: accent,
-                        size: 25,
-                      ),
+                      child: Icon(fallbackIcon, color: accent, size: 25),
                     ),
             ),
             const SizedBox(width: 12),

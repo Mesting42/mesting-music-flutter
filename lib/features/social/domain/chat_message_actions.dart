@@ -177,6 +177,37 @@ Future<void> writeSavedChatMessages(
   );
 }
 
+/// Removes one personal collection entry without touching the live message or
+/// any media object referenced by it.
+///
+/// Saved IDs and readable snapshots are persisted separately for backwards
+/// compatibility. They must be updated together or the conversation can still
+/// render the removed message as collected after this page has hidden it.
+Future<bool> removeSavedChatMessage(
+  SharedPreferences preferences,
+  String uid,
+  String messageId,
+) async {
+  final normalizedUid = uid.trim();
+  final normalizedMessageId = messageId.trim();
+  if (normalizedUid.isEmpty || normalizedMessageId.isEmpty) return false;
+
+  final messageIds = readSavedChatMessageIds(preferences, normalizedUid);
+  final removedId = messageIds.remove(normalizedMessageId);
+  final messages = readSavedChatMessages(preferences, normalizedUid);
+  final remainingMessages = messages
+      .where((message) => message.id != normalizedMessageId)
+      .toList(growable: false);
+  final removedSnapshot = remainingMessages.length != messages.length;
+  if (!removedId && !removedSnapshot) return false;
+
+  await Future.wait([
+    writeSavedChatMessageIds(preferences, normalizedUid, messageIds),
+    writeSavedChatMessages(preferences, normalizedUid, remainingMessages),
+  ]);
+  return true;
+}
+
 String chatMessageQuoteExcerpt(SocialMessage message) {
   final source = switch (message.kind) {
     SocialMessageKind.voice => '语音消息',

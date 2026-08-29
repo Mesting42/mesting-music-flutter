@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/persistence/app_preferences.dart';
 import '../../../core/audio/playback_providers.dart';
+import '../../../shared/widgets/liquid_glass_sheet.dart';
+import '../../../shared/widgets/music_notice.dart';
 import '../../auth/auth_providers.dart';
 import '../data/social_repository.dart';
 import '../domain/chat_message_actions.dart';
@@ -122,11 +124,16 @@ Future<String> _prepareSavedMessageMedia(
 ///
 /// Saved snapshots keep their own readable copy so removing a message from a
 /// conversation never makes a deliberately saved item disappear here.
-class SavedMessagesPage extends ConsumerWidget {
+class SavedMessagesPage extends ConsumerStatefulWidget {
   const SavedMessagesPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SavedMessagesPage> createState() => _SavedMessagesPageState();
+}
+
+class _SavedMessagesPageState extends ConsumerState<SavedMessagesPage> {
+  @override
+  Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
     final currentUser = ref.watch(currentUserProvider);
     final messages = currentUser == null
@@ -140,7 +147,7 @@ class SavedMessagesPage extends ConsumerWidget {
         SizedBox(height: top + 12),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 16),
-          child: SocialPageHeader(title: '收藏消息', subtitle: '长按消息后收藏的内容会保存在这里'),
+          child: SocialPageHeader(title: '收藏消息', subtitle: '点击查看详情，长按可以删除收藏'),
         ),
         const SizedBox(height: 17),
         Expanded(
@@ -161,12 +168,53 @@ class SavedMessagesPage extends ConsumerWidget {
                   itemCount: messages.length,
                   separatorBuilder: (context, index) =>
                       const SizedBox(height: 9),
-                  itemBuilder: (context, index) =>
-                      _SavedMessageRow(message: messages[index]),
+                  itemBuilder: (context, index) => _SavedMessageRow(
+                    message: messages[index],
+                    onLongPress: () =>
+                        _showSavedMessageActions(messages[index]),
+                  ),
                 ),
         ),
       ],
     );
+  }
+
+  Future<void> _showSavedMessageActions(SavedChatMessage message) async {
+    final remove = await showLiquidGlassBottomSheet<bool>(
+      context: context,
+      useRootNavigator: true,
+      useSafeArea: true,
+      showShadow: false,
+      showDecorativeGlow: false,
+      builder: (context) => _SavedMessageActionsSheet(message: message),
+    );
+    if (remove != true || !mounted) return;
+
+    final uid = ref.read(currentUserProvider)?.uid.trim() ?? '';
+    if (uid.isEmpty) return;
+    try {
+      final removed = await removeSavedChatMessage(
+        ref.read(sharedPreferencesProvider),
+        uid,
+        message.id,
+      );
+      if (!mounted || !removed) return;
+      setState(() {});
+      showMusicNotice(
+        context,
+        icon: Icons.bookmark_remove_rounded,
+        title: '已删除收藏',
+        message: '好友会话里的原消息仍会保留',
+      );
+    } on Object {
+      if (!mounted) return;
+      showMusicNotice(
+        context,
+        icon: Icons.error_outline_rounded,
+        title: '删除失败',
+        message: '暂时无法更新收藏，请稍后重试',
+      );
+    }
   }
 }
 
@@ -261,9 +309,10 @@ class SavedMessageDetailPage extends ConsumerWidget {
 }
 
 class _SavedMessageRow extends StatelessWidget {
-  const _SavedMessageRow({required this.message});
+  const _SavedMessageRow({required this.message, required this.onLongPress});
 
   final SavedChatMessage message;
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -275,6 +324,7 @@ class _SavedMessageRow extends StatelessWidget {
         onTap: () => context.push(
           '/social/saved-messages/${Uri.encodeComponent(message.id)}',
         ),
+        onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(18),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 13, 12, 13),
@@ -343,6 +393,109 @@ class _SavedMessageRow extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SavedMessageActionsSheet extends StatelessWidget {
+  const _SavedMessageActionsSheet({required this.message});
+
+  final SavedChatMessage message;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 26),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 44,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 18),
+              decoration: BoxDecoration(
+                color: scheme.onSurface.withValues(alpha: .20),
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+          ),
+          const Text(
+            '收藏操作',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            '只会移除这条收藏，不会删除好友会话里的原消息或媒体文件。',
+            style: TextStyle(
+              color: scheme.onSurfaceVariant,
+              fontSize: 12,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Semantics(
+            button: true,
+            label: '删除收藏：${message.authorName}',
+            child: InkWell(
+              key: ValueKey('delete-saved-message-${message.id}'),
+              onTap: () => Navigator.of(context).pop(true),
+              borderRadius: BorderRadius.circular(14),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 64),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: scheme.error.withValues(alpha: .12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.delete_outline_rounded,
+                        color: scheme.error,
+                      ),
+                    ),
+                    const SizedBox(width: 13),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '删除收藏',
+                            style: TextStyle(
+                              color: scheme.error,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            _messagePreview(message),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: scheme.onSurfaceVariant,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: scheme.error.withValues(alpha: .72),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
