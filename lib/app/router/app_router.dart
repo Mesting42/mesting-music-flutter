@@ -463,11 +463,11 @@ Page<void> _messagesTransitionPage({
   );
 }
 
-/// Full-page counterpart of [MusicHubPanelTransition].
+/// Full-page continuation after [MusicHubPanelTransition] has dismissed.
 ///
-/// The drawer is dismissed before this route is pushed, so this page can use
-/// the same recognisable motion without two drawer/page surfaces compositing
-/// together on Android.
+/// The drawer is dismissed before this route is pushed. A short, already-
+/// visible destination glide preserves that spatial relationship without
+/// repeating the drawer's full-width sweep or compositing both surfaces.
 class _MusicHubPanelTransitionPage extends Page<void> {
   const _MusicHubPanelTransitionPage({
     required this.child,
@@ -487,17 +487,20 @@ class _MusicHubPanelTransitionPage extends Page<void> {
       opaque: true,
       transitionDuration: reduceMotion
           ? Duration.zero
-          : musicHubPanelTransitionDuration,
+          : musicHubDestinationTransitionDuration,
       reverseTransitionDuration: reduceMotion
           ? Duration.zero
-          : musicHubPanelTransitionDuration,
+          : musicHubDestinationReverseTransitionDuration,
       pageBuilder: (context, animation, secondaryAnimation) => child,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         if (reduceMotion) return child;
         return MusicPageOutgoingLayerHandoff(
           secondaryAnimation: secondaryAnimation,
           handoffProgress: handoffProgress,
-          child: MusicHubPanelTransition(animation: animation, child: child),
+          child: MusicHubDestinationTransition(
+            animation: animation,
+            child: child,
+          ),
         );
       },
     );

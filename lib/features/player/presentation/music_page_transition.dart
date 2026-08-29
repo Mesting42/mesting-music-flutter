@@ -16,6 +16,14 @@ const musicHubPanelTransitionDuration = Duration(milliseconds: 310);
 const musicHubPanelTransitionOffset = Offset(-1, 0);
 const musicHubPanelTransitionCurve = Curves.easeOutCubic;
 const musicHubPanelReverseTransitionCurve = Curves.easeInCubic;
+const musicHubDestinationTransitionDuration = Duration(milliseconds: 300);
+const musicHubDestinationReverseTransitionDuration = Duration(
+  milliseconds: 240,
+);
+const musicHubDestinationTransitionOffset = Offset(-.055, 0);
+const musicHubDestinationStartOpacity = .86;
+const musicHubDestinationTransitionCurve = Cubic(.16, 1, .3, 1);
+const musicHubDestinationReverseTransitionCurve = Cubic(.4, 0, 1, 1);
 const messagesPageTransitionDuration = Duration(milliseconds: 360);
 const messagesPageReverseTransitionDuration = Duration(milliseconds: 280);
 const messagesPageHandoffProgress = .18;
@@ -98,6 +106,54 @@ class MusicHubPanelTransition extends StatelessWidget {
         end: Offset.zero,
       ).animate(motion),
       child: FadeTransition(opacity: motion, child: child),
+    );
+  }
+}
+
+/// A quiet continuation after the music hub panel has fully left the screen.
+///
+/// Repeating the drawer's full-width sweep made destination navigation feel
+/// like two unrelated transitions. The destination is already substantially
+/// visible and travels only a short distance, so the motion reads as one
+/// continuous handoff without reintroducing two painted app surfaces.
+class MusicHubDestinationTransition extends StatelessWidget {
+  const MusicHubDestinationTransition({
+    required this.animation,
+    required this.child,
+    super.key,
+  });
+
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final motion = CurvedAnimation(
+      parent: animation,
+      curve: musicHubDestinationTransitionCurve,
+      reverseCurve: musicHubDestinationReverseTransitionCurve,
+    );
+    final position = Tween<Offset>(
+      begin: musicHubDestinationTransitionOffset,
+      end: Offset.zero,
+    ).animate(motion);
+    final opacity = Tween<double>(
+      begin: musicHubDestinationStartOpacity,
+      end: 1,
+    ).animate(motion);
+    return ClipRect(
+      key: const ValueKey('music-hub-destination-clip'),
+      child: RepaintBoundary(
+        child: SlideTransition(
+          key: const ValueKey('music-hub-destination-slide'),
+          position: position,
+          child: FadeTransition(
+            key: const ValueKey('music-hub-destination-fade'),
+            opacity: opacity,
+            child: child,
+          ),
+        ),
+      ),
     );
   }
 }

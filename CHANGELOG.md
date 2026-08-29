@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.37+56 - stable CloudBase release
+
+- 桌面歌词控制面板最大宽度由 344dp 增加到 368dp，并根据屏幕宽度保留安全边距、始终水平居中。
+- 从侧边菜单进入“我的消息”、设置、用户协议与隐私政策、免责声明时，目标页改为短距离、初始可见的自然减速衔接，避免重复整页横扫造成机械感。
+- 继续保留侧栏完整退出和 Android 两个合成帧的隔离保护，防止抽屉与目标页内容短暂重叠；系统关闭动画时会直接切换。
+- Java + MySQL 测试包与 UI Beta 通道保持独立，本次稳定发布不会写入它们的更新清单。
+
+对应源码标签：`flutter-music-v1.0.37-build56`。发布与源码对应关系见 [docs/release-history.md](docs/release-history.md)。
+
 ## 1.0.37+55 - stable CloudBase release
 
 - 桌面歌词展开控制面板按确认设计升级为紧凑深色布局，使用正式 Mesting Logo，并重新安排锁定、关闭和播放控制。

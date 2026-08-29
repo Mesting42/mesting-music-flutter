@@ -107,6 +107,19 @@ void main() {
     expect(source, contains('"取消收藏当前歌曲"'));
   });
 
+  test('桌面歌词在窄边距内使用更长的紧凑控制面板', () {
+    expect(source, contains('COMPACT_OVERLAY_MAX_WIDTH_DP = 368'));
+    expect(source, contains('COMPACT_OVERLAY_SIDE_INSET_DP = 6'));
+    expect(source, contains('val compactWidth = overlayWidth('));
+    expect(
+      source,
+      contains('x = ((screenWidth - compactWidth) / 2).coerceAtLeast(0)'),
+    );
+    expect(source, contains('private fun overlayWidth('));
+    expect(source, isNot(contains('dp(344),')));
+    expect(source, isNot(contains('x = dp(22)')));
+  });
+
   test('字体大小与颜色设置面板保持原有视觉与功能', () {
     expect(source, contains('settingText(appContext, "桌面歌词", 18f'));
     expect(source, contains('settingText(appContext, "字体颜色", 14f'));

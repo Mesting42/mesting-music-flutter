@@ -105,7 +105,7 @@ Future<void> showDisclaimerDialog(
     transitionDuration: reduceMotion
         ? Duration.zero
         : animateLikeMusicHub
-        ? musicHubPanelTransitionDuration
+        ? musicHubDestinationTransitionDuration
         : const Duration(milliseconds: 360),
     pageBuilder: (context, animation, secondaryAnimation) => _DisclaimerOverlay(
       animation: animation,
@@ -118,7 +118,7 @@ Future<void> showDisclaimerDialog(
     ),
     transitionBuilder: (context, animation, secondaryAnimation, child) =>
         animateLikeMusicHub
-        ? MusicHubPanelTransition(animation: animation, child: child)
+        ? MusicHubDestinationTransition(animation: animation, child: child)
         : child,
   );
 }

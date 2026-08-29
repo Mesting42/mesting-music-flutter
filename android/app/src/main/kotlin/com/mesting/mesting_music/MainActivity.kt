@@ -1149,6 +1149,11 @@ class MorningMistBrandActivity : MainActivity()
 class MidnightVinylBrandActivity : MainActivity()
 
 private object LyricsOverlayController {
+    private const val COMPACT_OVERLAY_MAX_WIDTH_DP = 368
+    private const val COMPACT_OVERLAY_SIDE_INSET_DP = 6
+    private const val SETTINGS_OVERLAY_MAX_WIDTH_DP = 360
+    private const val SETTINGS_OVERLAY_SIDE_INSET_DP = 10
+
     private val colorPalette = intArrayOf(
         Color.WHITE,
         Color.rgb(255, 212, 92),
@@ -1311,8 +1316,14 @@ private object LyricsOverlayController {
             @Suppress("DEPRECATION")
             WindowManager.LayoutParams.TYPE_PHONE
         }
+        val screenWidth = appContext.resources.displayMetrics.widthPixels
+        val compactWidth = overlayWidth(
+            screenWidth,
+            COMPACT_OVERLAY_MAX_WIDTH_DP,
+            COMPACT_OVERLAY_SIDE_INSET_DP,
+        )
         params = WindowManager.LayoutParams(
-            dp(344),
+            compactWidth,
             WindowManager.LayoutParams.WRAP_CONTENT,
             overlayType,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
@@ -1323,7 +1334,7 @@ private object LyricsOverlayController {
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = dp(22)
+            x = ((screenWidth - compactWidth) / 2).coerceAtLeast(0)
             y = dp(110)
         }
         root = layout
@@ -1827,18 +1838,33 @@ private object LyricsOverlayController {
         settingsContent?.visibility = if (expanded) View.VISIBLE else View.GONE
         val screenWidth = context?.resources?.displayMetrics?.widthPixels ?: dp(360)
         params?.width = if (expanded) {
-            minOf(dp(360), screenWidth - dp(20))
+            overlayWidth(
+                screenWidth,
+                SETTINGS_OVERLAY_MAX_WIDTH_DP,
+                SETTINGS_OVERLAY_SIDE_INSET_DP,
+            )
         } else {
-            minOf(dp(344), screenWidth - dp(28))
+            overlayWidth(
+                screenWidth,
+                COMPACT_OVERLAY_MAX_WIDTH_DP,
+                COMPACT_OVERLAY_SIDE_INSET_DP,
+            )
         }
-        if (expanded) {
-            params?.x = ((screenWidth - (params?.width ?: screenWidth)) / 2)
-                .coerceAtLeast(dp(10))
-        }
+        params?.x = ((screenWidth - (params?.width ?: screenWidth)) / 2)
+            .coerceAtLeast(0)
         root?.let { view -> params?.let { windowManager?.updateViewLayout(view, it) } }
         setControlsExpanded(controlsExpanded)
         applyAppearance()
     }
+
+    private fun overlayWidth(
+        screenWidth: Int,
+        maxWidthDp: Int,
+        sideInsetDp: Int,
+    ): Int = minOf(
+        dp(maxWidthDp),
+        (screenWidth - dp(sideInsetDp * 2)).coerceAtLeast(dp(1)),
+    )
 
     private fun applyAppearance() {
         currentLine?.textSize = fontSize

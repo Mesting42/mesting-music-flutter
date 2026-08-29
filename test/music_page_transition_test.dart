@@ -31,6 +31,16 @@ void main() {
     expect(musicHubPanelTransitionOffset, const Offset(-1, 0));
     expect(musicHubPanelTransitionCurve, Curves.easeOutCubic);
     expect(musicHubPanelReverseTransitionCurve, Curves.easeInCubic);
+    expect(
+      musicHubDestinationTransitionDuration,
+      const Duration(milliseconds: 300),
+    );
+    expect(
+      musicHubDestinationReverseTransitionDuration,
+      const Duration(milliseconds: 240),
+    );
+    expect(musicHubDestinationTransitionOffset.dx, inExclusiveRange(-.1, 0));
+    expect(musicHubDestinationStartOpacity, inExclusiveRange(.8, 1));
   });
 
   testWidgets('侧栏转场从左侧滑入并同步淡入', (tester) async {
@@ -74,6 +84,61 @@ void main() {
     fade = tester.widget<FadeTransition>(fadeFinder);
     expect(slide.position.value.dx, inInclusiveRange(-1, 0));
     expect(fade.opacity.value, inInclusiveRange(0, 1));
+
+    controller.value = 1;
+    await tester.pump();
+    slide = tester.widget<SlideTransition>(slideFinder);
+    fade = tester.widget<FadeTransition>(fadeFinder);
+    expect(slide.position.value, Offset.zero);
+    expect(fade.opacity.value, 1);
+  });
+
+  testWidgets('侧栏目标页使用短距离且初始可见的自然衔接', (tester) async {
+    final controller = AnimationController(
+      vsync: tester,
+      duration: musicHubDestinationTransitionDuration,
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MusicHubDestinationTransition(
+            animation: controller,
+            child: const ColoredBox(
+              key: ValueKey('music-hub-destination'),
+              color: Colors.red,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final transition = find.byType(MusicHubDestinationTransition);
+    final slideFinder = find.descendant(
+      of: transition,
+      matching: find.byKey(const ValueKey('music-hub-destination-slide')),
+    );
+    final fadeFinder = find.descendant(
+      of: transition,
+      matching: find.byKey(const ValueKey('music-hub-destination-fade')),
+    );
+
+    var slide = tester.widget<SlideTransition>(slideFinder);
+    var fade = tester.widget<FadeTransition>(fadeFinder);
+    expect(slide.position.value, musicHubDestinationTransitionOffset);
+    expect(fade.opacity.value, musicHubDestinationStartOpacity);
+    expect(
+      find.byKey(const ValueKey('music-hub-destination-clip')),
+      findsOneWidget,
+    );
+
+    controller.value = .5;
+    await tester.pump();
+    slide = tester.widget<SlideTransition>(slideFinder);
+    fade = tester.widget<FadeTransition>(fadeFinder);
+    expect(slide.position.value.dx, inExclusiveRange(-.055, 0));
+    expect(fade.opacity.value, inExclusiveRange(.86, 1));
 
     controller.value = 1;
     await tester.pump();
