@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.37+55 - stable CloudBase release
+
+- 桌面歌词展开控制面板按确认设计升级为紧凑深色布局，使用正式 Mesting Logo，并重新安排锁定、关闭和播放控制。
+- 新增当前歌曲收藏按钮，空心与实心爱心会随真实收藏状态同步，未登录时继续使用既有登录引导。
+- 左下角设置按钮继续提供歌词字体大小和字体颜色调整，并完善触控区域、中文语义与展开状态稳定性。
+- Java + MySQL 测试包与 UI Beta 通道保持独立，本次稳定发布不会写入它们的更新清单。
+
+对应源码标签：`flutter-music-v1.0.37-build55`。发布与源码对应关系见 [docs/release-history.md](docs/release-history.md)。
+
 ## 1.0.37+54 - stable CloudBase release
 
 - 冷启动恢复本机账号期间不再短暂显示未登录状态，会明确展示账号恢复进度。

@@ -87,6 +87,7 @@ class _LyricsOverlayCoordinatorState
                 current: snapshot.current,
                 next: snapshot.next,
                 playing: snapshot.playing,
+                favorite: snapshot.favorite,
               );
           return;
         }
@@ -110,14 +111,18 @@ class _LyricsOverlayCoordinatorState
       current: snapshot.current,
       next: snapshot.next,
       playing: snapshot.playing,
+      favorite: snapshot.favorite,
     );
   }
 
-  Future<({String current, String next, bool playing})>
+  Future<({String current, String next, bool playing, bool favorite})>
   _lyricsSnapshot() async {
     final track = ref.read(currentTrackProvider);
     final position = ref.read(positionProvider).value ?? Duration.zero;
     final playing = ref.read(playbackStateProvider).value?.playing ?? false;
+    final favorite =
+        ref.read(isAuthenticatedProvider) &&
+        ref.read(favoriteTrackIdsProvider).contains(track.id);
     var current = track.title;
     var next = track.artist;
     try {
@@ -134,7 +139,7 @@ class _LyricsOverlayCoordinatorState
     } on Object {
       // 本地歌词暂不可用时仍显示歌曲信息，避免悬浮窗停留在“准备中”。
     }
-    return (current: current, next: next, playing: playing);
+    return (current: current, next: next, playing: playing, favorite: favorite);
   }
 
   Future<void> _syncOverlayLyrics() async {
@@ -152,6 +157,7 @@ class _LyricsOverlayCoordinatorState
         if (!mounted || !overlay.visible) break;
         final signature =
             '${snapshot.current}\n${snapshot.next}\n${snapshot.playing}\n'
+            '${snapshot.favorite}\n'
             '${overlay.locked}\n${overlay.fontSize}\n${overlay.textColor}';
         if (signature != _lastSignature) {
           _lastSignature = signature;
@@ -161,6 +167,7 @@ class _LyricsOverlayCoordinatorState
                 current: snapshot.current,
                 next: snapshot.next,
                 playing: snapshot.playing,
+                favorite: snapshot.favorite,
               );
         }
       } while (_overlaySyncPending);
@@ -200,6 +207,10 @@ class _LyricsOverlayCoordinatorState
     );
     ref.listen(
       playbackStateProvider,
+      (_, _) => unawaited(_syncOverlayLyrics()),
+    );
+    ref.listen(
+      favoriteTrackIdsProvider,
       (_, _) => unawaited(_syncOverlayLyrics()),
     );
     ref.listen(lyricsOverlayProvider, (previous, next) {

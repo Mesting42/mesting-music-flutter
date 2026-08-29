@@ -34,6 +34,7 @@ import android.view.View
 import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
 import android.widget.LinearLayout
+import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
@@ -1165,6 +1166,7 @@ private object LyricsOverlayController {
     private var compactContent: LinearLayout? = null
     private var compactHeader: LinearLayout? = null
     private var compactLyricsSurface: LinearLayout? = null
+    private var compactDivider: View? = null
     private var compactControls: LinearLayout? = null
     private var settingsContent: LinearLayout? = null
     private var lyricStatusLabel: TextView? = null
@@ -1173,6 +1175,7 @@ private object LyricsOverlayController {
     private var playButton: TextView? = null
     private var lockButton: TextView? = null
     private var settingsButton: TextView? = null
+    private var favoriteButton: TextView? = null
     private var lockStateLabel: TextView? = null
     private var settingsPreview: TextView? = null
     private var fontSizeValue: TextView? = null
@@ -1188,6 +1191,7 @@ private object LyricsOverlayController {
     private var settingsExpanded = false
     private var syncingSettingsControls = false
     private var playing = false
+    private var favorite = false
     private var displayedCurrentLine = ""
     private var displayedNextLine = ""
     private var lyricAnimationGeneration = 0L
@@ -1288,7 +1292,10 @@ private object LyricsOverlayController {
             compactHeader = (content.getChildAt(0) as? LinearLayout)?.apply {
                 visibility = View.GONE
             }
-            compactControls = (content.getChildAt(2) as? LinearLayout)?.apply {
+            compactDivider = content.getChildAt(2).apply {
+                visibility = View.GONE
+            }
+            compactControls = (content.getChildAt(3) as? LinearLayout)?.apply {
                 visibility = View.GONE
             }
             layout.addView(content)
@@ -1337,6 +1344,7 @@ private object LyricsOverlayController {
             next = args["next"] as? String ?: "",
         )
         playing = args["playing"] as? Boolean ?: false
+        favorite = args["favorite"] as? Boolean ?: favorite
         playButton?.setCompoundDrawablesRelativeWithIntrinsicBounds(
             if (playing) R.drawable.ic_overlay_pause else R.drawable.ic_overlay_play,
             0,
@@ -1431,6 +1439,7 @@ private object LyricsOverlayController {
         compactContent = null
         compactHeader = null
         compactLyricsSurface = null
+        compactDivider = null
         compactControls = null
         settingsContent = null
         lyricStatusLabel = null
@@ -1439,6 +1448,7 @@ private object LyricsOverlayController {
         playButton = null
         lockButton = null
         settingsButton = null
+        favoriteButton = null
         lockStateLabel = null
         settingsPreview = null
         fontSizeValue = null
@@ -1462,66 +1472,32 @@ private object LyricsOverlayController {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 addView(
-                    settingText(
-                        appContext,
-                        "词",
-                        12f,
-                        Color.parseColor("#FF151925"),
-                        true,
-                    ).apply {
-                        gravity = Gravity.CENTER
-                        includeFontPadding = false
-                        background = gradientBackground(
-                            intArrayOf(
-                                Color.parseColor("#FFAFC0FF"),
-                                Color.parseColor("#FF7F94F5"),
-                            ),
-                            Color.parseColor("#66FFFFFF"),
-                            10f,
-                        )
+                    ImageView(appContext).apply {
+                        setImageResource(R.drawable.mesting_mark_foreground)
+                        scaleType = ImageView.ScaleType.CENTER_INSIDE
+                        setPadding(dp(6), dp(6), dp(6), dp(6))
+                        contentDescription = "Mesting"
+                        background = roundedBackground("#0EFFFFFF", "#2EFFFFFF", 10f)
                     },
-                    LinearLayout.LayoutParams(dp(30), dp(30)).apply {
+                    LinearLayout.LayoutParams(dp(32), dp(32)).apply {
                         marginEnd = dp(10)
                     },
                 )
                 addView(
-                    LinearLayout(appContext).apply {
-                        orientation = LinearLayout.VERTICAL
-                        addView(
-                            settingText(
-                                appContext,
-                                "Mesting Music",
-                                11f,
-                                Color.parseColor("#F2FFFFFF"),
-                                true,
-                            ).apply {
-                                includeFontPadding = false
-                                letterSpacing = .025f
-                            },
-                        )
-                        addView(
-                            settingText(
-                                appContext,
-                                "桌面歌词 · 轻触收起",
-                                9f,
-                                Color.parseColor("#9FFFFFFF"),
-                            ).apply { includeFontPadding = false },
-                        )
+                    settingText(
+                        appContext,
+                        "Mesting Music",
+                        12f,
+                        Color.parseColor("#E8FFFFFF"),
+                        true,
+                    ).apply {
+                        includeFontPadding = false
+                        letterSpacing = .02f
                     },
                     LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
                 )
-                lockStateLabel = settingText(
-                    appContext,
-                    "可拖动",
-                    9f,
-                    Color.parseColor("#B8FFFFFF"),
-                    true,
-                ).also { label ->
-                    label.gravity = Gravity.CENTER
-                    label.includeFontPadding = false
-                    label.setPadding(dp(7), dp(5), dp(7), dp(5))
-                    addView(label)
-                }
+                lockButton = controlButton(appContext, "", "lock").also(::addView)
+                addView(controlButton(appContext, "", "close"))
             },
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -1534,26 +1510,8 @@ private object LyricsOverlayController {
                 compactLyricsSurface = this
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(2), dp(17), dp(2), dp(14))
+                setPadding(dp(2), dp(24), dp(2), dp(17))
                 setBackgroundColor(Color.TRANSPARENT)
-                lyricStatusLabel = settingText(
-                    appContext,
-                    "正在播放",
-                    9f,
-                    Color.parseColor("#FFB8C5FF"),
-                    true,
-                ).also {
-                    it.includeFontPadding = false
-                    it.letterSpacing = .06f
-                    it.setPadding(dp(8), dp(4), dp(8), dp(4))
-                    it.background = roundedBackground("#207B8FEF", "#287B8FEF", 999f)
-                    it.layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                    )
-                    it.visibility = View.GONE
-                    addView(it)
-                }
                 currentLine = lyricTextView(appContext, fontSize, true).also {
                     it.setOnClickListener {
                         if (!locked) setControlsExpanded(!controlsExpanded)
@@ -1580,18 +1538,30 @@ private object LyricsOverlayController {
         )
 
         addView(
+            View(appContext).apply {
+                background = dividerBackground()
+            },
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(2),
+            ).apply {
+                marginStart = dp(48)
+                marginEnd = dp(48)
+            },
+        )
+
+        addView(
             LinearLayout(appContext).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(5), dp(5), dp(5), dp(5))
-                background = roundedBackground("#0EFFFFFF", "#16FFFFFF", 18f)
+                setPadding(dp(0), dp(8), dp(0), dp(2))
+                settingsButton = controlButton(appContext, "", "settings").also(::addView)
+                addView(View(appContext), LinearLayout.LayoutParams(0, dp(1), 1f))
                 addView(controlButton(appContext, "", "previous"))
                 playButton = controlButton(appContext, "", "playPause").also(::addView)
                 addView(controlButton(appContext, "", "next"))
                 addView(View(appContext), LinearLayout.LayoutParams(0, dp(1), 1f))
-                settingsButton = controlButton(appContext, "Aa", "settings").also(::addView)
-                lockButton = controlButton(appContext, "", "lock").also(::addView)
-                addView(controlButton(appContext, "", "close"))
+                favoriteButton = controlButton(appContext, "", "favorite").also(::addView)
             },
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -1798,10 +1768,12 @@ private object LyricsOverlayController {
         if (expanded && locked) return
         controlsExpanded = expanded
         compactHeader?.visibility = if (expanded) View.VISIBLE else View.GONE
+        compactDivider?.visibility = if (expanded) View.VISIBLE else View.GONE
         compactControls?.visibility = if (expanded) View.VISIBLE else View.GONE
-        lyricStatusLabel?.visibility = if (expanded) View.VISIBLE else View.GONE
-        currentLine?.gravity = if (expanded) Gravity.START else Gravity.CENTER
-        nextLine?.gravity = if (expanded) Gravity.START else Gravity.CENTER
+        lyricStatusLabel?.visibility = View.GONE
+        currentLine?.gravity = Gravity.CENTER
+        nextLine?.gravity = Gravity.CENTER
+        nextLine?.visibility = if (expanded) View.GONE else View.VISIBLE
 
         root?.apply {
             if (expanded || settingsExpanded) {
@@ -1901,6 +1873,21 @@ private object LyricsOverlayController {
         lockStateLabel?.background = null
         settingsButton?.isEnabled = !locked
         settingsButton?.alpha = if (locked) .28f else 1f
+        favoriteButton?.setCompoundDrawablesRelativeWithIntrinsicBounds(
+            if (favorite) {
+                R.drawable.ic_overlay_favorite_filled
+            } else {
+                R.drawable.ic_overlay_favorite
+            },
+            0,
+            0,
+            0,
+        )
+        favoriteButton?.compoundDrawableTintList = ColorStateList.valueOf(
+            if (favorite) Color.parseColor("#FFFF8FA8") else Color.WHITE,
+        )
+        favoriteButton?.contentDescription =
+            if (favorite) "取消收藏当前歌曲" else "收藏当前歌曲"
 
         syncingSettingsControls = true
         fontSizeSeek?.progress = (fontSize - 14f).roundToInt()
@@ -1957,64 +1944,58 @@ private object LyricsOverlayController {
     private fun controlButton(appContext: Context, label: String, action: String) =
         TextView(appContext).apply {
             text = label
-            textSize = when (action) {
-                "settings" -> 12f
-                else -> 1f
-            }
+            textSize = 1f
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
             typeface = Typeface.DEFAULT_BOLD
             includeFontPadding = false
-            if (action != "settings") {
-                setCompoundDrawablesRelativeWithIntrinsicBounds(
-                    when (action) {
-                        "previous" -> R.drawable.ic_overlay_previous
-                        "playPause" -> if (playing) {
-                            R.drawable.ic_overlay_pause
-                        } else {
-                            R.drawable.ic_overlay_play
-                        }
-                        "next" -> R.drawable.ic_overlay_next
-                        "lock" -> R.drawable.ic_overlay_lock
-                        "close" -> R.drawable.ic_overlay_close
-                        else -> 0
-                    },
-                    0,
-                    0,
-                    0,
-                )
-                compoundDrawableTintList = ColorStateList.valueOf(
-                    if (action == "close") {
-                        Color.parseColor("#FFFF9A8A")
+            setCompoundDrawablesRelativeWithIntrinsicBounds(
+                when (action) {
+                    "previous" -> R.drawable.ic_overlay_previous
+                    "playPause" -> if (playing) {
+                        R.drawable.ic_overlay_pause
+                    } else {
+                        R.drawable.ic_overlay_play
+                    }
+                    "next" -> R.drawable.ic_overlay_next
+                    "settings" -> R.drawable.ic_overlay_settings
+                    "favorite" -> if (favorite) {
+                        R.drawable.ic_overlay_favorite_filled
+                    } else {
+                        R.drawable.ic_overlay_favorite
+                    }
+                    "lock" -> R.drawable.ic_overlay_lock
+                    "close" -> R.drawable.ic_overlay_close
+                    else -> 0
+                },
+                0,
+                0,
+                0,
+            )
+            compoundDrawableTintList = ColorStateList.valueOf(
+                when (action) {
+                    "favorite" -> if (favorite) {
+                        Color.parseColor("#FFFF8FA8")
                     } else {
                         Color.WHITE
-                    },
-                )
-            }
+                    }
+                    else -> Color.WHITE
+                },
+            )
             contentDescription = when (action) {
                 "previous" -> "上一首"
                 "playPause" -> "播放或暂停"
                 "next" -> "下一首"
-                "settings" -> "歌词样式"
+                "settings" -> "设置歌词字体大小和颜色"
+                "favorite" -> if (favorite) "取消收藏当前歌曲" else "收藏当前歌曲"
                 "lock" -> "锁定桌面歌词"
                 "close" -> "关闭桌面歌词"
                 else -> action
             }
-            background = when (action) {
-                "playPause" -> gradientBackground(
-                    intArrayOf(
-                        Color.parseColor("#FF8FA3FF"),
-                        Color.parseColor("#FF667DE0"),
-                    ),
-                    Color.parseColor("#70FFFFFF"),
-                    999f,
-                )
-                "close" -> roundedBackground("#12FF6F61", "#18FF8D7C", 999f)
-                else -> roundedBackground("#00000000", "#00000000", 999f)
-            }
+            background = roundedBackground("#00000000", "#00000000", 999f)
             layoutParams = LinearLayout.LayoutParams(
-                dp(if (action == "playPause") 48 else 40),
-                dp(if (action == "playPause") 48 else 40),
+                dp(if (action == "playPause") 50 else 48),
+                dp(if (action == "playPause") 50 else 48),
             ).apply {
                 marginStart = dp(if (action == "playPause") 3 else 1)
                 marginEnd = dp(if (action == "playPause") 3 else 1)
@@ -2044,6 +2025,7 @@ private object LyricsOverlayController {
                         hide()
                     }
                     "settings" -> if (!locked) setSettingsExpanded(true)
+                    "favorite" -> emitAction("toggleFavorite")
                     "lock" -> {
                         if (!locked) {
                             locked = true
@@ -2102,6 +2084,15 @@ private object LyricsOverlayController {
             cornerRadius = dp(radius.roundToInt()).toFloat()
             setStroke(dp(1), stroke)
         }
+
+    private fun dividerBackground() = GradientDrawable(
+        GradientDrawable.Orientation.LEFT_RIGHT,
+        intArrayOf(
+            Color.parseColor("#00FFFFFF"),
+            Color.parseColor("#607790FF"),
+            Color.parseColor("#00FFFFFF"),
+        ),
+    )
 
     private fun dp(value: Int): Int {
         val density = context?.resources?.displayMetrics?.density ?: 1f

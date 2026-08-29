@@ -26,6 +26,9 @@ void main() {
       'pause',
       'lock',
       'close',
+      'settings',
+      'favorite',
+      'favorite_filled',
     ])
       name: File(
         'android/app/src/main/res/drawable/ic_overlay_$name.xml',
@@ -46,11 +49,10 @@ void main() {
 
   test('展开的桌面歌词使用轻量单层面板与钴蓝强调色', () {
     expect(source, contains('"Mesting Music"'));
-    expect(source, contains('"桌面歌词 · 轻触收起"'));
+    expect(source, contains('R.drawable.mesting_mark_foreground'));
     expect(source, contains('Color.parseColor("#F21B1E28")'));
     expect(source, contains('Color.parseColor("#F214161E")'));
     expect(source, contains('Color.parseColor("#3D91A5FF")'));
-    expect(source, contains('Color.parseColor("#FF8FA3FF")'));
     expect(source, contains('Color.parseColor("#FF667DE0")'));
     expect(source, isNot(contains('#FFFF8DA8')));
     expect(source, isNot(contains('#FFFF668A')));
@@ -59,16 +61,17 @@ void main() {
 
   test('歌词区不再嵌套笨重卡片且控制项收入统一工具栏', () {
     expect(source, contains('compactLyricsSurface = this'));
+    expect(source, contains('compactDivider = content.getChildAt(2)'));
+    expect(source, contains('content.getChildAt(3) as? LinearLayout'));
+    expect(source, contains('compactDivider?.visibility'));
     expect(source, contains('lyricStatusLabel?.visibility'));
     expect(source, contains('compactLyricsSurface?.background = null'));
-    expect(
-      source,
-      contains('roundedBackground("#0EFFFFFF", "#16FFFFFF", 18f)'),
-    );
+    expect(source, contains('dividerBackground()'));
+    expect(source, contains('Color.parseColor("#607790FF")'));
     expect(source, contains('LinearLayout.LayoutParams.WRAP_CONTENT'));
     expect(source, contains('currentLine?.gravity'));
     expect(source, contains('setLineSpacing(dp(2).toFloat(), 1.04f)'));
-    expect(source, contains('dp(if (action == "playPause") 48 else 40)'));
+    expect(source, contains('dp(if (action == "playPause") 50 else 48)'));
     expect(source, isNot(contains('Color.parseColor("#CC292C37")')));
     expect(
       source,
@@ -84,7 +87,24 @@ void main() {
     }
     expect(source, isNot(contains('controlButton(appContext, "‹"')));
     expect(source, isNot(contains('controlButton(appContext, "›"')));
+    expect(source, isNot(contains('controlButton(appContext, "Aa"')));
     expect(source, isNot(contains('playButton?.text =')));
+  });
+
+  test('展开面板按确认稿提供字体设置和真实收藏功能', () {
+    expect(
+      source,
+      contains('settingsButton = controlButton(appContext, "", "settings")'),
+    );
+    expect(
+      source,
+      contains('favoriteButton = controlButton(appContext, "", "favorite")'),
+    );
+    expect(source, contains('"favorite" -> emitAction("toggleFavorite")'));
+    expect(source, contains('R.drawable.ic_overlay_favorite_filled'));
+    expect(source, contains('"设置歌词字体大小和颜色"'));
+    expect(source, contains('"收藏当前歌曲"'));
+    expect(source, contains('"取消收藏当前歌曲"'));
   });
 
   test('字体大小与颜色设置面板保持原有视觉与功能', () {
@@ -102,7 +122,9 @@ void main() {
       '上一首',
       '播放或暂停',
       '下一首',
-      '歌词样式',
+      '设置歌词字体大小和颜色',
+      '收藏当前歌曲',
+      '取消收藏当前歌曲',
       '锁定桌面歌词',
       '关闭桌面歌词',
     ]) {

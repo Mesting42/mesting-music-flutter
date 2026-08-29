@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../audio/playback_providers.dart';
+import '../audio/mesting_audio_handler.dart';
 import '../persistence/app_preferences.dart';
 
 class LyricsOverlaySettings {
@@ -131,9 +132,11 @@ class LyricsOverlayController extends Notifier<LyricsOverlaySettings> {
   String _pendingCurrent = 'Mesting 音乐';
   String _pendingNext = '歌词准备中';
   bool _pendingPlaying = false;
+  bool _pendingFavorite = false;
   String _lastCurrent = 'Mesting 音乐';
   String _lastNext = '歌词准备中';
   bool _lastPlaying = false;
+  bool _lastFavorite = false;
 
   @override
   LyricsOverlaySettings build() {
@@ -163,6 +166,7 @@ class LyricsOverlayController extends Notifier<LyricsOverlaySettings> {
         current: _pendingCurrent,
         next: _pendingNext,
         playing: _pendingPlaying,
+        favorite: _pendingFavorite,
       );
     }
   }
@@ -171,8 +175,14 @@ class LyricsOverlayController extends Notifier<LyricsOverlaySettings> {
     String current = 'Mesting 音乐',
     String next = '歌词准备中',
     bool playing = false,
+    bool favorite = false,
   }) async {
-    _rememberSnapshot(current: current, next: next, playing: playing);
+    _rememberSnapshot(
+      current: current,
+      next: next,
+      playing: playing,
+      favorite: favorite,
+    );
     final bridge = ref.read(lyricsOverlayBridgeProvider);
     final permitted = await bridge.canDrawOverlays();
     if (!permitted) {
@@ -180,12 +190,18 @@ class LyricsOverlayController extends Notifier<LyricsOverlaySettings> {
         current: current,
         next: next,
         playing: playing,
+        favorite: favorite,
       );
       await bridge.requestPermission();
       return;
     }
     final shown = await bridge.show(
-      _payload(current: current, next: next, playing: playing),
+      _payload(
+        current: current,
+        next: next,
+        playing: playing,
+        favorite: favorite,
+      ),
     );
     state = state.copyWith(visible: shown, permissionGranted: true);
   }
@@ -194,12 +210,19 @@ class LyricsOverlayController extends Notifier<LyricsOverlaySettings> {
     required String current,
     required String next,
     required bool playing,
+    bool favorite = false,
   }) {
-    _rememberSnapshot(current: current, next: next, playing: playing);
+    _rememberSnapshot(
+      current: current,
+      next: next,
+      playing: playing,
+      favorite: favorite,
+    );
     _pendingShowAfterPermission = true;
     _pendingCurrent = current;
     _pendingNext = next;
     _pendingPlaying = playing;
+    _pendingFavorite = favorite;
     state = state.copyWith(permissionGranted: false);
   }
 
@@ -212,9 +235,15 @@ class LyricsOverlayController extends Notifier<LyricsOverlaySettings> {
     String current = 'Mesting 音乐',
     String next = '歌词准备中',
     bool playing = false,
+    bool favorite = false,
   }) => state.visible
       ? hide()
-      : show(current: current, next: next, playing: playing);
+      : show(
+          current: current,
+          next: next,
+          playing: playing,
+          favorite: favorite,
+        );
 
   Future<void> setLocked(bool value) async {
     state = state.copyWith(locked: value);
@@ -242,36 +271,49 @@ class LyricsOverlayController extends Notifier<LyricsOverlaySettings> {
     required String current,
     required String next,
     bool? playing,
+    bool? favorite,
   }) async {
     if (!state.visible) return;
     _rememberSnapshot(
       current: current,
       next: next,
       playing: playing ?? _lastPlaying,
+      favorite: favorite ?? _lastFavorite,
     );
     await ref
         .read(lyricsOverlayBridgeProvider)
-        .update(_payload(current: current, next: next, playing: playing));
+        .update(
+          _payload(
+            current: current,
+            next: next,
+            playing: playing,
+            favorite: favorite,
+          ),
+        );
   }
 
   void _rememberSnapshot({
     required String current,
     required String next,
     required bool playing,
+    required bool favorite,
   }) {
     _lastCurrent = current;
     _lastNext = next;
     _lastPlaying = playing;
+    _lastFavorite = favorite;
   }
 
   Map<String, Object> _payload({
     required String current,
     required String next,
     bool? playing,
+    bool? favorite,
   }) => {
     'current': current,
     'next': next,
     'playing': playing ?? false,
+    'favorite': favorite ?? _lastFavorite,
     'locked': state.locked,
     'fontSize': state.fontSize,
     'textColor': state.textColor,
@@ -296,6 +338,10 @@ class LyricsOverlayController extends Notifier<LyricsOverlaySettings> {
         handler.togglePlayPause();
       case 'next':
         handler.skipToNext();
+      case 'toggleFavorite':
+        handler.customAction(
+          MestingAudioHandler.notificationToggleFavoriteAction,
+        );
       case 'close':
         state = state.copyWith(visible: false);
       case 'locked':

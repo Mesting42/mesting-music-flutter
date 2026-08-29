@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mesting_music/core/audio/mesting_audio_handler.dart';
+import 'package:mesting_music/core/audio/playback_providers.dart';
 import 'package:mesting_music/core/persistence/app_preferences.dart';
 import 'package:mesting_music/core/platform/lyrics_overlay_bridge.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -43,6 +45,7 @@ void main() {
     expect(bridge.lastShow?['current'], '从前从前');
     expect(bridge.lastShow?['next'], '有个人爱你很久');
     expect(bridge.lastShow?['playing'], isTrue);
+    expect(bridge.lastShow?['favorite'], isFalse);
     expect(bridge.lastShow?['next'], isNot('歌词准备中'));
   });
 
@@ -159,6 +162,49 @@ void main() {
     expect(bridge.lastUpdate?['locked'], isFalse);
     expect(container.read(lyricsOverlayProvider).visible, isTrue);
   });
+
+  test('桌面歌词收藏操作复用正式收藏事件并同步收藏状态', () async {
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+    final bridge = _FakeLyricsOverlayBridge();
+    final handler = _FakeAudioHandler();
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(preferences),
+        lyricsOverlayBridgeProvider.overrideWithValue(bridge),
+        audioHandlerProvider.overrideWithValue(handler),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final controller = container.read(lyricsOverlayProvider.notifier);
+    await controller.show(
+      current: '纯音乐，请欣赏',
+      next: '',
+      playing: true,
+      favorite: true,
+    );
+
+    expect(bridge.lastShow?['favorite'], isTrue);
+    bridge.onAction?.call({'action': 'toggleFavorite'});
+    await Future<void>.delayed(Duration.zero);
+
+    expect(
+      handler.lastCustomAction,
+      MestingAudioHandler.notificationToggleFavoriteAction,
+    );
+  });
+}
+
+class _FakeAudioHandler extends MestingAudioHandler {
+  _FakeAudioHandler() : super(tracks: const []);
+
+  String? lastCustomAction;
+
+  @override
+  Future<void> customAction(String name, [Map<String, dynamic>? extras]) async {
+    lastCustomAction = name;
+  }
 }
 
 class _FakeLyricsOverlayBridge extends LyricsOverlayBridge {
