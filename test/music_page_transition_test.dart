@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -92,7 +94,7 @@ void main() {
     expect(fade.opacity.value, 1);
   });
 
-  testWidgets('侧栏目标页在不透明底层上使用短距离自然衔接', (tester) async {
+  testWidgets('侧栏目标页仅在单层交接后开始短距离滑入', (tester) async {
     final controller = AnimationController(
       vsync: tester,
       duration: musicHubDestinationTransitionDuration,
@@ -126,12 +128,17 @@ void main() {
     );
     expect(
       find.byKey(const ValueKey('music-hub-destination-opaque-underlay')),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
       find.descendant(of: transition, matching: find.byType(FadeTransition)),
       findsNothing,
     );
+
+    controller.value = musicPageHandoffProgress - .01;
+    await tester.pump();
+    slide = tester.widget<SlideTransition>(slideFinder);
+    expect(slide.position.value, musicHubDestinationTransitionOffset);
 
     controller.value = .5;
     await tester.pump();
@@ -142,6 +149,52 @@ void main() {
     await tester.pump();
     slide = tester.widget<SlideTransition>(slideFinder);
     expect(slide.position.value, Offset.zero);
+  });
+
+  testWidgets('根导航目标页使用真正不透明的语义底层', (tester) async {
+    final controller = AnimationController(
+      vsync: tester,
+      duration: musicHubDestinationTransitionDuration,
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(
+          brightness: Brightness.dark,
+          scaffoldBackgroundColor: Colors.transparent,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.blue,
+            brightness: Brightness.dark,
+            surface: const Color(0x8011141B),
+          ),
+        ),
+        home: MusicHubDestinationTransition(
+          animation: controller,
+          blockUnderlyingContent: true,
+          child: const ColoredBox(color: Colors.red),
+        ),
+      ),
+    );
+
+    final underlay = tester.widget<ColoredBox>(
+      find.byKey(const ValueKey('music-hub-destination-opaque-underlay')),
+    );
+    expect(underlay.color.a, 1);
+    expect(underlay.color, isNot(Colors.transparent));
+  });
+
+  test('侧栏目标路由和根导航免责声明都保留单层交接保护', () {
+    final routerSource = File(
+      'lib/app/router/app_router.dart',
+    ).readAsStringSync();
+    final disclaimerSource = File(
+      'lib/features/legal/presentation/disclaimer_dialog.dart',
+    ).readAsStringSync();
+
+    expect(routerSource, contains('return MusicHubDestinationLayerHandoff('));
+    expect(disclaimerSource, contains('? MusicHubDestinationLayerHandoff('));
+    expect(disclaimerSource, contains('blockUnderlyingContent: true'));
   });
 
   test('全部歌单使用集合展开动画而不是横向滑动', () {
@@ -557,6 +610,59 @@ void main() {
       secondary.stop();
     },
   );
+
+  testWidgets('侧栏目标页逐帧切换时始终只绘制一个页面内容层', (tester) async {
+    final progress = AnimationController(
+      vsync: tester,
+      duration: musicHubDestinationTransitionDuration,
+    );
+    final outgoingPrimary = AnimationController(
+      vsync: tester,
+      duration: musicHubDestinationTransitionDuration,
+      value: 1,
+    );
+    addTearDown(progress.dispose);
+    addTearDown(outgoingPrimary.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Stack(
+          fit: StackFit.expand,
+          children: [
+            MusicPageSingleLayerHandoff(
+              primaryAnimation: outgoingPrimary,
+              secondaryAnimation: progress,
+              child: const ColoredBox(
+                key: ValueKey('recommendation-content'),
+                color: Colors.red,
+              ),
+            ),
+            MusicHubDestinationLayerHandoff(
+              primaryAnimation: progress,
+              secondaryAnimation: const AlwaysStoppedAnimation<double>(0),
+              child: const ColoredBox(
+                key: ValueKey('settings-content'),
+                color: Colors.blue,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    progress.forward();
+    for (var step = 0; step <= 100; step += 1) {
+      progress.value = step / 100;
+      await tester.pump();
+      expect(
+        _paintedLayerCount(tester),
+        1,
+        reason:
+            '侧栏目标页进入进度 ${progress.value} 出现内容重叠或空帧：'
+            '${_layerStatuses(tester)}',
+      );
+    }
+  });
 
   testWidgets(
     'four bottom tabs keep exactly one painted page while switching',

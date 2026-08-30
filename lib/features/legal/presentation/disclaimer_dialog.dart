@@ -118,7 +118,12 @@ Future<void> showDisclaimerDialog(
     ),
     transitionBuilder: (context, animation, secondaryAnimation, child) =>
         animateLikeMusicHub
-        ? MusicHubDestinationTransition(animation: animation, child: child)
+        ? MusicHubDestinationLayerHandoff(
+            primaryAnimation: animation,
+            secondaryAnimation: secondaryAnimation,
+            blockUnderlyingContent: true,
+            child: child,
+          )
         : child,
   );
 }

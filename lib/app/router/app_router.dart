@@ -494,13 +494,11 @@ class _MusicHubPanelTransitionPage extends Page<void> {
       pageBuilder: (context, animation, secondaryAnimation) => child,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         if (reduceMotion) return child;
-        return MusicPageOutgoingLayerHandoff(
+        return MusicHubDestinationLayerHandoff(
+          primaryAnimation: animation,
           secondaryAnimation: secondaryAnimation,
           handoffProgress: handoffProgress,
-          child: MusicHubDestinationTransition(
-            animation: animation,
-            child: child,
-          ),
+          child: child,
         );
       },
     );

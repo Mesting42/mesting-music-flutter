@@ -120,42 +120,106 @@ class MusicHubDestinationTransition extends StatelessWidget {
   const MusicHubDestinationTransition({
     required this.animation,
     required this.child,
+    this.handoffProgress = musicPageHandoffProgress,
+    this.blockUnderlyingContent = false,
     super.key,
   });
 
   final Animation<double> animation;
   final Widget child;
+  final double handoffProgress;
+  final bool blockUnderlyingContent;
 
   @override
   Widget build(BuildContext context) {
     final motion = CurvedAnimation(
       parent: animation,
-      curve: musicHubDestinationTransitionCurve,
-      reverseCurve: musicHubDestinationReverseTransitionCurve,
+      curve: Interval(
+        handoffProgress,
+        1,
+        curve: musicHubDestinationTransitionCurve,
+      ),
+      reverseCurve: Interval(
+        1 - handoffProgress,
+        1,
+        curve: musicHubDestinationReverseTransitionCurve,
+      ),
     );
     final position = Tween<Offset>(
       begin: musicHubDestinationTransitionOffset,
       end: Offset.zero,
     ).animate(motion);
+    final movingPage = ClipRect(
+      key: const ValueKey('music-hub-destination-clip'),
+      child: RepaintBoundary(
+        child: SlideTransition(
+          key: const ValueKey('music-hub-destination-slide'),
+          position: position,
+          child: child,
+        ),
+      ),
+    );
+    if (!blockUnderlyingContent) return movingPage;
+
+    // Dialog-style destinations are mounted on the root navigator, so the
+    // shell route beneath them does not receive a secondary animation and
+    // cannot participate in the normal single-layer handoff. Paint a truly
+    // opaque semantic surface in that one case. Do not use
+    // scaffoldBackgroundColor here: Mesting intentionally defines it as
+    // transparent so regular pages can reveal the shared theme artwork.
+    final theme = Theme.of(context);
+    final opaqueSurface = Color.alphaBlend(
+      theme.colorScheme.surface,
+      theme.brightness == Brightness.dark ? Colors.black : Colors.white,
+    );
     return SizedBox.expand(
       child: Stack(
         fit: StackFit.expand,
         children: [
           ColoredBox(
             key: const ValueKey('music-hub-destination-opaque-underlay'),
-            color: Theme.of(context).scaffoldBackgroundColor,
+            color: opaqueSurface,
           ),
-          ClipRect(
-            key: const ValueKey('music-hub-destination-clip'),
-            child: RepaintBoundary(
-              child: SlideTransition(
-                key: const ValueKey('music-hub-destination-slide'),
-                position: position,
-                child: child,
-              ),
-            ),
-          ),
+          movingPage,
         ],
+      ),
+    );
+  }
+}
+
+/// Coordinates routes opened from the music hub with the outgoing page.
+///
+/// The outgoing route remains visible only before [handoffProgress], and the
+/// destination becomes visible only at or after that exact boundary. This is
+/// the hard guarantee that recommendation content and destination content can
+/// never be painted in the same frame.
+class MusicHubDestinationLayerHandoff extends StatelessWidget {
+  const MusicHubDestinationLayerHandoff({
+    required this.primaryAnimation,
+    required this.secondaryAnimation,
+    required this.child,
+    this.handoffProgress = musicPageHandoffProgress,
+    this.blockUnderlyingContent = false,
+    super.key,
+  });
+
+  final Animation<double> primaryAnimation;
+  final Animation<double> secondaryAnimation;
+  final Widget child;
+  final double handoffProgress;
+  final bool blockUnderlyingContent;
+
+  @override
+  Widget build(BuildContext context) {
+    return MusicPageSingleLayerHandoff(
+      primaryAnimation: primaryAnimation,
+      secondaryAnimation: secondaryAnimation,
+      handoffProgress: handoffProgress,
+      child: MusicHubDestinationTransition(
+        animation: primaryAnimation,
+        handoffProgress: handoffProgress,
+        blockUnderlyingContent: blockUnderlyingContent,
+        child: child,
       ),
     );
   }

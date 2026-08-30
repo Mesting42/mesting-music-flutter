@@ -213,7 +213,7 @@ void main() {
     expect(find.text('项目性质'), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 160));
-    expect(find.text('项目性质'), findsOneWidget);
+    expect(find.text('项目性质'), findsNothing);
     await tester.pumpAndSettle();
     expect(find.text('项目性质'), findsNothing);
     expect(tester.takeException(), isNull);
