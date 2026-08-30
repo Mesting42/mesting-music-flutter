@@ -38,6 +38,7 @@ import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
+import android.widget.Toast
 import android.media.MediaScannerConnection
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -1149,8 +1150,9 @@ class MorningMistBrandActivity : MainActivity()
 class MidnightVinylBrandActivity : MainActivity()
 
 private object LyricsOverlayController {
-    private const val COMPACT_OVERLAY_MAX_WIDTH_DP = 368
+    private const val COMPACT_OVERLAY_MAX_WIDTH_DP = 376
     private const val COMPACT_OVERLAY_SIDE_INSET_DP = 6
+    private const val OVERLAY_DRAG_EDGE_INSET_DP = 6
     private const val SETTINGS_OVERLAY_MAX_WIDTH_DP = 360
     private const val SETTINGS_OVERLAY_SIDE_INSET_DP = 10
 
@@ -1272,6 +1274,7 @@ private object LyricsOverlayController {
                             (event.rawX - dragStartTouchX).roundToInt()
                         layoutParams.y = dragStartWindowY +
                             (event.rawY - dragStartTouchY).roundToInt()
+                        clampOverlayPosition(this, layoutParams)
                         windowManager?.updateViewLayout(this, layoutParams)
                     }
                     MotionEvent.ACTION_UP,
@@ -1345,6 +1348,12 @@ private object LyricsOverlayController {
         }
         manager.addView(layout, params)
         isVisible = true
+        layout.post {
+            params?.let { layoutParams ->
+                clampOverlayPosition(layout, layoutParams)
+                runCatching { manager.updateViewLayout(layout, layoutParams) }
+            }
+        }
         update(call)
     }
 
@@ -1824,7 +1833,7 @@ private object LyricsOverlayController {
 
         root?.let { view ->
             params?.let { layoutParams ->
-                runCatching { windowManager?.updateViewLayout(view, layoutParams) }
+                updateOverlayLayout(view, layoutParams)
             }
         }
     }
@@ -1852,9 +1861,55 @@ private object LyricsOverlayController {
         }
         params?.x = ((screenWidth - (params?.width ?: screenWidth)) / 2)
             .coerceAtLeast(0)
-        root?.let { view -> params?.let { windowManager?.updateViewLayout(view, it) } }
+        root?.let { view -> params?.let { updateOverlayLayout(view, it) } }
         setControlsExpanded(controlsExpanded)
         applyAppearance()
+    }
+
+    private fun updateOverlayLayout(
+        view: View,
+        layoutParams: WindowManager.LayoutParams,
+    ) {
+        clampOverlayPosition(view, layoutParams)
+        runCatching { windowManager?.updateViewLayout(view, layoutParams) }
+        // Expanded controls and settings change a WRAP_CONTENT window's
+        // measured height. Clamp again after that layout pass so the complete
+        // surface remains reachable at the bottom edge too.
+        view.post {
+            if (!isVisible || root !== view || params !== layoutParams) return@post
+            clampOverlayPosition(view, layoutParams)
+            runCatching { windowManager?.updateViewLayout(view, layoutParams) }
+        }
+    }
+
+    private fun clampOverlayPosition(
+        view: View,
+        layoutParams: WindowManager.LayoutParams,
+    ) {
+        val appContext = context ?: return
+        val metrics = appContext.resources.displayMetrics
+        val edgeInset = dp(OVERLAY_DRAG_EDGE_INSET_DP)
+        val overlayWidth = view.width.takeIf { it > 0 }
+            ?: layoutParams.width.takeIf { it > 0 }
+            ?: 0
+        val overlayHeight = view.height.takeIf { it > 0 }
+            ?: view.measuredHeight.takeIf { it > 0 }
+            ?: 0
+        val topInset = systemBarInset("status_bar_height") + edgeInset
+        val bottomInset = systemBarInset("navigation_bar_height") + edgeInset
+        val maxX = (metrics.widthPixels - overlayWidth - edgeInset)
+            .coerceAtLeast(edgeInset)
+        val maxY = (metrics.heightPixels - overlayHeight - bottomInset)
+            .coerceAtLeast(topInset)
+
+        layoutParams.x = layoutParams.x.coerceIn(edgeInset, maxX)
+        layoutParams.y = layoutParams.y.coerceIn(topInset, maxY)
+    }
+
+    private fun systemBarInset(resourceName: String): Int {
+        val resources = context?.resources ?: return 0
+        val resourceId = resources.getIdentifier(resourceName, "dimen", "android")
+        return if (resourceId > 0) resources.getDimensionPixelSize(resourceId) else 0
     }
 
     private fun overlayWidth(
@@ -1892,6 +1947,14 @@ private object LyricsOverlayController {
         } else {
             roundedBackground("#00000000", "#00000000", 999f)
         }
+        lockButton?.setCompoundDrawablesRelativeWithIntrinsicBounds(
+            if (locked) R.drawable.ic_overlay_lock else R.drawable.ic_overlay_unlock,
+            0,
+            0,
+            0,
+        )
+        lockButton?.contentDescription =
+            if (locked) "桌面歌词已锁定" else "锁定桌面歌词"
         lockStateLabel?.text = if (locked) "已锁定" else "可拖动"
         lockStateLabel?.setTextColor(
             if (locked) Color.parseColor("#FF9EB0FF") else Color.parseColor("#CCFFFFFF"),
@@ -1990,7 +2053,11 @@ private object LyricsOverlayController {
                     } else {
                         R.drawable.ic_overlay_favorite
                     }
-                    "lock" -> R.drawable.ic_overlay_lock
+                    "lock" -> if (locked) {
+                        R.drawable.ic_overlay_lock
+                    } else {
+                        R.drawable.ic_overlay_unlock
+                    }
                     "close" -> R.drawable.ic_overlay_close
                     else -> 0
                 },
@@ -2058,6 +2125,11 @@ private object LyricsOverlayController {
                             emitSettingsChanged()
                             if (settingsExpanded) setSettingsExpanded(false)
                             setControlsExpanded(false)
+                            Toast.makeText(
+                                appContext,
+                                "桌面歌词已锁定，可在灵动岛或通知中心的音乐面板中点击“词”解锁",
+                                Toast.LENGTH_LONG,
+                            ).show()
                             applyAppearance()
                         }
                     }

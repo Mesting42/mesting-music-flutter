@@ -21,7 +21,6 @@ const musicHubDestinationReverseTransitionDuration = Duration(
   milliseconds: 240,
 );
 const musicHubDestinationTransitionOffset = Offset(-.055, 0);
-const musicHubDestinationStartOpacity = .86;
 const musicHubDestinationTransitionCurve = Cubic(.16, 1, .3, 1);
 const musicHubDestinationReverseTransitionCurve = Cubic(.4, 0, 1, 1);
 const messagesPageTransitionDuration = Duration(milliseconds: 360);
@@ -115,7 +114,8 @@ class MusicHubPanelTransition extends StatelessWidget {
 /// Repeating the drawer's full-width sweep made destination navigation feel
 /// like two unrelated transitions. The destination is already substantially
 /// visible and travels only a short distance, so the motion reads as one
-/// continuous handoff without reintroducing two painted app surfaces.
+/// continuous handoff. A fixed opaque surface stays beneath the moving page so
+/// its short travel never reveals the previous recommendation page.
 class MusicHubDestinationTransition extends StatelessWidget {
   const MusicHubDestinationTransition({
     required this.animation,
@@ -137,22 +137,25 @@ class MusicHubDestinationTransition extends StatelessWidget {
       begin: musicHubDestinationTransitionOffset,
       end: Offset.zero,
     ).animate(motion);
-    final opacity = Tween<double>(
-      begin: musicHubDestinationStartOpacity,
-      end: 1,
-    ).animate(motion);
-    return ClipRect(
-      key: const ValueKey('music-hub-destination-clip'),
-      child: RepaintBoundary(
-        child: SlideTransition(
-          key: const ValueKey('music-hub-destination-slide'),
-          position: position,
-          child: FadeTransition(
-            key: const ValueKey('music-hub-destination-fade'),
-            opacity: opacity,
-            child: child,
+    return SizedBox.expand(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ColoredBox(
+            key: const ValueKey('music-hub-destination-opaque-underlay'),
+            color: Theme.of(context).scaffoldBackgroundColor,
           ),
-        ),
+          ClipRect(
+            key: const ValueKey('music-hub-destination-clip'),
+            child: RepaintBoundary(
+              child: SlideTransition(
+                key: const ValueKey('music-hub-destination-slide'),
+                position: position,
+                child: child,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

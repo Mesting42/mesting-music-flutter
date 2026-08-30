@@ -25,6 +25,7 @@ void main() {
       'play',
       'pause',
       'lock',
+      'unlock',
       'close',
       'settings',
       'favorite',
@@ -108,7 +109,7 @@ void main() {
   });
 
   test('桌面歌词在窄边距内使用更长的紧凑控制面板', () {
-    expect(source, contains('COMPACT_OVERLAY_MAX_WIDTH_DP = 368'));
+    expect(source, contains('COMPACT_OVERLAY_MAX_WIDTH_DP = 376'));
     expect(source, contains('COMPACT_OVERLAY_SIDE_INSET_DP = 6'));
     expect(source, contains('val compactWidth = overlayWidth('));
     expect(
@@ -118,6 +119,30 @@ void main() {
     expect(source, contains('private fun overlayWidth('));
     expect(source, isNot(contains('dp(344),')));
     expect(source, isNot(contains('x = dp(22)')));
+  });
+
+  test('桌面歌词拖动和尺寸变化后都限制在系统安全边缘内', () {
+    expect(source, contains('OVERLAY_DRAG_EDGE_INSET_DP = 6'));
+    expect(source, contains('private fun clampOverlayPosition('));
+    expect(source, contains('layoutParams.x = layoutParams.x.coerceIn('));
+    expect(source, contains('layoutParams.y = layoutParams.y.coerceIn('));
+    expect(source, contains('systemBarInset("status_bar_height")'));
+    expect(source, contains('systemBarInset("navigation_bar_height")'));
+    expect(source, contains('clampOverlayPosition(this, layoutParams)'));
+    expect(source, contains('private fun updateOverlayLayout('));
+    expect(source, contains('view.post {'));
+  });
+
+  test('未锁定与锁定状态使用对应图标并提示通知中心解锁路径', () {
+    expect(
+      source,
+      contains(
+        'if (locked) R.drawable.ic_overlay_lock else '
+        'R.drawable.ic_overlay_unlock',
+      ),
+    );
+    expect(source, contains('Toast.LENGTH_LONG'));
+    expect(source, contains('灵动岛或通知中心的音乐面板中点击“词”解锁'));
   });
 
   test('字体大小与颜色设置面板保持原有视觉与功能', () {

@@ -40,7 +40,6 @@ void main() {
       const Duration(milliseconds: 240),
     );
     expect(musicHubDestinationTransitionOffset.dx, inExclusiveRange(-.1, 0));
-    expect(musicHubDestinationStartOpacity, inExclusiveRange(.8, 1));
   });
 
   testWidgets('侧栏转场从左侧滑入并同步淡入', (tester) async {
@@ -93,7 +92,7 @@ void main() {
     expect(fade.opacity.value, 1);
   });
 
-  testWidgets('侧栏目标页使用短距离且初始可见的自然衔接', (tester) async {
+  testWidgets('侧栏目标页在不透明底层上使用短距离自然衔接', (tester) async {
     final controller = AnimationController(
       vsync: tester,
       duration: musicHubDestinationTransitionDuration,
@@ -119,33 +118,30 @@ void main() {
       of: transition,
       matching: find.byKey(const ValueKey('music-hub-destination-slide')),
     );
-    final fadeFinder = find.descendant(
-      of: transition,
-      matching: find.byKey(const ValueKey('music-hub-destination-fade')),
-    );
-
     var slide = tester.widget<SlideTransition>(slideFinder);
-    var fade = tester.widget<FadeTransition>(fadeFinder);
     expect(slide.position.value, musicHubDestinationTransitionOffset);
-    expect(fade.opacity.value, musicHubDestinationStartOpacity);
     expect(
       find.byKey(const ValueKey('music-hub-destination-clip')),
       findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('music-hub-destination-opaque-underlay')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: transition, matching: find.byType(FadeTransition)),
+      findsNothing,
     );
 
     controller.value = .5;
     await tester.pump();
     slide = tester.widget<SlideTransition>(slideFinder);
-    fade = tester.widget<FadeTransition>(fadeFinder);
     expect(slide.position.value.dx, inExclusiveRange(-.055, 0));
-    expect(fade.opacity.value, inExclusiveRange(.86, 1));
 
     controller.value = 1;
     await tester.pump();
     slide = tester.widget<SlideTransition>(slideFinder);
-    fade = tester.widget<FadeTransition>(fadeFinder);
     expect(slide.position.value, Offset.zero);
-    expect(fade.opacity.value, 1);
   });
 
   test('全部歌单使用集合展开动画而不是横向滑动', () {
