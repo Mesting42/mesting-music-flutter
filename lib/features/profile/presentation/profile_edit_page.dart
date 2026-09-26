@@ -166,6 +166,11 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                                           height: 112,
                                           fit: BoxFit.cover,
                                           retryOnNetworkError: true,
+                                          fallback: const Icon(
+                                            Icons.person_rounded,
+                                            size: 58,
+                                            color: Colors.white,
+                                          ),
                                         )
                                       : const Icon(
                                           Icons.person_rounded,

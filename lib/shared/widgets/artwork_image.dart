@@ -34,6 +34,7 @@ class ArtworkImage extends StatefulWidget {
     this.retryOnNetworkError = false,
     this.persistentNetworkCacheKey,
     this.networkImageCache,
+    this.fallback,
     super.key,
   });
 
@@ -46,6 +47,7 @@ class ArtworkImage extends StatefulWidget {
   final bool retryOnNetworkError;
   final String? persistentNetworkCacheKey;
   final PersistentNetworkImageCache? networkImageCache;
+  final Widget? fallback;
 
   @override
   State<ArtworkImage> createState() => _ArtworkImageState();
@@ -105,7 +107,8 @@ class _ArtworkImageState extends State<ArtworkImage> {
       Object error,
       StackTrace? stackTrace,
     ) {
-      return _ArtworkPlaceholder(width: widget.width, height: widget.height);
+      return widget.fallback ??
+          _ArtworkPlaceholder(width: widget.width, height: widget.height);
     }
 
     if (uri.startsWith('http://') || uri.startsWith('https://')) {
@@ -171,15 +174,14 @@ class _ArtworkImageState extends State<ArtworkImage> {
         },
         loadingBuilder: (context, child, progress) {
           if (progress == null || widget.retryOnNetworkError) return child;
-          return _ArtworkPlaceholder(
-            width: widget.width,
-            height: widget.height,
-          );
+          return widget.fallback ??
+              _ArtworkPlaceholder(width: widget.width, height: widget.height);
         },
       );
     }
     if (uri.isEmpty) {
-      return _ArtworkPlaceholder(width: widget.width, height: widget.height);
+      return widget.fallback ??
+          _ArtworkPlaceholder(width: widget.width, height: widget.height);
     }
     final localFile = _localFile(uri);
     if (localFile != null) {

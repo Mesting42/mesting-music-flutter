@@ -207,6 +207,42 @@ void main() {
         expect(signedInAgain.user.avatarCloudId, remoteUrl);
       },
     );
+
+    test('does not expose a legacy cloud id as a display URL', () async {
+      const cloudId = 'cloud://environment/user-avatars/listener-1/avatar.jpg';
+      final repository = HttpAuthRepository(
+        baseUrl: 'https://auth.example.test',
+        sessionStore: SessionStore(),
+        avatarDirectoryProvider: () async => temporaryDirectory,
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'data': {
+                'user': {
+                  'uid': 'listener-1',
+                  'nickname': 'Mest',
+                  'avatar_url': cloudId,
+                  'avatar_cloud_id': cloudId,
+                },
+                'access_token': 'access-token',
+                'refresh_token': 'refresh-token',
+                'expires_at': '2099-01-01T00:00:00.000Z',
+              },
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          ),
+        ),
+      );
+
+      final session = await repository.signInWithEmail(
+        email: 'listener@example.test',
+        password: 'StrongPassword123',
+      );
+
+      expect(session.user.avatarUrl, isNull);
+      expect(session.user.avatarCloudId, cloudId);
+    });
   });
 
   group('local preview account', () {

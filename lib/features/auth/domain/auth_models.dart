@@ -96,8 +96,8 @@ class AuthUser {
     String? bio,
     Object? age = _authUserFieldUnset,
     String? zodiac,
-    String? avatarUrl,
-    String? avatarCloudId,
+    Object? avatarUrl = _authUserFieldUnset,
+    Object? avatarCloudId = _authUserFieldUnset,
     String? emailMasked,
     String? phoneMasked,
     bool? hasPassword,
@@ -108,8 +108,12 @@ class AuthUser {
       bio: bio ?? this.bio,
       age: identical(age, _authUserFieldUnset) ? this.age : age as int?,
       zodiac: zodiac ?? this.zodiac,
-      avatarUrl: avatarUrl ?? this.avatarUrl,
-      avatarCloudId: avatarCloudId ?? this.avatarCloudId,
+      avatarUrl: identical(avatarUrl, _authUserFieldUnset)
+          ? this.avatarUrl
+          : avatarUrl as String?,
+      avatarCloudId: identical(avatarCloudId, _authUserFieldUnset)
+          ? this.avatarCloudId
+          : avatarCloudId as String?,
       emailMasked: emailMasked ?? this.emailMasked,
       phoneMasked: phoneMasked ?? this.phoneMasked,
       hasPassword: hasPassword ?? this.hasPassword,

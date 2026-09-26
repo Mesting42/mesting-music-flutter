@@ -1944,6 +1944,11 @@ class _ProfileAvatar extends StatelessWidget {
               height: size,
               fit: BoxFit.cover,
               retryOnNetworkError: true,
+              fallback: Icon(
+                Icons.person_rounded,
+                color: Colors.white,
+                size: size * .52,
+              ),
             ),
     );
   }

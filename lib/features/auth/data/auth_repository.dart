@@ -642,8 +642,11 @@ class HttpAuthRepository implements AuthRepository, RenewableAuthRepository {
     final stored = await _sessionStore.read();
     if (stored == null) return null;
     if (!stored.isExpired) {
-      _session = stored;
-      return stored;
+      final restored = stored.copyWith(
+        user: await _userWithDisplayAvatar(stored.user, fallback: stored.user),
+      );
+      await _persist(restored);
+      return restored;
     }
     try {
       final refreshed = await _sessionRequest('/v1/auth/refresh', {
@@ -1016,9 +1019,26 @@ class HttpAuthRepository implements AuthRepository, RenewableAuthRepository {
     final localAvatar = fallback?.uid == serverUser.uid
         ? await _existingLocalAvatar(fallback?.avatarUrl)
         : null;
+    final fallbackRemote = fallback == null ? null : _remoteAvatarFor(fallback);
+    final legacyCloudId =
+        [
+              serverUser.avatarCloudId,
+              serverUser.avatarUrl,
+              fallback?.avatarCloudId,
+              fallback?.avatarUrl,
+            ]
+            .whereType<String>()
+            .map((value) => value.trim())
+            .firstWhere(
+              (value) => value.startsWith('cloud://'),
+              orElse: () => '',
+            );
     return serverUser.copyWith(
       avatarUrl: localAvatar ?? remoteAvatar,
-      avatarCloudId: remoteAvatar ?? fallback?.avatarCloudId,
+      avatarCloudId:
+          remoteAvatar ??
+          fallbackRemote ??
+          (legacyCloudId.isEmpty ? null : legacyCloudId),
     );
   }
 
