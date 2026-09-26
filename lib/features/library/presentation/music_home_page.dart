@@ -27,6 +27,7 @@ import '../../recommendation/domain/personalized_recommendation.dart';
 import '../../recommendation/recommendation_providers.dart';
 import '../../search/search_providers.dart';
 import '../../themes/mesting_palette.dart';
+import '../../themes/mesting_backstage_theme.dart';
 import '../../themes/music_theme_preset.dart';
 import '../../themes/theme_controller.dart';
 import '../../themes/music_theme_tokens.dart';
@@ -101,105 +102,148 @@ class _MusicHomePageState extends ConsumerState<MusicHomePage>
       );
     }
     final topInset = MediaQuery.paddingOf(context).top;
+    final backstage = Theme.of(context).brightness == Brightness.dark;
+    final backstageColors = MestingBackstage.forBrightness(
+      Theme.of(context).brightness,
+    );
     final bottomClearance = mestingMusicPageBottomClearanceForWidth(
       MediaQuery.sizeOf(context).width,
     );
 
-    return Stack(
-      children: [
-        CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(
-                12,
-                topInset + 12,
-                12,
-                bottomClearance,
-              ),
-              sliver: SliverList.list(
-                children: [
-                  _Entrance(
-                    animation: _entrance,
-                    interval: const Interval(
-                      0,
-                      .55,
-                      curve: Curves.easeOutCubic,
-                    ),
-                    child: MusicHubTopBar(
-                      showBack: view == 'daily' || view == 'playlists',
-                      onBack: view == 'daily'
-                          ? () => context.canPop()
-                                ? context.pop()
-                                : context.go('/music/recommend')
-                          : view == 'playlists'
-                          ? () => context.canPop()
-                                ? context.pop()
-                                : context.go('/profile')
-                          : null,
-                      title: switch (view) {
-                        'daily' => '每日推荐',
-                        'favorites' => '我的喜欢',
-                        'playlists' => '我的歌单',
-                        _ => '发现音乐',
-                      },
-                      subtitle: switch (view) {
-                        'daily' => '每天更新的专属音乐队列',
-                        'favorites' => '收藏会跟随账号安全保存',
-                        'playlists' => '整理属于自己的音乐空间',
-                        _ => '探索歌单、新歌与在线音乐',
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 19),
-                  if (view == 'daily')
-                    _DailySection(
-                      localTracks: const <Track>[],
-                      onlineTracks: onlineRecommendationTracks,
-                    )
-                  else if (view == 'favorites')
-                    _FavoriteSection(tracks: favorites)
-                  else if (view == 'playlists')
-                    const _MyPlaylistsSection()
-                  else ...[
-                    _PlaylistSection(
-                      title: '精选歌单',
-                      playlists: curatedPlaylistsFor(
-                        CuratedPlaylistCategory.featured,
+    return Theme(
+      data: view == 'favorites'
+          ? MestingBackstage.themeOf(context)
+          : Theme.of(context),
+      child: Stack(
+        children: [
+          if (view == 'favorites')
+            Positioned.fill(child: ColoredBox(color: backstageColors.ink)),
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(
+                  12,
+                  topInset + 12,
+                  12,
+                  bottomClearance,
+                ),
+                sliver: SliverList.list(
+                  children: [
+                    _Entrance(
+                      animation: _entrance,
+                      interval: const Interval(
+                        0,
+                        .55,
+                        curve: Curves.easeOutCubic,
                       ),
-                      preset: selectedTheme,
-                      entrance: _entrance,
-                    ),
-                    const SizedBox(height: 26),
-                    _PopularMusicSection(
-                      tracks: popularTracks,
-                      entrance: _entrance,
-                    ),
-                    const SizedBox(height: 26),
-                    _PlaylistSection(
-                      title: '宝藏歌单',
-                      playlists: curatedPlaylistsFor(
-                        CuratedPlaylistCategory.treasure,
+                      child: MusicHubTopBar(
+                        showBack: view == 'daily' || view == 'playlists',
+                        onBack: view == 'daily'
+                            ? () => context.canPop()
+                                  ? context.pop()
+                                  : context.go('/music/recommend')
+                            : view == 'playlists'
+                            ? () => context.canPop()
+                                  ? context.pop()
+                                  : context.go('/profile')
+                            : null,
+                        title: switch (view) {
+                          'daily' => '每日推荐',
+                          'favorites' => '我的喜欢',
+                          'playlists' => '我的歌单',
+                          _ => '发现音乐',
+                        },
+                        subtitle: switch (view) {
+                          'daily' => '每天更新的专属音乐队列',
+                          'favorites' => '收藏会跟随账号安全保存',
+                          'playlists' => '整理属于自己的音乐空间',
+                          _ => '探索歌单、新歌与在线音乐',
+                        },
+                        brandOnly: view != 'daily' && view != 'playlists',
                       ),
-                      preset: selectedTheme,
-                      entrance: _entrance,
                     ),
-                    const SizedBox(height: 26),
-                    _PlaylistSection(
-                      title: '今日编辑推荐',
-                      playlists: curatedPlaylistsFor(
-                        CuratedPlaylistCategory.editor,
+                    const SizedBox(height: 19),
+                    if (view == 'daily')
+                      _DailySection(
+                        localTracks: const <Track>[],
+                        onlineTracks: onlineRecommendationTracks,
+                      )
+                    else if (view == 'favorites')
+                      _FavoriteSection(tracks: favorites)
+                    else if (view == 'playlists')
+                      const _MyPlaylistsSection()
+                    else ...[
+                      if (backstage)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _ExploreFrequencyHero(
+                              playlist: curatedPlaylistsFor(
+                                CuratedPlaylistCategory.featured,
+                              ).first,
+                            ),
+                            const SizedBox(height: 18),
+                            const _ExploreCityRail(),
+                            const SizedBox(height: 26),
+                            _EditorialDiscoveryGrid(
+                              playlists: curatedPlaylistsFor(
+                                CuratedPlaylistCategory.editor,
+                              ).take(3).toList(growable: false),
+                            ),
+                            const SizedBox(height: 26),
+                            const _DiscoveryMoodTuner(),
+                            const SizedBox(height: 24),
+                            _PlaylistSection(
+                              title: '精选歌单',
+                              playlists: curatedPlaylistsFor(
+                                CuratedPlaylistCategory.featured,
+                              ),
+                              preset: selectedTheme,
+                              entrance: _entrance,
+                            ),
+                          ],
+                        )
+                      else
+                        _PlaylistSection(
+                          title: '精选歌单',
+                          playlists: curatedPlaylistsFor(
+                            CuratedPlaylistCategory.featured,
+                          ),
+                          preset: selectedTheme,
+                          entrance: _entrance,
+                        ),
+                      const SizedBox(height: 26),
+                      _PopularMusicSection(
+                        tracks: popularTracks,
+                        entrance: _entrance,
                       ),
-                      preset: selectedTheme,
-                      entrance: _entrance,
-                    ),
+                      const SizedBox(height: 26),
+                      _PlaylistSection(
+                        title: '宝藏歌单',
+                        playlists: curatedPlaylistsFor(
+                          CuratedPlaylistCategory.treasure,
+                        ),
+                        preset: selectedTheme,
+                        entrance: _entrance,
+                      ),
+                      const SizedBox(height: 26),
+                      _PlaylistSection(
+                        title: '今日编辑推荐',
+                        playlists: curatedPlaylistsFor(
+                          CuratedPlaylistCategory.editor,
+                        ),
+                        preset: selectedTheme,
+                        entrance: _entrance,
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
-        ),
-      ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -284,6 +328,476 @@ class _SectionHeader extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The discover tab opens with an analogue-radio composition. The playlist
+/// callback remains exactly the same; only its visual entry point changes.
+class _ExploreFrequencyHero extends StatelessWidget {
+  const _ExploreFrequencyHero({required this.playlist});
+
+  final CuratedPlaylist playlist;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: '打开${playlist.name}',
+      child: Material(
+        color: MestingBackstage.ink,
+        borderRadius: BorderRadius.circular(12),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => context.push('/music/discover/${playlist.id}'),
+          child: SizedBox(
+            height: 390,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Positioned(
+                  right: -102,
+                  top: 15,
+                  width: 342,
+                  height: 342,
+                  child: CustomPaint(painter: const _RadioDialPainter()),
+                ),
+                const Positioned(
+                  left: 18,
+                  top: 34,
+                  child: Text(
+                    '发现',
+                    style: TextStyle(
+                      color: MestingBackstage.bone,
+                      fontSize: 62,
+                      height: .9,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -4,
+                    ),
+                  ),
+                ),
+                const Positioned(
+                  left: 22,
+                  top: 98,
+                  child: Row(
+                    children: [
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: MestingBackstage.signal,
+                          shape: BoxShape.circle,
+                        ),
+                        child: SizedBox.square(dimension: 8),
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'ON AIR / 07',
+                        style: TextStyle(
+                          color: MestingBackstage.boneMuted,
+                          fontSize: 11,
+                          letterSpacing: 1.3,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  left: 12,
+                  top: 150,
+                  width: 205,
+                  height: 104,
+                  child: Transform.rotate(
+                    angle: -.025,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE1C79C),
+                        borderRadius: BorderRadius.circular(5),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x66000000),
+                            blurRadius: 12,
+                            offset: Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 18, 14, 14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              '今晚，听点不一样',
+                              style: TextStyle(
+                                color: MestingBackstage.ink,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              '${playlist.name} · Mesting精选',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Color(0xFF5A4938),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const Positioned(
+                  right: 20,
+                  top: 168,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'FM',
+                        style: TextStyle(
+                          color: MestingBackstage.mustard,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                      Text(
+                        '101.3',
+                        style: TextStyle(
+                          color: MestingBackstage.bone,
+                          fontSize: 39,
+                          height: 1,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -2,
+                        ),
+                      ),
+                      Text(
+                        'MHZ',
+                        style: TextStyle(
+                          color: MestingBackstage.boneMuted,
+                          fontSize: 10,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Positioned(
+                  left: 18,
+                  right: 18,
+                  bottom: 32,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '正在播放的城市',
+                        style: TextStyle(
+                          color: MestingBackstage.bone,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      SizedBox(height: 12),
+                      _ExploreFrequencyMarkers(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RadioDialPainter extends CustomPainter {
+  const _RadioDialPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width * .55, size.height * .52);
+    final radius = size.shortestSide * .47;
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = const Color(0xFF073A88)
+        ..style = PaintingStyle.fill,
+    );
+    final rings = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color = MestingBackstage.cobalt.withValues(alpha: .75);
+    for (final scale in const [.72, .84, .96]) {
+      canvas.drawCircle(center, radius * scale, rings);
+    }
+    final tick = Paint()
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    for (var index = 0; index < 34; index++) {
+      final angle = -2.75 + index * .105;
+      final outer = center + Offset.fromDirection(angle, radius * .91);
+      final inner =
+          center +
+          Offset.fromDirection(angle, radius * (index % 5 == 0 ? .82 : .86));
+      tick.color = index % 5 == 0
+          ? MestingBackstage.mustard
+          : MestingBackstage.bone.withValues(alpha: .45);
+      canvas.drawLine(inner, outer, tick);
+    }
+    final needle = Paint()
+      ..color = MestingBackstage.signal
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(
+      center,
+      center + Offset.fromDirection(-2.78, radius * .74),
+      needle,
+    );
+    canvas.drawCircle(center, 7, Paint()..color = MestingBackstage.signal);
+    canvas.drawCircle(center, 3, Paint()..color = const Color(0xFF2B1510));
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _ExploreFrequencyMarkers extends StatelessWidget {
+  const _ExploreFrequencyMarkers();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (final marker in const ['88.7', '101.3', '107.9'])
+          Padding(
+            padding: const EdgeInsets.only(right: 11),
+            child: Text(
+              marker,
+              style: TextStyle(
+                color: marker == '101.3'
+                    ? const Color(0xFFE64232)
+                    : const Color(0xFFF0E8DB).withValues(alpha: .62),
+                fontSize: 8,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ExploreCityRail extends StatelessWidget {
+  const _ExploreCityRail();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        _CityFrequency(name: '上海', active: false),
+        Expanded(child: Divider(color: MestingBackstage.line)),
+        _CityFrequency(name: '成都', active: true),
+        Expanded(child: Divider(color: MestingBackstage.line)),
+        _CityFrequency(name: '深圳', active: false),
+      ],
+    );
+  }
+}
+
+class _CityFrequency extends StatelessWidget {
+  const _CityFrequency({required this.name, required this.active});
+
+  final String name;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          name,
+          style: const TextStyle(
+            color: MestingBackstage.bone,
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 5),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: active ? MestingBackstage.signal : MestingBackstage.ink,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: active ? MestingBackstage.signal : MestingBackstage.bone,
+              width: 1.4,
+            ),
+          ),
+          child: const SizedBox.square(dimension: 12),
+        ),
+      ],
+    );
+  }
+}
+
+class _EditorialDiscoveryGrid extends StatelessWidget {
+  const _EditorialDiscoveryGrid({required this.playlists});
+
+  final List<CuratedPlaylist> playlists;
+
+  @override
+  Widget build(BuildContext context) {
+    if (playlists.length < 3) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '编辑推荐',
+          style: TextStyle(
+            color: MestingBackstage.bone,
+            fontSize: 22,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 278,
+          child: Row(
+            children: [
+              Expanded(
+                child: _EditorialTile(playlist: playlists[0], large: true),
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Column(
+                  children: [
+                    Expanded(child: _EditorialTile(playlist: playlists[1])),
+                    const SizedBox(height: 9),
+                    Expanded(child: _EditorialTile(playlist: playlists[2])),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EditorialTile extends StatelessWidget {
+  const _EditorialTile({required this.playlist, this.large = false});
+
+  final CuratedPlaylist playlist;
+  final bool large;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: MestingBackstage.surface,
+      borderRadius: BorderRadius.circular(10),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push('/music/discover/${playlist.id}'),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ArtworkImage(uri: playlist.coverAsset, fit: BoxFit.cover),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Color(0xE6000000)],
+                  stops: [.35, 1],
+                ),
+              ),
+            ),
+            Positioned(
+              left: 14,
+              right: 10,
+              bottom: 13,
+              child: Text(
+                playlist.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: MestingBackstage.bone,
+                  fontSize: large ? 20 : 14,
+                  height: 1.1,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DiscoveryMoodTuner extends StatelessWidget {
+  const _DiscoveryMoodTuner();
+
+  @override
+  Widget build(BuildContext context) {
+    const moods = [
+      ('通勤', MestingBackstage.cobalt),
+      ('专注', MestingBackstage.mustard),
+      ('松弛', Color(0xFF7E8B65)),
+      ('深夜', MestingBackstage.signal),
+      ('现场', MestingBackstage.bone),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '按情绪收听',
+          style: TextStyle(
+            color: MestingBackstage.bone,
+            fontSize: 21,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            for (var index = 0; index < moods.length; index++) ...[
+              Expanded(
+                child: InkWell(
+                  onTap: () => context.push(
+                    '/music/discover/${curatedPlaylists[index].id}',
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        moods[index].$1,
+                        style: const TextStyle(
+                          color: MestingBackstage.bone,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      Container(height: 3, color: moods[index].$2),
+                    ],
+                  ),
+                ),
+              ),
+              if (index != moods.length - 1)
+                const SizedBox(
+                  height: 26,
+                  child: VerticalDivider(color: MestingBackstage.line),
+                ),
+            ],
+          ],
+        ),
+      ],
     );
   }
 }
@@ -689,13 +1203,25 @@ class FavoriteTrackRow extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeOutCubic,
-            height: 76,
-            padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+            height: 82,
+            padding: const EdgeInsets.fromLTRB(12, 9, 8, 9),
             color: active ? accent.withValues(alpha: .085) : Colors.transparent,
             child: Row(
               children: [
-                SizedBox(
+                Container(
                   width: 28,
+                  height: double.infinity,
+                  decoration: BoxDecoration(
+                    border: Border(
+                      left: BorderSide(
+                        color: active
+                            ? accent.withValues(alpha: .9)
+                            : tokens.border,
+                        width: 1.2,
+                      ),
+                    ),
+                  ),
+                  alignment: Alignment.center,
                   child: active
                       ? PlayingEqualizer(
                           animate: playing,
@@ -715,7 +1241,7 @@ class FavoriteTrackRow extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(10),
                   child: ArtworkImage(
                     uri: track.coverAsset,
                     width: 52,
@@ -1973,7 +2499,8 @@ class FavoriteCollectionView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tokens = context.musicThemeTokens;
-    final accent = favoriteCollectionAccentFor(theme.brightness);
+    final backstage = MestingBackstage.colorsOf(context);
+    final accent = backstage.signal;
     return Theme(
       data: theme.copyWith(
         colorScheme: theme.colorScheme.copyWith(
@@ -1985,39 +2512,91 @@ class FavoriteCollectionView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _FavoritesHero(tracks: tracks, onPlayAll: onPlayAll),
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 3),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '收藏曲目',
-                  style: TextStyle(
-                    color: tokens.textPrimary,
-                    fontSize: 19,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -.4,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  key: const ValueKey('favorite-track-count'),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: .10),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    '${tracks.length}',
-                    style: TextStyle(
-                      color: accent,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
+                Row(
+                  children: [
+                    Text(
+                      '收藏曲目',
+                      style: TextStyle(
+                        color: tokens.textPrimary,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -.4,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Container(
+                      key: const ValueKey('favorite-track-count'),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: .16),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: Text(
+                        '${tracks.length}',
+                        style: TextStyle(
+                          color: accent,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '按最近添加',
+                      style: TextStyle(
+                        color: tokens.textMuted,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Text(
+                      '收藏筛选',
+                      style: TextStyle(
+                        color: backstage.mustard,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const Spacer(),
+                    for (final label in const ['全部', '歌曲', '专辑'])
+                      Padding(
+                        padding: const EdgeInsets.only(left: 22),
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            color: label == '全部'
+                                ? backstage.signal
+                                : tokens.textSecondary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            decoration: label == '全部'
+                                ? TextDecoration.underline
+                                : null,
+                            decorationColor: backstage.signal,
+                            decorationThickness: 2,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '按时间收录，每一次心动都有位置',
+                  style: TextStyle(color: tokens.textMuted, fontSize: 9),
                 ),
               ],
             ),
@@ -2030,30 +2609,119 @@ class FavoriteCollectionView extends StatelessWidget {
               key: const ValueKey('favorite-track-list-liquid-glass'),
               borderRadius: BorderRadius.circular(26),
               blurSigma: 24,
-              child: Column(
+              showTopHighlight: false,
+              showDecorativeGlow: false,
+              surfaceColor: Colors.transparent,
+              child: Stack(
                 key: const ValueKey('favorite-track-list'),
                 children: [
-                  for (var index = 0; index < tracks.length; index++) ...[
-                    FavoriteTrackRow(
-                      track: tracks[index],
-                      index: index,
-                      active: currentTrackId == tracks[index].id,
-                      playing: playing,
-                      onPlay: () => onPlayTrack(tracks[index]),
-                      onAdd: () => onAddTrack(tracks[index]),
-                    ),
-                    if (index != tracks.length - 1)
-                      Divider(
-                        height: 1,
-                        indent: 48,
-                        endIndent: 12,
-                        color: accent.withValues(alpha: .09),
-                      ),
-                  ],
+                  Positioned(
+                    left: 26,
+                    top: 18,
+                    bottom: 18,
+                    child: Container(width: 1.5, color: backstage.cobalt),
+                  ),
+                  Column(
+                    children: [
+                      for (var index = 0; index < tracks.length; index++) ...[
+                        FavoriteTrackRow(
+                          track: tracks[index],
+                          index: index,
+                          active: currentTrackId == tracks[index].id,
+                          playing: playing,
+                          onPlay: () => onPlayTrack(tracks[index]),
+                          onAdd: () => onAddTrack(tracks[index]),
+                        ),
+                        if (index != tracks.length - 1)
+                          Divider(
+                            height: 1,
+                            indent: 52,
+                            endIndent: 12,
+                            color: backstage.line,
+                          ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ),
+          if (tracks.isNotEmpty &&
+              MediaQuery.sizeOf(context).height >= 700) ...[
+            const SizedBox(height: 20),
+            _FavoriteArtistsStrip(
+              tracks: tracks.take(4).toList(growable: false),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _FavoriteArtistsStrip extends StatelessWidget {
+  const _FavoriteArtistsStrip({required this.tracks});
+
+  final List<Track> tracks;
+
+  @override
+  Widget build(BuildContext context) {
+    final backstage = MestingBackstage.colorsOf(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: backstage.dark
+            ? const Color(0xFF082E61)
+            : const Color(0xFF174B8C),
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: backstage.mustard.withValues(alpha: .62)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 13, 16, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '喜欢的艺人',
+              style: TextStyle(
+                color: backstage.onAccent,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 13),
+            Row(
+              children: [
+                for (var index = 0; index < tracks.length; index++) ...[
+                  Expanded(
+                    child: Column(
+                      children: [
+                        ClipOval(
+                          child: ArtworkImage(
+                            uri: tracks[index].coverAsset,
+                            width: 58,
+                            height: 58,
+                            decodeWidth: favoriteArtworkDecodeWidth,
+                          ),
+                        ),
+                        const SizedBox(height: 7),
+                        Text(
+                          tracks[index].artist,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: backstage.onAccent,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (index != tracks.length - 1) const SizedBox(width: 10),
+                ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2067,205 +2735,347 @@ class _FavoritesHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final foreground = dark ? const Color(0xFFF5F6FA) : const Color(0xFF20242D);
-    final secondary = dark ? const Color(0xFFC3CAD7) : const Color(0xFF656E7C);
-    final accent = favoriteCollectionAccentFor(Theme.of(context).brightness);
+    final backstage = MestingBackstage.colorsOf(context);
+    final secondary = backstage.boneMuted;
     final subtitle = tracks.isEmpty ? '从第一首心动开始' : '${tracks.length} 首收藏';
+    final compact = MediaQuery.sizeOf(context).height < 700;
     return LiquidGlassSurface(
       key: const ValueKey('favorites-collection-hero'),
       borderRadius: BorderRadius.circular(30),
       blurSigma: 24,
+      showTopHighlight: false,
+      showDecorativeGlow: false,
+      surfaceColor: backstage.surface,
       child: SizedBox(
-        height: 210,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                accent.withValues(alpha: dark ? .055 : .075),
-                Colors.transparent,
-                accent.withValues(alpha: dark ? .035 : .045),
-              ],
-              stops: const [0, .56, 1],
-            ),
-          ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final artworkWidth = constraints.maxWidth < 330 ? 102.0 : 120.0;
-              return Stack(
-                children: [
-                  Positioned(
-                    left: 0,
-                    top: 28,
-                    bottom: 28,
-                    child: Container(
-                      width: 4,
-                      decoration: BoxDecoration(
-                        color: accent,
-                        borderRadius: const BorderRadius.horizontal(
-                          right: Radius.circular(99),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    left: -34,
-                    bottom: -48,
-                    child: Icon(
-                      Icons.favorite_border_rounded,
-                      size: 142,
-                      color: accent.withValues(alpha: dark ? .045 : .055),
-                    ),
-                  ),
-                  Positioned(
-                    right: -54,
-                    top: -58,
-                    child: Container(
-                      width: 176,
-                      height: 176,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: accent.withValues(alpha: dark ? .10 : .08),
-                          width: 24,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 36,
-                    right: 15,
-                    bottom: 28,
-                    width: artworkWidth,
-                    child: _FavoriteArtworkStack(tracks: tracks),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(22, 20, artworkWidth + 21, 18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          key: const ValueKey(
-                            'favorites-private-archive-label',
-                          ),
-                          padding: const EdgeInsets.fromLTRB(8, 5, 9, 5),
-                          decoration: BoxDecoration(
-                            color: accent.withValues(alpha: dark ? .14 : .09),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: accent.withValues(alpha: dark ? .25 : .16),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.favorite_rounded,
-                                color: accent,
-                                size: 11,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'PRIVATE ARCHIVE',
-                                style: TextStyle(
-                                  color: accent,
-                                  fontSize: 7.5,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 1.15,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 15),
-                        Text(
-                          '心动收藏',
-                          style: TextStyle(
-                            color: foreground,
-                            fontSize: 25,
-                            height: 1,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -1,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '把每一首喜欢，收进自己的声音档案',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: secondary,
-                            fontSize: 9.5,
-                            height: 1.35,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const Spacer(),
-                        Row(
-                          children: [
-                            Container(
-                              key: const ValueKey('favorites-hero-track-count'),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 9,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: foreground.withValues(alpha: .065),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(
-                                subtitle,
-                                style: TextStyle(
-                                  color: secondary,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 7),
-                            SizedBox(
-                              height: 34,
-                              child: FilledButton.icon(
-                                key: const ValueKey('favorites-play-all'),
-                                onPressed: onPlayAll,
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: MestingPalette.heart,
-                                  disabledBackgroundColor: MestingPalette.heart
-                                      .withValues(alpha: .18),
-                                  foregroundColor: Colors.white,
-                                  disabledForegroundColor: secondary,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 11,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                ),
-                                icon: const Icon(
-                                  Icons.play_arrow_rounded,
-                                  size: 16,
-                                ),
-                                label: const Text(
-                                  '播放',
+        height: compact ? 236 : 360,
+        child: compact
+            ? _CompactFavoritesHero(
+                tracks: tracks,
+                subtitle: subtitle,
+                onPlayAll: onPlayAll,
+              )
+            : DecoratedBox(
+                decoration: BoxDecoration(color: backstage.surface),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '我的喜欢',
                                   style: TextStyle(
-                                    fontSize: 10,
+                                    color: backstage.bone,
+                                    fontSize: 38,
+                                    height: 1,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -2,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  key: const ValueKey(
+                                    'favorites-private-archive-label',
+                                  ),
+                                  child: Text(
+                                    'SAVED SOUNDS / ${tracks.length}',
+                                    style: TextStyle(
+                                      color: backstage.mustard,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 2,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 7),
+                                Text(
+                                  '心动收藏',
+                                  style: TextStyle(
+                                    color: backstage.bone,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.w900,
                                   ),
                                 ),
+                                Text(
+                                  '把每一首喜欢，收进自己的声音档案',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: backstage.boneMuted,
+                                    fontSize: 8,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.favorite_rounded,
+                            color: backstage.signal,
+                            size: 64,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF5B1718),
+                            borderRadius: BorderRadius.circular(9),
+                            border: Border.all(
+                              color: backstage.mustard.withValues(alpha: .66),
+                            ),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x73000000),
+                                blurRadius: 16,
+                                offset: Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(14, 12, 14, 11),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Transform.scale(
+                                    scale: 1.08,
+                                    child: _FavoriteArtworkStack(
+                                      tracks: tracks,
+                                    ),
+                                  ),
+                                ),
+                                if (tracks.length > 1) ...[
+                                  const SizedBox(width: 9),
+                                  Expanded(
+                                    child: _PinnedFavoriteCover(
+                                      track: tracks[1],
+                                    ),
+                                  ),
+                                ],
+                                if (tracks.length > 2) ...[
+                                  const SizedBox(width: 9),
+                                  Expanded(
+                                    child: _PinnedFavoriteCover(
+                                      track: tracks[2],
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Container(
+                            key: const ValueKey('favorites-hero-track-count'),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: backstage.dark
+                                  ? backstage.bone.withValues(alpha: .1)
+                                  : backstage.surfaceRaised,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              subtitle,
+                              style: TextStyle(
+                                color: secondary,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
-                          ],
-                        ),
-                      ],
+                          ),
+                          const Spacer(),
+                          SizedBox(
+                            height: 34,
+                            child: FilledButton.icon(
+                              key: const ValueKey('favorites-play-all'),
+                              onPressed: onPlayAll,
+                              style: FilledButton.styleFrom(
+                                disabledBackgroundColor: backstage.signal
+                                    .withValues(alpha: .18),
+                                backgroundColor: backstage.signal,
+                                foregroundColor: Colors.white,
+                                disabledForegroundColor: secondary,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 11,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                              ),
+                              icon: const Icon(
+                                Icons.play_arrow_rounded,
+                                size: 16,
+                              ),
+                              label: const Text(
+                                '播放全部',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+class _CompactFavoritesHero extends StatelessWidget {
+  const _CompactFavoritesHero({
+    required this.tracks,
+    required this.subtitle,
+    required this.onPlayAll,
+  });
+
+  final List<Track> tracks;
+  final String subtitle;
+  final VoidCallback? onPlayAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final backstage = MestingBackstage.colorsOf(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(22, 22, 20, 20),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '心动收藏',
+                  style: TextStyle(
+                    color: backstage.bone,
+                    fontSize: 25,
+                    height: 1,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '把每一首喜欢，收进自己的声音档案',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: backstage.boneMuted,
+                    fontSize: 9.5,
+                    height: 1.35,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: backstage.boneMuted,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 9),
+                SizedBox(
+                  height: 34,
+                  child: FilledButton.icon(
+                    key: const ValueKey('favorites-play-all'),
+                    onPressed: onPlayAll,
+                    icon: const Icon(Icons.play_arrow_rounded, size: 16),
+                    label: const Text('播放全部'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          SizedBox(
+            width: 136,
+            child: Column(
+              children: [
+                Container(
+                  key: const ValueKey('favorites-private-archive-label'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: backstage.signal,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Text(
+                    'PRIVATE ARCHIVE',
+                    style: TextStyle(
+                      color: backstage.onAccent,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
-                ],
-              );
-            },
+                ),
+                const SizedBox(height: 6),
+                Expanded(child: _FavoriteArtworkStack(tracks: tracks)),
+                Container(
+                  key: const ValueKey('favorites-hero-track-count'),
+                  width: 1,
+                  height: 1,
+                  color: Colors.transparent,
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PinnedFavoriteCover extends StatelessWidget {
+  const _PinnedFavoriteCover({required this.track});
+
+  final Track track;
+
+  @override
+  Widget build(BuildContext context) {
+    final backstage = MestingBackstage.colorsOf(context);
+    return Transform.rotate(
+      angle: .035,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(5),
+              child: ArtworkImage(
+                uri: track.coverAsset,
+                fit: BoxFit.cover,
+                decodeWidth: favoriteArtworkDecodeWidth,
+              ),
+            ),
+          ),
+          Positioned(
+            right: -4,
+            top: -6,
+            child: Icon(
+              Icons.push_pin_rounded,
+              color: backstage.signal,
+              size: 20,
+            ),
+          ),
+        ],
       ),
     );
   }

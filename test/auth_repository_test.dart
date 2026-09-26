@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -87,6 +88,126 @@ void main() {
       expect(store.remembered, isNull);
     },
   );
+
+  group('custom HTTP account avatar', () {
+    late Directory temporaryDirectory;
+
+    setUp(() async {
+      FlutterSecureStorage.setMockInitialValues({});
+      temporaryDirectory = await Directory.systemTemp.createTemp(
+        'mesting_http_avatar_test_',
+      );
+    });
+
+    tearDown(() async {
+      if (temporaryDirectory.existsSync()) {
+        await temporaryDirectory.delete(recursive: true);
+      }
+    });
+
+    test(
+      'keeps a private local avatar while persisting the remote URL',
+      () async {
+        Map<String, Object?>? profilePatch;
+        final client = MockClient((request) async {
+          if (request.url.path == '/v1/auth/email/login') {
+            return http.Response(
+              jsonEncode({
+                'data': {
+                  'user': {
+                    'uid': 'listener-1',
+                    'nickname': 'Mest',
+                    'bio': '',
+                    'avatar_url': null,
+                  },
+                  'access_token': 'access-token',
+                  'refresh_token': 'refresh-token',
+                  'expires_at': '2099-01-01T00:00:00.000Z',
+                },
+              }),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          if (request.url.path == '/v1/me/avatar') {
+            expect(request.method, 'POST');
+            expect(request.headers['authorization'], 'Bearer access-token');
+            return http.Response(
+              jsonEncode({
+                'data': {
+                  'avatar_url':
+                      'http://localhost:8080/media/avatars/listener-1/new.png',
+                },
+              }),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          if (request.url.path == '/v1/me') {
+            expect(request.method, 'PATCH');
+            profilePatch = jsonDecode(request.body) as Map<String, Object?>;
+            return http.Response(
+              jsonEncode({
+                'data': {
+                  'user': {
+                    'uid': 'listener-1',
+                    'nickname': 'Mesting',
+                    'bio': '喜欢音乐',
+                    'avatar_url': profilePatch!['avatar_url'],
+                  },
+                },
+              }),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('not found', 404);
+        });
+        final repository = HttpAuthRepository(
+          baseUrl: 'https://auth.example.test',
+          sessionStore: SessionStore(),
+          client: client,
+          avatarDirectoryProvider: () async => temporaryDirectory,
+        );
+        await repository.signInWithEmail(
+          email: 'listener@example.test',
+          password: 'StrongPassword123',
+        );
+        final source = File(
+          '${temporaryDirectory.path}${Platform.pathSeparator}picked.png',
+        );
+        await source.writeAsBytes(const [137, 80, 78, 71]);
+
+        final updated = await repository.updateProfile(
+          nickname: 'Mesting',
+          bio: '喜欢音乐',
+          avatarPath: source.path,
+        );
+
+        const remoteUrl =
+            'https://auth.example.test/media/avatars/listener-1/new.png';
+        expect(profilePatch!['avatar_url'], remoteUrl);
+        expect(updated.user.avatarCloudId, remoteUrl);
+        expect(updated.user.avatarUrl, isNot(source.path));
+        expect(updated.user.avatarUrl, isNot(remoteUrl));
+        expect(File(updated.user.avatarUrl!).existsSync(), isTrue);
+
+        await repository.signOut();
+        final signedInAgain =
+            await HttpAuthRepository(
+              baseUrl: 'https://auth.example.test',
+              sessionStore: SessionStore(),
+              client: client,
+              avatarDirectoryProvider: () async => temporaryDirectory,
+            ).signInWithEmail(
+              email: 'listener@example.test',
+              password: 'StrongPassword123',
+            );
+        expect(signedInAgain.user.avatarUrl, updated.user.avatarUrl);
+        expect(signedInAgain.user.avatarCloudId, remoteUrl);
+      },
+    );
+  });
 
   group('local preview account', () {
     late SharedPreferences preferences;

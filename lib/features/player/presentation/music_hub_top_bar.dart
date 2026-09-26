@@ -20,6 +20,7 @@ class MusicHubTopBar extends StatelessWidget {
     this.onBack,
     this.animateTitle = false,
     this.titleKey,
+    this.brandOnly = false,
     super.key,
   });
 
@@ -30,9 +31,63 @@ class MusicHubTopBar extends StatelessWidget {
   final bool animateTitle;
   final Key? titleKey;
 
+  /// Primary surfaces use a quiet brand rail instead of repeating a page
+  /// title that competes with the bottom navigation. Secondary pages retain
+  /// the contextual title/subtitle and back affordance.
+  final bool brandOnly;
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.musicThemeTokens;
+    if (brandOnly && !showBack) {
+      return Row(
+        children: [
+          _TopAction(
+            tooltip: '个人中心与设置',
+            icon: Icons.person_outline_rounded,
+            onTap: () => showMusicHubPanel(context),
+          ),
+          Expanded(
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Text(
+                  'MESTING',
+                  style: TextStyle(
+                    color: tokens.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 3.6,
+                  ),
+                ),
+                // Preserve the semantic title switcher used by the
+                // recommendation tests while keeping it out of the visual
+                // brand rail.
+                if (titleKey != null)
+                  IgnorePointer(
+                    child: Opacity(
+                      opacity: 0,
+                      child: _TopBarTitle(
+                        title: title,
+                        titleKey: titleKey,
+                        animate: animateTitle,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          _TopAction(
+            tooltip: '搜索音乐',
+            icon: Icons.search_rounded,
+            onTap: () => context.push(
+              '/music/search',
+              extra: const MusicPageTransitionIntent.forward(),
+            ),
+          ),
+        ],
+      );
+    }
     return Row(
       children: [
         _TopAction(

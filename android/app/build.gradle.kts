@@ -43,6 +43,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            // The internal test app must coexist with the stable release on
+            // a tester's phone. Its version stream and update feed are kept
+            // separate by the build command's Dart defines.
+            applicationIdSuffix = ".beta"
+        }
         release {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.

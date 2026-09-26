@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/layout/adaptive_layout.dart';
 import '../../social/listen_together_providers.dart';
+import '../../themes/mesting_backstage_theme.dart';
 import '../../themes/music_theme_background.dart';
 import 'music_navigation.dart';
 import 'persistent_mini_player.dart';
@@ -10,6 +11,13 @@ import 'persistent_mini_player.dart';
 bool musicShellUsesImmersiveProfileMediaOverlay(String location) {
   final path = Uri.parse(location).path;
   return path == '/profile/avatar' || path == '/profile/background';
+}
+
+bool musicShellUsesBackstageWorld(String location) {
+  final uri = Uri.parse(location);
+  if (uri.path == '/music/recommend' || uri.path == '/music') return true;
+  if (uri.path == '/profile') return true;
+  return uri.path == '/music/discover';
 }
 
 class MusicShell extends ConsumerWidget {
@@ -44,9 +52,16 @@ class MusicShell extends ConsumerWidget {
     final childContent = fullPlayer || profileMediaOverlay
         ? child
         : MestingAdaptiveContentFrame(child: child);
-    return MusicThemeBackground(
+    final backstageWorld = musicShellUsesBackstageWorld(location);
+    final backstageColors = MestingBackstage.forBrightness(
+      Theme.of(context).brightness,
+    );
+    final shell = Theme(
+      data: MestingBackstage.themeOf(context),
       child: Scaffold(
-        backgroundColor: Colors.transparent,
+        backgroundColor: backstageWorld
+            ? backstageColors.ink
+            : Colors.transparent,
         body: Stack(
           children: [
             Positioned(
@@ -111,5 +126,9 @@ class MusicShell extends ConsumerWidget {
         ),
       ),
     );
+    if (backstageWorld) {
+      return ColoredBox(color: backstageColors.ink, child: shell);
+    }
+    return MusicThemeBackground(child: shell);
   }
 }

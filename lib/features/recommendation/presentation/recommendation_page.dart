@@ -4,6 +4,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iconoir_flutter/iconoir_flutter.dart'
+    show Eye, HalfMoon, Leaf, Metro;
 
 import '../../../core/audio/playback_providers.dart';
 import '../../../shared/layout/adaptive_layout.dart';
@@ -16,6 +18,7 @@ import '../../library/library_providers.dart';
 import '../../player/presentation/music_hub_top_bar.dart';
 import '../../search/search_providers.dart';
 import '../../themes/mesting_palette.dart';
+import '../../themes/mesting_backstage_theme.dart';
 import '../../themes/music_theme_preset.dart';
 import '../../themes/music_theme_tokens.dart';
 import '../../themes/theme_controller.dart';
@@ -113,6 +116,7 @@ class _RecommendationPageState extends ConsumerState<RecommendationPage>
     final bottomClearance = mestingMusicPageBottomClearanceForWidth(
       MediaQuery.sizeOf(context).width,
     );
+    final backstage = Theme.of(context).brightness == Brightness.dark;
 
     return CustomScrollView(
       key: const PageStorageKey('recommendation-page'),
@@ -130,16 +134,24 @@ class _RecommendationPageState extends ConsumerState<RecommendationPage>
                 onPlay: () => _playQueue(dailyTracks),
               ),
               const SizedBox(height: 14),
-              _DailyRecommendationEntry(
-                now: now,
-                trackCount: dailyTracks.length,
-                onTap: () => context.push('/music?view=daily'),
-              ),
+              if (backstage)
+                _BackstageNextUp(
+                  tracks: dailyTracks,
+                  onOpenDaily: () => context.push('/music?view=daily'),
+                  onPlay: (index) =>
+                      _playTrack(dailyTracks[index], dailyTracks),
+                )
+              else
+                _DailyRecommendationEntry(
+                  now: now,
+                  trackCount: dailyTracks.length,
+                  onTap: () => context.push('/music?view=daily'),
+                ),
               const SizedBox(height: 28),
-              const _SectionHeading(
-                eyebrow: 'MATCH YOUR MOMENT',
-                title: '现在适合听什么',
-                subtitle: '不用搜索，选一个此刻的状态',
+              _SectionHeading(
+                eyebrow: backstage ? 'STATE PASSES' : 'MATCH YOUR MOMENT',
+                title: backstage ? '按状态入场' : '现在适合听什么',
+                subtitle: backstage ? '四张状态票，直接进入此刻' : '不用搜索，选一个此刻的状态',
               ),
               const SizedBox(height: 12),
               const RepaintBoundary(
@@ -148,9 +160,9 @@ class _RecommendationPageState extends ConsumerState<RecommendationPage>
               ),
               const SizedBox(height: 28),
               _SectionHeading(
-                eyebrow: 'QUICK START',
-                title: '随手点一首',
-                subtitle: '从熟悉的旋律开始今天',
+                eyebrow: backstage ? 'COVER WALL' : 'QUICK START',
+                title: backstage ? '封面墙' : '随手点一首',
+                subtitle: backstage ? '随手点一首，从一张封面开始' : '从熟悉的旋律开始今天',
                 actionLabel: '播放全部',
                 onAction: () => _playQueue(dailyTracks),
               ),
@@ -159,66 +171,85 @@ class _RecommendationPageState extends ConsumerState<RecommendationPage>
                 tracks: dailyTracks.take(5).toList(growable: false),
                 onPlay: (index) => _playTrack(dailyTracks[index], dailyTracks),
               ),
-              const SizedBox(height: 28),
-              _SectionHeading(
-                eyebrow: 'MADE FOR YOU',
-                title: '猜你喜欢',
-                subtitle: '从不同场景里挑一些新鲜感',
-                actionLabel: '换一批',
-                actionIconTurns: _refreshAnimationTurns.toDouble(),
-                onAction: _changeRecommendationBatch,
-              ),
-              const SizedBox(height: 12),
-              AnimatedSwitcher(
-                key: const ValueKey('recommendation-grid-switcher'),
-                duration: const Duration(milliseconds: 520),
-                reverseDuration: const Duration(milliseconds: 520),
-                switchInCurve: Curves.linear,
-                switchOutCurve: Curves.linear,
-                transitionBuilder: (child, animation) {
-                  final gridKey = (child.key as ValueKey<String>).value;
-                  // Old and new glass cards must not remain readable at the
-                  // same time: their borders and shadows otherwise look like
-                  // a duplicated card layer. Keep only a tiny hand-off window.
-                  final opacity = CurvedAnimation(
-                    parent: animation,
-                    curve: const Interval(.46, 1, curve: Curves.easeOutCubic),
-                    reverseCurve: const Interval(
-                      .50,
-                      1,
-                      curve: Curves.easeOutCubic,
-                    ),
-                  );
-                  final movement = CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOutCubic,
-                    reverseCurve: Curves.easeInCubic,
-                  );
-                  final offset = Tween<Offset>(
-                    begin: const Offset(0, .032),
-                    end: Offset.zero,
-                  ).animate(movement);
-                  final scale = Tween<double>(
-                    begin: .972,
-                    end: 1,
-                  ).animate(movement);
-                  return FadeTransition(
-                    key: ValueKey('recommendation-grid-fade-$gridKey'),
-                    opacity: opacity,
-                    child: SlideTransition(
-                      position: offset,
-                      child: ScaleTransition(
-                        scale: scale,
-                        child: RepaintBoundary(child: child),
-                      ),
-                    ),
-                  );
-                },
-                child: _RecommendationGrid(
-                  key: ValueKey('recommendation-grid-$_recommendationBatch'),
-                  playlists: recommendedPlaylists,
-                  theme: theme,
+              if (backstage) ...[
+                const SizedBox(height: 28),
+                _BackstageWeeklySetlist(
+                  tracks: dailyTracks.take(5).toList(growable: false),
+                  onPlay: (index) =>
+                      _playTrack(dailyTracks[index], dailyTracks),
                 ),
+              ],
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 28),
+                  _SectionHeading(
+                    eyebrow: backstage ? 'MORE SELECTIONS' : 'MADE FOR YOU',
+                    title: '猜你喜欢',
+                    subtitle: '从不同场景里挑一些新鲜感',
+                    actionLabel: '换一批',
+                    actionIconTurns: _refreshAnimationTurns.toDouble(),
+                    onAction: _changeRecommendationBatch,
+                  ),
+                  const SizedBox(height: 12),
+                  AnimatedSwitcher(
+                    key: const ValueKey('recommendation-grid-switcher'),
+                    duration: const Duration(milliseconds: 520),
+                    reverseDuration: const Duration(milliseconds: 520),
+                    switchInCurve: Curves.linear,
+                    switchOutCurve: Curves.linear,
+                    transitionBuilder: (child, animation) {
+                      final gridKey = (child.key as ValueKey<String>).value;
+                      // Old and new glass cards must not remain readable at the
+                      // same time: their borders and shadows otherwise look like
+                      // a duplicated card layer. Keep only a tiny hand-off window.
+                      final opacity = CurvedAnimation(
+                        parent: animation,
+                        curve: const Interval(
+                          .46,
+                          1,
+                          curve: Curves.easeOutCubic,
+                        ),
+                        reverseCurve: const Interval(
+                          .50,
+                          1,
+                          curve: Curves.easeOutCubic,
+                        ),
+                      );
+                      final movement = CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeOutCubic,
+                        reverseCurve: Curves.easeInCubic,
+                      );
+                      final offset = Tween<Offset>(
+                        begin: const Offset(0, .032),
+                        end: Offset.zero,
+                      ).animate(movement);
+                      final scale = Tween<double>(
+                        begin: .972,
+                        end: 1,
+                      ).animate(movement);
+                      return FadeTransition(
+                        key: ValueKey('recommendation-grid-fade-$gridKey'),
+                        opacity: opacity,
+                        child: SlideTransition(
+                          position: offset,
+                          child: ScaleTransition(
+                            scale: scale,
+                            child: RepaintBoundary(child: child),
+                          ),
+                        ),
+                      );
+                    },
+                    child: _RecommendationGrid(
+                      key: ValueKey(
+                        'recommendation-grid-$_recommendationBatch',
+                      ),
+                      playlists: recommendedPlaylists,
+                      theme: theme,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -378,6 +409,7 @@ class _RecommendationHeader extends StatelessWidget {
         'recommendation-greeting-${now.year}-${now.month}-${now.day}-${now.hour}-${now.minute ~/ 3}',
       ),
       animateTitle: true,
+      brandOnly: true,
       subtitle: 'FOR YOU  ·  ${now.month}月${now.day}日  ·  先从一首喜欢的歌开始',
     );
   }
@@ -397,6 +429,11 @@ class _DailyMixHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = dailyMixHeroPaletteFor(accent);
+    final backstage = Theme.of(context).brightness == Brightness.dark;
+    final covers = <String>{
+      ...tracks.map((track) => track.coverAsset),
+      ...curatedPlaylists.take(3).map((playlist) => playlist.coverAsset),
+    }.where((cover) => cover.trim().isNotEmpty).toList(growable: false);
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
       duration: const Duration(milliseconds: 620),
@@ -406,108 +443,181 @@ class _DailyMixHero extends StatelessWidget {
         child: Opacity(opacity: value, child: child),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(backstage ? 15 : 28),
         child: SizedBox(
-          height: 226,
+          height: backstage ? 284 : 226,
           child: Stack(
             fit: StackFit.expand,
             children: [
               DecoratedBox(
                 key: const ValueKey('daily-mix-hero-background'),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [palette.backgroundStart, palette.backgroundEnd],
-                  ),
-                ),
+                decoration: const BoxDecoration(color: Color(0xFF141719)),
               ),
-              if (tracks.isNotEmpty)
-                Positioned(
-                  right: -25,
-                  top: -16,
-                  child: _TiltedArtwork(track: tracks[0], size: 158, angle: .1),
-                ),
-              if (tracks.length > 1)
-                Positioned(
-                  right: 71,
-                  bottom: -35,
-                  child: _TiltedArtwork(
-                    track: tracks[1],
-                    size: 112,
-                    angle: -.13,
-                  ),
-                ),
               Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [
-                        const Color(0xD916101F),
-                        const Color(0x8A16101F),
-                        Colors.transparent,
-                      ],
-                      stops: const [0, .53, 1],
+                child: Padding(
+                  padding: EdgeInsets.all(backstage ? 5 : 8),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0E8DB),
+                      borderRadius: BorderRadius.circular(backstage ? 11 : 13),
+                      border: Border.all(color: const Color(0xFFB9AD9C)),
                     ),
                   ),
                 ),
               ),
+              Positioned(
+                left: backstage ? 5 : 8,
+                top: backstage ? 5 : 8,
+                bottom: backstage ? 5 : 8,
+                width: backstage ? 72 : 68,
+                child: DecoratedBox(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF2057BE),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(10),
+                      bottomLeft: Radius.circular(10),
+                    ),
+                  ),
+                  child: backstage
+                      ? const Center(
+                          child: RotatedBox(
+                            quarterTurns: 3,
+                            child: Text(
+                              '20:24',
+                              style: TextStyle(
+                                color: Color(0xFFF0E8DB),
+                                fontSize: 39,
+                                height: .9,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -1.8,
+                              ),
+                            ),
+                          ),
+                        )
+                      : const RotatedBox(
+                          quarterTurns: 3,
+                          child: Center(
+                            child: Text(
+                              'MESTING SELECTS',
+                              style: TextStyle(
+                                color: Color(0xFFF0E8DB),
+                                fontSize: 9,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.4,
+                              ),
+                            ),
+                          ),
+                        ),
+                ),
+              ),
+              if (covers.isNotEmpty)
+                Positioned(
+                  right: backstage ? 28 : 28,
+                  top: backstage ? 94 : 35,
+                  child: _TiltedCover(
+                    cover: covers[0],
+                    size: backstage ? 124 : 116,
+                    angle: .08,
+                  ),
+                ),
+              if (covers.length > 1)
+                Positioned(
+                  right: backstage ? 125 : 108,
+                  bottom: backstage ? 38 : 22,
+                  child: _TiltedCover(
+                    cover: covers[1],
+                    size: backstage ? 92 : 84,
+                    angle: -.1,
+                  ),
+                ),
+              if (backstage && covers.length > 2)
+                Positioned(
+                  right: 84,
+                  top: 126,
+                  child: _TiltedCover(cover: covers[2], size: 102, angle: .015),
+                ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 16, 18),
+                padding: EdgeInsets.fromLTRB(
+                  backstage ? 92 : 88,
+                  backstage ? 21 : 18,
+                  backstage ? 22 : 132,
+                  16,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const _HeroTag(),
-                    const Spacer(),
-                    const Text(
-                      '今日私人混合',
+                    if (!backstage) const _HeroTag(),
+                    if (!backstage) const SizedBox(height: 9),
+                    Text(
+                      backstage ? '今晚的演出单' : '今日私人混合',
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 27,
+                        color: const Color(0xFF171A1B),
+                        fontSize: backstage ? 31 : 23,
                         height: 1,
                         fontWeight: FontWeight.w900,
+                        letterSpacing: backstage ? -1.15 : 0,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      tracks.isEmpty
+                      backstage
+                          ? '今日私人混合'
+                          : tracks.isEmpty
                           ? '连接在线曲库后，为你生成今日歌单'
                           : '${tracks.length} 首偏爱与新鲜风格 · 随机开启今天',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xD9FFFFFF),
-                        fontSize: 12,
+                        color: Color(0xFF514A42),
+                        fontSize: 10,
+                        height: 1.35,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      key: const ValueKey('daily-mix-play'),
-                      onPressed: tracks.isEmpty ? null : onPlay,
-                      icon: const Icon(Icons.play_arrow_rounded, size: 21),
-                      label: const Text('开始播放'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: palette.playButton,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: palette.playButton.withValues(
-                          alpha: .38,
-                        ),
-                        disabledForegroundColor: Colors.white54,
-                        elevation: 0,
-                        side: BorderSide(
-                          color: Colors.white.withValues(alpha: .16),
-                        ),
-                        minimumSize: const Size(124, 44),
-                        textStyle: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
+                    const Spacer(),
+                    Align(
+                      alignment: backstage
+                          ? Alignment.bottomRight
+                          : Alignment.bottomLeft,
+                      child: FilledButton.icon(
+                        key: const ValueKey('daily-mix-play'),
+                        onPressed: tracks.isEmpty ? null : onPlay,
+                        icon: const Icon(Icons.play_arrow_rounded, size: 21),
+                        label: const Text('开始播放'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: palette.playButton,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: palette.playButton
+                              .withValues(alpha: .38),
+                          disabledForegroundColor: Colors.white54,
+                          elevation: 0,
+                          minimumSize: Size(backstage ? 48 : 108, 38),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
+              if (backstage)
+                for (final y in const [34.0, 76.0, 118.0, 160.0, 202.0, 244.0])
+                  Positioned(
+                    right: -8,
+                    top: y,
+                    child: const DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Color(0xFF141719),
+                        shape: BoxShape.circle,
+                      ),
+                      child: SizedBox.square(dimension: 16),
+                    ),
+                  ),
             ],
           ),
         ),
@@ -531,20 +641,20 @@ class DailyMixHeroPalette {
 
 DailyMixHeroPalette dailyMixHeroPaletteFor(Color accent) {
   return DailyMixHeroPalette(
-    backgroundStart: Color.lerp(accent, const Color(0xFF522D4A), .74)!,
-    backgroundEnd: Color.lerp(accent, const Color(0xFF1D1725), .88)!,
+    backgroundStart: Color.lerp(accent, const Color(0xFF1F3858), .78)!,
+    backgroundEnd: Color.lerp(accent, const Color(0xFF16191B), .9)!,
     playButton: MestingPalette.heart,
   );
 }
 
-class _TiltedArtwork extends StatelessWidget {
-  const _TiltedArtwork({
-    required this.track,
+class _TiltedCover extends StatelessWidget {
+  const _TiltedCover({
+    required this.cover,
     required this.size,
     required this.angle,
   });
 
-  final Track track;
+  final String cover;
   final double size;
   final double angle;
 
@@ -555,19 +665,22 @@ class _TiltedArtwork extends StatelessWidget {
       child: Container(
         width: size,
         height: size,
-        padding: const EdgeInsets.all(5),
+        padding: const EdgeInsets.all(3),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: .2),
-          borderRadius: BorderRadius.circular(25),
-          border: Border.all(color: Colors.white.withValues(alpha: .34)),
+          color: const Color(0xFFF3EBDD),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFF292725), width: 1.1),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x4D16191B),
+              blurRadius: 8,
+              offset: Offset(0, 4),
+            ),
+          ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: ArtworkImage(
-            uri: track.coverAsset,
-            width: size - 10,
-            height: size - 10,
-          ),
+          borderRadius: BorderRadius.circular(7),
+          child: ArtworkImage(uri: cover, width: size - 6, height: size - 6),
         ),
       ),
     );
@@ -581,16 +694,15 @@ class _HeroTag extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: .16),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: .25)),
+        color: const Color(0xFF2057BE),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: const Padding(
         padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         child: Text(
           'JUST FOR YOU',
           style: TextStyle(
-            color: Colors.white,
+            color: Color(0xFFF0E8DB),
             fontSize: 9,
             fontWeight: FontWeight.w900,
             letterSpacing: 1.3,
@@ -685,10 +797,10 @@ class _DailyRecommendationEntry extends StatelessWidget {
     );
     return GlassCard(
       padding: EdgeInsets.zero,
-      borderRadius: 22,
+      borderRadius: 12,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(13),
           child: Row(
@@ -700,7 +812,7 @@ class _DailyRecommendationEntry extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: badgePalette.background,
-                  borderRadius: BorderRadius.circular(17),
+                  borderRadius: BorderRadius.circular(9),
                   border: Border.all(color: badgePalette.border),
                   boxShadow: [
                     BoxShadow(
@@ -771,6 +883,332 @@ class _DailyRecommendationEntry extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _BackstageNextUp extends StatelessWidget {
+  const _BackstageNextUp({
+    required this.tracks,
+    required this.onOpenDaily,
+    required this.onPlay,
+  });
+
+  final List<Track> tracks;
+  final VoidCallback onOpenDaily;
+  final ValueChanged<int> onPlay;
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = tracks.take(3).toList(growable: false);
+    final fallbacks = curatedPlaylists.take(3).toList(growable: false);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: MestingBackstage.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MestingBackstage.line),
+      ),
+      child: SizedBox(
+        height: 158,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            InkWell(
+              onTap: onOpenDaily,
+              child: Container(
+                width: 62,
+                decoration: const BoxDecoration(
+                  color: MestingBackstage.cobalt,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(11),
+                    bottomLeft: Radius.circular(11),
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: const RotatedBox(
+                  quarterTurns: 3,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'NEXT UP',
+                        style: TextStyle(
+                          color: MestingBackstage.ink,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      SizedBox(width: 10),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        color: MestingBackstage.ink,
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: visible.isEmpty
+                  ? Column(
+                      children: [
+                        for (
+                          var index = 0;
+                          index < fallbacks.length;
+                          index++
+                        ) ...[
+                          InkWell(
+                            onTap: onOpenDaily,
+                            child: SizedBox(
+                              height: 52,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 9,
+                                ),
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 30,
+                                      child: Text(
+                                        '${index + 1}'.padLeft(2, '0'),
+                                        style: const TextStyle(
+                                          color: MestingBackstage.cobalt,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(5),
+                                      child: ArtworkImage(
+                                        uri: fallbacks[index].coverAsset,
+                                        width: 36,
+                                        height: 36,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 9),
+                                    Expanded(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            fallbacks[index].name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: MestingBackstage.bone,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                          const Text(
+                                            'Mesting精选',
+                                            style: TextStyle(
+                                              color: MestingBackstage.boneMuted,
+                                              fontSize: 9,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const Icon(
+                                      Icons.arrow_outward_rounded,
+                                      color: MestingBackstage.boneMuted,
+                                      size: 16,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (index != fallbacks.length - 1)
+                            const Divider(
+                              height: 1,
+                              color: MestingBackstage.line,
+                            ),
+                        ],
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        for (
+                          var index = 0;
+                          index < visible.length;
+                          index++
+                        ) ...[
+                          InkWell(
+                            onTap: () => onPlay(index),
+                            child: SizedBox(
+                              height: 52,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 9,
+                                ),
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 30,
+                                      child: Text(
+                                        '${index + 1}'.padLeft(2, '0'),
+                                        style: const TextStyle(
+                                          color: MestingBackstage.cobalt,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(5),
+                                      child: ArtworkImage(
+                                        uri: visible[index].coverAsset,
+                                        width: 36,
+                                        height: 36,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 9),
+                                    Expanded(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            visible[index].title,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: MestingBackstage.bone,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                          Text(
+                                            visible[index].artist,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: MestingBackstage.boneMuted,
+                                              fontSize: 9,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const Icon(
+                                      Icons.more_vert_rounded,
+                                      color: MestingBackstage.boneMuted,
+                                      size: 17,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (index != visible.length - 1)
+                            const Divider(
+                              height: 1,
+                              color: MestingBackstage.line,
+                            ),
+                        ],
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BackstageWeeklySetlist extends StatelessWidget {
+  const _BackstageWeeklySetlist({required this.tracks, required this.onPlay});
+
+  final List<Track> tracks;
+  final ValueChanged<int> onPlay;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '本周节目单',
+          style: TextStyle(
+            color: MestingBackstage.bone,
+            fontSize: 20,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 9),
+        DecoratedBox(
+          decoration: const BoxDecoration(
+            border: Border(
+              top: BorderSide(color: MestingBackstage.line),
+              bottom: BorderSide(color: MestingBackstage.line),
+            ),
+          ),
+          child: Column(
+            children: [
+              for (var index = 0; index < tracks.length; index++)
+                InkWell(
+                  onTap: () => onPlay(index),
+                  child: SizedBox(
+                    height: 42,
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 34,
+                          child: Text(
+                            '${index + 1}'.padLeft(2, '0'),
+                            style: TextStyle(
+                              color: index == 0
+                                  ? MestingBackstage.signal
+                                  : MestingBackstage.boneMuted,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            tracks[index].title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: MestingBackstage.bone,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          tracks[index].artist,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: MestingBackstage.boneMuted,
+                            fontSize: 9,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        const Icon(
+                          Icons.play_arrow_rounded,
+                          color: MestingBackstage.bone,
+                          size: 17,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -924,10 +1362,16 @@ class _MoodCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.musicThemeTokens;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final ticketColor = switch (mood.visual) {
+      _MoodVisual.commute => const Color(0xFFE9E0CD),
+      _MoodVisual.unwind => const Color(0xFF9EAD94),
+      _MoodVisual.focus => const Color(0xFFD5A62B),
+      _MoodVisual.sleep => const Color(0xFF3567B9),
+    };
     return GlassCard(
       key: ValueKey('mood-card-${mood.visual.name}'),
       padding: EdgeInsets.zero,
-      borderRadius: 20,
+      borderRadius: 12,
       color: isDark ? null : const Color(0xFFF5F6FA),
       borderColor: isDark ? null : const Color(0x3D596784),
       shadows: isDark
@@ -939,42 +1383,55 @@ class _MoodCard extends StatelessWidget {
                 offset: Offset(0, 7),
               ),
             ],
-      child: Semantics(
-        button: true,
-        label: '${mood.title}：${mood.subtitle}',
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => context.push('/music/discover/${mood.playlistId}'),
-          child: Padding(
-            padding: const EdgeInsets.all(13),
-            child: Row(
-              children: [
-                _MoodGlyph(visual: mood.visual, colors: mood.colors),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        mood.title,
-                        maxLines: 1,
-                        style: TextStyle(
-                          color: tokens.textPrimary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: isDark ? ticketColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: Semantics(
+          button: true,
+          label: '${mood.title}：${mood.subtitle}',
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => context.push('/music/discover/${mood.playlistId}'),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  _MoodGlyph(visual: mood.visual, colors: mood.colors),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          mood.title,
+                          maxLines: 1,
+                          style: TextStyle(
+                            color: isDark
+                                ? MestingBackstage.ink
+                                : tokens.textPrimary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        mood.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: tokens.textMuted, fontSize: 9),
-                      ),
-                    ],
+                        const SizedBox(height: 2),
+                        Text(
+                          mood.subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: isDark
+                                ? MestingBackstage.ink.withValues(alpha: .66)
+                                : tokens.textMuted,
+                            fontSize: 9,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -1028,16 +1485,10 @@ class _MoodGlyph extends StatelessWidget {
         padding: const EdgeInsets.all(5),
         child: RepaintBoundary(
           key: ValueKey('mood-glyph-design-v2-${visual.name}'),
-          child: CustomPaint(
+          child: _MoodStateIcon(
             key: ValueKey('mood-glyph-art-${visual.name}'),
-            painter: _MoodGlyphPainter(
-              visual: visual,
-              foreground: foreground,
-              secondary: foreground.withValues(alpha: .38),
-              primary: colors.first,
-              accent: colors.last,
-            ),
-            child: const SizedBox.expand(),
+            visual: visual,
+            color: foreground,
           ),
         ),
       ),
@@ -1045,20 +1496,15 @@ class _MoodGlyph extends StatelessWidget {
   }
 }
 
-class _MoodGlyphPainter extends CustomPainter {
-  const _MoodGlyphPainter({
+class _MoodStateIcon extends StatelessWidget {
+  const _MoodStateIcon({
+    required super.key,
     required this.visual,
-    required this.foreground,
-    required this.secondary,
-    required this.primary,
-    required this.accent,
+    required this.color,
   });
 
   final _MoodVisual visual;
-  final Color foreground;
-  final Color secondary;
-  final Color primary;
-  final Color accent;
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1231,14 +1677,6 @@ class _MoodGlyphPainter extends CustomPainter {
     canvas.drawCircle(const Offset(23, 31.3), 1.5, accentFill);
     canvas.drawCircle(const Offset(27.2, 33.6), 1, accentFill);
   }
-
-  @override
-  bool shouldRepaint(covariant _MoodGlyphPainter oldDelegate) =>
-      visual != oldDelegate.visual ||
-      foreground != oldDelegate.foreground ||
-      secondary != oldDelegate.secondary ||
-      primary != oldDelegate.primary ||
-      accent != oldDelegate.accent;
 }
 
 class _TrackRail extends StatelessWidget {
