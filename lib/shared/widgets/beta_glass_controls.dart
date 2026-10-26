@@ -4,6 +4,7 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import '../../features/experience/presentation/beta_bottom_bar.dart';
 import '../../features/themes/beta_appearance.dart';
 import 'beta_glass_action.dart';
+import '../../core/haptics/app_haptics.dart';
 
 /// Floating controls share the navigation's optical material. Each surface
 /// owns its layer: nesting glass would disable the child's refraction.
@@ -12,6 +13,8 @@ class BetaGlassButton extends StatelessWidget {
     required this.child,
     required this.onPressed,
     this.loading = false,
+    this.interactionEnabled = true,
+    this.hapticFeedback = true,
     this.label,
     this.height = 52,
     this.width,
@@ -23,7 +26,7 @@ class BetaGlassButton extends StatelessWidget {
   });
   final Widget child;
   final VoidCallback? onPressed;
-  final bool loading, accent, blue;
+  final bool loading, accent, blue, interactionEnabled, hapticFeedback;
   final String? label;
   final double height;
   final double fontSize;
@@ -34,36 +37,55 @@ class BetaGlassButton extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
     button: true,
     label: label,
-    enabled: onPressed != null && !loading,
-    child: RepaintBoundary(
-      child: GlassButton.custom(
-        onTap: onPressed ?? () {},
-        enabled: onPressed != null && !loading,
-        height: height,
-        width: width,
-        useOwnLayer: true,
-        quality: GlassQuality.premium,
-        stretch: .12,
-        settings: blue ? betaBlueActionGlass : betaMusicPillGlass(context),
-        shape: LiquidRoundedRectangle(borderRadius: height / 2),
-        child: Padding(
-          padding: width == height
-              ? EdgeInsets.zero
-              : EdgeInsets.symmetric(horizontal: horizontalPadding),
-          child: loading
-              ? BetaActivityIndicator(color: blue ? Colors.white : null)
-              : DefaultTextStyle.merge(
-                  style: TextStyle(
-                    fontSize: fontSize,
-                    fontWeight: FontWeight.w700,
-                    color: blue
-                        ? Colors.white
-                        : accent
-                        ? BetaAppearance.accent(Theme.of(context).brightness)
-                        : Theme.of(context).colorScheme.onSurface,
-                  ),
-                  child: child,
-                ),
+    enabled: interactionEnabled && onPressed != null && !loading,
+    // Blocking a sibling request is an interaction state, not a new optical
+    // material. Keep the same glass layer instead of inserting disabled opacity.
+    child: ExcludeFocus(
+      excluding: !interactionEnabled,
+      child: IgnorePointer(
+        ignoring: !interactionEnabled,
+        child: RepaintBoundary(
+          child: GlassButton.custom(
+            onTap: () {
+              if (!interactionEnabled || loading || onPressed == null) return;
+              if (hapticFeedback) {
+                appHaptic(
+                  context,
+                  blue ? AppHapticEvent.impact : AppHapticEvent.selection,
+                );
+              }
+              onPressed!();
+            },
+            enabled: onPressed != null && !loading,
+            height: height,
+            width: width,
+            useOwnLayer: true,
+            quality: GlassQuality.premium,
+            stretch: .12,
+            settings: blue ? betaBlueActionGlass : betaMusicPillGlass(context),
+            shape: LiquidRoundedRectangle(borderRadius: height / 2),
+            child: Padding(
+              padding: width == height
+                  ? EdgeInsets.zero
+                  : EdgeInsets.symmetric(horizontal: horizontalPadding),
+              child: loading
+                  ? BetaActivityIndicator(color: blue ? Colors.white : null)
+                  : DefaultTextStyle.merge(
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        fontWeight: FontWeight.w700,
+                        color: blue
+                            ? Colors.white
+                            : accent
+                            ? BetaAppearance.accent(
+                                Theme.of(context).brightness,
+                              )
+                            : Theme.of(context).colorScheme.onSurface,
+                      ),
+                      child: child,
+                    ),
+            ),
+          ),
         ),
       ),
     ),

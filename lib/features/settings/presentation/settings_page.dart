@@ -21,6 +21,7 @@ import '../../../shared/widgets/beta_glass_controls.dart';
 import '../../auth/presentation/beta_onboarding_page.dart';
 import '../../auth/presentation/beta_welcome_page.dart';
 import '../../auth/presentation/beta_sign_out_dialog.dart';
+import 'haptic_settings_page.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -41,7 +42,18 @@ class SettingsPage extends ConsumerWidget {
       physics: const BouncingScrollPhysics(),
       slivers: [
         SliverPadding(
-          padding: EdgeInsets.fromLTRB(16, topInset + 12, 16, 42),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            topInset + 12,
+            16,
+            DistributionChannel.isBeta
+                ? 210 +
+                      MediaQuery.viewPaddingOf(context).bottom +
+                      2 *
+                          (MediaQuery.textScalerOf(context).scale(24) - 24)
+                              .clamp(0, 28)
+                : 42,
+          ),
           sliver: SliverList.list(
             children: [
               const DressUpAssetWarmup(),
@@ -124,21 +136,37 @@ class SettingsPage extends ConsumerWidget {
                     const _SettingsDivider(),
                     if (DistributionChannel.isBeta)
                       _SettingsTile(
+                        key: const ValueKey('settings-haptics'),
+                        icon: Icons.vibration_rounded,
+                        iconColor: const Color(0xFF527FD3),
+                        title: '震动与触感',
+                        subtitle: '关键操作反馈、强度与体验',
+                        onTap: () =>
+                            Navigator.of(context, rootNavigator: true).push(
+                              betaEntryRoute<void>(const HapticSettingsPage()),
+                            ),
+                      ),
+                    if (DistributionChannel.isBeta) const _SettingsDivider(),
+                    if (DistributionChannel.isBeta)
+                      _SettingsTile(
                         key: const ValueKey('settings-guide'),
                         icon: Icons.auto_stories_outlined,
                         iconColor: const Color(0xFFDE5757),
                         title: '使用指南',
                         subtitle: '重新探索 Mesting Music 的操作与外观',
-                        onTap: () => Navigator.of(context).push(
-                          betaEntryRoute(
-                            Builder(
-                              builder: (guideContext) => BetaOnboardingPage(
-                                onFinish: () =>
-                                    Navigator.of(guideContext).pop(),
+                        // The tour covers the shell, including its floating
+                        // controls. System SafeArea cannot reserve app chrome.
+                        onTap: () =>
+                            Navigator.of(context, rootNavigator: true).push(
+                              betaEntryRoute(
+                                Builder(
+                                  builder: (guideContext) => BetaOnboardingPage(
+                                    onFinish: () =>
+                                        Navigator.of(guideContext).pop(),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
                       ),
                     if (ref.watch(showMestingFeaturesProvider))
                       _SettingsTile(

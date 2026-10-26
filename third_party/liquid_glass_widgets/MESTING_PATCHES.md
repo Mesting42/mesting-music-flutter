@@ -1,4 +1,17 @@
-# Mesting Beta.12 optical correction and Beta.13 editing hooks
+# Mesting Beta.12 optical correction, Beta.13 hooks and Beta.15 geometry isolation
+
+## Beta.15 navigation morph work isolation
+
+`package/lib/src/widgets/surfaces/tab_bar_searchable_layout.dart` retains the
+existing premium `AdaptiveLiquidGlassLayer` outside height animation callbacks.
+Accessory motion also reuses its optical/content subtree on both animated axes.
+The renderer, shader, quality, blur, refraction, springs, geometry targets and
+input/RTL/search contracts remain intact. Application-owned capsule content now
+receives its compact placement explicitly instead of rebuilding at every width.
+
+The host widget benchmark for one identical collapse sequence changes optical
+layer rebuilds from 14 to 1 and artwork rebuilds from 19 to 1. These are rebuild
+counts, not Android GPU timing or a guarantee of a particular device frame rate.
 
 ## Beta.13 host-owned text editing
 

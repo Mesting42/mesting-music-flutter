@@ -24,6 +24,7 @@ class _ListeningReplayPageState extends ConsumerState<ListeningReplayPage> {
   @override
   Widget build(BuildContext context) {
     final days = ref.watch(playbackDaysProvider);
+    final today = DateTime.now();
     if (_revealPending) {
       _revealPending = false;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -42,7 +43,9 @@ class _ListeningReplayPageState extends ConsumerState<ListeningReplayPage> {
       _year,
       for (final day in days.value ?? [])
         if (day.dayKey.length >= 4)
-          int.tryParse(day.dayKey.substring(0, 4)) ?? DateTime.now().year,
+          if ((int.tryParse(day.dayKey.substring(0, 4)) ?? today.year) <=
+              today.year)
+            int.tryParse(day.dayKey.substring(0, 4)) ?? today.year,
     }.toList()..sort((a, b) => b.compareTo(a));
     return PlatformStyle(
       child: _ReplayAtmosphere(
@@ -72,7 +75,15 @@ class _ListeningReplayPageState extends ConsumerState<ListeningReplayPage> {
                       ),
                   ],
                 ],
-                onSelected: (value) => setState(() => _year = int.parse(value)),
+                onSelected: (value) => setState(() {
+                  _year = int.parse(value);
+                  // Returning from December of a past year cannot select a
+                  // month that has not happened in the current year.
+                  if (_year == today.year && (_month ?? 0) > today.month) {
+                    _month = today.month;
+                  }
+                  _revealPending = true;
+                }),
                 trigger: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -90,17 +101,14 @@ class _ListeningReplayPageState extends ConsumerState<ListeningReplayPage> {
             ),
             SizedBox(
               height: 56,
-              // All 13 period chips must exist before reveal; a lazy list
+              // All available chips must exist before reveal; a lazy list
               // cannot locate an initially off-screen selected month.
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 22),
                 child: Row(
                   children: [
-                    for (final month in <int?>[
-                      null,
-                      ...List.generate(12, (i) => i + 1),
-                    ])
+                    for (final month in replayMonthsForYear(_year, today))
                       Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: ChoiceChip(

@@ -30,6 +30,40 @@ void main() {
     }
   });
 
+  testWidgets('menu grows from its trigger while keeping one optical surface', (
+    tester,
+  ) async {
+    final motion = AnimationController(
+      vsync: tester,
+      duration: betaMenuOpenDuration,
+    );
+    try {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Center(
+            child: BetaGlassMenuTransition(
+              animation: motion,
+              origin: Alignment.bottomCenter,
+              child: const SizedBox(width: 240, height: 180),
+            ),
+          ),
+        ),
+      );
+      final menu = find.byKey(const ValueKey('beta13-glass-menu-surface'));
+      final surface = tester.widget<GlassContainer>(menu);
+      expect(tester.getRect(menu).height, lessThanOrEqualTo(50));
+      motion.forward();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 90));
+      expect(identical(surface, tester.widget<GlassContainer>(menu)), true);
+      await tester.pump(betaMenuOpenDuration);
+      expect(tester.getRect(menu).height, closeTo(180, .1));
+    } finally {
+      await tester.pumpWidget(const SizedBox.shrink());
+      motion.dispose();
+    }
+  });
+
   for (final reduceMotion in [false, true]) {
     testWidgets('popover finishes closing before its action ($reduceMotion)', (
       tester,
@@ -216,7 +250,8 @@ void main() {
           find.byKey(const ValueKey('beta13-glass-menu-surface')),
         );
         expect(glass.settings!.blur, greaterThan(restingBlur!));
-        expect(glass.settings!.blur - restingBlur!, lessThanOrEqualTo(1.5));
+        expect(glass.settings!.blur, greaterThan(3));
+        expect(glass.settings!.blur - restingBlur!, lessThanOrEqualTo(3));
         expect(glass.quality, GlassQuality.premium);
         expect(tester.takeException(), isNull);
       }

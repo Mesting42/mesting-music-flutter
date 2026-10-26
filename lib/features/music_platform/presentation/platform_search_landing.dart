@@ -1,3 +1,4 @@
+import 'dart:convert';
 import '../../../shared/widgets/automatic_song_paging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,8 @@ import '../music_platform_providers.dart';
 import '../platform_recommendation_providers.dart';
 import 'platform_design.dart';
 import 'apple_hot_search.dart';
+import '../data/music_platform_api.dart';
+import '../data/platform_recommendations.dart';
 
 final platformExploreRepositoryProvider = Provider<PlatformExploreRepository>(
   (ref) => PlatformExploreRepository(ref.watch(musicPlatformApiProvider)),
@@ -34,6 +37,47 @@ class PlatformSearchLanding extends ConsumerStatefulWidget {
 }
 
 class _PlatformSearchLandingState extends ConsumerState<PlatformSearchLanding> {
+  bool _refreshing = false;
+  String? _refreshStatus;
+
+  Future<void> _refreshHotSearch() async {
+    if (_refreshing) return;
+    final previous = ref.read(platformHotSearchProvider).value;
+    final owner = ref.read(platformAccountProvider).value?.userId;
+    setState(() {
+      _refreshing = true;
+      _refreshStatus = null;
+    });
+    try {
+      final fresh = await ref.refresh(platformHotSearchProvider.future);
+      if (!mounted ||
+          ref.read(platformAccountProvider).value?.userId != owner) {
+        return;
+      }
+      // Server ranks stay authoritative: identical results are a successful
+      // refresh, not a reason to shuffle songs merely to produce movement.
+      String signature(List<PlatformHotSearchBoard> items) => jsonEncode([
+        for (final board in items) [board.name, board.keywords],
+      ]);
+      setState(
+        () => _refreshStatus =
+            previous != null && signature(previous) == signature(fresh)
+            ? '已是最新热搜'
+            : '热搜已更新',
+      );
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _refreshStatus = previous?.isNotEmpty == true
+              ? '刷新失败，已保留原榜单，请重试'
+              : '刷新失败，请重试',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final history = ref.watch(musicSearchControllerProvider).recentSearches;
@@ -72,12 +116,29 @@ class _PlatformSearchLandingState extends ConsumerState<PlatformSearchLanding> {
             const Spacer(),
             IconButton(
               tooltip: '刷新热门搜索',
-              onPressed: () => ref.invalidate(platformHotSearchProvider),
-              icon: const Icon(Icons.refresh),
+              onPressed: _refreshing ? null : _refreshHotSearch,
+              icon: _refreshing
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.refresh),
             ),
           ],
         ),
+        if (_refreshStatus != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Semantics(
+              liveRegion: true,
+              child: Text(
+                _refreshStatus!,
+                key: const ValueKey('hot-search-refresh-status'),
+              ),
+            ),
+          ),
         boards.when(
+          skipError: true,
           loading: () => const PlatformFeedbackState(loading: true),
           error: (_, _) => EditorialEmpty(
             '热搜暂时无法加载',
@@ -106,11 +167,15 @@ class _ExploreSection extends ConsumerWidget {
       .watch(platformExploreProvider(kind))
       .when(
         loading: () => const SizedBox.shrink(),
-        error: (_, _) => Padding(
+        error: (error, _) => Padding(
           padding: const EdgeInsets.only(bottom: 18),
           child: Row(
             children: [
-              Expanded(child: Text('${kind.label}暂时未能加载')),
+              Expanded(
+                child: Text(
+                  '${kind.label}暂时未能加载${error is MusicPlatformException ? '\n${error.message}' : ''}',
+                ),
+              ),
               TextButton(
                 onPressed: () => ref.invalidate(platformExploreProvider(kind)),
                 child: const Text('重试'),

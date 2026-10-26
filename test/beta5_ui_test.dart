@@ -3,9 +3,11 @@ import 'package:mesting_music/shared/widgets/beta_text_editing.dart';
 import 'package:mesting_music/features/experience/presentation/player_chrome_reveal.dart';
 import 'package:mesting_music/features/auth/beta_entry_flow.dart';
 import 'package:mesting_music/features/auth/presentation/beta_entry_coordinator.dart';
+import 'package:mesting_music/features/auth/presentation/beta_onboarding_page.dart';
 import 'package:mesting_music/app/system_back_coordinator.dart';
 import 'package:mesting_music/features/music_platform/data/platform_category_search.dart';
 import 'package:mesting_music/features/settings/presentation/settings_page.dart';
+import 'package:mesting_music/features/settings/presentation/haptic_settings_page.dart';
 import 'package:mesting_music/features/music_platform/platform_category_search_providers.dart';
 import 'package:mesting_music/features/search/presentation/beta_category_search_results.dart';
 import 'package:mesting_music/features/library/presentation/library_access.dart';
@@ -256,6 +258,7 @@ void main() {
     bool playing = false,
     Stream<PlaybackState>? playbackEvents,
     Duration position = const Duration(seconds: 37),
+    Future<List<PlatformHotSearchBoard>> Function()? hotSearch,
   }) async {
     metadataReady = false;
     paths = [];
@@ -387,9 +390,11 @@ void main() {
         // parsing rejects asset filenames and is covered in beta6_platform_test.
         platformFmProvider.overrideWith((ref) async => [_track]),
         platformHotSearchProvider.overrideWith(
-          (ref) async => const [
-            PlatformHotSearchBoard('热搜榜', ['认真的雪', '平凡之路', '音乐让我们相遇']),
-          ],
+          (ref) async => hotSearch != null
+              ? hotSearch()
+              : const [
+                  PlatformHotSearchBoard('热搜榜', ['认真的雪', '平凡之路', '音乐让我们相遇']),
+                ],
         ),
         platformExploreProvider.overrideWith(
           (ref, kind) async => [
@@ -1168,7 +1173,7 @@ void main() {
           tester
               .widget<BetaMusicShell>(find.byType(BetaMusicShell))
               .chromeVisible,
-          false,
+          overlay == '/music/settings',
         );
         expect(find.byType(BetaMusicBottomBar), findsOneWidget);
         router.pop();
@@ -1190,12 +1195,216 @@ void main() {
         tester
             .widget<BetaMusicShell>(find.byType(BetaMusicShell))
             .chromeVisible,
-        false,
+        true,
       );
       expect(find.byType(BetaMusicBottomBar), findsOneWidget);
       router.pop();
       await settle();
       expect(selected(), 2);
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta15 settings controls work after player reveal and guide covers chrome',
+    (tester) async {
+      viewport(tester);
+      for (final sample in [
+        (const Size(390, 844), 1.0),
+        (const Size(320, 640), 1.6),
+        (const Size(844, 390), 1.0),
+      ]) {
+        tester.view.physicalSize = sample.$1;
+        await prepare();
+        try {
+          production.appRouter.go('/music/settings');
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: container,
+              child: RepaintBoundary(
+                key: const ValueKey('beta5-capture'),
+                child: MaterialApp.router(
+                  theme: buildMestingTheme(musicThemePresetById('classic')),
+                  routerConfig: production.appRouter,
+                  builder: (context, child) => MediaQuery(
+                    data: MediaQuery.of(
+                      context,
+                    ).copyWith(textScaler: TextScaler.linear(sample.$2)),
+                    child: child!,
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 500));
+          container.read(playerChromeRevealProvider).value = 1;
+          await tester.pump();
+          final handler = container.read(audioHandlerProvider) as _Handler;
+          await tester.tap(find.bySemanticsLabel('播放').hitTestable().first);
+          await tester.pump();
+          expect(handler.toggles, 1);
+          await tester.tap(find.byIcon(Icons.home_rounded).hitTestable().first);
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 500));
+          expect(
+            production.appRouter.routeInformationProvider.value.uri.path,
+            '/music/recommend',
+          );
+          production.appRouter.go('/music/settings');
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 500));
+          if (sample.$1 == const Size(390, 844)) {
+            await captureScreenshot(tester, 'beta15-settings');
+            final haptics = find.byKey(const ValueKey('settings-haptics'));
+            await tester.scrollUntilVisible(
+              haptics,
+              160,
+              scrollable: find
+                  .descendant(
+                    of: find.byType(SettingsPage),
+                    matching: find.byType(Scrollable),
+                  )
+                  .first,
+            );
+            await tester.tap(haptics);
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 500));
+            expect(find.byType(HapticSettingsPage), findsOneWidget);
+            expect(find.byType(BetaMusicBottomBar), findsNothing);
+            await captureScreenshot(tester, 'beta15-haptics');
+            await tester.pageBack();
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 500));
+          }
+          final guide = find.byKey(const ValueKey('settings-guide'));
+          await tester.scrollUntilVisible(
+            guide,
+            160,
+            scrollable: find
+                .descendant(
+                  of: find.byType(SettingsPage),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          );
+          await tester.pump(const Duration(milliseconds: 500));
+          await tester.tap(guide);
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 500));
+          expect(find.byType(BetaMusicBottomBar), findsNothing);
+          expect(find.byType(BetaOnboardingPage), findsOneWidget);
+          await captureScreenshot(
+            tester,
+            'beta15-guide-${sample.$1.width.toInt()}x${sample.$1.height.toInt()}',
+          );
+          for (var page = 0; page < 8; page++) {
+            final next = find.byKey(const ValueKey('guide-next'));
+            expect(
+              tester.getRect(next).bottom,
+              lessThanOrEqualTo(sample.$1.height),
+            );
+            await tester.tap(next);
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 500));
+          }
+          expect(find.byType(SettingsPage), findsOneWidget);
+          expect(tester.takeException(), isNull, reason: 'viewport=$sample');
+        } finally {
+          await disposeFixture(tester);
+        }
+      }
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta15 player footer keeps icon centers aligned without inline quality text',
+    (tester) async {
+      viewport(tester);
+      await prepare();
+      await pump(tester, const BetaNowPlayingPage());
+      final quality = find.byKey(const ValueKey('player-quality-button'));
+      expect(
+        find.descendant(of: quality, matching: find.byType(Text)),
+        findsNothing,
+      );
+      final speaker = find.byIcon(CupertinoIcons.hifispeaker_fill);
+      expect(
+        tester.getCenter(speaker).dy,
+        closeTo(tester.getCenter(find.bySemanticsLabel('歌曲评论').first).dy, .1),
+      );
+      expect(
+        tester.getCenter(speaker).dy,
+        closeTo(tester.getCenter(find.bySemanticsLabel('播放队列').first).dy, .1),
+      );
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta15 hot refresh keeps ranking and reports pending, unchanged, failure and recovery',
+    (tester) async {
+      viewport(tester);
+      var calls = 0;
+      const original = [
+        PlatformHotSearchBoard('热搜榜', ['真实第一', '真实第二']),
+      ];
+      var pending = Completer<List<PlatformHotSearchBoard>>();
+      await prepare(
+        hotSearch: () async => ++calls == 1 ? original : pending.future,
+      );
+      await pump(tester, PlatformSearchLanding(onSearch: (_) {}));
+      final refresh = find.byTooltip('刷新热门搜索');
+      await tester.tap(refresh);
+      await tester.pump();
+      expect(calls, 2);
+      expect(
+        tester
+            .widget<IconButton>(
+              find.ancestor(of: refresh, matching: find.byType(IconButton)),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(find.text('真实第一'), findsOneWidget);
+      pending.complete(original);
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('已是最新热搜'), findsOneWidget);
+      pending = Completer<List<PlatformHotSearchBoard>>();
+      await tester.tap(refresh);
+      await tester.pump();
+      pending.completeError(StateError('offline fixture'));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('真实第一'), findsOneWidget);
+      expect(find.text('刷新失败，已保留原榜单，请重试'), findsOneWidget);
+      pending = Completer<List<PlatformHotSearchBoard>>();
+      await tester.tap(refresh);
+      await tester.pump();
+      pending.complete(const [
+        PlatformHotSearchBoard('热搜榜', ['新的真实第一']),
+      ]);
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('新的真实第一'), findsOneWidget);
+      expect(find.text('热搜已更新'), findsOneWidget);
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta15 replay excludes future months in the current year',
+    (tester) async {
+      viewport(tester);
+      await prepare();
+      await pump(tester, const ListeningReplayPage());
+      final months = tester.widgetList<ChoiceChip>(find.byType(ChoiceChip));
+      expect(months.length, DateTime.now().month + 1);
       await disposeFixture(tester);
     },
     skip: !DistributionChannel.isBeta,
@@ -2252,6 +2461,62 @@ void main() {
   );
 
   testWidgets(
+    'beta15 morph retains its optical layer between geometry frames',
+    (tester) async {
+      viewport(tester);
+      await prepare(playing: true);
+      await pump(tester, const MusicLandingPage(), shell: true);
+      final counts = <String, int>{};
+      final previous = debugOnRebuildDirtyWidget;
+      debugOnRebuildDirtyWidget = (element, _) {
+        final name = element.widget.runtimeType.toString();
+        if ([
+          'AdaptiveLiquidGlassLayer',
+          'TrackArtwork',
+          'FloatingPlaybackPill',
+        ].contains(name)) {
+          counts[name] = (counts[name] ?? 0) + 1;
+        }
+      };
+      Object? surface;
+      var stable = false;
+      try {
+        final context = tester.element(find.byType(ListView).first);
+        ScrollUpdateNotification(
+          metrics: FixedScrollMetrics(
+            minScrollExtent: 0,
+            maxScrollExtent: 2000,
+            pixels: 300,
+            viewportDimension: 700,
+            axisDirection: AxisDirection.down,
+            devicePixelRatio: 1,
+          ),
+          context: context,
+          scrollDelta: 300,
+        ).dispatch(context);
+        final layers = find.descendant(
+          of: find.byType(GlassTabBar),
+          matching: find.byType(AdaptiveLiquidGlassLayer),
+        );
+        for (var frame = 0; frame < 24; frame++) {
+          await tester.pump(const Duration(milliseconds: 16));
+          if (frame == 3) surface = tester.widget(layers.first);
+          if (frame == 8) {
+            stable = identical(surface, tester.widget(layers.first));
+          }
+        }
+      } finally {
+        debugOnRebuildDirtyWidget = previous;
+      }
+      // ignore: avoid_print
+      print('BETA15_MORPH_BENCH $counts stableOptics=$stable');
+      expect(stable, true);
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
     'beta11 playing-scroll compact rebuild benchmark',
     (tester) async {
       viewport(tester);
@@ -2587,7 +2852,14 @@ void main() {
           );
           if (character != ProgressDecoration.shinchan) {
             expect(tester.getSize(marker), const Size.square(24));
-            expect(tester.getCenter(marker).dy, closeTo(rect.center.dy, .1));
+            expect(
+              tester.getCenter(marker).dy,
+              closeTo(
+                rect.center.dy -
+                    (character == ProgressDecoration.kuromi ? 3 : 0),
+                .1,
+              ),
+            );
           } else {
             expect(
               tester.getRect(marker).bottom,
@@ -2597,7 +2869,7 @@ void main() {
           }
           await captureScreenshot(
             tester,
-            'beta13-companion-${character.name}-$seconds',
+            'beta15-companion-${character.name}-$seconds',
           );
           await disposeFixture(tester);
         }

@@ -547,23 +547,23 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
         themeGlowPrimary == null &&
         widget.interactionBehavior.hasGlow;
 
-    Widget barContent = TweenAnimationBuilder<double>(
+    // Mesting: keep the optical layer outside geometry ticks. Its settings,
+    // quality and renderer are unchanged while only the pill height morphs.
+    Widget barContent = AdaptiveLiquidGlassLayer(
+      settings: effectiveSettings,
+      quality: effectiveQuality,
+      platformViewBackdrop: widget.platformViewBackdrop,
+      blendAmount: widget.enableBlend ? widget.blendAmount : 0,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: widget.horizontalPadding,
+          vertical: widget.verticalPadding),
+        child: TweenAnimationBuilder<double>(
       tween: Tween<double>(
           end: searching ? widget.searchBarHeight : widget.barHeight),
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
       builder: (context, animH, child) {
-        return AdaptiveLiquidGlassLayer(
-          settings: effectiveSettings,
-          quality: effectiveQuality,
-          platformViewBackdrop: widget.platformViewBackdrop,
-          blendAmount: widget.enableBlend ? widget.blendAmount : 0,
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: widget.horizontalPadding,
-              vertical: widget.verticalPadding,
-            ),
-            child: LayoutBuilder(
+        return LayoutBuilder(
               builder: (context, constraints) {
                 final totalW = constraints.maxWidth;
 
@@ -1060,10 +1060,10 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                   ),
                 );
               },
-            ),
-          ),
-        );
+            );
       },
+        ),
+      ),
     );
 
     if (widget.bottomAccessory != null) {
@@ -1125,6 +1125,14 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
           ) ==
           GlassTabBarAccessoryPlacement.inline;
 
+      // The same accessory subtree moves on both axes. Rebuilding its optical
+      // layer on each geometry tick invalidates shader/layout work needlessly.
+      final accessorySurface = AnimatedOpacity(
+        duration: const Duration(milliseconds: 200), curve: Curves.easeOut,
+        opacity: widget.bottomAccessoryEnabled ? 1.0 : 0.0,
+        child: GlassBackdropGroup(enabled: false,
+          child: RepaintBoundary(child: widget.bottomAccessory!)),
+      );
       barContent = GlassTabBarAccessoryPlacementScope(
         placement: accessoryInline
             ? GlassTabBarAccessoryPlacement.inline
@@ -1170,7 +1178,8 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                     tween: Tween<double>(end: searching ? 1.0 : 0.0),
                     duration: const Duration(milliseconds: 200),
                     curve: Curves.easeOut,
-                    builder: (context, searchT, _) {
+                    child: accessorySurface,
+                    builder: (context, searchT, accessory) {
                       // Move down by 14px (= pillH - collapsedPillH) when searching
                       final expandedBottom = ui.lerpDouble(
                         collapsedPillH + widget.bottomAccessorySpacing,
@@ -1189,17 +1198,7 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                           accessoryT,
                         )!,
                         height: accessoryH,
-                        child: AnimatedOpacity(
-                          duration: const Duration(milliseconds: 200),
-                          curve: Curves.easeOut,
-                          opacity: widget.bottomAccessoryEnabled ? 1.0 : 0.0,
-                          // The accessory overlaps the pill's top edge, so
-                          // glass in it stays out of the bar's group.
-                          child: GlassBackdropGroup(
-                            enabled: false,
-                            child: widget.bottomAccessory!,
-                          ),
-                        ),
+                        child: accessory!,
                       );
                     },
                   ),

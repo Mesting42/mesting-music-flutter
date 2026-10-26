@@ -5,7 +5,9 @@ import 'platform_artwork.dart';
 
 enum PlatformExploreKind {
   theme('主题歌单', '/theme/playlist'),
-  scene('场景音乐', '/scene/music'),
+  // Labels come from the scene catalogue. /scene/music returns recommended
+  // tracks; it does not define the catalogue of named scene categories.
+  scene('场景音乐', '/scene/lists'),
   playlist('热门歌单', '/top/playlist'),
   rank('排行榜', '/rank/list'),
   album('新碟上架', '/top/album');
@@ -45,6 +47,7 @@ class PlatformExploreRepository {
       },
     );
     var rows = PlatformCatalog.rows(payload);
+    if (kind == PlatformExploreKind.scene) rows = _sceneRows(payload);
     final data = MusicPlatformApi.objectMap(payload['data']);
     if (kind == PlatformExploreKind.rank && rows.isEmpty) {
       rows = PlatformCatalog.rows(data['ranks']);
@@ -94,6 +97,7 @@ class PlatformExploreRepository {
               'album_name',
               'albumname',
               'title',
+              'scene_name',
             ]),
             cover: PlatformArtwork.fromPayload(row),
             kind: kind,
@@ -102,6 +106,34 @@ class PlatformExploreRepository {
         })
         .where((item) => item.title.isNotEmpty)
         .toList();
+  }
+
+  /// Scene catalogues use both flat and grouped envelopes. Only real named
+  /// scene records become labels; recommendation tracks are not substitutes.
+  static List<Map<String, dynamic>> _sceneRows(Object? value) {
+    if (value is List) return [for (final item in value) ..._sceneRows(item)];
+    if (value is! Map) return const [];
+    final row = MusicPlatformApi.objectMap(value);
+    for (final key in [
+      'data',
+      'scene_list',
+      'scenes',
+      'list',
+      'lists',
+      'info',
+      'children',
+    ]) {
+      final nested = _sceneRows(row[key]);
+      if (nested.isNotEmpty) return nested;
+    }
+    final id = row['scene_id'] ?? row['id'];
+    final name = row['scene_name'] ?? row['name'] ?? row['title'];
+    return id != null &&
+            '$id'.isNotEmpty &&
+            name != null &&
+            '$name'.trim().isNotEmpty
+        ? [row]
+        : const [];
   }
 
   Future<List<Track>> tracks(PlatformExploreItem item, {int page = 1}) async {

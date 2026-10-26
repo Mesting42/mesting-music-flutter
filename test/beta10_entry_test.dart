@@ -326,6 +326,21 @@ void main() {
       await tester.tap(action);
       await tester.pump();
       expect(tester.widget<BetaGlassButton>(action).loading, true);
+      // Sending a code blocks duplicate login without replacing the primary
+      // button's glass layer or its visible label.
+      final submit = find.byKey(const ValueKey('beta11-phone-submit'));
+      expect(
+        find.descendant(of: submit, matching: find.text('登录')),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<GlassButton>(
+              find.descendant(of: submit, matching: find.byType(GlassButton)),
+            )
+            .enabled,
+        true,
+      );
       await capture(tester, 'beta11-phone-code-pending');
       await tester.tap(action);
       await tester.pump();
@@ -566,6 +581,12 @@ void main() {
       await tester.pump();
       expect(find.byType(BetaOnboardingPage), findsOneWidget);
       final guideState = tester.state(find.byType(BetaOnboardingPage));
+      expect(
+        TickerMode.valuesOf(
+          tester.element(find.byType(BetaOnboardingPage)),
+        ).enabled,
+        false,
+      );
       expect(find.bySemanticsLabel('下一步'), findsNothing);
       expect(find.bySemanticsLabel('跳过'), findsNothing);
       expect(
@@ -585,6 +606,12 @@ void main() {
       await capture(tester, 'beta13-success-fading-to-guide');
       await tester.pump(const Duration(milliseconds: 250));
       expect(sounds, 1);
+      expect(
+        TickerMode.valuesOf(
+          tester.element(find.byType(BetaOnboardingPage)),
+        ).enabled,
+        true,
+      );
       expect(find.byType(BetaLoginSuccess), findsNothing);
       expect(tester.state(find.byType(BetaOnboardingPage)), same(guideState));
       expect(find.bySemanticsLabel('下一步'), findsOneWidget);

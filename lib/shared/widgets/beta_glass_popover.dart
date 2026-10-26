@@ -2,9 +2,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import '../../features/experience/presentation/beta_bottom_bar.dart';
+import '../../core/haptics/app_haptics.dart';
 
-const betaMenuOpenDuration = Duration(milliseconds: 360);
-const betaMenuCloseDuration = Duration(milliseconds: 220);
+const betaMenuOpenDuration = Duration(milliseconds: 400);
+const betaMenuCloseDuration = Duration(milliseconds: 240);
 const double betaMenuAnchorGap = 8;
 
 /// The pill's actual optical material, shared by playback and editing menus.
@@ -26,7 +27,7 @@ class BetaGlassMenuSurface extends StatelessWidget {
       quality: GlassQuality.premium,
       useOwnLayer: true,
       settings: betaMusicPillGlass(context).copyWith(
-        blur: betaMusicPillGlass(context).blur + 1,
+        blur: betaMusicPillGlass(context).blur + 2,
         visibility: visibility,
       ),
       shape: LiquidRoundedRectangle(borderRadius: radius),
@@ -57,11 +58,17 @@ class BetaGlassMenuTransition extends StatefulWidget {
 
 class _BetaGlassMenuTransitionState extends State<BetaGlassMenuTransition> {
   late CurvedAnimation _stretch;
+  late CurvedAnimation _reveal;
 
   void _bindAnimation() {
     _stretch = CurvedAnimation(
       parent: widget.animation,
-      curve: Curves.easeOutBack,
+      curve: const _MenuSpringCurve(),
+      reverseCurve: Curves.easeInOutCubic,
+    );
+    _reveal = CurvedAnimation(
+      parent: widget.animation,
+      curve: const Interval(0, .45, curve: Curves.easeOutCubic),
       reverseCurve: Curves.easeOutCubic,
     );
   }
@@ -77,6 +84,7 @@ class _BetaGlassMenuTransitionState extends State<BetaGlassMenuTransition> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.animation != widget.animation) {
       _stretch.dispose();
+      _reveal.dispose();
       _bindAnimation();
     }
   }
@@ -84,6 +92,7 @@ class _BetaGlassMenuTransitionState extends State<BetaGlassMenuTransition> {
   @override
   void dispose() {
     _stretch.dispose();
+    _reveal.dispose();
     super.dispose();
   }
 
@@ -92,31 +101,38 @@ class _BetaGlassMenuTransitionState extends State<BetaGlassMenuTransition> {
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     return AnimatedBuilder(
       animation: widget.animation,
-      child: widget.child,
+      // The glass surface and shader configuration stay stable for the entire
+      // transition. Geometry/fade change outside it, avoiding optical rebuilds
+      // every frame as the menu grows out of its real trigger.
+      child: FadeTransition(
+        opacity: reduceMotion ? kAlwaysCompleteAnimation : _reveal,
+        child: BetaGlassMenuSurface(child: widget.child),
+      ),
       builder: (context, child) {
-        final value = reduceMotion
-            ? 1.0
-            : widget.animation.value.clamp(0.0, 1.0);
-        final reveal = Curves.easeOutCubic.transform(value);
         // CurvedAnimation retains the active curve when a gesture reverses
         // mid-flight. Switching curves by status would visibly jump in size.
         final stretch = reduceMotion ? 1.0 : _stretch.value;
         return Transform.translate(
-          offset: Offset(0, widget.origin.y * (1 - reveal) * 14),
+          offset: Offset(0, widget.origin.y * (1 - stretch) * 12),
           child: Transform.scale(
-            scaleX: .9 + .1 * stretch,
-            scaleY: .74 + .26 * stretch,
+            scaleX: .82 + .18 * stretch,
+            scaleY: .16 + .84 * stretch,
             alignment: widget.origin,
-            child: BetaGlassMenuSurface(
-              radius: 24 + (1 - reveal) * 12,
-              visibility: reveal,
-              child: Opacity(opacity: reveal, child: child),
-            ),
+            child: child,
           ),
         );
       },
     );
   }
+}
+
+/// A lightly damped growth, calibrated to the supplied Music menu reference.
+/// These are application parameters, not claims about Apple's private physics.
+class _MenuSpringCurve extends Curve {
+  const _MenuSpringCurve();
+  @override
+  double transformInternal(double t) =>
+      1 - math.exp(-9 * t) * (math.cos(11 * t) + 9 / 11 * math.sin(11 * t));
 }
 
 /// Positions from the measured trigger, then animates only the bounded menu.
@@ -129,6 +145,7 @@ Future<T?> showBetaGlassPopover<T>({
   double width = 300,
   String label = '关闭菜单',
 }) async {
+  appHaptic(context, AppHapticEvent.impact);
   final media = MediaQuery.of(context);
   final layout = BetaMenuLayout(anchor: anchor, media: media, width: width);
   final route = _BetaGlassPopoverRoute<T>(

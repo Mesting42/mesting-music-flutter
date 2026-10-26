@@ -11,6 +11,14 @@ final playbackDaysProvider = StreamProvider<List<PlaybackDailyHistory>>(
       .watchPlaybackDays(ref.watch(activeLibraryOwnerProvider)),
 );
 
+/// Calendar availability is independent of listening totals. A future month
+/// must never become selectable simply because the UI renders a whole year.
+List<int?> replayMonthsForYear(int year, DateTime today) => [
+  null,
+  if (year <= today.year)
+    ...List.generate(year == today.year ? today.month : 12, (i) => i + 1),
+];
+
 class ReplayTrack {
   const ReplayTrack(this.track, this.milliseconds, this.plays);
   final Track track;

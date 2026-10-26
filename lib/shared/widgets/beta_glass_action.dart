@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../features/experience/presentation/beta_bottom_bar.dart';
+import '../../core/haptics/app_haptics.dart';
 
 /// Stable blue action glass. Adaptive body tint preserves background luminance,
 /// which turns this blue almost cyan over light scrolling content. Clear body
@@ -50,7 +51,11 @@ class BetaGlassAction extends StatelessWidget {
         message: label,
         child: RepaintBoundary(
           child: GlassButton.custom(
-            onTap: onPressed ?? () {},
+            onTap: () {
+              if (loading || onPressed == null) return;
+              appHaptic(context, AppHapticEvent.impact);
+              onPressed!();
+            },
             enabled: onPressed != null && !loading,
             width: 48,
             height: 48,

@@ -5,6 +5,7 @@ import '../../../shared/widgets/player_comment_glyph.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/audio/media_volume_controller.dart';
 import '../../../core/audio/playback_providers.dart';
+import '../../../core/haptics/app_haptics.dart';
 import '../../../shared/utils/duration_format.dart';
 import '../../music_platform/music_platform_providers.dart';
 import '../../auth/presentation/beta_login_navigation.dart';
@@ -124,6 +125,7 @@ class _ApplePlayerControlsState extends ConsumerState<ApplePlayerControls> {
                                   : null,
                               onChangeEnd: duration > Duration.zero
                                   ? (v) async {
+                                      appHaptic(context, AppHapticEvent.impact);
                                       await _act(
                                         () => handler.seek(
                                           Duration(milliseconds: v.round()),
@@ -356,7 +358,10 @@ class _Transport extends StatelessWidget {
       child: CupertinoButton(
         padding: const EdgeInsets.all(8),
         minimumSize: const Size(48, 48),
-        onPressed: onPressed,
+        onPressed: () {
+          appHaptic(context, AppHapticEvent.selection);
+          onPressed();
+        },
         child: glyph ?? Icon(icon, size: size, color: Colors.white),
       ),
     ),

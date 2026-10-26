@@ -62,6 +62,17 @@ void main() {
     },
   );
 
+  test('replay periods follow January, October, December and past years', () {
+    expect(replayMonthsForYear(2026, DateTime(2026, 1, 3)), [null, 1]);
+    expect(replayMonthsForYear(2026, DateTime(2026, 10, 26)), [
+      null,
+      ...List.generate(10, (i) => i + 1),
+    ]);
+    expect(replayMonthsForYear(2025, DateTime(2026, 1, 3)).length, 13);
+    expect(replayMonthsForYear(2026, DateTime(2026, 12, 31)).length, 13);
+    expect(replayMonthsForYear(2027, DateTime(2026, 12, 31)), [null]);
+  });
+
   test(
     'obsolete snapshots retain total listening time without hiding valid rankings',
     () {

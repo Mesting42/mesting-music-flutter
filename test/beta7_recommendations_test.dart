@@ -201,6 +201,30 @@ void main() {
     },
   );
   test(
+    'scene labels use the scene catalogue and parse grouped scene names',
+    () async {
+      final client = MockClient((request) async {
+        if (request.url.path != '/scene/lists') {
+          return http.Response('{"status":0,"error_code":400}', 200);
+        }
+        return _response({
+          'scene_list': [
+            {'scene_id': 'work', 'scene_name': '专注工作'},
+            {'scene_id': 'rest', 'scene_name': '放松休息'},
+          ],
+        });
+      });
+      addTearDown(client.close);
+      final repo = PlatformExploreRepository(
+        MusicPlatformApi(server: _Server(), client: client),
+      );
+      final scenes = await repo.list(PlatformExploreKind.scene);
+      expect(scenes.map((s) => s.id), ['work', 'rest']);
+      expect(scenes.map((s) => s.title), ['专注工作', '放松休息']);
+    },
+  );
+
+  test(
     'exploration preserves album language buckets and rank request contract',
     () async {
       final requests = <http.Request>[];

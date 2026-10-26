@@ -40,6 +40,7 @@ import 'package:mesting_music/features/music_platform/presentation/platform_avat
 import 'package:mesting_music/features/player/presentation/music_hub_top_bar.dart';
 import 'package:mesting_music/features/music_platform/data/platform_comments_repository.dart';
 import 'package:mesting_music/features/music_platform/presentation/platform_comments_page.dart';
+import 'package:mesting_music/features/music_platform/presentation/platform_design.dart';
 
 class _Store implements PlatformSessionStore {
   PlatformSession? value;
@@ -466,10 +467,16 @@ void main() {
     (tester) async {
       store.value = const PlatformSession(userId: '7', token: 'test');
       final writes = <http.Request>[];
+      final refresh = Completer<http.Response>();
       api = MusicPlatformApi(
         server: _Server(),
         client: MockClient((request) async {
           if (request.method == 'POST') writes.add(request);
+          if (request.method == 'GET' &&
+              request.url.path.startsWith('/comment/') &&
+              writes.isNotEmpty) {
+            return refresh.future;
+          }
           return http.Response(
             jsonEncode({
               'status': 1,
@@ -525,6 +532,12 @@ void main() {
       await tester.pump();
       expect(writes.length, 1);
       expect(writes.single.url.queryParameters['content'], '仅测试提交');
+      // A successful POST is acknowledged independently of a slow readback.
+      expect(find.text('已发送'), findsOneWidget);
+      expect(find.text('我的平台评论'), findsOneWidget);
+      expect(find.byType(PlatformFeedbackState), findsNothing);
+      refresh.complete(http.Response('{"status":1,"data":{"list":[]}}', 200));
+      await tester.pump();
       await container.read(platformAccountProvider.notifier).signOut();
       await tester.pump();
       expect(find.text('我的平台评论'), findsNothing);

@@ -430,7 +430,8 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
                           key: const ValueKey('beta11-phone-submit'),
                           blue: true,
                           loading: _busy && _busyAction == 'login',
-                          onPressed: _busy ? null : _phoneLogin,
+                          interactionEnabled: !_busy,
+                          onPressed: _phoneLogin,
                           child: const Text('登录'),
                         ),
                       ] else ...[

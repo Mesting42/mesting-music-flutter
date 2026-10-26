@@ -1,4 +1,5 @@
 import '../../../shared/widgets/beta_anchored_menu.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -144,6 +145,7 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
   bool _loading = false;
   bool _writing = false;
   bool _hasMore = false;
+  bool _silentLoading = false;
   String? _error;
   PlatformComment? _reply;
   PlatformCommentSort _sort = PlatformCommentSort.hottest;
@@ -183,12 +185,13 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
     super.dispose();
   }
 
-  Future<void> _load({bool reset = false}) async {
+  Future<void> _load({bool reset = false, bool silent = false}) async {
     if (!_current || (_loading && !reset)) return;
     final generation = ++_generation;
     final page = reset ? 1 : _page + 1;
     setState(() {
       _loading = true;
+      _silentLoading = silent;
       _error = null;
     });
     try {
@@ -246,7 +249,7 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
         _hasMore = result.hasMore && progressed;
       });
     } catch (error) {
-      if (mounted && generation == _generation) {
+      if (mounted && generation == _generation && !silent) {
         setState(
           () => _error = error is MusicPlatformException
               ? error.message
@@ -273,15 +276,15 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
       if (!mounted || !_current) return;
       _text.clear();
       setState(() => _reply = null);
-      await _load(reset: true);
-      if (mounted) {
-        showMusicNotice(
-          context,
-          icon: Icons.check_rounded,
-          title: '已发送',
-          message: '',
-        );
-      }
+      // A committed write is already successful. Readback must neither delay
+      // that acknowledgement nor insert an initial-loading panel in the list.
+      showMusicNotice(
+        context,
+        icon: Icons.check_rounded,
+        title: '已发送',
+        message: '',
+      );
+      unawaited(_load(reset: true, silent: true));
     } catch (error) {
       if (mounted) showPlatformFailure(context, error);
     } finally {
@@ -448,7 +451,9 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
                                     ],
                                   ),
                                 ),
-                              if (_loading)
+                              if (_loading &&
+                                  !_silentLoading &&
+                                  _comments.isEmpty)
                                 const PlatformFeedbackState(loading: true),
                               if (_error != null)
                                 PlatformFeedbackState(
@@ -487,6 +492,15 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
                                           ),
                                         )
                                       : null,
+                                ),
+                              if (_loading &&
+                                  !_silentLoading &&
+                                  _comments.isNotEmpty)
+                                const Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Center(
+                                    child: CircularProgressIndicator.adaptive(),
+                                  ),
                                 ),
                               if (_hasMore && !_loading)
                                 TextButton.icon(

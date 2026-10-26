@@ -67,7 +67,9 @@ class _MusicShellState extends ConsumerState<MusicShell> {
       return BetaMusicShell(
         location: location,
         navigationOwner: _owner,
-        chromeVisible: showNavigation,
+        // Beta settings share the persistent music controls. Their hit testing
+        // must agree with the visible bar rather than inherit stable's overlay.
+        chromeVisible: showNavigation || settingsOverlay,
         child: child,
       );
     }

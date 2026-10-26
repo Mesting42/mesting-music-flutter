@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import '../../../shared/widgets/beta_edge_back.dart';
 import '../../../shared/widgets/beta_text_editing.dart';
+import '../../../shared/widgets/beta_glass_action.dart';
+import '../../../core/haptics/app_haptics.dart';
 
 import '../../../core/audio/playback_providers.dart';
 import '../../../shared/layout/adaptive_layout.dart';
@@ -233,6 +235,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
 
   @override
   Widget build(BuildContext context) {
+    final playerRoute = Uri.parse(widget.location).path == '/player';
     ref.listen(
       musicSearchControllerProvider.select((state) => state.query.isNotEmpty),
       (_, value) => _scheduleBackHistory(),
@@ -354,9 +357,12 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
                   selectedIndex: selected,
                   isSearchActive: compact || _searching,
                   inline: compact && !_searching,
-                  accessory: hasTrack ? const FloatingPlaybackPill() : null,
+                  accessory: hasTrack
+                      ? FloatingPlaybackPill(compact: compact && !_searching)
+                      : null,
                   accessoryEnabled: !_focused,
                   onTabSelected: (index) {
+                    appHaptic(context, AppHapticEvent.selection);
                     if (index == selected &&
                         _mini &&
                         !_searching &&
@@ -378,7 +384,10 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
                     showsCancelButton: true,
                     expandWhenActive: !compact || _searching,
                     hintText: '搜索歌曲、歌手',
-                    onSearchToggle: _search,
+                    onSearchToggle: (active) {
+                      appHaptic(context, AppHapticEvent.selection);
+                      _search(active);
+                    },
                     onSearchFocusChanged: (focused) {
                       if (mounted) setState(() => _focused = focused);
                     },
@@ -386,9 +395,10 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
                         .read(musicSearchControllerProvider.notifier)
                         .setQuery(text),
                     onSubmitted: _submit,
-                    trailingBuilder: (context) => IconButton(
-                      tooltip: '搜索',
-                      icon: const Icon(Icons.arrow_upward_rounded),
+                    trailingBuilder: (context) => BetaGlassAction(
+                      label: '搜索',
+                      icon: Icons.arrow_upward_rounded,
+                      blue: true,
                       onPressed: () => _submit(_searchText.text),
                     ),
                     cancelButtonSemanticLabel: '关闭搜索',
@@ -401,13 +411,24 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
           builder: (context, reveal, child) => IgnorePointer(
             ignoring: !widget.chromeVisible,
             child: AnimatedOpacity(
-              opacity: widget.chromeVisible ? 1 : reveal,
+              // Only the player may reveal chrome while it is dismissing.
+              // Its retained value must not expose inert bars on other routes.
+              opacity: widget.chromeVisible
+                  ? 1
+                  : playerRoute
+                  ? reveal
+                  : 0,
               duration: widget.location == '/player'
                   ? Duration.zero
                   : const Duration(milliseconds: 220),
               curve: Curves.easeOutCubic,
               child: Transform.translate(
-                offset: Offset(0, widget.chromeVisible ? 0 : (1 - reveal) * 12),
+                offset: Offset(
+                  0,
+                  widget.chromeVisible
+                      ? 0
+                      : (1 - (playerRoute ? reveal : 0)) * 12,
+                ),
                 child: child,
               ),
             ),

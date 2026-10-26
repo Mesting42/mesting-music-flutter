@@ -37,8 +37,10 @@ double progressCompanionTop(
 }) {
   final size = companionSize ?? progressCompanionSize(ip);
   return switch (ip) {
-    MusicThemeIp.helloKitty ||
-    MusicThemeIp.kuromi => trackCenterY - size.height / 2,
+    MusicThemeIp.helloKitty => trackCenterY - size.height / 2,
+    // Kuromi's long ears sit above the face. Its PNG canvas midpoint therefore
+    // leaves the perceived head below the rail; use a 3dp optical lift at 24dp.
+    MusicThemeIp.kuromi => trackCenterY - size.height * .625,
     MusicThemeIp.shinchan => trackCenterY - trackHeight / 2 - size.height,
     MusicThemeIp.classic => 0,
   };

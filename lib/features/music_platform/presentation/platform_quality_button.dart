@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
+import '../../../core/haptics/app_haptics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/audio/playback_providers.dart';
@@ -212,22 +213,18 @@ class PlatformQualityButton extends ConsumerWidget {
       minimumSize: const Size(64, 48),
       onPressed: state.switching
           ? null
-          : () => showPlatformQualityPicker(context, ref),
+          : () {
+              appHaptic(context, AppHapticEvent.selection);
+              showPlatformQualityPicker(context, ref);
+            },
       child: inline
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  CupertinoIcons.hifispeaker_fill,
-                  size: 25,
-                  color: Colors.white70,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  label,
-                  style: const TextStyle(color: Colors.white70, fontSize: 10),
-                ),
-              ],
+          ? Semantics(
+              label: '音质，$label',
+              child: const Icon(
+                CupertinoIcons.hifispeaker_fill,
+                size: 25,
+                color: Colors.white70,
+              ),
             )
           : Row(
               mainAxisSize: MainAxisSize.min,

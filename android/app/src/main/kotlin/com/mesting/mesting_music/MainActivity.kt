@@ -53,12 +53,15 @@ import kotlin.math.roundToInt
 open class MainActivity : AudioServiceActivity() {
     private var mediaVolumeBridge: MediaVolumeBridge? = null
     private var loginSuccessSoundBridge: LoginSuccessSoundBridge? = null
+    private var hapticFeedbackBridge: HapticFeedbackBridge? = null
     private lateinit var lyricsChannel: MethodChannel
     private var secureScreenRequests = 0
     private var pendingImageSave: PendingImageSave? = null
     private var pendingPhoneNumberResult: MethodChannel.Result? = null
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        hapticFeedbackBridge?.dispose()
+        hapticFeedbackBridge = null
         loginSuccessSoundBridge?.dispose()
         loginSuccessSoundBridge = null
         mediaVolumeBridge?.dispose()
@@ -78,6 +81,8 @@ open class MainActivity : AudioServiceActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        hapticFeedbackBridge?.dispose()
+        hapticFeedbackBridge = HapticFeedbackBridge(this, flutterEngine.dartExecutor.binaryMessenger)
         loginSuccessSoundBridge?.dispose()
         loginSuccessSoundBridge = LoginSuccessSoundBridge(this, flutterEngine.dartExecutor.binaryMessenger)
         mediaVolumeBridge?.dispose()

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../core/platform/distribution_channel.dart';
 import '../../features/themes/beta_appearance.dart';
 import 'beta_success_feedback.dart';
+import '../../core/haptics/app_haptics.dart';
 
 OverlayEntry? _activeMusicNotice;
 // Kept for callers compiled against older releases; HUDs now use the top inset.
@@ -17,6 +18,12 @@ void showMusicNotice(
   required String title,
   required String message,
 }) {
+  if (icon == Icons.check_rounded || icon == Icons.check) {
+    appHaptic(context, AppHapticEvent.success);
+  } else if (icon == Icons.error_outline_rounded ||
+      icon == Icons.warning_amber_rounded) {
+    appHaptic(context, AppHapticEvent.warning);
+  }
   _activeMusicNotice?.remove();
   final overlay = Overlay.of(context, rootOverlay: true);
   final theme = Theme.of(context);
@@ -70,9 +77,13 @@ class _MusicNoticeOverlayState extends State<_MusicNoticeOverlay>
           if (status == AnimationStatus.dismissed) widget.onDismissed();
         });
     _animation.forward();
-    final success = DistributionChannel.isBeta &&
+    final success =
+        DistributionChannel.isBeta &&
         (widget.icon == Icons.check_rounded || widget.icon == Icons.check);
-    _timer = Timer(Duration(milliseconds: success ? 2600 : 1900), _animation.reverse);
+    _timer = Timer(
+      Duration(milliseconds: success ? 2600 : 1900),
+      _animation.reverse,
+    );
   }
 
   @override
