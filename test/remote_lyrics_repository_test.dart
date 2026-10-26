@@ -12,6 +12,32 @@ http.Response _jsonResponse(Object body) => http.Response(
 );
 
 void main() {
+  test('embedded lyrics transport works without a hosted base URL', () async {
+    final requested = <String>[];
+    final repository = LyricsRepository(
+      client: MockClient(
+        (_) async => throw StateError('Must use injected adapter'),
+      ),
+      kugouApiBaseUrl: '',
+      neteaseApiBaseUrl: '',
+      kugouRequest: (path, query) async {
+        requested.add(path);
+        if (path == '/search/lyric') {
+          expect(query['hash'], 'hash123');
+          return {
+            'candidates': [
+              {'id': 'one', 'accesskey': 'key'},
+            ],
+          };
+        }
+        return {'decodeContent': '[00:01.00]本机服务歌词'};
+      },
+    );
+    final lyrics = await repository.loadAsset('mesting-lyrics://kugou/hash123');
+    expect(lyrics.isSynced, true);
+    expect(lyrics.lines.single.text, '本机服务歌词');
+    expect(requested, ['/search/lyric', '/lyric']);
+  });
   test('酷狗歌词按搜索与下载两步解析为同步歌词', () async {
     final client = MockClient((request) async {
       if (request.url.path.endsWith('/search/lyric')) {

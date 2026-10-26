@@ -1,4 +1,8 @@
+import '../../../shared/widgets/beta_text_editing.dart';
+import 'beta_category_search_results.dart';
+import '../../../shared/widgets/beta_edge_back.dart';
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/beta_glass_controls.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -6,7 +10,7 @@ import '../../../core/audio/playback_providers.dart';
 import '../../../core/errors/user_facing_error.dart';
 import '../../../shared/models/track.dart';
 import '../../../shared/utils/duration_format.dart';
-import '../../../shared/widgets/artwork_image.dart';
+import '../../../shared/widgets/track_artwork.dart';
 import '../../../shared/widgets/mesting_loading_indicator.dart';
 import '../../../shared/widgets/music_notice.dart';
 import '../../library/library_providers.dart';
@@ -20,6 +24,11 @@ import '../../themes/mesting_palette.dart';
 import '../../themes/music_theme_tokens.dart';
 import '../domain/music_rankings.dart';
 import '../search_providers.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../auth/account_capabilities.dart';
+import '../../music_platform/presentation/platform_feedback.dart';
+import '../../music_platform/presentation/platform_search_landing.dart';
+import '../../music_platform/presentation/platform_comments_page.dart';
 
 List<Track> selectedSearchPlaybackQueue(Track selectedTrack) =>
     List<Track>.unmodifiable([selectedTrack]);
@@ -32,6 +41,7 @@ class MusicSearchPage extends ConsumerStatefulWidget {
 }
 
 class _MusicSearchPageState extends ConsumerState<MusicSearchPage> {
+  final _resultsKey = GlobalKey<MusicSearchResultsBodyState>();
   final _textController = TextEditingController();
   final _focusNode = FocusNode();
   bool _inputIsEmpty = true;
@@ -69,6 +79,22 @@ class _MusicSearchPageState extends ConsumerState<MusicSearchPage> {
   }
 
   void _closeSearch() {
+    if (DistributionChannel.isBeta && !_inputIsEmpty) {
+      void clear() {
+        if (!mounted) return;
+        _textController.clear();
+        _focusNode.unfocus();
+        ref.read(musicSearchControllerProvider.notifier).setQuery('');
+        setState(() {
+          _inputIsEmpty = true;
+          _hasSubmitted = false;
+        });
+      }
+
+      final results = _resultsKey.currentState;
+      results == null ? clear() : results.returnToLanding(clear);
+      return;
+    }
     if (context.canPop()) {
       context.pop();
     } else {
@@ -85,123 +111,251 @@ class _MusicSearchPageState extends ConsumerState<MusicSearchPage> {
     final top = MediaQuery.paddingOf(context).top;
     final tokens = context.musicThemeTokens;
     final accent = Theme.of(context).colorScheme.primary;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            tokens.glassStrong.withValues(alpha: .93),
-            tokens.glass.withValues(alpha: .89),
-          ],
-        ),
-      ),
-      child: Column(
-        children: [
-          SizedBox(height: top + 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Row(
-              children: [
-                _CircleBack(onTap: _closeSearch),
-                const SizedBox(width: 9),
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: Container(
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: tokens.glass,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: accent.withValues(alpha: .42),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const SizedBox(width: 13),
-                          const Icon(Icons.search_rounded, size: 20),
-                          const SizedBox(width: 7),
-                          Expanded(
-                            child: TextField(
-                              controller: _textController,
-                              focusNode: _focusNode,
-                              textInputAction: TextInputAction.search,
-                              onChanged: _handleQueryChanged,
-                              onSubmitted: _submit,
-                              style: const TextStyle(fontSize: 13),
-                              decoration: const InputDecoration(
-                                hintText: '搜索本地音乐，也可以在线找试听',
-                                hintStyle: TextStyle(fontSize: 12),
-                                border: InputBorder.none,
-                                enabledBorder: InputBorder.none,
-                                focusedBorder: InputBorder.none,
-                                disabledBorder: InputBorder.none,
-                                errorBorder: InputBorder.none,
-                                focusedErrorBorder: InputBorder.none,
-                                isCollapsed: true,
-                                filled: false,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                TextButton(
-                  key: const ValueKey('search-submit-action'),
-                  onPressed: () => _submit(_textController.text),
-                  style: TextButton.styleFrom(
-                    foregroundColor: tokens.textSecondary,
-                    minimumSize: const Size(0, 52),
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                  ),
-                  child: const Text(
-                    '搜索',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                  ),
-                ),
+    return BetaEdgeBack(
+      enabled: DistributionChannel.isBeta,
+      onBack: _closeSearch,
+      child: PopScope(
+        canPop: !DistributionChannel.isBeta || _inputIsEmpty,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _closeSearch();
+        },
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                tokens.glassStrong.withValues(alpha: .93),
+                tokens.glass.withValues(alpha: .89),
               ],
             ),
           ),
-          Expanded(
-            child: _inputIsEmpty
-                ? _SearchLanding(onSearch: _submit)
-                : (_hasSubmitted
-                      ? AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 220),
-                          switchInCurve: Curves.easeOutCubic,
-                          switchOutCurve: Curves.easeInCubic,
-                          child: search.isLoading
-                              ? _SearchLoading(
-                                  key: ValueKey(
-                                    'search-loading-${search.query}',
-                                  ),
-                                  query: search.query,
-                                )
-                              : _SearchResults(
-                                  key: ValueKey(
-                                    'search-results-${search.query}',
-                                  ),
-                                  state: search,
-                                  onSearch: _submit,
-                                ),
-                        )
-                      : AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 220),
-                          switchInCurve: Curves.easeOutCubic,
-                          switchOutCurve: Curves.easeInCubic,
-                          child: _SearchInputPreview(
-                            key: ValueKey(
-                              'search-input-preview-${search.query}',
+          child: Column(
+            children: [
+              SizedBox(height: top + 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Row(
+                  children: [
+                    _CircleBack(onTap: _closeSearch),
+                    const SizedBox(width: 9),
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: Container(
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: tokens.glass,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: accent.withValues(alpha: .42),
                             ),
-                            state: search,
-                            onSearch: _submit,
                           ),
-                        )),
+                          child: Row(
+                            children: [
+                              const SizedBox(width: 13),
+                              const Icon(Icons.search_rounded, size: 20),
+                              const SizedBox(width: 7),
+                              Expanded(
+                                child: TextField(
+                                  contextMenuBuilder: buildBetaEditingMenu,
+                                  selectionControls:
+                                      mestingTextSelectionControls,
+                                  cursorRadius: const Radius.circular(1),
+                                  controller: _textController,
+                                  focusNode: _focusNode,
+                                  textInputAction: TextInputAction.search,
+                                  onChanged: _handleQueryChanged,
+                                  onSubmitted: _submit,
+                                  style: const TextStyle(fontSize: 13),
+                                  decoration: const InputDecoration(
+                                    hintText: '搜索本地音乐，也可以在线找试听',
+                                    hintStyle: TextStyle(fontSize: 12),
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    disabledBorder: InputBorder.none,
+                                    errorBorder: InputBorder.none,
+                                    focusedErrorBorder: InputBorder.none,
+                                    isCollapsed: true,
+                                    filled: false,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    TextButton(
+                      key: const ValueKey('search-submit-action'),
+                      onPressed: () => _submit(_textController.text),
+                      style: TextButton.styleFrom(
+                        foregroundColor: tokens.textSecondary,
+                        minimumSize: const Size(0, 52),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                      ),
+                      child: const Text(
+                        '搜索',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: DistributionChannel.isBeta
+                    ? MusicSearchResultsBody(
+                        key: _resultsKey,
+                        onSearch: _submit,
+                      )
+                    : _inputIsEmpty
+                    ? _SearchLanding(onSearch: _submit)
+                    : (_hasSubmitted
+                          ? AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 220),
+                              switchInCurve: Curves.easeOutCubic,
+                              switchOutCurve: Curves.easeInCubic,
+                              child: search.isLoading
+                                  ? _SearchLoading(
+                                      key: ValueKey(
+                                        'search-loading-${search.query}',
+                                      ),
+                                      query: search.query,
+                                    )
+                                  : _SearchResults(
+                                      key: ValueKey(
+                                        'search-results-${search.query}',
+                                      ),
+                                      state: search,
+                                      onSearch: _submit,
+                                    ),
+                            )
+                          : AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 220),
+                              switchInCurve: Curves.easeOutCubic,
+                              switchOutCurve: Curves.easeInCubic,
+                              child: _SearchInputPreview(
+                                key: ValueKey(
+                                  'search-input-preview-${search.query}',
+                                ),
+                                state: search,
+                                onSearch: _submit,
+                              ),
+                            )),
+              ),
+            ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Search results reused by the official bottom search field. It consumes the
+/// same paged controller, so there is no second search implementation/state.
+class MusicSearchResultsBody extends ConsumerStatefulWidget {
+  const MusicSearchResultsBody({required this.onSearch, super.key});
+  final ValueChanged<String> onSearch;
+  @override
+  ConsumerState<MusicSearchResultsBody> createState() =>
+      MusicSearchResultsBodyState();
+}
+
+/// Keep the real result pane and its providers alive until the return motion
+/// ends. Clearing query first would reset five categories in the outgoing frame.
+class MusicSearchResultsBodyState extends ConsumerState<MusicSearchResultsBody>
+    with SingleTickerProviderStateMixin {
+  late final _motion = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 300),
+    reverseDuration: const Duration(milliseconds: 280),
+    value: 1,
+  );
+  bool _returning = false;
+  @override
+  void initState() {
+    super.initState();
+    // A landing-only visit has no AnimatedBuilder; initialize before disposal.
+    _motion;
+  }
+  Future<void> returnToLanding(VoidCallback clear) async {
+    if (_returning) return;
+    final query = ref.read(musicSearchControllerProvider).query;
+    if (query.isEmpty) {
+      clear();
+      return;
+    }
+    setState(() => _returning = true);
+    try {
+      if (MediaQuery.disableAnimationsOf(context)) {
+        _motion.value = 0;
+      } else {
+        await _motion.reverse().orCancel;
+      }
+      if (mounted && ref.read(musicSearchControllerProvider).query == query) {
+        clear();
+      }
+    } on TickerCanceled {
+      // A newer query/navigation owns the presentation now.
+    } finally {
+      if (mounted) setState(() => _returning = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _motion.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(musicSearchControllerProvider);
+    ref.listen(musicSearchControllerProvider.select((s) => s.query), (
+      before,
+      after,
+    ) {
+      if (after.isNotEmpty && (before == null || before.isEmpty)) {
+        _motion.forward(from: MediaQuery.disableAnimationsOf(context) ? 1 : 0);
+      }
+    });
+    if (!DistributionChannel.isBeta) {
+      return state.query.isEmpty
+          ? _SearchLanding(onSearch: widget.onSearch)
+          : state.isLoading
+          ? _SearchLoading(query: state.query)
+          : _SearchResults(state: state, onSearch: widget.onSearch);
+    }
+    return ClipRect(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (state.query.isEmpty || _returning)
+            PlatformSearchLanding(onSearch: widget.onSearch),
+          if (state.query.isNotEmpty)
+            AnimatedBuilder(
+              animation: _motion,
+              child: const BetaCategorySearchResults(),
+              builder: (context, child) => IgnorePointer(
+                ignoring: _returning,
+                child: FractionalTranslation(
+                  translation: Offset(
+                    1 - Curves.easeInOutCubic.transform(_motion.value),
+                    0,
+                  ),
+                  child: ColoredBox(
+                    key: const ValueKey('beta13-search-results-surface'),
+                    color: Theme.of(context).colorScheme.surface,
+                    child: child,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -216,6 +370,9 @@ class _CircleBack extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.musicThemeTokens;
+    if (DistributionChannel.isBeta) {
+      return BetaGlassBackButton(onPressed: onTap);
+    }
     return Material(
       color: tokens.glass,
       shape: const CircleBorder(),
@@ -258,6 +415,9 @@ class _SearchLandingState extends ConsumerState<_SearchLanding> {
 
   @override
   Widget build(BuildContext context) {
+    if (DistributionChannel.isBeta) {
+      return PlatformSearchLanding(onSearch: widget.onSearch);
+    }
     final tokens = context.musicThemeTokens;
     final hotRanking = ref.watch(hotMusicControllerProvider);
     final hotSnapshot = hotRanking.value;
@@ -909,7 +1069,9 @@ class _SearchInputPreview extends ConsumerWidget {
     if (state.isLoading && !state.hasResults) {
       return _SearchLoading(query: state.query);
     }
-    final users = ref.watch(socialUserSearchProvider(state.query));
+    final users = ref.watch(showMestingFeaturesProvider)
+        ? ref.watch(socialUserSearchProvider(state.query))
+        : const AsyncData<List<SocialUser>>([]);
 
     return SingleChildScrollView(
       key: const ValueKey('search-input-preview-scroll'),
@@ -946,26 +1108,50 @@ class _SearchResults extends ConsumerStatefulWidget {
 
 class _SearchResultsState extends ConsumerState<_SearchResults> {
   _SearchResultCategory _category = _SearchResultCategory.tracks;
+  final _scroll = ScrollController();
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(() {
+      if (_scroll.hasClients &&
+          _scroll.position.extentAfter < 320 &&
+          widget.state.moreError == null &&
+          _category == _SearchResultCategory.tracks) {
+        ref.read(musicSearchControllerProvider.notifier).loadMore();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final state = widget.state;
-    final showUsers = _category == _SearchResultCategory.users;
-    final showTracks = _category == _SearchResultCategory.tracks;
+    final showUsers =
+        _category == _SearchResultCategory.users &&
+        ref.watch(showMestingFeaturesProvider);
+    final showTracks = !showUsers;
     final userResults = showUsers
         ? ref.watch(socialUserSearchProvider(state.query))
         : const AsyncData<List<SocialUser>>(<SocialUser>[]);
     final hasUserResults = userResults.value?.isNotEmpty == true;
     final allUsers = userResults.value ?? const <SocialUser>[];
+    if (DistributionChannel.isBeta) return const BetaCategorySearchResults();
     return Column(
       children: [
-        _SearchResultTabs(
-          selected: _category,
-          onSelected: (category) => setState(() => _category = category),
-        ),
+        if (ref.watch(showMestingFeaturesProvider))
+          _SearchResultTabs(
+            selected: _category,
+            onSelected: (category) => setState(() => _category = category),
+          ),
         Expanded(
           child: ListView(
             key: const ValueKey('search-results-scroll'),
+            controller: _scroll,
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(18, 14, 18, 96),
             children: [
@@ -1004,10 +1190,41 @@ class _SearchResultsState extends ConsumerState<_SearchResults> {
                 _SectionTitle(
                   title: '在线音乐',
                   count: state.onlineTracks.length,
-                  suffix: state.fromCache ? '已从缓存加载' : '酷狗优先 · 网易云补充',
+                  suffix: state.fromCache
+                      ? '已从缓存加载'
+                      : DistributionChannel.isBeta
+                      ? (state.total == null ? '酷狗概念版' : '共 ${state.total} 首')
+                      : '酷狗优先 · 网易云补充',
                 ),
                 const SizedBox(height: 8),
                 _TrackResults(tracks: state.onlineTracks),
+                if (DistributionChannel.isBeta)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: state.isLoadingMore
+                        ? const MestingLoadingIndicator(
+                            semanticLabel: '正在加载更多歌曲',
+                          )
+                        : state.moreError != null
+                        ? _MessageCard(
+                            icon: Icons.refresh_rounded,
+                            message: state.moreError!,
+                            actionLabel: '重试加载',
+                            onAction: ref
+                                .read(musicSearchControllerProvider.notifier)
+                                .loadMore,
+                          )
+                        : state.hasMore
+                        ? TextButton.icon(
+                            key: const ValueKey('platform-search-more'),
+                            onPressed: ref
+                                .read(musicSearchControllerProvider.notifier)
+                                .loadMore,
+                            icon: const Icon(Icons.expand_more_rounded),
+                            label: const Text('继续加载歌曲'),
+                          )
+                        : const Center(child: Text('已显示全部搜索结果')),
+                  ),
               ],
               if (_category == _SearchResultCategory.tracks &&
                   !state.hasResults &&
@@ -1180,9 +1397,15 @@ class _NeteaseTrackResult extends ConsumerWidget {
     return InkWell(
       key: ValueKey('netease-search-track-${track.id}'),
       onTap: track.isPlayable
-          ? () => ref
-                .read(audioHandlerProvider)
-                .playSingleTrack(track, playbackContext: [track])
+          ? () async {
+              try {
+                await ref
+                    .read(audioHandlerProvider)
+                    .playSingleTrack(track, playbackContext: [track]);
+              } catch (error) {
+                if (context.mounted) showPlatformFailure(context, error);
+              }
+            }
           : null,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(13, 8, 8, 8),
@@ -1190,7 +1413,7 @@ class _NeteaseTrackResult extends ConsumerWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(9),
-              child: ArtworkImage(uri: track.coverAsset, width: 52, height: 52),
+              child: TrackArtwork(track: track, width: 52, height: 52),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1235,6 +1458,13 @@ class _NeteaseTrackResult extends ConsumerWidget {
                 ],
               ),
             ),
+            if (ref.watch(showPlatformFeaturesProvider) &&
+                track.source == TrackSource.kugou)
+              IconButton(
+                tooltip: '酷狗歌曲评论',
+                icon: const Icon(Icons.comment_outlined),
+                onPressed: () => openPlatformSongComments(context, ref, track),
+              ),
             if (!track.isPlayable)
               Icon(Icons.lock_outline_rounded, color: tokens.textMuted)
             else
@@ -1645,30 +1875,31 @@ class _TrackResults extends ConsumerWidget {
           final track = tracks[index];
           final active = currentId == track.id;
           return ListTile(
-            onTap: () {
+            onTap: () async {
               if (!track.isPlayable) {
-                ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        track.availabilityMessage.isEmpty
-                            ? '这首歌当前不可播放'
-                            : track.availabilityMessage,
-                      ),
-                    ),
-                  );
+                showMusicNotice(
+                  context,
+                  icon: Icons.error_outline_rounded,
+                  title: track.availabilityMessage.isEmpty
+                      ? '这首歌当前不可播放'
+                      : track.availabilityMessage,
+                  message: '',
+                );
                 return;
               }
               // Search results remain outside the explicit upcoming queue,
               // but provide an invisible ordered context for previous/next.
-              ref
-                  .read(audioHandlerProvider)
-                  .playSingleTrack(track, playbackContext: tracks);
+              try {
+                await ref
+                    .read(audioHandlerProvider)
+                    .playSingleTrack(track, playbackContext: tracks);
+              } catch (error) {
+                if (context.mounted) showPlatformFailure(context, error);
+              }
             },
             leading: ClipRRect(
               borderRadius: BorderRadius.circular(13),
-              child: ArtworkImage(uri: track.coverAsset, width: 52, height: 52),
+              child: TrackArtwork(track: track, width: 52, height: 52),
             ),
             title: Text(
               track.title,
@@ -1692,6 +1923,14 @@ class _TrackResults extends ConsumerWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       FavoriteToggleButton(track: track, compact: true),
+                      if (ref.watch(showPlatformFeaturesProvider) &&
+                          track.source == TrackSource.kugou)
+                        IconButton(
+                          tooltip: '酷狗歌曲评论',
+                          icon: const Icon(Icons.comment_outlined, size: 19),
+                          onPressed: () =>
+                              openPlatformSongComments(context, ref, track),
+                        ),
                       _SearchQueueButton(
                         onTap: () async {
                           try {

@@ -16,9 +16,11 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.39+60
+version: 1.0.37+58
+
 environment:
-  sdk: ^3.10.7
+  sdk: ^3.11.0
+  flutter: '>=3.41.0'
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -33,9 +35,6 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  # Iconoir is the app's shared editorial icon set for semantic music states.
-  # https://github.com/iconoir-icons/iconoir (MIT)
-  iconoir_flutter: ^7.11.1
   flutter_riverpod: ^3.3.2
   go_router: ^17.3.0
   just_audio: ^0.10.6
@@ -53,6 +52,7 @@ dependencies:
   http: ^1.6.0
   flutter_cache_manager: ^3.4.1
   crypto: 3.0.7
+  ffi: ^2.1.4
   pinyin: 3.3.0
   image_picker: ^1.2.3
   path_provider: ^2.1.5
@@ -63,6 +63,9 @@ dependencies:
   # MIT-licensed clean-room Flutter implementation inspired by
   # PAIDAX01/math-curve-loaders.
   math_curve_loaders: 0.1.0
+  # Beta.5 chrome uses the upstream shader renderer; keep the version pinned
+  # so an unrelated dependency resolution cannot change the visual material.
+  liquid_glass_widgets: 1.15.0
 
 dev_dependencies:
   flutter_test:
@@ -80,6 +83,12 @@ dev_dependencies:
   drift_dev: 2.31.0
   build_runner: ^2.15.1
 
+# Keep the optical correction reproducible in APK and source archives. The
+# local MIT fork removes a synthetic dark-mode perimeter, not refraction.
+dependency_overrides:
+  liquid_glass_widgets:
+    path: third_party/liquid_glass_widgets/package
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -92,8 +101,15 @@ flutter:
   uses-material-design: true
 
   assets:
+    - third_party/md3music/LICENSE
+    - third_party/md3music/NOTICE.md
+    - third_party/md3music/UPSTREAM_DISCLAIMER.md
+    - third_party/liquid_glass_widgets/LICENSE
+    - third_party/liquid_glass_widgets/NOTICE.md
     - assets/branding/mesting-mark-master.png
+    - assets/branding/mesting-app-icon.png
     - assets/branding/mesting-launch-lockup-master.png
+    - assets/branding/startup/
     - assets/branding/dress-morning-icon-v2.png
     - assets/branding/dress-morning-launch.webp
     - assets/branding/dress-midnight-icon-v2.png

@@ -34,7 +34,7 @@ class ArtworkImage extends StatefulWidget {
     this.retryOnNetworkError = false,
     this.persistentNetworkCacheKey,
     this.networkImageCache,
-    this.fallback,
+    this.onNetworkError,
     super.key,
   });
 
@@ -47,7 +47,7 @@ class ArtworkImage extends StatefulWidget {
   final bool retryOnNetworkError;
   final String? persistentNetworkCacheKey;
   final PersistentNetworkImageCache? networkImageCache;
-  final Widget? fallback;
+  final VoidCallback? onNetworkError;
 
   @override
   State<ArtworkImage> createState() => _ArtworkImageState();
@@ -107,8 +107,7 @@ class _ArtworkImageState extends State<ArtworkImage> {
       Object error,
       StackTrace? stackTrace,
     ) {
-      return widget.fallback ??
-          _ArtworkPlaceholder(width: widget.width, height: widget.height);
+      return _ArtworkPlaceholder(width: widget.width, height: widget.height);
     }
 
     if (uri.startsWith('http://') || uri.startsWith('https://')) {
@@ -162,6 +161,7 @@ class _ArtworkImageState extends State<ArtworkImage> {
         fit: widget.fit,
         gaplessPlayback: true,
         errorBuilder: (context, error, stackTrace) {
+          widget.onNetworkError?.call();
           _scheduleNetworkRetry(provider);
           return errorBuilder(context, error, stackTrace);
         },
@@ -174,14 +174,15 @@ class _ArtworkImageState extends State<ArtworkImage> {
         },
         loadingBuilder: (context, child, progress) {
           if (progress == null || widget.retryOnNetworkError) return child;
-          return widget.fallback ??
-              _ArtworkPlaceholder(width: widget.width, height: widget.height);
+          return _ArtworkPlaceholder(
+            width: widget.width,
+            height: widget.height,
+          );
         },
       );
     }
     if (uri.isEmpty) {
-      return widget.fallback ??
-          _ArtworkPlaceholder(width: widget.width, height: widget.height);
+      return _ArtworkPlaceholder(width: widget.width, height: widget.height);
     }
     final localFile = _localFile(uri);
     if (localFile != null) {

@@ -19,6 +19,7 @@ class MestingBrandedLaunchApp extends StatelessWidget {
     this.themeMode = ThemeMode.system,
     this.failed = false,
     this.onRetry,
+    this.forceCoral = false,
     super.key,
   });
 
@@ -26,6 +27,7 @@ class MestingBrandedLaunchApp extends StatelessWidget {
   final ThemeMode themeMode;
   final bool failed;
   final VoidCallback? onRetry;
+  final bool forceCoral;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +46,7 @@ class MestingBrandedLaunchApp extends StatelessWidget {
         brandStyle: brandStyle,
         failed: failed,
         onRetry: onRetry,
+        forceCoral: forceCoral,
       ),
     );
   }
@@ -54,18 +57,20 @@ class MestingBrandedLaunchScreen extends StatelessWidget {
     this.brandStyle = AppBrandStyle.coral,
     this.failed = false,
     this.onRetry,
+    this.forceCoral = false,
     super.key,
   });
 
   final AppBrandStyle brandStyle;
   final bool failed;
   final VoidCallback? onRetry;
+  final bool forceCoral;
 
   @override
   Widget build(BuildContext context) {
     final background = switch (brandStyle) {
       AppBrandStyle.coral =>
-        Theme.of(context).brightness == Brightness.dark
+        !forceCoral && Theme.of(context).brightness == Brightness.dark
             ? mestingBrandInk
             : mestingBrandCoral,
       AppBrandStyle.morningMist => mestingMorningCanvas,

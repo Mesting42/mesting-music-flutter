@@ -40,15 +40,15 @@ android {
             dimension = "distribution"
             applicationIdSuffix = ".javatest"
         }
+        // Keep the integration sandbox installable beside both existing apps.
+        // Native md3Music libraries live in src/beta, never in stable/main.
+        create("beta") {
+            dimension = "distribution"
+            applicationIdSuffix = ".beta"
+        }
     }
 
     buildTypes {
-        debug {
-            // The internal test app must coexist with the stable release on
-            // a tester's phone. Its version stream and update feed are kept
-            // separate by the build command's Dart defines.
-            applicationIdSuffix = ".beta"
-        }
         release {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.

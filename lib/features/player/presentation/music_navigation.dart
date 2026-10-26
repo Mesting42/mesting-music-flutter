@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../themes/mesting_palette.dart';
-import '../../themes/mesting_backstage_theme.dart';
 import '../../themes/music_theme_tokens.dart';
 import 'music_page_transition.dart';
+import '../../experience/presentation/beta_bottom_bar.dart';
+import '../../../core/platform/distribution_channel.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 const double musicBottomNavigationContentHeight = 64;
+const double betaMusicBottomNavigationContentHeight = 84;
 const double musicNavigationRailWidth = 88;
 const List<BoxShadow> musicBottomNavigationOuterShadows = <BoxShadow>[];
 
@@ -19,16 +22,59 @@ Color musicBottomNavigationSelectedColorFor(Brightness brightness) =>
 int musicBottomNavigationIndexForLocation(String location) {
   final uri = Uri.parse(location);
   final view = uri.queryParameters['view'];
-
-  if (uri.path.startsWith('/profile') ||
-      uri.path.startsWith('/social') ||
-      uri.path.startsWith('/music/playlists') ||
-      view == 'playlists') {
+  if (!DistributionChannel.isBeta &&
+      (view == 'playlists' || uri.path.startsWith('/music/playlists'))) {
     return 3;
   }
-  if (view == 'favorites') return 2;
+
+  if (uri.path.startsWith('/profile') || uri.path.startsWith('/social')) {
+    return 3;
+  }
+  if (view == 'favorites' ||
+      view == 'playlists' ||
+      uri.path.startsWith('/music/library') ||
+      uri.path.startsWith('/music/playlists') ||
+      uri.path == '/music/replay') {
+    return 2;
+  }
   if (uri.path == '/music/recommend' || view == 'daily') return 0;
   return 1;
+}
+
+/// Logical parent for a restored Beta detail without a real route underneath.
+/// A pushed page always pops its actual history first; this policy only handles
+/// the final shell route, where Android would otherwise return to the launcher.
+String? betaMusicBackDestination(String location, {required String tabRoot}) {
+  final uri = Uri.parse(location);
+  final path = uri.path;
+  if (path == '/music') {
+    return switch (uri.queryParameters['view']) {
+      'daily' => '/music/recommend',
+      'favorites' || 'playlists' => '/profile',
+      _ => null,
+    };
+  }
+  if (path == '/music/library') {
+    return uri.queryParameters['view'] == null ? null : '/music/library';
+  }
+  if (path == '/music/recommend' || path == '/profile') return null;
+  if (path.startsWith('/legal')) return '/music/settings';
+  if (path == '/profile/delete-account') return '/music/settings';
+  if (path.startsWith('/profile/')) return '/profile';
+  if (path.startsWith('/social/saved-messages/')) {
+    return '/social/saved-messages';
+  }
+  if (path.startsWith('/social/chat/') || path.startsWith('/social/users/')) {
+    return '/social/messages';
+  }
+  if (path.startsWith('/social')) return '/profile';
+  if (path.startsWith('/music/playlists/')) return '/music?view=playlists';
+  return switch (path) {
+    '/music/search' || '/music/settings' || '/player' => '/music/recommend',
+    '/music/replay' => '/music/library',
+    '/music/queue' => '/music',
+    _ => tabRoot,
+  };
 }
 
 class MusicBottomNavigation extends ConsumerWidget {
@@ -37,12 +83,25 @@ class MusicBottomNavigation extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = context.musicThemeTokens;
-    final backstage = MestingBackstage.colorsOf(context);
-    final dark = backstage.dark;
-    final accent = backstage.signal;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final accent = Theme.of(context).colorScheme.primary;
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     final location = GoRouterState.of(context).uri.toString();
     final selected = musicBottomNavigationIndexForLocation(location);
+
+    if (DistributionChannel.isBeta) {
+      return BetaMusicBottomBar(
+        selectedIndex: selected,
+        onTabSelected: (index) =>
+            _goToMusicTab(context, selected, index, betaMusicRoutes[index]),
+        searchConfig: GlassSearchBarConfig(
+          hintText: '搜索歌曲、歌手',
+          onSearchToggle: (active) {
+            if (active) context.push('/music/search');
+          },
+        ),
+      );
+    }
 
     return SizedBox(
       height: musicBottomNavigationContentHeight + bottomInset,
@@ -51,10 +110,16 @@ class MusicBottomNavigation extends ConsumerWidget {
         children: [
           DecoratedBox(
             decoration: BoxDecoration(
-              color: dark ? const Color(0xFA0B0E0F) : backstage.surface,
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: dark
+                    ? const [Color(0xEB17131F), Color(0xF5100D16)]
+                    : const [Color(0xECFFFFFF), Color(0xF5FFFDF9)],
+              ),
               border: Border(
                 top: BorderSide(
-                  color: backstage.line.withValues(alpha: dark ? .34 : .72),
+                  color: Colors.white.withValues(alpha: dark ? .13 : .58),
                 ),
               ),
               boxShadow: musicBottomNavigationOuterShadows,
@@ -71,26 +136,23 @@ class MusicBottomNavigation extends ConsumerWidget {
             child: Row(
               children: [
                 _BottomNavItem(
-                  label: '首页',
-                  keyLabel: '推荐',
-                  icon: Icons.home_outlined,
+                  label: '推荐',
+                  icon: Icons.auto_awesome_rounded,
                   active: selected == 0,
                   onTap: () =>
                       _goToMusicTab(context, selected, 0, '/music/recommend'),
                   tokens: tokens,
                 ),
                 _BottomNavItem(
-                  label: '发现',
-                  keyLabel: '发现音乐',
-                  icon: Icons.explore_outlined,
+                  label: '发现音乐',
+                  icon: Icons.music_note_rounded,
                   active: selected == 1,
                   onTap: () => _goToMusicTab(context, selected, 1, '/music'),
                   tokens: tokens,
                 ),
                 _BottomNavItem(
-                  label: '音乐库',
-                  keyLabel: '我的喜欢',
-                  icon: Icons.library_music_outlined,
+                  label: '我的喜欢',
+                  icon: Icons.favorite_rounded,
                   active: selected == 2,
                   onTap: () => _goToMusicTab(
                     context,
@@ -102,7 +164,7 @@ class MusicBottomNavigation extends ConsumerWidget {
                 ),
                 _BottomNavItem(
                   label: '我的',
-                  icon: Icons.person_outline_rounded,
+                  icon: Icons.person_rounded,
                   active: selected == 3,
                   onTap: () => _goToMusicTab(context, selected, 3, '/profile'),
                   tokens: tokens,
@@ -122,8 +184,8 @@ class MusicNavigationRail extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = context.musicThemeTokens;
-    final backstage = MestingBackstage.colorsOf(context);
-    final accent = backstage.signal;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final accent = Theme.of(context).colorScheme.primary;
     final location = GoRouterState.of(context).uri.toString();
     final selected = musicBottomNavigationIndexForLocation(location);
 
@@ -132,12 +194,16 @@ class MusicNavigationRail extends ConsumerWidget {
       width: musicNavigationRailWidth,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: backstage.dark ? const Color(0xFA0B0E0F) : backstage.surface,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: dark
+                ? const [Color(0xF014111C), Color(0xF50E0C14)]
+                : const [Color(0xF5FFFFFF), Color(0xF2FFF9F7)],
+          ),
           border: Border(
             right: BorderSide(
-              color: backstage.line.withValues(
-                alpha: backstage.dark ? .34 : .72,
-              ),
+              color: Colors.white.withValues(alpha: dark ? .12 : .62),
             ),
           ),
         ),
@@ -161,7 +227,7 @@ class MusicNavigationRail extends ConsumerWidget {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: accent.withValues(alpha: .24),
+                      color: accent.withValues(alpha: dark ? .24 : .18),
                       blurRadius: 18,
                       spreadRadius: -3,
                     ),
@@ -176,9 +242,10 @@ class MusicNavigationRail extends ConsumerWidget {
               ),
               const Spacer(),
               _RailNavItem(
-                label: '首页',
-                keyLabel: '推荐',
-                icon: Icons.home_outlined,
+                label: DistributionChannel.isBeta ? '首页' : '推荐',
+                icon: DistributionChannel.isBeta
+                    ? Icons.home_rounded
+                    : Icons.auto_awesome_rounded,
                 active: selected == 0,
                 onTap: () =>
                     _goToMusicTab(context, selected, 0, '/music/recommend'),
@@ -186,32 +253,51 @@ class MusicNavigationRail extends ConsumerWidget {
               ),
               _RailNavItem(
                 label: '发现',
-                icon: Icons.explore_outlined,
+                icon: DistributionChannel.isBeta
+                    ? Icons.grid_view_rounded
+                    : Icons.music_note_rounded,
                 active: selected == 1,
                 onTap: () => _goToMusicTab(context, selected, 1, '/music'),
                 tokens: tokens,
               ),
               _RailNavItem(
-                label: '音乐库',
-                keyLabel: '喜欢',
-                icon: Icons.library_music_outlined,
+                label: DistributionChannel.isBeta ? '音乐库' : '喜欢',
+                icon: DistributionChannel.isBeta
+                    ? Icons.library_music_rounded
+                    : Icons.favorite_rounded,
                 active: selected == 2,
                 onTap: () => _goToMusicTab(
                   context,
                   selected,
                   2,
-                  '/music?view=favorites',
+                  DistributionChannel.isBeta
+                      ? '/music/library'
+                      : '/music?view=favorites',
                 ),
                 tokens: tokens,
               ),
               _RailNavItem(
                 label: '我的',
-                icon: Icons.person_outline_rounded,
+                icon: Icons.person_rounded,
                 active: selected == 3,
                 onTap: () => _goToMusicTab(context, selected, 3, '/profile'),
                 tokens: tokens,
               ),
               const Spacer(),
+              if (DistributionChannel.isBeta)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 18),
+                  child: IconButton.filledTonal(
+                    tooltip: '搜索歌曲',
+                    onPressed: () => context.push('/music/search'),
+                    style: IconButton.styleFrom(
+                      minimumSize: const Size.square(52),
+                      foregroundColor: tokens.textPrimary,
+                      backgroundColor: accent.withValues(alpha: .12),
+                    ),
+                    icon: const Icon(Icons.search_rounded),
+                  ),
+                ),
               const SizedBox(height: 18),
             ],
           ),
@@ -237,7 +323,6 @@ void _goToMusicTab(
 class _RailNavItem extends StatelessWidget {
   const _RailNavItem({
     required this.label,
-    this.keyLabel,
     required this.icon,
     required this.active,
     required this.onTap,
@@ -245,7 +330,6 @@ class _RailNavItem extends StatelessWidget {
   });
 
   final String label;
-  final String? keyLabel;
   final IconData icon;
   final bool active;
   final VoidCallback onTap;
@@ -254,7 +338,9 @@ class _RailNavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
-    final selectedColor = musicBottomNavigationSelectedColorFor(brightness);
+    final selectedColor = DistributionChannel.isBeta
+        ? Theme.of(context).colorScheme.primary
+        : musicBottomNavigationSelectedColorFor(brightness);
     final color = active ? selectedColor : tokens.textMuted;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -266,7 +352,7 @@ class _RailNavItem extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(20),
           child: AnimatedContainer(
-            key: ValueKey('music-navigation-rail-item-${keyLabel ?? label}'),
+            key: ValueKey('music-navigation-rail-item-$label'),
             duration: const Duration(milliseconds: 280),
             curve: Curves.easeOutCubic,
             width: 68,
@@ -310,7 +396,6 @@ class _RailNavItem extends StatelessWidget {
 class _BottomNavItem extends StatelessWidget {
   const _BottomNavItem({
     required this.label,
-    this.keyLabel,
     required this.icon,
     required this.active,
     required this.onTap,
@@ -318,7 +403,6 @@ class _BottomNavItem extends StatelessWidget {
   });
 
   final String label;
-  final String? keyLabel;
   final IconData icon;
   final bool active;
   final VoidCallback onTap;
@@ -341,9 +425,7 @@ class _BottomNavItem extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               AnimatedContainer(
-                key: ValueKey(
-                  'music-bottom-navigation-indicator-${keyLabel ?? label}',
-                ),
+                key: ValueKey('music-bottom-navigation-indicator-$label'),
                 duration: const Duration(milliseconds: 320),
                 curve: Curves.easeOutCubic,
                 width: active ? 44 : 34,

@@ -1,3 +1,4 @@
+import '../../../shared/widgets/beta_text_editing.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
@@ -8,6 +9,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/user_facing_error.dart';
 import '../../../core/persistence/app_preferences.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../music_platform/presentation/platform_account_page.dart';
+import '../../music_platform/music_platform_providers.dart';
+import '../beta_account_choice.dart';
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../legal/presentation/disclaimer_dialog.dart';
 import '../../library/library_providers.dart';
@@ -16,6 +21,9 @@ import '../data/device_phone_number_service.dart';
 import '../domain/auth_models.dart';
 import '../domain/password_policy.dart';
 import 'password_visibility_button.dart';
+import '../../../shared/widgets/beta_glass_controls.dart';
+import 'beta_welcome_page.dart';
+import '../beta_entry_flow.dart';
 
 class AuthPage extends ConsumerStatefulWidget {
   const AuthPage({
@@ -23,6 +31,7 @@ class AuthPage extends ConsumerStatefulWidget {
     required this.redirect,
     this.firstLaunch = false,
     this.onExperience,
+    this.mestingOnly = false,
     super.key,
   });
 
@@ -30,6 +39,7 @@ class AuthPage extends ConsumerStatefulWidget {
   final String redirect;
   final bool firstLaunch;
   final VoidCallback? onExperience;
+  final bool mestingOnly;
 
   @override
   ConsumerState<AuthPage> createState() => _AuthPageState();
@@ -89,7 +99,7 @@ class _AuthPageState extends ConsumerState<AuthPage>
     _disclaimerRead = read;
     _registrationTermsRead = read;
     unawaited(_loadRememberedAccount());
-    if (widget.firstLaunch) {
+    if (widget.firstLaunch && !DistributionChannel.isBeta) {
       unawaited(_detectDataSimPhoneNumber());
     }
   }
@@ -107,6 +117,28 @@ class _AuthPageState extends ConsumerState<AuthPage>
 
   @override
   Widget build(BuildContext context) {
+    if (DistributionChannel.isBeta &&
+        ref.watch(platformAccountProvider).value == null &&
+        ref.watch(currentUserProvider) == null) {
+      return BetaWelcomePage(
+        onExperience: () {
+          if (widget.firstLaunch) {
+            widget.onExperience?.call();
+          } else {
+            context.go(
+              ref.read(betaEntryFlowProvider) == BetaEntryStage.app
+                  ? '/music/recommend'
+                  : widget.redirect,
+            );
+          }
+        },
+      );
+    }
+    if (DistributionChannel.isBeta &&
+        (ref.watch(platformAccountProvider).value != null ||
+            ref.watch(currentUserProvider) != null)) {
+      return const PlatformAccountPage();
+    }
     final platformBrightness = MediaQuery.platformBrightnessOf(context);
     final dark = platformBrightness == Brightness.dark;
     final palette = _AuthPalette.forBrightness(platformBrightness);
@@ -174,6 +206,21 @@ class _AuthPageState extends ConsumerState<AuthPage>
                             ),
                             SizedBox(height: widget.firstLaunch ? 54 : 24),
                             const _AuthBrand(),
+                            if (DistributionChannel.isBeta &&
+                                authState.value == null) ...[
+                              const SizedBox(height: 24),
+                              OutlinedButton.icon(
+                                key: const ValueKey('music-platform-login'),
+                                onPressed: _openMusicPlatform,
+                                icon: const Icon(Icons.music_note_outlined),
+                                label: const Text('使用音乐平台账号登录'),
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Mesting 账号登录 / 注册',
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
                             const SizedBox(height: 46),
                             if (_rememberedSession != null) ...[
                               _RememberedAccountCard(
@@ -297,47 +344,52 @@ class _AuthPageState extends ConsumerState<AuthPage>
           ),
           const SizedBox(height: 10),
         ],
-        TextFormField(
-          key: const ValueKey('phone-number-field'),
-          controller: _accountController,
-          readOnly: _detectedPhone != null,
-          keyboardType: TextInputType.phone,
-          autofillHints: const [AutofillHints.telephoneNumberDevice],
-          decoration: InputDecoration(
-            labelText: '手机号码',
-            prefixIcon: const Padding(
-              padding: EdgeInsets.only(left: 16, right: 5),
-              child: Center(
-                widthFactor: 1,
-                child: Text(
-                  '+86',
-                  style: TextStyle(fontWeight: FontWeight.w900),
+        _glassAuthField(
+          TextFormField(
+            contextMenuBuilder: buildBetaEditingMenu,
+            selectionControls: mestingTextSelectionControls,
+            cursorRadius: const Radius.circular(1),
+            key: const ValueKey('phone-number-field'),
+            controller: _accountController,
+            readOnly: _detectedPhone != null,
+            keyboardType: TextInputType.phone,
+            autofillHints: const [AutofillHints.telephoneNumberDevice],
+            decoration: InputDecoration(
+              labelText: '手机号码',
+              prefixIcon: const Padding(
+                padding: EdgeInsets.only(left: 16, right: 5),
+                child: Center(
+                  widthFactor: 1,
+                  child: Text(
+                    '+86',
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
                 ),
               ),
+              suffixIcon: _detectedPhone != null
+                  ? IconButton(
+                      tooltip: '改用其他手机号',
+                      onPressed: _useManualPhoneInput,
+                      icon: const Icon(Icons.edit_rounded),
+                    )
+                  : _detectingPhone
+                  ? const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : null,
             ),
-            suffixIcon: _detectedPhone != null
-                ? IconButton(
-                    tooltip: '改用其他手机号',
-                    onPressed: _useManualPhoneInput,
-                    icon: const Icon(Icons.edit_rounded),
-                  )
-                : _detectingPhone
-                ? const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  )
-                : null,
+            validator: (_) => RegExp(r'^1\d{10}$').hasMatch(_phoneValue)
+                ? null
+                : '请输入 11 位中国大陆手机号',
+            onChanged: (_) {
+              _resetPhoneVerification();
+              _resetRegistrationConsent();
+            },
           ),
-          validator: (_) => RegExp(r'^1\d{10}$').hasMatch(_phoneValue)
-              ? null
-              : '请输入 11 位中国大陆手机号',
-          onChanged: (_) {
-            _resetPhoneVerification();
-            _resetRegistrationConsent();
-          },
         ),
         AnimatedSize(
           duration: const Duration(milliseconds: 330),
@@ -347,35 +399,40 @@ class _AuthPageState extends ConsumerState<AuthPage>
               ? const SizedBox.shrink()
               : Padding(
                   padding: const EdgeInsets.only(top: 13),
-                  child: TextFormField(
-                    key: const ValueKey('phone-code-field'),
-                    controller: _codeController,
-                    keyboardType: TextInputType.number,
-                    autofillHints: const [AutofillHints.oneTimeCode],
-                    maxLength: 6,
-                    decoration: InputDecoration(
-                      labelText: '短信验证码',
-                      counterText: '',
-                      prefixIcon: const Icon(Icons.verified_user_outlined),
-                      suffixIcon: Padding(
-                        padding: const EdgeInsets.only(right: 10),
-                        child: TextButton(
-                          onPressed: _countdown > 0 || _sendingCode
-                              ? null
-                              : _startPhoneLogin,
-                          child: Text(
-                            _sendingCode
-                                ? '发送中'
-                                : _countdown > 0
-                                ? '已获取 $_countdown秒'
-                                : '重新获取',
+                  child: _glassAuthField(
+                    TextFormField(
+                      contextMenuBuilder: buildBetaEditingMenu,
+                      selectionControls: mestingTextSelectionControls,
+                      cursorRadius: const Radius.circular(1),
+                      key: const ValueKey('phone-code-field'),
+                      controller: _codeController,
+                      keyboardType: TextInputType.number,
+                      autofillHints: const [AutofillHints.oneTimeCode],
+                      maxLength: 6,
+                      decoration: InputDecoration(
+                        labelText: '短信验证码',
+                        counterText: '',
+                        prefixIcon: const Icon(Icons.verified_user_outlined),
+                        suffixIcon: Padding(
+                          padding: const EdgeInsets.only(right: 10),
+                          child: TextButton(
+                            onPressed: _countdown > 0 || _sendingCode
+                                ? null
+                                : _startPhoneLogin,
+                            child: Text(
+                              _sendingCode
+                                  ? '发送中'
+                                  : _countdown > 0
+                                  ? '已获取 $_countdown秒'
+                                  : '重新获取',
+                            ),
                           ),
                         ),
                       ),
+                      validator: (value) => (value ?? '').trim().length == 6
+                          ? null
+                          : '请输入 6 位短信验证码',
                     ),
-                    validator: (value) => (value ?? '').trim().length == 6
-                        ? null
-                        : '请输入 6 位短信验证码',
                   ),
                 ),
         ),
@@ -390,37 +447,46 @@ class _AuthPageState extends ConsumerState<AuthPage>
         const SizedBox(height: 18),
         SizedBox(
           height: 56,
-          child: FilledButton(
-            key: const ValueKey('phone-primary-action'),
-            onPressed: loading ? null : _handlePhonePrimaryAction,
-            style: FilledButton.styleFrom(
-              backgroundColor: _currentTermsAccepted
-                  ? const Color(0xFF5268D7)
-                  : const Color(0xFF5268D7).withValues(alpha: .25),
-              disabledBackgroundColor: const Color(
-                0xFF5268D7,
-              ).withValues(alpha: .25),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-            child: loading || _sendingCode
-                ? const SizedBox.square(
-                    dimension: 21,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.4,
-                      color: Colors.white,
-                    ),
-                  )
-                : Text(
-                    _phoneCodeVisible ? '验证并登录' : '一键登录',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
+          child: (DistributionChannel.isBeta
+              ? BetaGlassButton(
+                  key: const ValueKey('phone-primary-action'),
+                  loading: loading || _sendingCode,
+                  onPressed: loading || _sendingCode
+                      ? null
+                      : _handlePhonePrimaryAction,
+                  child: Text(_phoneCodeVisible ? '验证并登录' : '一键登录'),
+                )
+              : FilledButton(
+                  key: const ValueKey('phone-primary-action'),
+                  onPressed: loading ? null : _handlePhonePrimaryAction,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _currentTermsAccepted
+                        ? const Color(0xFF5268D7)
+                        : const Color(0xFF5268D7).withValues(alpha: .25),
+                    disabledBackgroundColor: const Color(
+                      0xFF5268D7,
+                    ).withValues(alpha: .25),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
                     ),
                   ),
-          ),
+                  child: loading || _sendingCode
+                      ? const SizedBox.square(
+                          dimension: 21,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.4,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          _phoneCodeVisible ? '验证并登录' : '一键登录',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                )),
         ),
       ],
     );
@@ -437,102 +503,124 @@ class _AuthPageState extends ConsumerState<AuthPage>
           onChanged: _setEmailRegistering,
         ),
         const SizedBox(height: 14),
-        TextFormField(
-          key: const ValueKey('email-account-field'),
-          controller: _accountController,
-          keyboardType: TextInputType.emailAddress,
-          autofillHints: const [AutofillHints.email],
-          decoration: const InputDecoration(
-            labelText: '邮箱地址',
-            prefixIcon: Icon(Icons.alternate_email_rounded),
+        _glassAuthField(
+          TextFormField(
+            contextMenuBuilder: buildBetaEditingMenu,
+            selectionControls: mestingTextSelectionControls,
+            cursorRadius: const Radius.circular(1),
+            key: const ValueKey('email-account-field'),
+            controller: _accountController,
+            keyboardType: TextInputType.emailAddress,
+            autofillHints: const [AutofillHints.email],
+            decoration: const InputDecoration(
+              labelText: '邮箱地址',
+              prefixIcon: Icon(Icons.alternate_email_rounded),
+            ),
+            validator: (value) {
+              final account = (value ?? '').trim();
+              return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(account)
+                  ? null
+                  : '请输入正确的邮箱地址';
+            },
+            onChanged: (_) {
+              _resetEmailVerification();
+              _resetRegistrationConsent();
+            },
           ),
-          validator: (value) {
-            final account = (value ?? '').trim();
-            return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(account)
-                ? null
-                : '请输入正确的邮箱地址';
-          },
-          onChanged: (_) {
-            _resetEmailVerification();
-            _resetRegistrationConsent();
-          },
         ),
         if (_emailRegistering) ...[
           const SizedBox(height: 13),
-          TextFormField(
-            key: const ValueKey('email-code-field'),
-            controller: _codeController,
-            keyboardType: TextInputType.number,
-            autofillHints: const [AutofillHints.oneTimeCode],
-            maxLength: 6,
-            decoration: InputDecoration(
-              labelText: '邮箱验证码',
-              counterText: '',
-              prefixIcon: const Icon(Icons.mark_email_read_outlined),
-              suffixIcon: TextButton(
-                onPressed: _countdown > 0 || _sendingCode
-                    ? null
-                    : _sendEmailCode,
-                child: Text(
-                  _sendingCode
-                      ? '发送中'
-                      : _countdown > 0
-                      ? '$_countdown秒'
-                      : '获取验证码',
+          _glassAuthField(
+            TextFormField(
+              contextMenuBuilder: buildBetaEditingMenu,
+              selectionControls: mestingTextSelectionControls,
+              cursorRadius: const Radius.circular(1),
+              key: const ValueKey('email-code-field'),
+              controller: _codeController,
+              keyboardType: TextInputType.number,
+              autofillHints: const [AutofillHints.oneTimeCode],
+              maxLength: 6,
+              decoration: InputDecoration(
+                labelText: '邮箱验证码',
+                counterText: '',
+                prefixIcon: const Icon(Icons.mark_email_read_outlined),
+                suffixIcon: TextButton(
+                  onPressed: _countdown > 0 || _sendingCode
+                      ? null
+                      : _sendEmailCode,
+                  child: Text(
+                    _sendingCode
+                        ? '发送中'
+                        : _countdown > 0
+                        ? '$_countdown秒'
+                        : '获取验证码',
+                  ),
                 ),
               ),
+              validator: (value) =>
+                  (value ?? '').trim().length == 6 ? null : '请输入 6 位邮箱验证码',
             ),
-            validator: (value) =>
-                (value ?? '').trim().length == 6 ? null : '请输入 6 位邮箱验证码',
           ),
         ],
         const SizedBox(height: 13),
-        TextFormField(
-          key: const ValueKey('email-password-field'),
-          controller: _passwordController,
-          obscureText: _obscurePassword,
-          autofillHints: _emailRegistering
-              ? const [AutofillHints.newPassword]
-              : const [AutofillHints.password],
-          decoration: InputDecoration(
-            labelText: '密码',
-            prefixIcon: const Icon(Icons.lock_outline_rounded),
-            suffixIcon: PasswordVisibilityButton(
-              buttonKey: const ValueKey('email-password-visibility'),
-              obscured: _obscurePassword,
-              onPressed: () =>
-                  setState(() => _obscurePassword = !_obscurePassword),
+        _glassAuthField(
+          TextFormField(
+            contextMenuBuilder: buildBetaEditingMenu,
+            selectionControls: mestingTextSelectionControls,
+            cursorRadius: const Radius.circular(1),
+            key: const ValueKey('email-password-field'),
+            controller: _passwordController,
+            obscureText: _obscurePassword,
+            autofillHints: _emailRegistering
+                ? const [AutofillHints.newPassword]
+                : const [AutofillHints.password],
+            decoration: InputDecoration(
+              labelText: '密码',
+              prefixIcon: const Icon(Icons.lock_outline_rounded),
+              suffixIcon: PasswordVisibilityButton(
+                buttonKey: const ValueKey('email-password-visibility'),
+                obscured: _obscurePassword,
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
+              ),
             ),
+            validator: (value) => validateAccountPassword(value ?? ''),
+            onChanged: (_) => _resetRegistrationConsent(),
           ),
-          validator: (value) => validateAccountPassword(value ?? ''),
-          onChanged: (_) => _resetRegistrationConsent(),
         ),
         if (_emailRegistering) ...[
           const SizedBox(height: 13),
-          TextFormField(
-            key: const ValueKey('email-confirm-password-field'),
-            controller: _confirmPasswordController,
-            obscureText: _obscureConfirmPassword,
-            autofillHints: const [AutofillHints.newPassword],
-            decoration: InputDecoration(
-              labelText: '确认密码',
-              prefixIcon: const Icon(Icons.lock_reset_rounded),
-              suffixIcon: PasswordVisibilityButton(
-                buttonKey: const ValueKey('email-confirm-password-visibility'),
-                obscured: _obscureConfirmPassword,
-                onPressed: () => setState(
-                  () => _obscureConfirmPassword = !_obscureConfirmPassword,
+          _glassAuthField(
+            TextFormField(
+              contextMenuBuilder: buildBetaEditingMenu,
+              selectionControls: mestingTextSelectionControls,
+              cursorRadius: const Radius.circular(1),
+              key: const ValueKey('email-confirm-password-field'),
+              controller: _confirmPasswordController,
+              obscureText: _obscureConfirmPassword,
+              autofillHints: const [AutofillHints.newPassword],
+              decoration: InputDecoration(
+                labelText: '确认密码',
+                prefixIcon: const Icon(Icons.lock_reset_rounded),
+                suffixIcon: PasswordVisibilityButton(
+                  buttonKey: const ValueKey(
+                    'email-confirm-password-visibility',
+                  ),
+                  obscured: _obscureConfirmPassword,
+                  onPressed: () => setState(
+                    () => _obscureConfirmPassword = !_obscureConfirmPassword,
+                  ),
                 ),
               ),
+              validator: (value) {
+                if ((value ?? '').isEmpty) return '请再次输入密码';
+                if (value != _passwordController.text) {
+                  return '两次输入的密码不一致';
+                }
+                return null;
+              },
+              onChanged: (_) => _resetRegistrationConsent(),
             ),
-            validator: (value) {
-              if ((value ?? '').isEmpty) return '请再次输入密码';
-              if (value != _passwordController.text) {
-                return '两次输入的密码不一致';
-              }
-              return null;
-            },
-            onChanged: (_) => _resetRegistrationConsent(),
           ),
         ],
         if (error != null) ...[
@@ -546,37 +634,44 @@ class _AuthPageState extends ConsumerState<AuthPage>
         const SizedBox(height: 18),
         SizedBox(
           height: 56,
-          child: FilledButton(
-            key: const ValueKey('email-primary-action'),
-            onPressed: loading ? null : _handleEmailPrimaryAction,
-            style: FilledButton.styleFrom(
-              backgroundColor: _currentTermsAccepted
-                  ? const Color(0xFF5268D7)
-                  : const Color(0xFF5268D7).withValues(alpha: .25),
-              disabledBackgroundColor: const Color(
-                0xFF5268D7,
-              ).withValues(alpha: .25),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-            child: loading
-                ? const SizedBox.square(
-                    dimension: 21,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.4,
-                      color: Colors.white,
-                    ),
-                  )
-                : Text(
-                    _emailRegistering ? '注册并登录' : '登录',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
+          child: (DistributionChannel.isBeta
+              ? BetaGlassButton(
+                  key: const ValueKey('email-primary-action'),
+                  loading: loading,
+                  onPressed: loading ? null : _handleEmailPrimaryAction,
+                  child: Text(_emailRegistering ? '注册并登录' : '登录'),
+                )
+              : FilledButton(
+                  key: const ValueKey('email-primary-action'),
+                  onPressed: loading ? null : _handleEmailPrimaryAction,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _currentTermsAccepted
+                        ? const Color(0xFF5268D7)
+                        : const Color(0xFF5268D7).withValues(alpha: .25),
+                    disabledBackgroundColor: const Color(
+                      0xFF5268D7,
+                    ).withValues(alpha: .25),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
                     ),
                   ),
-          ),
+                  child: loading
+                      ? const SizedBox.square(
+                          dimension: 21,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.4,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          _emailRegistering ? '注册并登录' : '登录',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                )),
         ),
         if (!_emailRegistering)
           TextButton(
@@ -809,6 +904,9 @@ class _AuthPageState extends ConsumerState<AuthPage>
     }
   }
 
+  Widget _glassAuthField(Widget child) =>
+      DistributionChannel.isBeta ? BetaGlassField(child: child) : child;
+
   Future<void> _submitEmail() async {
     _clearMessages();
     if (!_ensureTermsAcceptedForCurrentFlow()) return;
@@ -862,6 +960,9 @@ class _AuthPageState extends ConsumerState<AuthPage>
     await saveLegalDocumentConsent(preferences);
     await _offerLegacyLibraryImport();
     if (!mounted) return;
+    if (DistributionChannel.isBeta) {
+      ref.read(betaEntryFlowProvider.notifier).authenticated();
+    }
     if (widget.firstLaunch) {
       widget.onExperience?.call();
       return;
@@ -956,9 +1057,29 @@ class _AuthPageState extends ConsumerState<AuthPage>
     }
   }
 
-  void _experienceNow() {
+  Future<void> _experienceNow() async {
+    if (DistributionChannel.isBeta &&
+        ref.read(platformAccountProvider).value == null &&
+        ref.read(authControllerProvider).value == null) {
+      await ref
+          .read(betaAccountChoiceProvider.notifier)
+          .select(BetaAccountChoice.guest);
+    }
+    if (!mounted) return;
+    if (DistributionChannel.isBeta) {
+      await ref.read(betaEntryFlowProvider.notifier).finish();
+    }
+    if (!mounted) return;
     widget.onExperience?.call();
     if (!widget.firstLaunch) context.go('/music/recommend');
+  }
+
+  Future<void> _openMusicPlatform() async {
+    final success = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const PlatformAccountPage()),
+    );
+    // Completing onboarding does not fabricate a Mesting account/session.
+    if (success == true && mounted) _experienceNow();
   }
 
   Future<void> _showLoginHelp() async {
@@ -1064,20 +1185,23 @@ class _TopActions extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        IconButton.filledTonal(
-          tooltip: firstLaunch ? '暂不登录' : '返回',
-          onPressed: onBack,
-          icon: Icon(
-            firstLaunch ? Icons.close_rounded : Icons.arrow_back_rounded,
+        if (DistributionChannel.isBeta)
+          BetaGlassBackButton(onPressed: onBack)
+        else
+          IconButton.filledTonal(
+            tooltip: firstLaunch ? '暂不登录' : '返回',
+            onPressed: onBack,
+            icon: Icon(
+              firstLaunch ? Icons.close_rounded : Icons.arrow_back_rounded,
+            ),
           ),
-        ),
         const Spacer(),
         TextButton(
           key: const ValueKey('experience-now'),
           onPressed: onExperience,
-          child: const Text(
-            '立即体验',
-            style: TextStyle(fontWeight: FontWeight.w900),
+          child: Text(
+            DistributionChannel.isBeta ? '暂不登录，先体验' : '立即体验',
+            style: const TextStyle(fontWeight: FontWeight.w900),
           ),
         ),
       ],

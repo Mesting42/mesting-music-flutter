@@ -1,23 +1,78 @@
+import '../../shared/widgets/beta_page_motion.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
+import '../../core/platform/distribution_channel.dart';
+import 'beta_appearance.dart';
 import 'mesting_palette.dart';
 import 'music_theme_preset.dart';
 import 'music_theme_tokens.dart';
 
 ThemeData buildMestingTheme(MusicThemePreset preset) {
-  final seed = preset.accent;
-  final scheme = ColorScheme.fromSeed(
+  final seed = DistributionChannel.isBeta ? BetaAppearance.red : preset.accent;
+  final generated = ColorScheme.fromSeed(
     seedColor: seed,
     brightness: preset.dark ? Brightness.dark : Brightness.light,
     surface: preset.dark
         ? MestingPalette.darkSurface
         : MestingPalette.lightSurface,
   );
+  final scheme = DistributionChannel.isBeta
+      ? generated.copyWith(
+          primary: BetaAppearance.accent(generated.brightness),
+          primaryContainer: BetaAppearance.panel(generated.brightness),
+          surfaceContainerLow: BetaAppearance.panel(generated.brightness),
+          surface: preset.dark ? generated.surface : const Color(0xFFFFFFFF),
+          surfaceContainer: preset.dark
+              ? generated.surfaceContainer
+              : const Color(0xFFF2F2F7),
+          surfaceContainerHigh: preset.dark
+              ? generated.surfaceContainerHigh
+              : const Color(0xFFE8E8ED),
+          surfaceContainerHighest: preset.dark
+              ? generated.surfaceContainerHighest
+              : const Color(0xFFE3E3E8),
+        )
+      : generated;
   final tokens = MusicThemeTokens.forBrightness(scheme.brightness);
 
   return ThemeData(
     useMaterial3: true,
+    pageTransitionsTheme: DistributionChannel.isBeta
+        ? const PageTransitionsTheme(
+            builders: {
+              TargetPlatform.android: BetaPageTransitionsBuilder(),
+              TargetPlatform.iOS: BetaPageTransitionsBuilder(),
+              TargetPlatform.windows: BetaPageTransitionsBuilder(),
+            },
+          )
+        : const PageTransitionsTheme(),
     colorScheme: scheme,
+    textSelectionTheme: DistributionChannel.isBeta
+        ? TextSelectionThemeData(
+            cursorColor: preset.dark
+                ? const Color(0xFF0A84FF)
+                : const Color(0xFF007AFF),
+            selectionHandleColor: preset.dark
+                ? const Color(0xFF0A84FF)
+                : const Color(0xFF007AFF),
+            selectionColor:
+                (preset.dark
+                        ? const Color(0xFF0A84FF)
+                        : const Color(0xFF007AFF))
+                    .withValues(alpha: .22),
+          )
+        : null,
+    cupertinoOverrideTheme: DistributionChannel.isBeta
+        ? CupertinoThemeData(
+            primaryColor: preset.dark
+                ? const Color(0xFF0A84FF)
+                : const Color(0xFF007AFF),
+            selectionHandleColor: preset.dark
+                ? const Color(0xFF0A84FF)
+                : const Color(0xFF007AFF),
+          )
+        : null,
     extensions: [tokens],
     scaffoldBackgroundColor: Colors.transparent,
     fontFamilyFallback: const ['Noto Sans SC', 'Microsoft YaHei', 'sans-serif'],

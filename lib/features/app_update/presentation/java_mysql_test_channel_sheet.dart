@@ -148,7 +148,12 @@ class _JavaMysqlTestChannelSheetState
             const _RiskLine('测试包有独立数据；遇到异常请停止测试并反馈。'),
             const SizedBox(height: 20),
             if (_loading)
-              const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: CircularProgressIndicator(),
+                ),
+              )
             else if (manifest == null) ...[
               Text(
                 _errorMessage ?? '测试通道暂未开放',
@@ -177,7 +182,10 @@ class _JavaMysqlTestChannelSheetState
               ],
               if (_errorMessage != null) ...[
                 const SizedBox(height: 10),
-                Text(_errorMessage!, style: const TextStyle(color: Color(0xFFC24A34))),
+                Text(
+                  _errorMessage!,
+                  style: const TextStyle(color: Color(0xFFC24A34)),
+                ),
               ],
               const SizedBox(height: 14),
               SizedBox(
@@ -214,7 +222,11 @@ class _RiskLine extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded, size: 17, color: tokens.textSecondary),
+          Icon(
+            Icons.info_outline_rounded,
+            size: 17,
+            color: tokens.textSecondary,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

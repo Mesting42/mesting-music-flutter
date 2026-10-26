@@ -1,3 +1,4 @@
+import '../../../shared/widgets/beta_text_editing.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -154,6 +155,9 @@ class _AccountDeletionPageState extends ConsumerState<AccountDeletionPage> {
                         if (!verified && _challenge != null) ...[
                           const SizedBox(height: 14),
                           TextField(
+                            contextMenuBuilder: buildBetaEditingMenu,
+                            selectionControls: mestingTextSelectionControls,
+                            cursorRadius: const Radius.circular(1),
                             key: const ValueKey('account-delete-code'),
                             controller: _codeController,
                             enabled: !_busy,
@@ -219,6 +223,9 @@ class _AccountDeletionPageState extends ConsumerState<AccountDeletionPage> {
                         ),
                         const SizedBox(height: 14),
                         TextField(
+                          contextMenuBuilder: buildBetaEditingMenu,
+                          selectionControls: mestingTextSelectionControls,
+                          cursorRadius: const Radius.circular(1),
                           key: const ValueKey('account-delete-confirmation'),
                           controller: _confirmationController,
                           enabled: verified && !_busy,

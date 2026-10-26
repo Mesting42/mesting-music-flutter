@@ -5,9 +5,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/database/app_database.dart';
 import '../../core/persistence/app_preferences.dart';
+import '../../core/platform/distribution_channel.dart';
 import '../../shared/models/track.dart';
 import '../auth/auth_providers.dart';
 import '../auth/data/auth_repository.dart';
+import '../music_platform/music_platform_providers.dart';
+import '../music_platform/data/platform_library_repository.dart';
 import 'data/library_repository.dart';
 import 'data/library_sync_api.dart';
 
@@ -85,6 +88,18 @@ final librarySyncApiProvider = Provider<LibrarySyncApi?>((ref) {
 });
 
 final libraryRepositoryProvider = Provider<LibraryRepository>((ref) {
+  if (DistributionChannel.isBeta) {
+    final platform = ref.watch(platformAccountProvider).value;
+    if (platform != null) {
+      final repository = PlatformLibraryRepository(
+        ref.watch(appDatabaseProvider),
+        api: ref.watch(musicPlatformApiProvider),
+        identity: platform,
+      );
+      ref.onDispose(repository.dispose);
+      return repository;
+    }
+  }
   final user = ref.watch(currentUserProvider);
   final ownerId = user?.uid ?? legacyLibraryOwnerId;
   final database = ref.watch(appDatabaseProvider);
@@ -96,6 +111,12 @@ final libraryRepositoryProvider = Provider<LibraryRepository>((ref) {
     database,
     ownerId: ownerId,
     syncApi: syncApi,
+    canWrite: DistributionChannel.isBeta
+        ? () =>
+              ref.mounted &&
+              user != null &&
+              ref.read(currentUserProvider)?.uid == user.uid
+        : null,
   );
   ref.onDispose(repository.dispose);
   if (user != null && syncApi != null) {
@@ -111,8 +132,18 @@ final libraryRepositoryProvider = Provider<LibraryRepository>((ref) {
   return repository;
 });
 
+/// Playback history belongs to the active account without inventing a Mesting
+/// user for a platform login. Guests keep their existing local owner.
+final activeLibraryOwnerProvider = Provider<String>((ref) {
+  if (DistributionChannel.isBeta) {
+    final platform = ref.watch(platformAccountProvider).value;
+    if (platform != null) return 'kugou:${platform.userId}';
+  }
+  return ref.watch(currentUserProvider)?.uid ?? legacyLibraryOwnerId;
+});
+
 final favoriteTracksProvider = StreamProvider<List<Track>>((ref) {
-  if (!ref.watch(isAuthenticatedProvider)) {
+  if (!ref.watch(isAuthenticatedProvider) && !DistributionChannel.isBeta) {
     return Stream.value(const <Track>[]);
   }
   return ref.watch(libraryRepositoryProvider).watchFavorites();
@@ -124,7 +155,7 @@ final favoriteTrackIdsProvider = Provider<Set<String>>((ref) {
 });
 
 final playlistsProvider = StreamProvider<List<UserPlaylist>>((ref) {
-  if (!ref.watch(isAuthenticatedProvider)) {
+  if (!ref.watch(isAuthenticatedProvider) && !DistributionChannel.isBeta) {
     return Stream.value(const <UserPlaylist>[]);
   }
   return ref.watch(libraryRepositoryProvider).watchPlaylists();
@@ -134,7 +165,9 @@ final playlistProvider = FutureProvider.family<UserPlaylist?, String>((
   ref,
   id,
 ) {
-  if (!ref.watch(isAuthenticatedProvider)) return null;
+  if (!ref.watch(isAuthenticatedProvider) && !DistributionChannel.isBeta) {
+    return null;
+  }
   return ref.watch(libraryRepositoryProvider).getPlaylist(id);
 });
 
@@ -142,7 +175,7 @@ final playlistTracksProvider = StreamProvider.family<List<Track>, String>((
   ref,
   playlistId,
 ) {
-  if (!ref.watch(isAuthenticatedProvider)) {
+  if (!ref.watch(isAuthenticatedProvider) && !DistributionChannel.isBeta) {
     return Stream.value(const <Track>[]);
   }
   return ref.watch(libraryRepositoryProvider).watchPlaylistTracks(playlistId);

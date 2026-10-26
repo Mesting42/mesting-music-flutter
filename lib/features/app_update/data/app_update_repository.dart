@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+import '../../../core/platform/distribution_channel.dart';
 
 import '../domain/app_update_models.dart';
 import 'app_update_platform.dart';
@@ -67,15 +68,19 @@ class AppUpdateRepository {
        _manifestUrl = manifestUrl ?? Uri.parse(defaultManifestUrl),
        _directoryProvider = directoryProvider ?? getApplicationSupportDirectory;
 
-  static const defaultManifestUrl = String.fromEnvironment(
-    'APP_UPDATE_MANIFEST_URL',
-    defaultValue:
-        'https://mesting-d5gm7tuhxacddccfb-1331507389.tcloudbaseapp.com/releases/android/latest.json',
-  );
-  static const expectedPackageName = String.fromEnvironment(
-    'APP_UPDATE_PACKAGE_NAME',
-    defaultValue: 'com.mesting.music',
-  );
+  static String get defaultManifestUrl => DistributionChannel.isBeta
+      ? DistributionChannel.updateManifestUrl
+      : const String.fromEnvironment(
+          'APP_UPDATE_MANIFEST_URL',
+          defaultValue:
+              'https://mesting-d5gm7tuhxacddccfb-1331507389.tcloudbaseapp.com/releases/android/latest.json',
+        );
+  static String get expectedPackageName => DistributionChannel.isBeta
+      ? DistributionChannel.packageName
+      : const String.fromEnvironment(
+          'APP_UPDATE_PACKAGE_NAME',
+          defaultValue: 'com.mesting.music',
+        );
   static const _maxManifestBytes = 1024 * 1024;
   static const _maxApkBytes = 350 * 1024 * 1024;
   static const _progressFlushBytes = 256 * 1024;

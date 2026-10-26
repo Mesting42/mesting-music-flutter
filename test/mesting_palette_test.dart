@@ -41,7 +41,7 @@ void main() {
     );
   });
 
-  test('rose colors are limited to brand and heart semantics', () {
+  test('rose colors are limited to declared brand and heart roles', () {
     final files = <File>[
       ...Directory('lib')
           .listSync(recursive: true)
@@ -102,7 +102,32 @@ void main() {
                     normalizedPath.endsWith(
                       'android/app/src/main/kotlin/com/mesting/mesting_music/MainActivity.kt',
                     )));
-        if (isRoseFamily && !isAllowedCoralBrandColor && !isAllowedHeartColor) {
+        final isPinnedBetaRed =
+            normalizedPath.endsWith(
+              'lib/features/themes/beta_appearance.dart',
+            ) &&
+            const {'DE3A3D', 'FF777A', '291D20', 'FCF0F0'}.contains(rgb);
+        // User-approved Beta.10 entry artwork keeps its coral/porcelain world
+        // scoped to these new surfaces. Exact roles are listed, rather than
+        // allowing arbitrary rose colors throughout the application.
+        final isPinnedBetaEntryColor =
+            (normalizedPath.endsWith(
+                  'lib/features/auth/presentation/beta_welcome_page.dart',
+                ) &&
+                rgb == '291B20') ||
+            (normalizedPath.endsWith(
+                  'lib/features/auth/presentation/beta_onboarding_page.dart',
+                ) &&
+                rgb == '22181D') ||
+            (normalizedPath.endsWith(
+                  'lib/features/auth/presentation/beta_player_style_previews.dart',
+                ) &&
+                const {'D75E63', '784344'}.contains(rgb));
+        if (isRoseFamily &&
+            !isAllowedCoralBrandColor &&
+            !isAllowedHeartColor &&
+            !isPinnedBetaRed &&
+            !isPinnedBetaEntryColor) {
           violations.add(
             '${file.path}: #$rgb '
             '(h=${hsl.hue.toStringAsFixed(1)}, '

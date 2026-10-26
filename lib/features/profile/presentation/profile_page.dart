@@ -7,6 +7,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/user_facing_error.dart';
 import '../../../core/persistence/app_preferences.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../music_platform/presentation/platform_account_page.dart';
+import '../../music_platform/presentation/platform_profile.dart';
 import '../../../shared/layout/adaptive_layout.dart';
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../../shared/widgets/mesting_loading_indicator.dart';
@@ -16,12 +19,14 @@ import '../../library/library_providers.dart';
 import '../../player/presentation/music_hub_top_bar.dart';
 import '../../player/presentation/music_page_transition.dart';
 import '../../playlists/presentation/playlist_editor_dialog.dart';
+import '../../experience/presentation/music_library_page.dart';
 import '../../social/social_providers.dart';
 import '../../social/social_attention.dart';
 import '../../social/domain/social_models.dart';
+import '../../social/presentation/social_widgets.dart';
 import '../../themes/theme_gallery_page.dart';
 import '../../themes/mesting_palette.dart';
-import '../../themes/mesting_backstage_theme.dart';
+import '../../themes/beta_appearance.dart';
 import '../../themes/music_theme_tokens.dart';
 import '../../../shared/widgets/artwork_image.dart';
 import '../../../shared/widgets/music_notice.dart';
@@ -48,11 +53,12 @@ class ProfilePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Beta owns one account presentation for guests and either restored identity.
+    if (DistributionChannel.isBeta) return const PlatformProfile();
     final auth = ref.watch(authControllerProvider);
     final user = auth.value?.user;
     final topInset = MediaQuery.paddingOf(context).top;
     final playlists = ref.watch(playlistsProvider).value?.length ?? 0;
-    final favoriteCount = ref.watch(favoriteTracksProvider).value?.length ?? 0;
     final listeningHistory = user == null
         ? const <ListeningHistoryItem>[]
         : ref.watch(listeningRankingProvider).value ??
@@ -79,9 +85,6 @@ class ProfilePage extends ConsumerWidget {
     final pageWidth = MediaQuery.sizeOf(context).width;
     final expanded = mestingUsesNavigationRailForWidth(pageWidth);
     final bottomClearance = mestingMusicPageBottomClearanceForWidth(pageWidth);
-    final backstageColors = MestingBackstage.forBrightness(
-      Theme.of(context).brightness,
-    );
 
     final header = _PageEyebrow(
       immersive: user != null,
@@ -99,7 +102,9 @@ class ProfilePage extends ConsumerWidget {
         id: 'playlists',
         eyebrow: 'COLLECTION',
         icon: Icons.library_music_rounded,
-        color: const Color(0xFF2259C7),
+        color: DistributionChannel.isBeta
+            ? BetaAppearance.red
+            : const Color(0xFF9A7AF1),
         title: '我的歌单',
         subtitle: '$playlists 个歌单 · 收藏你的声音',
         onTap: () => openMyPlaylistsFromProfile(context),
@@ -108,7 +113,9 @@ class ProfilePage extends ConsumerWidget {
         id: 'history',
         eyebrow: 'FOOTPRINT',
         icon: Icons.equalizer_rounded,
-        color: MestingPalette.amber,
+        color: DistributionChannel.isBeta
+            ? BetaAppearance.red
+            : MestingPalette.amber,
         title: '听歌排行',
         subtitle: listeningHistory.isEmpty
             ? '从第一首完整播放开始记录'
@@ -122,7 +129,9 @@ class ProfilePage extends ConsumerWidget {
         id: 'friends',
         eyebrow: 'CONNECTION',
         icon: Icons.people_alt_rounded,
-        color: const Color(0xFF67A9F5),
+        color: DistributionChannel.isBeta
+            ? BetaAppearance.red
+            : const Color(0xFF67A9F5),
         title: '关注与粉丝',
         subtitle: socialSummary == null
             ? '找到与你同频的人'
@@ -147,83 +156,98 @@ class ProfilePage extends ConsumerWidget {
       _ProfileDashboardItem(
         id: 'dress-up',
         eyebrow: 'IDENTITY',
-        color: MestingPalette.teal,
-        iconWidget: const _DressUpGlyph(
+        color: DistributionChannel.isBeta
+            ? BetaAppearance.red
+            : MestingPalette.teal,
+        iconWidget: _DressUpGlyph(
           key: ValueKey('profile-dress-up-glyph'),
           color: MestingPalette.teal,
         ),
         title: '装扮',
-        subtitle: '皮肤、IP 主题、图标与启动页',
+        subtitle: DistributionChannel.isBeta
+            ? '启动页、播放器、背景与进度条'
+            : '皮肤、IP 主题、图标与启动页',
         onTap: () => showDressUpCenterSheet(context),
       ),
     ];
 
-    return Theme(
-      data: MestingBackstage.themeOf(context),
-      child: ColoredBox(
-        color: backstageColors.ink,
-        child: CustomScrollView(
-          key: const PageStorageKey('profile-page'),
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            SliverToBoxAdapter(
-              child: user == null
-                  ? Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        14,
-                        topInset + 14,
-                        14,
-                        bottomClearance,
-                      ),
-                      child: Column(
-                        children: [
-                          const DressUpAssetWarmup(),
-                          header,
-                          const SizedBox(height: 16),
-                          if (auth.isLoading)
-                            const _LoadingProfile()
-                          else
-                            const _GuestProfile(),
-                        ],
-                      ),
-                    )
-                  : Column(
-                      children: [
-                        const DressUpAssetWarmup(),
-                        _SignedInHero(
-                          topInset: topInset,
-                          header: header,
-                          nickname: user.nickname,
-                          bio: user.bio,
-                          avatarUrl: user.avatarUrl,
-                          background: profileBackground,
-                          favoriteCount: favoriteCount,
-                          playlistCount: playlists,
-                          playCount: completedPlayCount,
-                          onEditTap: () => context.push('/profile/edit'),
+    return CustomScrollView(
+      key: const PageStorageKey('profile-page'),
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        SliverToBoxAdapter(
+          child: user == null
+              ? Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    14,
+                    topInset + 14,
+                    14,
+                    bottomClearance,
+                  ),
+                  child: Column(
+                    children: [
+                      const DressUpAssetWarmup(),
+                      header,
+                      if (DistributionChannel.isBeta)
+                        _musicPlatformEntry(context),
+                      const SizedBox(height: 16),
+                      if (auth.isLoading)
+                        const _LoadingProfile()
+                      else
+                        const _GuestProfile(),
+                      if (DistributionChannel.isBeta) ...[
+                        ListTile(
+                          leading: const Icon(Icons.favorite_border),
+                          title: const Text('本机收藏'),
+                          subtitle: const Text('保存在此 Beta 应用中'),
+                          onTap: () => context.push('/music?view=favorites'),
                         ),
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            14,
-                            20,
-                            14,
-                            bottomClearance,
-                          ),
-                          child: _ProfileDashboard(
-                            key: const ValueKey('profile-dashboard'),
-                            expanded: expanded,
-                            items: dashboardItems,
-                          ),
+                        ListTile(
+                          leading: const Icon(Icons.queue_music),
+                          title: const Text('本机歌单'),
+                          onTap: () => context.push('/music?view=playlists'),
                         ),
                       ],
+                    ],
+                  ),
+                )
+              : Column(
+                  children: [
+                    const DressUpAssetWarmup(),
+                    _SignedInHero(
+                      topInset: topInset,
+                      header: header,
+                      nickname: user.nickname,
+                      bio: user.bio,
+                      avatarUrl: user.avatarUrl,
+                      background: profileBackground,
+                      onEditTap: () => context.push('/profile/edit'),
                     ),
-            ),
-          ],
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(14, 20, 14, bottomClearance),
+                      child: _ProfileDashboard(
+                        key: const ValueKey('profile-dashboard'),
+                        expanded: expanded,
+                        items: dashboardItems,
+                      ),
+                    ),
+                  ],
+                ),
         ),
-      ),
+      ],
     );
   }
 }
+
+Widget _musicPlatformEntry(BuildContext context) => ListTile(
+  leading: const Icon(Icons.music_note_outlined),
+  title: const Text('音乐平台账号'),
+  subtitle: const Text('酷狗音乐 · 独立登录与退出'),
+  trailing: const Icon(Icons.chevron_right),
+  onTap: () => Navigator.of(
+    context,
+  ).push(MaterialPageRoute<void>(builder: (_) => const PlatformAccountPage())),
+);
 
 Future<void> _changeStatus(
   BuildContext context,
@@ -278,6 +302,10 @@ Future<void> _openProfileCreateMenu(
     builder: (sheetContext) => const _ProfileCreateSheet(),
   );
   if (!context.mounted || action != _ProfileQuickAction.createPlaylist) return;
+  if (DistributionChannel.isBeta) {
+    await createEditorialPlaylist(context, ref);
+    return;
+  }
   if (!signedIn) {
     context.push(
       '/auth?mode=register&redirect=${Uri.encodeComponent('/profile')}',
@@ -333,7 +361,6 @@ class _PageEyebrow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final backstage = MestingBackstage.colorsOf(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         final centerSideInset = math.min(
@@ -346,37 +373,23 @@ class _PageEyebrow extends StatelessWidget {
             fit: StackFit.expand,
             alignment: Alignment.center,
             children: [
-              Positioned(
-                left: centerSideInset,
-                right: centerSideInset,
-                top: 0,
-                bottom: 0,
-                child: Align(
-                  key: const ValueKey('profile-header-center-lane'),
-                  alignment: Alignment.center,
-                  child: Semantics(
-                    button: status != null,
-                    label: status == null
-                        ? 'Mesting'
-                        : status!.isEmpty
-                        ? 'Mesting，设置社交状态'
-                        : 'Mesting，当前状态${status!.label}',
-                    child: GestureDetector(
+              if (status != null)
+                Positioned(
+                  left: centerSideInset,
+                  right: centerSideInset,
+                  top: 0,
+                  bottom: 0,
+                  child: Align(
+                    key: const ValueKey('profile-header-center-lane'),
+                    alignment: Alignment.center,
+                    child: SocialStatusBadge(
                       key: const ValueKey('profile-header-status'),
+                      status: status!,
                       onTap: onStatusTap,
-                      child: Text(
-                        'MESTING',
-                        style: TextStyle(
-                          color: backstage.bone,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 3.2,
-                        ),
-                      ),
+                      plain: true,
                     ),
                   ),
                 ),
-              ),
               Align(
                 alignment: Alignment.centerLeft,
                 child: _ProfileHeaderAction(
@@ -445,9 +458,7 @@ class _ProfileHeaderAction extends StatelessWidget {
       message: tooltip,
       child: Material(
         color: immersive
-            ? dark
-                  ? Colors.black.withValues(alpha: .28)
-                  : Colors.white.withValues(alpha: .72)
+            ? Colors.black.withValues(alpha: .28)
             : dark
             ? Colors.white.withValues(alpha: .07)
             : Colors.black.withValues(alpha: .035),
@@ -455,9 +466,7 @@ class _ProfileHeaderAction extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
             color: immersive
-                ? dark
-                      ? Colors.white.withValues(alpha: .22)
-                      : Colors.black.withValues(alpha: .12)
+                ? Colors.white.withValues(alpha: .22)
                 : dark
                 ? Colors.white.withValues(alpha: .16)
                 : Colors.black.withValues(alpha: .10),
@@ -471,7 +480,7 @@ class _ProfileHeaderAction extends StatelessWidget {
             height: _profileHeaderActionSize,
             child: Icon(
               icon,
-              color: immersive && dark ? Colors.white : tokens.textPrimary,
+              color: immersive ? Colors.white : tokens.textPrimary,
               size: 23,
             ),
           ),
@@ -1005,9 +1014,6 @@ class _SignedInHero extends StatelessWidget {
     required this.bio,
     required this.avatarUrl,
     required this.background,
-    required this.favoriteCount,
-    required this.playlistCount,
-    required this.playCount,
     required this.onEditTap,
   });
 
@@ -1017,49 +1023,36 @@ class _SignedInHero extends StatelessWidget {
   final String bio;
   final String? avatarUrl;
   final ProfileBackgroundState background;
-  final int favoriteCount;
-  final int playlistCount;
-  final int playCount;
   final VoidCallback onEditTap;
 
   @override
   Widget build(BuildContext context) {
-    final backstage = MestingBackstage.colorsOf(context);
+    const foreground = Colors.white;
+    const secondary = Color(0xD9FFFFFF);
     return SizedBox(
       key: const ValueKey('profile-immersive-hero'),
-      height: topInset + 520,
+      height: topInset + 300,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          ColoredBox(color: backstage.ink),
           RepaintBoundary(
-            child: Opacity(
-              opacity: .1,
-              child: ProfileBackgroundVisual(
-                key: const ValueKey('profile-hero-background'),
-                background: background,
-              ),
+            child: ProfileBackgroundVisual(
+              key: const ValueKey('profile-hero-background'),
+              background: background,
             ),
           ),
-          DecoratedBox(
+          const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: backstage.dark
-                    ? const [
-                        Color(0xF2101110),
-                        Color(0xC9101110),
-                        Color(0xE6101110),
-                        Color(0xFF101110),
-                      ]
-                    : [
-                        backstage.ink.withValues(alpha: .94),
-                        backstage.ink.withValues(alpha: .78),
-                        backstage.ink.withValues(alpha: .9),
-                        backstage.ink,
-                      ],
-                stops: const [0, .34, .66, 1],
+                colors: [
+                  Color(0x66000000),
+                  Color(0x12000000),
+                  Color(0x4D000000),
+                  Color(0xD9000000),
+                ],
+                stops: [0, .34, .66, 1],
               ),
             ),
           ),
@@ -1067,45 +1060,15 @@ class _SignedInHero extends StatelessWidget {
           Positioned(
             left: 18,
             right: 18,
-            top: topInset + 82,
+            bottom: 22,
             child: Align(
-              alignment: Alignment.topLeft,
+              alignment: Alignment.bottomLeft,
               child: ConstrainedBox(
                 key: const ValueKey('profile-hero-content'),
                 constraints: const BoxConstraints(maxWidth: 780),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '我的',
-                          style: TextStyle(
-                            color: backstage.bone,
-                            fontSize: 60,
-                            height: .92,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -4,
-                          ),
-                        ),
-                        const SizedBox(width: 18),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Text(
-                            'BACKSTAGE /\nPERSONAL CONSOLE',
-                            style: TextStyle(
-                              color: backstage.boneMuted,
-                              fontSize: 9,
-                              height: 1.45,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
                     Semantics(
                       button: true,
                       label: '编辑个人资料',
@@ -1113,132 +1076,82 @@ class _SignedInHero extends StatelessWidget {
                         key: const ValueKey('profile-edit-entry'),
                         behavior: HitTestBehavior.opaque,
                         onTap: onEditTap,
-                        child: Material(
-                          color: backstage.dark
-                              ? const Color(0xE114181A)
-                              : backstage.surface,
-                          borderRadius: BorderRadius.circular(10),
-                          clipBehavior: Clip.antiAlias,
-                          child: Container(
-                            height: 176,
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: backstage.line.withValues(
-                                  alpha: backstage.dark ? .52 : .84,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Container(
+                              key: const ValueKey('profile-avatar-halo'),
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white.withValues(alpha: .14),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: .72),
+                                  width: 1.2,
+                                ),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x73000000),
+                                    blurRadius: 28,
+                                    offset: Offset(0, 12),
+                                  ),
+                                ],
+                              ),
+                              child: _ProfileAvatar(url: avatarUrl, size: 86),
+                            ),
+                            const SizedBox(width: 15),
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.only(bottom: 2),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text(
+                                      'PERSONAL SOUNDSPACE',
+                                      style: TextStyle(
+                                        color: Color(0xC7FFFFFF),
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 1.65,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 5),
+                                    Text(
+                                      nickname,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: foreground,
+                                        fontSize: 27,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: -.55,
+                                        shadows: [
+                                          Shadow(
+                                            color: Color(0x80000000),
+                                            blurRadius: 12,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 5),
+                                    Text(
+                                      bio.trim().isEmpty ? '还没有写个人简介' : bio,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: secondary,
+                                        fontSize: 11.5,
+                                        height: 1.38,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 132,
-                                  alignment: Alignment.center,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFF0B376C),
-                                  ),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        key: const ValueKey(
-                                          'profile-avatar-halo',
-                                        ),
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: backstage.onAccent,
-                                            width: 1.2,
-                                          ),
-                                        ),
-                                        child: _ProfileAvatar(
-                                          url: avatarUrl,
-                                          size: 88,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Text(
-                                        'M  E  S  T',
-                                        style: TextStyle(
-                                          color: backstage.onAccent.withValues(
-                                            alpha: .72,
-                                          ),
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(
-                                      top: 24,
-                                      right: 16,
-                                      bottom: 18,
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'BACKSTAGE / PERSONAL CONSOLE',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            color: backstage.signal,
-                                            fontSize: 8,
-                                            fontWeight: FontWeight.w900,
-                                            letterSpacing: 1.15,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 5),
-                                        Text(
-                                          nickname,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            color: backstage.bone,
-                                            fontSize: 31,
-                                            fontWeight: FontWeight.w900,
-                                            letterSpacing: -.55,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 5),
-                                        Text(
-                                          bio.trim().isEmpty
-                                              ? '正在整理你的音乐后台'
-                                              : bio,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            color: backstage.boneMuted,
-                                            fontSize: 10.5,
-                                            height: 1.25,
-                                          ),
-                                        ),
-                                        const Spacer(),
-                                        Container(
-                                          height: 2,
-                                          color: backstage.signal,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    _ProfileStatsStrip(
-                      favoriteCount: favoriteCount,
-                      playlistCount: playlistCount,
-                      playCount: playCount,
                     ),
                   ],
                 ),
@@ -1246,97 +1159,6 @@ class _SignedInHero extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ProfileStatsStrip extends StatelessWidget {
-  const _ProfileStatsStrip({
-    required this.favoriteCount,
-    required this.playlistCount,
-    required this.playCount,
-  });
-
-  final int favoriteCount;
-  final int playlistCount;
-  final int playCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final backstage = MestingBackstage.colorsOf(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: backstage.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: backstage.line),
-      ),
-      child: SizedBox(
-        height: 76,
-        child: Row(
-          children: [
-            _ProfileStat(value: '$favoriteCount', label: '喜欢'),
-            VerticalDivider(
-              width: 1,
-              indent: 12,
-              endIndent: 12,
-              color: backstage.line,
-            ),
-            _ProfileStat(value: '$playlistCount', label: '歌单'),
-            VerticalDivider(
-              width: 1,
-              indent: 12,
-              endIndent: 12,
-              color: backstage.line,
-            ),
-            _ProfileStat(value: '$playCount', label: '播放'),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ProfileStat extends StatelessWidget {
-  const _ProfileStat({required this.value, required this.label});
-
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final backstage = MestingBackstage.colorsOf(context);
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Flexible(
-              child: Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: backstage.bone,
-                  fontSize: 26,
-                  height: 1,
-                  fontWeight: FontWeight.w900,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: backstage.boneMuted,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -1381,7 +1203,6 @@ class _ProfileDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.musicThemeTokens;
-    final backstage = MestingBackstage.colorsOf(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1395,10 +1216,20 @@ class _ProfileDashboard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '我的工作台',
+                      'YOUR MUSIC SPACE',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      '我的音乐空间',
                       style: TextStyle(
                         color: tokens.textPrimary,
-                        fontSize: 22,
+                        fontSize: 21,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -.35,
                       ),
@@ -1407,7 +1238,7 @@ class _ProfileDashboard extends StatelessWidget {
                 ),
               ),
               Text(
-                '收藏、足迹与关系',
+                '把收藏、足迹与关系放在一起',
                 style: TextStyle(
                   color: tokens.textMuted,
                   fontSize: 9.5,
@@ -1420,46 +1251,11 @@ class _ProfileDashboard extends StatelessWidget {
         const SizedBox(height: 13),
         LayoutBuilder(
           builder: (context, constraints) {
-            if (!expanded && constraints.maxWidth >= 320) {
-              return SizedBox(
-                key: const ValueKey('profile-compact-sections'),
-                height: 282,
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 11,
-                      child: _ProfileDashboardCard(
-                        item: items.first,
-                        featured: true,
-                      ),
-                    ),
-                    const SizedBox(width: 9),
-                    Expanded(
-                      flex: 9,
-                      child: Column(
-                        children: [
-                          for (
-                            var index = 1;
-                            index < items.length;
-                            index++
-                          ) ...[
-                            Expanded(
-                              child: _ProfileDashboardCard(
-                                item: items[index],
-                                compact: true,
-                              ),
-                            ),
-                            if (index != items.length - 1)
-                              const SizedBox(height: 8),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-            final columns = expanded ? 4 : 1;
+            final columns = constraints.maxWidth < 330
+                ? 1
+                : expanded
+                ? 4
+                : 2;
             const spacing = 10.0;
             final cardWidth =
                 (constraints.maxWidth - spacing * (columns - 1)) / columns;
@@ -1472,53 +1268,33 @@ class _ProfileDashboard extends StatelessWidget {
               children: [
                 for (final item in items)
                   SizedBox(
-                    width: item.id == 'playlists' && columns > 1
-                        ? cardWidth * 2 + spacing
-                        : cardWidth,
-                    height: item.id == 'playlists' ? 150 : 142,
+                    width: cardWidth,
+                    height: 142,
                     child: _ProfileDashboardCard(item: item),
                   ),
               ],
             );
           },
         ),
-        const SizedBox(height: 24),
-        Text(
-          '管理',
-          style: TextStyle(
-            color: backstage.bone,
-            fontSize: 21,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 10),
-        _ProfileManagementPanel(items: items),
       ],
     );
   }
 }
 
 class _ProfileDashboardCard extends StatelessWidget {
-  const _ProfileDashboardCard({
-    required this.item,
-    this.featured = false,
-    this.compact = false,
-  });
+  const _ProfileDashboardCard({required this.item});
 
   final _ProfileDashboardItem item;
-  final bool featured;
-  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.musicThemeTokens;
-    final backstage = MestingBackstage.colorsOf(context);
-    final radius = BorderRadius.circular(12);
-    final surface = featured ? const Color(0xFFD9C8A9) : backstage.surface;
-    final foreground = featured ? const Color(0xFF191B1D) : tokens.textPrimary;
-    final secondary = featured
-        ? const Color(0xFF191B1D).withValues(alpha: .68)
-        : tokens.textSecondary;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final radius = BorderRadius.circular(24);
+    final surface = Color.alphaBlend(
+      item.color.withValues(alpha: dark ? .055 : .04),
+      tokens.glassStrong.withValues(alpha: dark ? .82 : .86),
+    );
     return Semantics(
       button: true,
       label: item.unreadCount > 0
@@ -1527,14 +1303,24 @@ class _ProfileDashboardCard extends StatelessWidget {
       child: RepaintBoundary(
         child: DecoratedBox(
           key: ValueKey('profile-dashboard-card-${item.id}'),
-          decoration: BoxDecoration(borderRadius: radius, boxShadow: const []),
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            boxShadow: [
+              BoxShadow(
+                color: tokens.shadow.withValues(alpha: dark ? .22 : .12),
+                blurRadius: 20,
+                spreadRadius: -7,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
           child: Material(
             color: surface,
             shape: RoundedRectangleBorder(
               borderRadius: radius,
               side: BorderSide(
                 color: Color.alphaBlend(
-                  item.color.withValues(alpha: .12),
+                  item.color.withValues(alpha: dark ? .12 : .08),
                   tokens.border,
                 ),
               ),
@@ -1546,26 +1332,33 @@ class _ProfileDashboardCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  if (!compact)
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        height: 3,
-                        color: item.color.withValues(alpha: .88),
+                  Positioned(
+                    top: -28,
+                    right: -26,
+                    child: Container(
+                      width: 92,
+                      height: 92,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            item.color.withValues(alpha: dark ? .20 : .13),
+                            item.color.withValues(alpha: 0),
+                          ],
+                        ),
                       ),
                     ),
+                  ),
                   Positioned(
-                    top: compact ? 13 : 15,
-                    left: compact ? 12 : 15,
+                    top: 15,
+                    left: 15,
                     child: Container(
                       key: ValueKey('profile-tile-leading-${item.title}'),
-                      width: compact ? 31 : 39,
-                      height: compact ? 31 : 39,
+                      width: 42,
+                      height: 42,
                       decoration: BoxDecoration(
-                        color: item.color.withValues(alpha: .17),
-                        borderRadius: BorderRadius.circular(8),
+                        color: item.color.withValues(alpha: dark ? .17 : .12),
+                        borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: item.color.withValues(alpha: .18),
                         ),
@@ -1573,17 +1366,13 @@ class _ProfileDashboardCard extends StatelessWidget {
                       child: Center(
                         child:
                             item.iconWidget ??
-                            Icon(
-                              item.icon,
-                              color: item.color,
-                              size: compact ? 18 : 22,
-                            ),
+                            Icon(item.icon, color: item.color, size: 22),
                       ),
                     ),
                   ),
                   Positioned(
-                    top: compact ? 12 : 17,
-                    right: compact ? 10 : 16,
+                    top: 17,
+                    right: 16,
                     child: item.unreadCount > 0
                         ? _ProfileUnreadBadge(
                             count: item.unreadCount,
@@ -1592,48 +1381,31 @@ class _ProfileDashboardCard extends StatelessWidget {
                         : Icon(
                             Icons.arrow_outward_rounded,
                             color: item.color.withValues(alpha: .86),
-                            size: compact ? 15 : 18,
+                            size: 18,
                           ),
                   ),
-                  if (!compact)
-                    Positioned(
-                      left: 15,
-                      right: 15,
-                      bottom: 12,
-                      child: Container(
-                        height: 2,
-                        color: item.color.withValues(alpha: .56),
-                      ),
-                    ),
                   Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      compact ? 12 : 15,
-                      compact ? 49 : 67,
-                      compact ? 9 : 15,
-                      compact ? 8 : 13,
-                    ),
+                    padding: const EdgeInsets.fromLTRB(15, 67, 15, 13),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (!compact) ...[
-                          Text(
-                            item.eyebrow,
-                            style: TextStyle(
-                              color: item.color,
-                              fontSize: 8,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1.15,
-                            ),
+                        Text(
+                          item.eyebrow,
+                          style: TextStyle(
+                            color: item.color,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.15,
                           ),
-                          const SizedBox(height: 3),
-                        ],
+                        ),
+                        const SizedBox(height: 3),
                         Text(
                           item.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: foreground,
-                            fontSize: compact ? 12 : 14,
+                            color: tokens.textPrimary,
+                            fontSize: 14,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -1641,11 +1413,11 @@ class _ProfileDashboardCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             item.subtitle,
-                            maxLines: compact ? 1 : 2,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: secondary,
-                              fontSize: compact ? 8 : 9.5,
+                              color: tokens.textSecondary,
+                              fontSize: 9.5,
                               height: 1.3,
                               fontWeight: FontWeight.w600,
                             ),
@@ -1659,97 +1431,6 @@ class _ProfileDashboardCard extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _ProfileManagementPanel extends StatelessWidget {
-  const _ProfileManagementPanel({required this.items});
-
-  final List<_ProfileDashboardItem> items;
-
-  @override
-  Widget build(BuildContext context) {
-    final backstage = MestingBackstage.colorsOf(context);
-    final rows =
-        <({IconData icon, String label, String detail, VoidCallback tap})>[
-          (
-            icon: Icons.library_music_outlined,
-            label: '我的歌单',
-            detail: '进入管理',
-            tap: items[0].onTap,
-          ),
-          (
-            icon: Icons.history_rounded,
-            label: '最近播放',
-            detail: '完整足迹',
-            tap: items[1].onTap,
-          ),
-          (
-            icon: Icons.people_outline_rounded,
-            label: '关注与粉丝',
-            detail: '好友关系',
-            tap: items[2].onTap,
-          ),
-          (
-            icon: Icons.palette_outlined,
-            label: '主题与外观',
-            detail: '装扮中心',
-            tap: items[3].onTap,
-          ),
-        ];
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: backstage.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: backstage.line),
-      ),
-      child: Column(
-        children: [
-          for (var index = 0; index < rows.length; index++) ...[
-            InkWell(
-              onTap: rows[index].tap,
-              child: SizedBox(
-                height: 52,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: Row(
-                    children: [
-                      Icon(rows[index].icon, color: backstage.bone, size: 20),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Text(
-                          rows[index].label,
-                          style: TextStyle(
-                            color: backstage.bone,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        rows[index].detail,
-                        style: TextStyle(
-                          color: backstage.boneMuted,
-                          fontSize: 9,
-                        ),
-                      ),
-                      const SizedBox(width: 7),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        color: backstage.boneMuted,
-                        size: 18,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            if (index != rows.length - 1)
-              Divider(height: 1, indent: 48, color: backstage.line),
-          ],
-        ],
       ),
     );
   }
@@ -1944,11 +1625,6 @@ class _ProfileAvatar extends StatelessWidget {
               height: size,
               fit: BoxFit.cover,
               retryOnNetworkError: true,
-              fallback: Icon(
-                Icons.person_rounded,
-                color: Colors.white,
-                size: size * .52,
-              ),
             ),
     );
   }

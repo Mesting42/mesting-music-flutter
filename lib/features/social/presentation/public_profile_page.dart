@@ -1,3 +1,4 @@
+import '../../../shared/widgets/beta_text_editing.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -212,6 +213,9 @@ class _PublicProfilePageState extends ConsumerState<PublicProfilePage> {
                 ),
                 const SizedBox(height: 16),
                 TextField(
+                  contextMenuBuilder: buildBetaEditingMenu,
+                  selectionControls: mestingTextSelectionControls,
+                  cursorRadius: const Radius.circular(1),
                   controller: controller,
                   autofocus: true,
                   maxLength: 24,

@@ -1,3 +1,4 @@
+import '../../../shared/widgets/beta_text_editing.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -978,6 +979,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 ),
                 const SizedBox(height: 16),
                 TextField(
+                  contextMenuBuilder: buildBetaEditingMenu,
+                  selectionControls: mestingTextSelectionControls,
+                  cursorRadius: const Radius.circular(1),
                   controller: controller,
                   autofocus: true,
                   maxLength: 24,
@@ -1593,6 +1597,9 @@ class _Composer extends StatelessWidget {
                               ),
                             ),
                             child: TextField(
+                              contextMenuBuilder: buildBetaEditingMenu,
+                              selectionControls: mestingTextSelectionControls,
+                              cursorRadius: const Radius.circular(1),
                               controller: controller,
                               enabled: enabled,
                               minLines: 1,

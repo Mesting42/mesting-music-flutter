@@ -80,6 +80,11 @@ void main() {
     for (final entity in Directory('lib').listSync(recursive: true)) {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;
       if (entity.path.endsWith('liquid_glass_sheet.dart')) continue;
+      // These content sheets deliberately remain opaque. Beta.10 login-method
+      // buttons own independent premium glass layers inside their stable sheet,
+      // so the sheet itself must not add a second nested glass surface.
+      if (entity.path.endsWith('playlist_editor_dialog.dart')) continue;
+      if (entity.path.endsWith('beta_welcome_page.dart')) continue;
       if (entity.readAsStringSync().contains('showModalBottomSheet')) {
         offenders.add(entity.path);
       }

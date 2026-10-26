@@ -620,17 +620,13 @@ class HttpAuthRepository implements AuthRepository, RenewableAuthRepository {
     required String baseUrl,
     required SessionStore sessionStore,
     http.Client? client,
-    Future<Directory> Function()? avatarDirectoryProvider,
   }) : _baseUrl = baseUrl.replaceFirst(RegExp(r'/$'), ''),
        _sessionStore = sessionStore,
-       _client = client ?? http.Client(),
-       _avatarDirectoryProvider =
-           avatarDirectoryProvider ?? getApplicationDocumentsDirectory;
+       _client = client ?? http.Client();
 
   final String _baseUrl;
   final SessionStore _sessionStore;
   final http.Client _client;
-  final Future<Directory> Function() _avatarDirectoryProvider;
   AuthSession? _session;
 
   @override
@@ -642,11 +638,8 @@ class HttpAuthRepository implements AuthRepository, RenewableAuthRepository {
     final stored = await _sessionStore.read();
     if (stored == null) return null;
     if (!stored.isExpired) {
-      final restored = stored.copyWith(
-        user: await _userWithDisplayAvatar(stored.user, fallback: stored.user),
-      );
-      await _persist(restored);
-      return restored;
+      _session = stored;
+      return stored;
     }
     try {
       final refreshed = await _sessionRequest('/v1/auth/refresh', {
@@ -682,10 +675,7 @@ class HttpAuthRepository implements AuthRepository, RenewableAuthRepository {
       authenticated: true,
     );
     final userPayload = (payload['user'] as Map<String, Object?>?) ?? payload;
-    final serverUser = AuthUser.fromJson(userPayload);
-    final next = current.copyWith(
-      user: await _userWithDisplayAvatar(serverUser, fallback: current.user),
-    );
+    final next = current.copyWith(user: AuthUser.fromJson(userPayload));
     await _persist(next);
     return next;
   }
@@ -781,19 +771,10 @@ class HttpAuthRepository implements AuthRepository, RenewableAuthRepository {
     String zodiac = '',
     String? avatarPath,
   }) async {
-    final current = _session ?? await _sessionStore.read();
-    if (current == null) {
-      throw const AuthRequestException('登录状态已失效，请重新登录');
-    }
-    _session = current;
-
-    var remoteAvatarUrl = _remoteAvatarFor(current.user);
-    String? localAvatarPath;
-    if (avatarPath != null && avatarPath.trim().isNotEmpty) {
-      localAvatarPath = await _copyAvatar(
-        avatarPath.trim(),
-        userId: current.user.uid,
-      );
+    var avatarUrl = _session?.user.avatarUrl;
+    if (avatarPath != null) {
+      // Media is uploaded before the JSON profile patch so the database only
+      // receives an address returned by the account service.
       final request = http.MultipartRequest(
         'POST',
         Uri.parse('$_baseUrl/v1/me/avatar'),
@@ -802,14 +783,10 @@ class HttpAuthRepository implements AuthRepository, RenewableAuthRepository {
       request.files.add(
         await http.MultipartFile.fromPath('avatar', avatarPath),
       );
-      final streamed = await _client.send(request);
+      final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
       final payload = _decodeResponse(response);
-      final uploadedAvatar = payload['avatar_url']?.toString().trim();
-      if (uploadedAvatar == null || uploadedAvatar.isEmpty) {
-        throw const AuthRequestException('头像已上传，但服务没有返回可用的头像地址，请稍后重试');
-      }
-      remoteAvatarUrl = _normalizeRemoteAvatar(uploadedAvatar);
+      avatarUrl = payload['avatar_url'] as String?;
     }
 
     final payload = await _request(
@@ -819,24 +796,20 @@ class HttpAuthRepository implements AuthRepository, RenewableAuthRepository {
         'bio': bio,
         'age': age,
         'zodiac': zodiac.trim(),
-        'avatar_url': remoteAvatarUrl,
+        'avatar_url': avatarUrl,
       },
       method: 'PATCH',
       authenticated: true,
     );
+    final current = _session;
+    if (current == null) {
+      throw const AuthRequestException('登录状态已失效，请重新登录');
+    }
     final returned = AuthUser.fromJson(
       payload['user']! as Map<String, Object?>,
     );
-    final returnedRemote = _remoteAvatarFor(returned) ?? remoteAvatarUrl;
-    final retainedLocalAvatar =
-        localAvatarPath ?? await _existingLocalAvatar(current.user.avatarUrl);
     final next = current.copyWith(
-      user: returned.copyWith(
-        age: age,
-        zodiac: zodiac.trim(),
-        avatarUrl: retainedLocalAvatar ?? returnedRemote,
-        avatarCloudId: returnedRemote,
-      ),
+      user: returned.copyWith(age: age, zodiac: zodiac.trim()),
     );
     await _persist(next);
     return next;
@@ -998,139 +971,14 @@ class HttpAuthRepository implements AuthRepository, RenewableAuthRepository {
     Map<String, Object?> body,
   ) async {
     final payload = await _request(path, body);
-    final rawSession = AuthSession.fromJson(payload);
-    final activeFallback = _session?.user.uid == rawSession.user.uid
-        ? _session?.user
-        : null;
-    final fallback =
-        activeFallback ?? await _sessionStore.readProfile(rawSession.user.uid);
-    final session = rawSession.copyWith(
-      user: await _userWithDisplayAvatar(rawSession.user, fallback: fallback),
-    );
+    final session = AuthSession.fromJson(payload);
     await _persist(session);
     return session;
   }
 
-  Future<AuthUser> _userWithDisplayAvatar(
-    AuthUser serverUser, {
-    AuthUser? fallback,
-  }) async {
-    final remoteAvatar = _remoteAvatarFor(serverUser);
-    final localAvatar = fallback?.uid == serverUser.uid
-        ? await _existingLocalAvatar(fallback?.avatarUrl)
-        : null;
-    final fallbackRemote = fallback == null ? null : _remoteAvatarFor(fallback);
-    final legacyCloudId =
-        [
-              serverUser.avatarCloudId,
-              serverUser.avatarUrl,
-              fallback?.avatarCloudId,
-              fallback?.avatarUrl,
-            ]
-            .whereType<String>()
-            .map((value) => value.trim())
-            .firstWhere(
-              (value) => value.startsWith('cloud://'),
-              orElse: () => '',
-            );
-    return serverUser.copyWith(
-      avatarUrl: localAvatar ?? remoteAvatar,
-      avatarCloudId:
-          remoteAvatar ??
-          fallbackRemote ??
-          (legacyCloudId.isEmpty ? null : legacyCloudId),
-    );
-  }
-
-  String? _remoteAvatarFor(AuthUser user) {
-    for (final candidate in [user.avatarCloudId, user.avatarUrl]) {
-      final value = candidate?.trim();
-      if (value == null || value.isEmpty) continue;
-      final uri = Uri.tryParse(value);
-      if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
-        return _normalizeRemoteAvatar(value);
-      }
-    }
-    return null;
-  }
-
-  String _normalizeRemoteAvatar(String value) {
-    final base = Uri.parse(_baseUrl);
-    final parsed = Uri.tryParse(value);
-    if (parsed == null) return value;
-    if (!parsed.hasScheme) return base.resolve(value).toString();
-    final localHost = const {
-      'localhost',
-      '127.0.0.1',
-      '::1',
-    }.contains(parsed.host.toLowerCase());
-    final baseIsLocal = const {
-      'localhost',
-      '127.0.0.1',
-      '::1',
-    }.contains(base.host.toLowerCase());
-    if (!localHost || baseIsLocal) return parsed.toString();
-    return Uri(
-      scheme: base.scheme,
-      userInfo: base.userInfo,
-      host: base.host,
-      port: base.hasPort ? base.port : null,
-      path: parsed.path,
-      query: parsed.hasQuery ? parsed.query : null,
-      fragment: parsed.hasFragment ? parsed.fragment : null,
-    ).toString();
-  }
-
-  Future<String?> _existingLocalAvatar(String? value) async {
-    final path = value?.trim();
-    if (path == null || path.isEmpty) return null;
-    final uri = Uri.tryParse(path);
-    if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
-      return null;
-    }
-    final filePath = uri?.scheme == 'file' ? uri!.toFilePath() : path;
-    return await File(filePath).exists() ? filePath : null;
-  }
-
-  Future<String> _copyAvatar(
-    String sourcePath, {
-    required String userId,
-  }) async {
-    final source = File(sourcePath);
-    if (!await source.exists()) {
-      throw const AuthRequestException('选择的头像文件已不存在，请重新选择');
-    }
-    final root = await _avatarDirectoryProvider();
-    final safeUserId = userId.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
-    final directory = Directory(
-      '${root.path}${Platform.pathSeparator}mesting_http_profile'
-      '${Platform.pathSeparator}$safeUserId',
-    );
-    await directory.create(recursive: true);
-    final extension = _safeImageExtension(sourcePath);
-    final target = File(
-      '${directory.path}${Platform.pathSeparator}'
-      'avatar_${DateTime.now().microsecondsSinceEpoch}$extension',
-    );
-    await source.copy(target.path);
-    return target.path;
-  }
-
-  String _safeImageExtension(String path) {
-    final fileName = path.replaceAll('\\', '/').split('/').last;
-    final dot = fileName.lastIndexOf('.');
-    if (dot > 0) {
-      final extension = fileName.substring(dot).toLowerCase();
-      if (const {'.jpg', '.jpeg', '.png', '.webp'}.contains(extension)) {
-        return extension;
-      }
-    }
-    return '.jpg';
-  }
-
   Future<void> _persist(AuthSession session) async {
     _session = session;
-    await _sessionStore.writeSessionAndProfile(session);
+    await _sessionStore.write(session);
   }
 
   /// Sends one API request and normalizes transport failures for the UI.

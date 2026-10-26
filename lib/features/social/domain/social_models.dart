@@ -53,7 +53,6 @@ class SocialUser {
     this.age,
     this.zodiac = '',
     this.avatarUrl,
-    this.avatarCloudId,
     this.remark = '',
     this.followingCount = 0,
     this.followerCount = 0,
@@ -69,7 +68,6 @@ class SocialUser {
   final int? age;
   final String zodiac;
   final String? avatarUrl;
-  final String? avatarCloudId;
   final String remark;
   final int followingCount;
   final int followerCount;
@@ -82,11 +80,6 @@ class SocialUser {
   bool get isFriend => isFollowing && followsMe && !isBlocked;
 
   factory SocialUser.fromJson(Map<String, Object?> json) {
-    final rawAvatarUrl = _nonEmptyText(json['avatar_url']);
-    final rawCloudId = _nonEmptyText(json['avatar_cloud_id']);
-    final legacyCloudId = rawAvatarUrl?.startsWith('cloud://') == true
-        ? rawAvatarUrl
-        : null;
     return SocialUser(
       uid: json['uid'] as String? ?? '',
       nickname: (json['nickname'] as String?)?.trim().isNotEmpty == true
@@ -95,8 +88,7 @@ class SocialUser {
       bio: json['bio'] as String? ?? '',
       age: _optionalProfileAge(json['age']),
       zodiac: json['zodiac'] as String? ?? '',
-      avatarUrl: legacyCloudId == null ? rawAvatarUrl : null,
-      avatarCloudId: rawCloudId ?? legacyCloudId,
+      avatarUrl: json['avatar_url'] as String?,
       remark: json['remark'] as String? ?? '',
       followingCount: _intValue(json['following_count']),
       followerCount: _intValue(json['follower_count']),
@@ -114,7 +106,6 @@ class SocialUser {
     'age': age,
     'zodiac': zodiac,
     'avatar_url': avatarUrl,
-    'avatar_cloud_id': avatarCloudId,
     'remark': remark,
     'following_count': followingCount,
     'follower_count': followerCount,
@@ -141,7 +132,6 @@ class SocialUser {
       age: age,
       zodiac: zodiac,
       avatarUrl: avatarUrl,
-      avatarCloudId: avatarCloudId,
       remark: remark ?? this.remark,
       followingCount: followingCount ?? this.followingCount,
       followerCount: followerCount ?? this.followerCount,
@@ -151,11 +141,6 @@ class SocialUser {
       status: status ?? this.status,
     );
   }
-}
-
-String? _nonEmptyText(Object? value) {
-  final text = value?.toString().trim();
-  return text == null || text.isEmpty ? null : text;
 }
 
 class SocialSummary {

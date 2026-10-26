@@ -24,11 +24,23 @@ class LibraryRepository {
     this._database, {
     required this.ownerId,
     LibrarySyncApi? syncApi,
-  }) : _syncApi = syncApi;
+    bool Function()? canWrite,
+  }) : _syncApi = syncApi,
+       _canWrite = canWrite;
 
   final AppDatabase _database;
   final String ownerId;
   final LibrarySyncApi? _syncApi;
+  final bool Function()? _canWrite;
+
+  /// Guard every mutation, including non-widget notification/media actions.
+  /// Existing guest rows remain readable; playback history uses its own owner.
+  void _requireWriteAccess() {
+    if (_canWrite != null && (_disposed || !_canWrite())) {
+      throw StateError('登录后才能管理收藏和自己的歌单');
+    }
+  }
+
   Future<bool>? _activeSync;
   Timer? _syncTimer;
   bool _syncAgain = false;
@@ -51,11 +63,13 @@ class LibraryRepository {
       _database.isFavorite(ownerId, trackId);
 
   Future<void> setFavorite(Track track, {required bool favorite}) async {
+    _requireWriteAccess();
     await _database.setFavorite(ownerId, track, favorite: favorite);
     _scheduleSync();
   }
 
   Future<bool> toggleFavorite(Track track) async {
+    _requireWriteAccess();
     final favorite = await _database.toggleFavorite(ownerId, track);
     _scheduleSync();
     return favorite;
@@ -85,6 +99,7 @@ class LibraryRepository {
     String? coverAsset,
     String? coverCloudId,
   }) async {
+    _requireWriteAccess();
     await _database.createPlaylist(
       ownerId: ownerId,
       id: id,
@@ -103,6 +118,7 @@ class LibraryRepository {
     required String? coverAsset,
     String? coverCloudId,
   }) async {
+    _requireWriteAccess();
     await _database.updatePlaylist(
       ownerId: ownerId,
       id: id,
@@ -115,11 +131,13 @@ class LibraryRepository {
   }
 
   Future<void> deletePlaylist(String id) async {
+    _requireWriteAccess();
     await _database.deletePlaylist(ownerId, id);
     _scheduleSync();
   }
 
   Future<void> addTrackToPlaylist(String playlistId, Track track) async {
+    _requireWriteAccess();
     if (!await isFavorite(track.id)) {
       throw const FavoriteTrackRequiredException();
     }
@@ -131,6 +149,7 @@ class LibraryRepository {
     String playlistId,
     String trackId,
   ) async {
+    _requireWriteAccess();
     await _database.removeTrackFromPlaylist(ownerId, playlistId, trackId);
     _scheduleSync();
   }
@@ -139,6 +158,7 @@ class LibraryRepository {
     String playlistId,
     List<String> trackIds,
   ) async {
+    _requireWriteAccess();
     await _database.reorderPlaylistTracks(ownerId, playlistId, trackIds);
     _scheduleSync();
   }
@@ -146,6 +166,7 @@ class LibraryRepository {
   Future<int> countLegacyFavorites() => _database.countLegacyFavorites();
 
   Future<void> importLegacyLibrary() async {
+    _requireWriteAccess();
     await _database.importLegacyLibraryTo(ownerId);
     _scheduleSync();
   }

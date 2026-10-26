@@ -175,11 +175,6 @@ class SocialAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fallback = Icon(
-      Icons.person_rounded,
-      color: Colors.white,
-      size: size * .52,
-    );
     return Container(
       width: size,
       height: size,
@@ -198,9 +193,8 @@ class SocialAvatar extends StatelessWidget {
               fit: BoxFit.cover,
               retryOnNetworkError: true,
               persistentNetworkCacheKey: 'social-avatar-${user.uid}',
-              fallback: fallback,
             )
-          : fallback,
+          : Icon(Icons.person_rounded, color: Colors.white, size: size * .52),
     );
   }
 }

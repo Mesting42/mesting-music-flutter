@@ -1,12 +1,15 @@
+import '../../../shared/widgets/beta_text_editing.dart';
 import 'dart:io';
-
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
-
 import '../../../shared/widgets/artwork_image.dart';
-import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../themes/music_theme_tokens.dart';
+import '../../music_platform/presentation/platform_design.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../../shared/widgets/beta_glass_action.dart';
 
 class PlaylistDraft {
   const PlaylistDraft({
@@ -14,242 +17,102 @@ class PlaylistDraft {
     required this.description,
     required this.coverAsset,
   });
-
   final String name;
   final String description;
   final String? coverAsset;
 }
 
+/// Commit inside the sheet to retain the user's draft after a remote failure.
 Future<PlaylistDraft?> showPlaylistEditorDialog(
   BuildContext context, {
   String? initialName,
   String initialDescription = '',
   String? initialCoverAsset,
-}) {
-  return showLiquidGlassBottomSheet<PlaylistDraft>(
-    context: context,
-    useRootNavigator: true,
-    useSafeArea: true,
-    isScrollControlled: true,
-    barrierColor: Colors.black.withValues(alpha: .56),
-    builder: (sheetContext) => _PlaylistEditorSheet(
-      initialName: initialName,
-      initialDescription: initialDescription,
-      initialCoverAsset: initialCoverAsset,
-    ),
-  );
-}
+  Future<void> Function(PlaylistDraft)? onSave,
+}) => showModalBottomSheet<PlaylistDraft>(
+  context: context,
+  useRootNavigator: true,
+  useSafeArea: true,
+  isScrollControlled: true,
+  isDismissible: false,
+  enableDrag: false,
+  backgroundColor: Colors.transparent,
+  constraints: const BoxConstraints(maxWidth: 720),
+  builder: (_) => _PlaylistEditor(
+    initialName: initialName,
+    initialDescription: initialDescription,
+    initialCover: initialCoverAsset,
+    onSave: onSave,
+  ),
+);
 
-class _PlaylistEditorSheet extends StatefulWidget {
-  const _PlaylistEditorSheet({
-    required this.initialName,
+class _PlaylistEditor extends StatefulWidget {
+  const _PlaylistEditor({
+    this.initialName,
     required this.initialDescription,
-    required this.initialCoverAsset,
+    this.initialCover,
+    this.onSave,
   });
-
   final String? initialName;
   final String initialDescription;
-  final String? initialCoverAsset;
-
+  final String? initialCover;
+  final Future<void> Function(PlaylistDraft)? onSave;
   @override
-  State<_PlaylistEditorSheet> createState() => _PlaylistEditorSheetState();
+  State<_PlaylistEditor> createState() => _PlaylistEditorState();
 }
 
-class _PlaylistEditorSheetState extends State<_PlaylistEditorSheet> {
-  static const _maximumCoverBytes = 10 * 1024 * 1024;
-
-  late final TextEditingController _nameController;
-  late final TextEditingController _descriptionController;
-  final ImagePicker _picker = ImagePicker();
-  String? _selectedCover;
-  String? _pendingPickedCover;
-  String? _error;
+class _PlaylistEditorState extends State<_PlaylistEditor> {
+  late final TextEditingController _name = TextEditingController(
+    text: widget.initialName,
+  );
+  late final TextEditingController _description = TextEditingController(
+    text: widget.initialDescription,
+  );
+  int? _template;
+  final _covers = PageController(viewportFraction: .72);
+  int _coverPage = 0;
+  String? _photo;
   bool _saving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(text: widget.initialName);
-    _descriptionController = TextEditingController(
-      text: widget.initialDescription,
-    );
-    _nameController.addListener(_refreshCounters);
-    _descriptionController.addListener(_refreshCounters);
-    _selectedCover = widget.initialCoverAsset;
-  }
-
+  String? _error;
   @override
   void dispose() {
-    _nameController
-      ..removeListener(_refreshCounters)
-      ..dispose();
-    _descriptionController
-      ..removeListener(_refreshCounters)
-      ..dispose();
+    _name.dispose();
+    _description.dispose();
+    _covers.dispose();
     super.dispose();
   }
 
-  void _refreshCounters() {
-    if (mounted) setState(() {});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final media = MediaQuery.of(context);
-    final tokens = context.musicThemeTokens;
-    final scheme = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final editing = widget.initialName != null;
-    final panelColor = Color.alphaBlend(tokens.glassStrong, scheme.surface);
-
-    return AnimatedPadding(
-      key: const ValueKey('playlist-editor-sheet'),
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOutCubic,
-      padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: media.size.height * .91),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(34)),
-          child: Material(
-            color: panelColor,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(
-                    color: dark
-                        ? Colors.white.withValues(alpha: .16)
-                        : scheme.primary.withValues(alpha: .13),
-                  ),
-                ),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    scheme.primary.withValues(alpha: dark ? .13 : .075),
-                    panelColor.withValues(alpha: .98),
-                    panelColor,
-                  ],
-                  stops: const [0, .42, 1],
-                ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 10),
-                  _SheetHandle(color: tokens.textMuted),
-                  Flexible(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      keyboardDismissBehavior:
-                          ScrollViewKeyboardDismissBehavior.onDrag,
-                      padding: const EdgeInsets.fromLTRB(20, 15, 20, 16),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 520),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            _EditorHeader(
-                              editing: editing,
-                              onClose: _saving
-                                  ? null
-                                  : () => Navigator.pop(context),
-                            ),
-                            const SizedBox(height: 18),
-                            _CoverStudio(
-                              cover: _selectedCover,
-                              saving: _saving,
-                              onPick: _pickCover,
-                              onAutomatic: _selectedCover == null
-                                  ? null
-                                  : () {
-                                      setState(() {
-                                        _selectedCover = null;
-                                        _pendingPickedCover = null;
-                                        _error = null;
-                                      });
-                                    },
-                            ),
-                            const SizedBox(height: 18),
-                            _StudioTextField(
-                              key: const ValueKey('playlist-editor-name-field'),
-                              controller: _nameController,
-                              label: '歌单名称',
-                              hint: '给这一段旋律取个名字',
-                              icon: Icons.graphic_eq_rounded,
-                              maximumLength: 30,
-                              enabled: !_saving,
-                              textInputAction: TextInputAction.next,
-                            ),
-                            const SizedBox(height: 12),
-                            _StudioTextField(
-                              key: const ValueKey(
-                                'playlist-editor-description-field',
-                              ),
-                              controller: _descriptionController,
-                              label: '歌单描述',
-                              hint: '写下这张歌单的情绪、场景或故事',
-                              icon: Icons.notes_rounded,
-                              maximumLength: 100,
-                              enabled: !_saving,
-                              maximumLines: 3,
-                              minimumLines: 2,
-                              textInputAction: TextInputAction.newline,
-                            ),
-                            if (_error != null) ...[
-                              const SizedBox(height: 12),
-                              _EditorNotice(message: _error!),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  _EditorFooter(
-                    editing: editing,
-                    saving: _saving,
-                    canSave: _nameController.text.trim().isNotEmpty,
-                    onCancel: () => Navigator.pop(context),
-                    onSave: _save,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _pickCover() async {
+  Future<void> _pick() async {
     try {
-      final picked = await _picker.pickImage(
+      final photo = await ImagePicker().pickImage(
         source: ImageSource.gallery,
         maxWidth: 1800,
         maxHeight: 1800,
         imageQuality: 90,
         requestFullMetadata: false,
       );
-      if (picked == null) return;
-      if (await picked.length() > _maximumCoverBytes) {
-        if (mounted) setState(() => _error = '封面图片不能超过 10 MB');
-        return;
+      if (photo == null) return;
+      if (await photo.length() > 10 * 1024 * 1024) {
+        throw StateError('请选择小于 10 MB 的图片');
       }
-      if (!mounted) return;
-      setState(() {
-        _selectedCover = picked.path;
-        _pendingPickedCover = picked.path;
-        _error = null;
-      });
-    } on Object {
+      if (mounted) {
+        setState(() {
+          _photo = photo.path;
+          _template = null;
+          _error = null;
+        });
+        // Jump directly so intermediate template pages cannot clear the photo.
+        _covers.jumpToPage(0);
+      }
+    } catch (_) {
       if (mounted) setState(() => _error = '图片读取失败，请换一张图片重试');
     }
   }
 
   Future<void> _save() async {
-    final name = _nameController.text.trim();
-    if (name.isEmpty) {
-      setState(() => _error = '先为歌单取一个名字');
+    if (_saving) return;
+    if (_name.text.trim().isEmpty) {
+      setState(() => _error = '请先填写歌单名称');
       return;
     }
     setState(() {
@@ -257,727 +120,330 @@ class _PlaylistEditorSheetState extends State<_PlaylistEditorSheet> {
       _error = null;
     });
     try {
-      var cover = _selectedCover;
-      final pendingCover = _pendingPickedCover;
-      if (pendingCover != null) cover = await _persistCover(pendingCover);
-      if (!mounted) return;
-      Navigator.pop(
-        context,
-        PlaylistDraft(
-          name: name,
-          description: _descriptionController.text.trim(),
-          coverAsset: cover,
-        ),
+      var cover = widget.initialCover;
+      if (_template != null || _photo != null) {
+        cover = await persistPlaylistCover(template: _template, photo: _photo);
+      }
+      final draft = PlaylistDraft(
+        name: _name.text.trim(),
+        description: _description.text.trim(),
+        coverAsset: cover,
       );
-    } on Object {
-      if (!mounted) return;
-      setState(() {
-        _saving = false;
-        _error = '封面保存失败，请检查存储空间后重试';
-      });
-    }
-  }
-
-  Future<String> _persistCover(String sourcePath) async {
-    final source = File(sourcePath);
-    if (!await source.exists()) throw const FileSystemException('图片不存在');
-    final documents = await getApplicationDocumentsDirectory();
-    final directory = Directory(
-      '${documents.path}${Platform.pathSeparator}playlist_covers',
-    );
-    await directory.create(recursive: true);
-    final extension = _safeImageExtension(sourcePath);
-    final target = File(
-      '${directory.path}${Platform.pathSeparator}'
-      'playlist_cover_${DateTime.now().microsecondsSinceEpoch}$extension',
-    );
-    return (await source.copy(target.path)).path;
-  }
-
-  String _safeImageExtension(String path) {
-    final fileName = path.replaceAll('\\', '/').split('/').last;
-    final dot = fileName.lastIndexOf('.');
-    if (dot > 0) {
-      final extension = fileName.substring(dot).toLowerCase();
-      if (const {'.jpg', '.jpeg', '.png', '.webp'}.contains(extension)) {
-        return extension;
+      await widget.onSave?.call(draft);
+      if (mounted) Navigator.pop(context, draft);
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = error is StateError
+              ? error.message
+              : '歌单未能保存，请检查网络后重试。输入与封面已保留。';
+        });
       }
     }
-    return '.jpg';
   }
-}
-
-class _SheetHandle extends StatelessWidget {
-  const _SheetHandle({required this.color});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 40,
-      height: 4,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: .34),
-        borderRadius: BorderRadius.circular(99),
-      ),
-    );
-  }
-}
-
-class _EditorHeader extends StatelessWidget {
-  const _EditorHeader({required this.editing, required this.onClose});
-
-  final bool editing;
-  final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.musicThemeTokens;
-    final scheme = Theme.of(context).colorScheme;
-    return Row(
+    final header = Row(
       children: [
-        Container(
-          width: 46,
-          height: 46,
-          decoration: BoxDecoration(
-            color: scheme.primary.withValues(alpha: .12),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: scheme.primary.withValues(alpha: .18)),
+        if (DistributionChannel.isBeta)
+          BetaGlassAction(
+            key: const ValueKey('playlist-editor-close'),
+            label: '取消',
+            icon: Icons.close_rounded,
+            blue: false,
+            onPressed: _saving ? null : () => Navigator.pop(context),
+          )
+        else
+          IconButton(
+            tooltip: '取消',
+            onPressed: _saving ? null : () => Navigator.pop(context),
+            icon: const Icon(Icons.close_rounded, size: 29),
           ),
-          child: Icon(
-            Icons.library_music_rounded,
-            color: scheme.primary,
-            size: 23,
-          ),
-        ),
-        const SizedBox(width: 13),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'PLAYLIST STUDIO',
-                style: TextStyle(
-                  color: scheme.primary,
-                  fontSize: 9,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.7,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                editing ? '编辑歌单' : '创建歌单',
-                style: TextStyle(
-                  color: tokens.textPrimary,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -.4,
-                ),
-              ),
-            ],
-          ),
-        ),
-        _RoundAction(
-          semanticLabel: '关闭',
-          icon: Icons.close_rounded,
-          onTap: onClose,
-        ),
-      ],
-    );
-  }
-}
-
-class _CoverStudio extends StatelessWidget {
-  const _CoverStudio({
-    required this.cover,
-    required this.saving,
-    required this.onPick,
-    required this.onAutomatic,
-  });
-
-  final String? cover;
-  final bool saving;
-  final VoidCallback onPick;
-  final VoidCallback? onAutomatic;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.musicThemeTokens;
-    final scheme = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      key: const ValueKey('playlist-editor-cover-stage'),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: tokens.glassSubtle,
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(
-          color: dark
-              ? tokens.borderStrong
-              : scheme.primary.withValues(alpha: .13),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: tokens.shadow.withValues(alpha: .72),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Semantics(
-            button: true,
-            label: '歌单封面，点击从相册选择图片',
-            child: GestureDetector(
-              onTap: saving ? null : onPick,
-              child: _CoverPreview(cover: cover),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  cover == null ? '让歌曲决定封面' : '封面已就位',
-                  style: TextStyle(
-                    color: tokens.textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  cover == null
-                      ? '未选择图片时，会自动取歌单内的第一张唱片封面。'
-                      : '支持 JPG、PNG、WebP，图片仅保存在本机应用目录。',
-                  style: TextStyle(
-                    color: tokens.textMuted,
-                    height: 1.45,
-                    fontSize: 10.5,
-                  ),
-                ),
-                const SizedBox(height: 11),
-                Wrap(
-                  spacing: 7,
-                  runSpacing: 7,
-                  children: [
-                    _CoverAction(
-                      label: '从相册选择',
-                      icon: Icons.add_photo_alternate_rounded,
-                      emphasized: true,
-                      onTap: saving ? null : onPick,
-                    ),
-                    _CoverAction(
-                      label: '自动封面',
-                      icon: Icons.auto_awesome_rounded,
-                      onTap: saving ? null : onAutomatic,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CoverPreview extends StatelessWidget {
-  const _CoverPreview({required this.cover});
-
-  final String? cover;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final tokens = context.musicThemeTokens;
-    return Container(
-      width: 108,
-      height: 108,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(23),
-        border: Border.all(color: tokens.borderStrong),
-        boxShadow: [
-          BoxShadow(
-            color: tokens.shadow,
-            blurRadius: 19,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (cover == null)
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    scheme.primary.withValues(alpha: .2),
-                    scheme.primaryContainer.withValues(alpha: .72),
-                  ],
-                ),
-              ),
-              child: Icon(Icons.album_rounded, size: 43, color: scheme.primary),
-            )
-          else
-            ArtworkImage(uri: cover!),
-          Align(
-            alignment: Alignment.bottomRight,
-            child: Container(
-              width: 34,
-              height: 34,
-              margin: const EdgeInsets.all(7),
-              decoration: BoxDecoration(
-                color: const Color(0xD91A1720),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withValues(alpha: .22)),
-              ),
-              child: const Icon(
-                Icons.photo_camera_rounded,
-                color: Colors.white,
-                size: 16,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CoverAction extends StatelessWidget {
-  const _CoverAction({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-    this.emphasized = false,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback? onTap;
-  final bool emphasized;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final tokens = context.musicThemeTokens;
-    final active = onTap != null;
-    final foreground = emphasized ? scheme.primary : tokens.textSecondary;
-    return Semantics(
-      button: true,
-      enabled: active,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(13),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: BoxDecoration(
-            color: emphasized
-                ? scheme.primary.withValues(alpha: active ? .12 : .055)
-                : tokens.glass.withValues(alpha: active ? .72 : .34),
-            borderRadius: BorderRadius.circular(13),
-            border: Border.all(
-              color: emphasized
-                  ? scheme.primary.withValues(alpha: active ? .2 : .08)
-                  : tokens.border,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 15,
-                color: foreground.withValues(alpha: active ? 1 : .4),
-              ),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: TextStyle(
-                  color: foreground.withValues(alpha: active ? 1 : .4),
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StudioTextField extends StatefulWidget {
-  const _StudioTextField({
-    required this.controller,
-    required this.label,
-    required this.hint,
-    required this.icon,
-    required this.maximumLength,
-    required this.enabled,
-    required this.textInputAction,
-    this.maximumLines = 1,
-    this.minimumLines = 1,
-    super.key,
-  });
-
-  final TextEditingController controller;
-  final String label;
-  final String hint;
-  final IconData icon;
-  final int maximumLength;
-  final bool enabled;
-  final int maximumLines;
-  final int minimumLines;
-  final TextInputAction textInputAction;
-
-  @override
-  State<_StudioTextField> createState() => _StudioTextFieldState();
-}
-
-class _StudioTextFieldState extends State<_StudioTextField> {
-  final FocusNode _focusNode = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    _focusNode.addListener(_handleFocus);
-  }
-
-  @override
-  void dispose() {
-    _focusNode
-      ..removeListener(_handleFocus)
-      ..dispose();
-    super.dispose();
-  }
-
-  void _handleFocus() {
-    if (mounted) setState(() {});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.musicThemeTokens;
-    final scheme = Theme.of(context).colorScheme;
-    final focused = _focusNode.hasFocus;
-    final multiline = widget.maximumLines > 1;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOutCubic,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 11),
-      decoration: BoxDecoration(
-        color: focused
-            ? scheme.primary.withValues(alpha: .075)
-            : tokens.glassSubtle,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: focused
-              ? scheme.primary.withValues(alpha: .72)
-              : tokens.borderStrong,
-          width: focused ? 1.35 : 1,
-        ),
-        boxShadow: focused
-            ? [
-                BoxShadow(
-                  color: scheme.primary.withValues(alpha: .1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 7),
-                ),
-              ]
-            : const [],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: focused
-                  ? scheme.primary.withValues(alpha: .16)
-                  : tokens.glass,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              widget.icon,
-              size: 18,
-              color: focused ? scheme.primary : tokens.textMuted,
-            ),
-          ),
-          const SizedBox(width: 11),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        widget.label,
-                        style: TextStyle(
-                          color: focused
-                              ? scheme.primary
-                              : tokens.textSecondary,
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '${widget.controller.text.characters.length}'
-                      '/${widget.maximumLength}',
-                      style: TextStyle(
-                        color: tokens.textMuted,
-                        fontSize: 9.5,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                TextField(
-                  controller: widget.controller,
-                  focusNode: _focusNode,
-                  enabled: widget.enabled,
-                  maxLength: widget.maximumLength,
-                  maxLines: widget.maximumLines,
-                  minLines: widget.minimumLines,
-                  textInputAction: widget.textInputAction,
-                  textAlignVertical: multiline
-                      ? TextAlignVertical.top
-                      : TextAlignVertical.center,
-                  cursorHeight: 19,
-                  cursorRadius: const Radius.circular(2),
-                  style: TextStyle(
-                    color: tokens.textPrimary,
-                    fontSize: 15,
-                    height: 1.35,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: widget.hint,
-                    hintMaxLines: multiline ? widget.minimumLines : 1,
-                    hintStyle: TextStyle(
-                      color: tokens.textMuted.withValues(alpha: .72),
-                      fontWeight: FontWeight.w500,
-                      height: 1.35,
-                    ),
-                    isDense: true,
-                    filled: false,
-                    fillColor: Colors.transparent,
-                    contentPadding: EdgeInsets.only(
-                      top: multiline ? 6 : 4,
-                      bottom: multiline ? 4 : 4,
-                    ),
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    focusedErrorBorder: InputBorder.none,
-                    counterText: '',
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EditorNotice extends StatelessWidget {
-  const _EditorNotice({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
-      decoration: BoxDecoration(
-        color: scheme.error.withValues(alpha: .09),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: scheme.error.withValues(alpha: .18)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.info_outline_rounded, size: 17, color: scheme.error),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(
-                color: scheme.error,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EditorFooter extends StatelessWidget {
-  const _EditorFooter({
-    required this.editing,
-    required this.saving,
-    required this.canSave,
-    required this.onCancel,
-    required this.onSave,
-  });
-
-  final bool editing;
-  final bool saving;
-  final bool canSave;
-  final VoidCallback onCancel;
-  final VoidCallback onSave;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.musicThemeTokens;
-    final scheme = Theme.of(context).colorScheme;
-    final enabled = canSave && !saving;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Color.alphaBlend(tokens.glassStrong, scheme.surface),
-        border: Border(top: BorderSide(color: tokens.border)),
-        boxShadow: [
-          BoxShadow(
-            color: tokens.shadow,
-            blurRadius: 22,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        minimum: const EdgeInsets.fromLTRB(20, 12, 20, 14),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _FooterAction(
-                    label: '取消',
-                    icon: Icons.close_rounded,
-                    onTap: saving ? null : onCancel,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 2,
-                  child: _FooterAction(
-                    key: const ValueKey('playlist-editor-save'),
-                    label: editing ? '保存修改' : '完成创建',
-                    icon: Icons.arrow_forward_rounded,
-                    emphasized: true,
-                    loading: saving,
-                    onTap: enabled ? onSave : null,
-                  ),
-                ),
-              ],
+          child: Text(
+            widget.initialName == null ? '新建歌单' : '编辑歌单',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 21,
+              fontWeight: FontWeight.w800,
+              color: tokens.textPrimary,
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _FooterAction extends StatelessWidget {
-  const _FooterAction({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-    this.emphasized = false,
-    this.loading = false,
-    super.key,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback? onTap;
-  final bool emphasized;
-  final bool loading;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.musicThemeTokens;
-    final scheme = Theme.of(context).colorScheme;
-    final active = onTap != null;
-    final foreground = emphasized ? scheme.onPrimary : tokens.textSecondary;
-    return Semantics(
-      button: true,
-      enabled: active,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          height: 52,
-          decoration: BoxDecoration(
-            color: emphasized
-                ? scheme.primary.withValues(alpha: active ? 1 : .34)
-                : tokens.glassSubtle,
-            borderRadius: BorderRadius.circular(18),
-            border: emphasized ? null : Border.all(color: tokens.borderStrong),
-            boxShadow: emphasized && active
-                ? [
-                    BoxShadow(
-                      color: scheme.primary.withValues(alpha: .22),
-                      blurRadius: 18,
-                      offset: const Offset(0, 8),
-                    ),
-                  ]
-                : const [],
-          ),
-          child: Center(
-            child: loading
+        if (DistributionChannel.isBeta)
+          BetaGlassAction(
+            key: const ValueKey('playlist-editor-save'),
+            label: '保存歌单',
+            icon: Icons.check_rounded,
+            loading: _saving,
+            onPressed: _saving ? null : _save,
+          )
+        else
+          IconButton.filled(
+            key: const ValueKey('playlist-editor-save'),
+            tooltip: '保存歌单',
+            onPressed: _saving ? null : _save,
+            style: IconButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              disabledBackgroundColor: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: .35),
+              minimumSize: const Size.square(48),
+            ),
+            icon: _saving
                 ? SizedBox.square(
-                    dimension: 19,
+                    dimension: 22,
                     child: CircularProgressIndicator(
-                      strokeWidth: 2.2,
-                      color: scheme.onPrimary,
+                      strokeWidth: 2,
+                      color: Theme.of(context).colorScheme.onPrimary,
                     ),
                   )
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        label,
-                        style: TextStyle(
-                          color: foreground.withValues(alpha: active ? 1 : .48),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
+                : const Icon(Icons.check_rounded, size: 28),
+          ),
+      ],
+    );
+    return PopScope(
+      canPop: !_saving,
+      child: PlatformStyle(
+        child: AnimatedPadding(
+          duration: const Duration(milliseconds: 180),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
+            child: Material(
+              color: Theme.of(context).colorScheme.surface,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(context).height * .88,
+                ),
+                child: Column(
+                  key: const ValueKey('playlist-editor-sheet'),
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Confirmation remains fixed while forms scroll above the keyboard.
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+                      child: header,
+                    ),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(18, 0, 18, 26),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const SizedBox(height: 28),
+                              SizedBox(
+                                height: 226,
+                                child: PageView.builder(
+                                  controller: _covers,
+                                  physics: _saving
+                                      ? const NeverScrollableScrollPhysics()
+                                      : null,
+                                  onPageChanged: (index) => setState(() {
+                                    _coverPage = index;
+                                    _template = index == 0 ? null : index - 1;
+                                    if (index != 0) _photo = null;
+                                  }),
+                                  itemCount: 7,
+                                  itemBuilder: (context, index) {
+                                    final selected = index == 0
+                                        ? _template == null
+                                        : _template == index - 1;
+                                    return Center(
+                                      child: Semantics(
+                                        button: true,
+                                        selected: selected,
+                                        label: index == 0
+                                            ? '当前封面或从相册选择'
+                                            : '封面模板 $index',
+                                        child: InkWell(
+                                          onTap: _saving
+                                              ? null
+                                              : () {
+                                                  if (index == 0) {
+                                                    _pick();
+                                                  } else {
+                                                    setState(() {
+                                                      _template = index - 1;
+                                                      _photo = null;
+                                                    });
+                                                    _covers.animateToPage(
+                                                      index,
+                                                      duration: const Duration(
+                                                        milliseconds: 240,
+                                                      ),
+                                                      curve:
+                                                          Curves.easeOutCubic,
+                                                    );
+                                                  }
+                                                },
+                                          borderRadius: BorderRadius.circular(
+                                            18,
+                                          ),
+                                          child: Container(
+                                            width: 212,
+                                            height: 212,
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(18),
+                                              border: Border.all(
+                                                width: selected ? 2 : 1,
+                                                color: selected
+                                                    ? Theme.of(
+                                                        context,
+                                                      ).colorScheme.primary
+                                                    : Colors.transparent,
+                                              ),
+                                            ),
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(13),
+                                              child: index == 0
+                                                  ? (_photo ??
+                                                                widget
+                                                                    .initialCover) !=
+                                                            null
+                                                        ? ArtworkImage(
+                                                            uri:
+                                                                _photo ??
+                                                                widget
+                                                                    .initialCover!,
+                                                            width: 204,
+                                                            height: 204,
+                                                          )
+                                                        : ColoredBox(
+                                                            color: Theme.of(context)
+                                                                .colorScheme
+                                                                .surfaceContainerHighest,
+                                                            child: const Center(
+                                                              child: Icon(
+                                                                Icons
+                                                                    .add_photo_alternate_outlined,
+                                                                size: 40,
+                                                              ),
+                                                            ),
+                                                          )
+                                                  : CustomPaint(
+                                                      painter:
+                                                          PlaylistTemplatePainter(
+                                                            index - 1,
+                                                          ),
+                                                      size: const Size.square(
+                                                        204,
+                                                      ),
+                                                    ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              // Position cues reflect both swiping and gallery selection.
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  for (var index = 0; index < 7; index++)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 10,
+                                      ),
+                                      child: Icon(
+                                        index == 0
+                                            ? Icons.photo_camera_rounded
+                                            : Icons.circle,
+                                        size: index == 0 ? 16 : 8,
+                                        color: index == _coverPage
+                                            ? Theme.of(
+                                                context,
+                                              ).colorScheme.primary
+                                            : tokens.textMuted.withValues(
+                                                alpha: .4,
+                                              ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              TextButton.icon(
+                                onPressed: _saving ? null : _pick,
+                                icon: const Icon(Icons.photo_library_outlined),
+                                label: const Text('从相册选择封面'),
+                              ),
+                              const SizedBox(height: 20),
+                              TextField(
+                                contextMenuBuilder: buildBetaEditingMenu,
+                                selectionControls: mestingTextSelectionControls,
+                                cursorRadius: const Radius.circular(1),
+                                key: const ValueKey(
+                                  'playlist-editor-name-field',
+                                ),
+                                controller: _name,
+                                enabled: !_saving,
+                                maxLength: 30,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                  color: tokens.textPrimary,
+                                ),
+                                decoration: const InputDecoration(
+                                  hintText: '歌单名称',
+                                  counterText: '',
+                                ),
+                                textInputAction: TextInputAction.next,
+                              ),
+                              const SizedBox(height: 14),
+                              TextField(
+                                contextMenuBuilder: buildBetaEditingMenu,
+                                selectionControls: mestingTextSelectionControls,
+                                cursorRadius: const Radius.circular(1),
+                                key: const ValueKey(
+                                  'playlist-editor-description-field',
+                                ),
+                                controller: _description,
+                                enabled: !_saving,
+                                maxLength: 100,
+                                minLines: 2,
+                                maxLines: 3,
+                                decoration: const InputDecoration(
+                                  hintText: '添加描述，留下一段心情',
+                                ),
+                              ),
+                              if (_error != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 12),
+                                  child: Text(
+                                    _error!,
+                                    style: TextStyle(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.error,
+                                      height: 1.6,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              const SizedBox(height: 12),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 7),
-                      Icon(
-                        icon,
-                        size: 18,
-                        color: foreground.withValues(alpha: active ? 1 : .48),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -985,37 +451,127 @@ class _FooterAction extends StatelessWidget {
   }
 }
 
-class _RoundAction extends StatelessWidget {
-  const _RoundAction({
-    required this.semanticLabel,
-    required this.icon,
-    required this.onTap,
-  });
-
-  final String semanticLabel;
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.musicThemeTokens;
-    return Semantics(
-      label: semanticLabel,
-      button: true,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: tokens.glassSubtle,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: tokens.border),
-          ),
-          child: Icon(icon, color: tokens.textPrimary, size: 21),
-        ),
+/// Normalize to the upstream image contract: 640×640 opaque PNG, including
+/// upscaling small photos. A source path alone is never treated as cloud saved.
+Future<String> persistPlaylistCover({int? template, String? photo}) async {
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder)..drawColor(Colors.white, BlendMode.src);
+  ui.Image? source;
+  ui.Codec? codec;
+  if (template != null) {
+    PlaylistTemplatePainter(template).paint(canvas, const Size.square(640));
+  } else {
+    codec = await ui.instantiateImageCodec(
+      await File(photo!).readAsBytes(),
+      targetWidth: 1280,
+    );
+    source = (await codec.getNextFrame()).image;
+    final edge = math.min(source.width, source.height).toDouble();
+    canvas.drawImageRect(
+      source,
+      Rect.fromLTWH(
+        (source.width - edge) / 2,
+        (source.height - edge) / 2,
+        edge,
+        edge,
       ),
+      const Rect.fromLTWH(0, 0, 640, 640),
+      Paint()..filterQuality = FilterQuality.high,
     );
   }
+  final picture = recorder.endRecording();
+  final output = await picture.toImage(640, 640);
+  final bytes = await output.toByteData(format: ui.ImageByteFormat.png);
+  source?.dispose();
+  codec?.dispose();
+  picture.dispose();
+  output.dispose();
+  final documents = await getApplicationDocumentsDirectory();
+  final directory = Directory('${documents.path}/playlist_covers');
+  await directory.create(recursive: true);
+  final file = File(
+    '${directory.path}/cover_${DateTime.now().microsecondsSinceEpoch}.png',
+  );
+  final png = bytes!;
+  await file.writeAsBytes(
+    png.buffer.asUint8List(png.offsetInBytes, png.lengthInBytes),
+    flush: true,
+  );
+  return file.path;
+}
+
+/// Native cover templates are reproducible and independent from network art.
+class PlaylistTemplatePainter extends CustomPainter {
+  const PlaylistTemplatePainter(this.index);
+  final int index;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    const palettes = [
+      [Color(0xFFF3D9B6), Color(0xFF272525), Color(0xFFEEEAE3)],
+      [Color(0xFFD8E6F1), Color(0xFF263E5C), Color(0xFFA6BACD)],
+      [Color(0xFFE8B8B2), Color(0xFF5E3528), Color(0xFFF2E9D9)],
+      [Color(0xFFB4C9B5), Color(0xFF223C32), Color(0xFFE7E0C4)],
+      [Color(0xFFD8CEFA), Color(0xFF302B53), Color(0xFFF8D8B3)],
+      [Color(0xFFF4CF5C), Color(0xFF362D28), Color(0xFFFFEEE2)],
+    ];
+    final colors = palettes[index % palettes.length];
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: colors,
+          stops: const [0, .53, 1],
+        ).createShader(rect),
+    );
+    if (index.isEven) {
+      for (var i = 0; i < 14; i++) {
+        canvas.drawCircle(
+          Offset(size.width * .74, size.height * .66),
+          size.width * (.12 + i * .047),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = size.width * .025
+            ..color = colors[1].withValues(alpha: .05 + i * .025),
+        );
+      }
+    } else {
+      final path = Path()
+        ..moveTo(0, size.height)
+        ..lineTo(size.width, 0)
+        ..lineTo(size.width, size.height)
+        ..close();
+      canvas.drawPath(
+        path,
+        Paint()
+          ..shader = LinearGradient(
+            colors: [colors[1], colors[2]],
+            begin: Alignment.bottomLeft,
+            end: Alignment.topRight,
+          ).createShader(rect),
+      );
+    }
+    final label = TextPainter(
+      text: const TextSpan(
+        text: 'M',
+        style: TextStyle(
+          color: Color(0xCCFFFFFF),
+          fontSize: 60,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    canvas.save();
+    canvas.scale(size.width / 640);
+    label.paint(canvas, const Offset(38, 28));
+    canvas.restore();
+    label.dispose();
+  }
+
+  @override
+  bool shouldRepaint(PlaylistTemplatePainter oldDelegate) =>
+      oldDelegate.index != index;
 }

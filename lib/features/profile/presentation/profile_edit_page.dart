@@ -1,3 +1,4 @@
+import '../../../shared/widgets/beta_text_editing.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -166,11 +167,6 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                                           height: 112,
                                           fit: BoxFit.cover,
                                           retryOnNetworkError: true,
-                                          fallback: const Icon(
-                                            Icons.person_rounded,
-                                            size: 58,
-                                            color: Colors.white,
-                                          ),
                                         )
                                       : const Icon(
                                           Icons.person_rounded,
@@ -285,6 +281,9 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                       _ProfileTextFieldSurface(
                         surfaceKey: profileEditNicknameFieldSurfaceKey,
                         child: TextFormField(
+                          contextMenuBuilder: buildBetaEditingMenu,
+                          selectionControls: mestingTextSelectionControls,
+                          cursorRadius: const Radius.circular(1),
                           controller: _nicknameController,
                           maxLength: 24,
                           decoration: const InputDecoration(
@@ -300,6 +299,9 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                       _ProfileTextFieldSurface(
                         surfaceKey: profileEditBioFieldSurfaceKey,
                         child: TextFormField(
+                          contextMenuBuilder: buildBetaEditingMenu,
+                          selectionControls: mestingTextSelectionControls,
+                          cursorRadius: const Radius.circular(1),
                           controller: _bioController,
                           maxLength: 120,
                           minLines: 2,

@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../../shared/widgets/beta_glass_controls.dart';
+import '../../music_platform/music_platform_providers.dart';
+import '../../music_platform/platform_profile_provider.dart';
+import '../../auth/account_capabilities.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -20,7 +25,6 @@ class MusicHubTopBar extends StatelessWidget {
     this.onBack,
     this.animateTitle = false,
     this.titleKey,
-    this.brandOnly = false,
     super.key,
   });
 
@@ -31,74 +35,23 @@ class MusicHubTopBar extends StatelessWidget {
   final bool animateTitle;
   final Key? titleKey;
 
-  /// Primary surfaces use a quiet brand rail instead of repeating a page
-  /// title that competes with the bottom navigation. Secondary pages retain
-  /// the contextual title/subtitle and back affordance.
-  final bool brandOnly;
-
   @override
   Widget build(BuildContext context) {
     final tokens = context.musicThemeTokens;
-    if (brandOnly && !showBack) {
-      return Row(
-        children: [
-          _TopAction(
-            tooltip: '个人中心与设置',
-            icon: Icons.person_outline_rounded,
-            onTap: () => showMusicHubPanel(context),
-          ),
-          Expanded(
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Text(
-                  'MESTING',
-                  style: TextStyle(
-                    color: tokens.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 3.6,
-                  ),
-                ),
-                // Preserve the semantic title switcher used by the
-                // recommendation tests while keeping it out of the visual
-                // brand rail.
-                if (titleKey != null)
-                  IgnorePointer(
-                    child: Opacity(
-                      opacity: 0,
-                      child: _TopBarTitle(
-                        title: title,
-                        titleKey: titleKey,
-                        animate: animateTitle,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          _TopAction(
-            tooltip: '搜索音乐',
-            icon: Icons.search_rounded,
-            onTap: () => context.push(
-              '/music/search',
-              extra: const MusicPageTransitionIntent.forward(),
-            ),
-          ),
-        ],
-      );
-    }
     return Row(
       children: [
-        _TopAction(
-          tooltip: showBack ? '返回' : '个人中心与设置',
-          icon: showBack
-              ? Icons.arrow_back_ios_new_rounded
-              : Icons.menu_rounded,
-          onTap: showBack
-              ? onBack ?? Navigator.of(context).maybePop
-              : () => showMusicHubPanel(context),
-        ),
+        if (DistributionChannel.isBeta && showBack)
+          BetaGlassBackButton(onPressed: onBack)
+        else
+          _TopAction(
+            tooltip: showBack ? '返回' : '个人中心与设置',
+            icon: showBack
+                ? Icons.arrow_back_ios_new_rounded
+                : Icons.menu_rounded,
+            onTap: showBack
+                ? onBack ?? Navigator.of(context).maybePop
+                : () => showMusicHubPanel(context),
+          ),
         const SizedBox(width: 13),
         Expanded(
           child: Column(
@@ -323,8 +276,11 @@ class _MusicHubPanelState extends ConsumerState<_MusicHubPanel> {
   Widget build(BuildContext context) {
     final tokens = context.musicThemeTokens;
     final auth = ref.watch(authControllerProvider);
+    final platform = DistributionChannel.isBeta
+        ? ref.watch(platformAccountProvider).value
+        : null;
     final user = auth.value?.user;
-    final accountState = user != null
+    final accountState = user != null || platform != null
         ? _PanelAccountState.signedIn
         : auth.isLoading
         ? _PanelAccountState.restoring
@@ -386,16 +342,31 @@ class _MusicHubPanelState extends ConsumerState<_MusicHubPanel> {
                       _PanelAccountState.restoring => '正在恢复账号',
                       _PanelAccountState.unavailable => '账号状态暂不可用',
                       _PanelAccountState.signedOut => '登录后收藏你的音乐',
-                      _PanelAccountState.signedIn => user!.nickname,
+                      _PanelAccountState.signedIn =>
+                        platform != null
+                            ? (platform.nickname.isEmpty
+                                  ? '酷狗账号'
+                                  : platform.nickname)
+                            : user!.nickname,
                     },
                     caption: switch (accountState) {
                       _PanelAccountState.restoring => '正在读取本机登录状态',
                       _PanelAccountState.unavailable => '请稍后重新打开侧边菜单',
                       _PanelAccountState.signedOut => '同步收藏、歌单和个人资料',
                       _PanelAccountState.signedIn =>
-                        user!.bio.trim().isNotEmpty ? user.bio : '欢迎回到你的音乐空间',
+                        platform != null
+                            ? '酷狗账号 · 云端收藏与歌单'
+                            : user!.bio.trim().isNotEmpty
+                            ? user.bio
+                            : '欢迎回到你的音乐空间',
                     },
-                    avatarUrl: user?.avatarUrl,
+                    avatarUrl: platform != null
+                        ? (ref
+                                  .watch(platformProfileProvider)
+                                  .value
+                                  ?.avatarUrl ??
+                              platform.avatarUrl)
+                        : user?.avatarUrl,
                     fallbackIcon: switch (accountState) {
                       _PanelAccountState.restoring =>
                         Icons.person_search_rounded,
@@ -413,20 +384,22 @@ class _MusicHubPanelState extends ConsumerState<_MusicHubPanel> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _PanelLabel('好友与消息'),
-                        _PanelSection(
-                          children: [
-                            _PanelTile(
-                              key: const ValueKey('music-hub-my-messages'),
-                              icon: Icons.mail_outline_rounded,
-                              title: '我的消息',
-                              subtitle: '互相关注好友的私信与会话',
-                              unreadCount: unreadCount,
-                              onTap: () => _openMessages(context),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
+                        if (ref.watch(showMestingFeaturesProvider)) ...[
+                          const _PanelLabel('好友与消息'),
+                          _PanelSection(
+                            children: [
+                              _PanelTile(
+                                key: const ValueKey('music-hub-my-messages'),
+                                icon: Icons.mail_outline_rounded,
+                                title: '我的消息',
+                                subtitle: '互相关注好友的私信与会话',
+                                unreadCount: unreadCount,
+                                onTap: () => _openMessages(context),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                        ],
                         const _PanelLabel('应用设置'),
                         _PanelSection(
                           children: [
@@ -462,7 +435,9 @@ class _MusicHubPanelState extends ConsumerState<_MusicHubPanel> {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           child: Text(
-                            '主题、账号绑定与登录安全已统一放在“设置”，收藏和歌单仍在“我的”页面。',
+                            platform != null
+                                ? '当前使用酷狗账号，收藏和歌单与酷狗云端同步。'
+                                : '主题、账号绑定与登录安全已统一放在“设置”，收藏和歌单仍在“我的”页面。',
                             style: TextStyle(
                               color: tokens.textMuted,
                               fontSize: 10,

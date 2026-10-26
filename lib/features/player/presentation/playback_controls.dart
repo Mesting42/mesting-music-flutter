@@ -74,12 +74,14 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
     }
 
     final styleAccent = switch (widget.visualStyle) {
+      PlayerVisualStyle.cover ||
       PlayerVisualStyle.classic => const Color(0xFF5F75DE),
       PlayerVisualStyle.aurora => const Color(0xFF73E0FF),
       PlayerVisualStyle.cassette => const Color(0xFFA78BFA),
       PlayerVisualStyle.lyricStage => const Color(0xFF5EEAD4),
     };
     final dockColor = switch (widget.visualStyle) {
+      PlayerVisualStyle.cover ||
       PlayerVisualStyle.classic => Colors.transparent,
       PlayerVisualStyle.aurora => const Color(0x221D397A),
       PlayerVisualStyle.cassette => const Color(0x4D17123C),
@@ -232,8 +234,21 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
                       ),
                     if (!busy && characterIp == MusicThemeIp.shinchan)
                       Positioned(
-                        left: progress * constraints.maxWidth - 74,
-                        top: -60,
+                        left: progressCompanionLeft(
+                          progress: progress,
+                          availableWidth: constraints.maxWidth,
+                          companionWidth: 104,
+                        ),
+                        top: progressCompanionTop(
+                          characterIp,
+                          trackCenterY: constraints.maxHeight / 2,
+                          trackHeight: progressIp == MusicThemeIp.classic
+                              ? 2
+                              : ipProgressTrackHeight,
+                          companionSize: ShinchanProgressWalker.sizeForWidth(
+                            104,
+                          ),
+                        ),
                         child: IgnorePointer(
                           child: ShinchanProgressWalker(
                             presetId: musicTheme.id,

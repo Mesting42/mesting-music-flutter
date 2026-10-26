@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/audio/playback_providers.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../music_platform/presentation/platform_library_page.dart';
 import '../../../core/database/app_database.dart';
 import '../../../shared/models/track.dart';
 import '../../../shared/utils/duration_format.dart';
@@ -17,6 +19,7 @@ import '../../library/presentation/favorite_toggle_button.dart';
 import '../../themes/mesting_palette.dart';
 import '../../themes/music_theme_tokens.dart';
 import 'playlist_editor_dialog.dart';
+import '../../player/presentation/beta_playback_actions.dart';
 
 bool _canPopPlaylistRoute(BuildContext context) =>
     Navigator.maybeOf(context)?.canPop() ?? false;
@@ -36,6 +39,9 @@ class PlaylistDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (DistributionChannel.isBeta && playlistId.startsWith('kg:')) {
+      return PlatformCloudPlaylistPage(id: playlistId);
+    }
     final playlist = ref.watch(playlistProvider(playlistId));
     final tracks = ref.watch(playlistTracksProvider(playlistId));
     final favoriteTracks =
@@ -75,7 +81,14 @@ class PlaylistDetailPage extends ConsumerWidget {
             onManage: () => _showPlaylistActions(context, ref, item),
             onPlayAll: trackList.isEmpty
                 ? null
-                : () => ref.read(audioHandlerProvider).replaceQueue(trackList),
+                : () => DistributionChannel.isBeta
+                      ? playBetaSelection(
+                          context,
+                          ref,
+                          trackList.first,
+                          playAll: trackList,
+                        )
+                      : ref.read(audioHandlerProvider).replaceQueue(trackList),
             onAddTracks: () =>
                 _showTrackPicker(context, ref, trackList, favoriteTracks),
             onReorder: (items, oldIndex, newIndex) {
@@ -90,9 +103,11 @@ class PlaylistDetailPage extends ConsumerWidget {
                     reordered.map((track) => track.id).toList(),
                   );
             },
-            onPlayTrack: (track) => ref
-                .read(audioHandlerProvider)
-                .playSingleTrack(track, playbackContext: trackList),
+            onPlayTrack: (track) => DistributionChannel.isBeta
+                ? playBetaSelection(context, ref, track)
+                : ref
+                      .read(audioHandlerProvider)
+                      .playSingleTrack(track, playbackContext: trackList),
             onAddTrack: (track) => _appendTrack(context, ref, track),
             onRemoveTrack: (track) async {
               await ref
@@ -154,16 +169,17 @@ class PlaylistDetailPage extends ConsumerWidget {
     WidgetRef ref,
     UserPlaylist playlist,
   ) async {
-    final draft = await showPlaylistEditorDialog(
+    final repository = ref.read(libraryRepositoryProvider);
+    await showPlaylistEditorDialog(
       context,
       initialName: playlist.name,
       initialDescription: playlist.description,
       initialCoverAsset: playlist.coverAsset,
-    );
-    if (draft == null) return;
-    await ref
-        .read(libraryRepositoryProvider)
-        .updatePlaylist(
+      onSave: (draft) async {
+        if (!identical(repository, ref.read(libraryRepositoryProvider))) {
+          throw StateError('账号已变化，请重新打开歌单');
+        }
+        await repository.updatePlaylist(
           id: playlistId,
           name: draft.name,
           description: draft.description,
@@ -172,6 +188,8 @@ class PlaylistDetailPage extends ConsumerWidget {
               ? playlist.coverCloudId
               : null,
         );
+      },
+    );
     ref.invalidate(playlistProvider(playlistId));
   }
 
@@ -820,63 +838,12 @@ void _showPlaylistNotice(
   String message, {
   required bool added,
 }) {
-  final tokens = context.musicThemeTokens;
-  final messenger = ScaffoldMessenger.of(context);
-  messenger
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
-      SnackBar(
-        duration: const Duration(milliseconds: 1350),
-        behavior: SnackBarBehavior.floating,
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        margin: const EdgeInsets.fromLTRB(56, 0, 56, 142),
-        padding: EdgeInsets.zero,
-        content: DecoratedBox(
-          decoration: BoxDecoration(
-            color: tokens.glassStrong,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: tokens.borderStrong),
-            boxShadow: [
-              BoxShadow(
-                color: tokens.shadow,
-                blurRadius: 24,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  added ? Icons.check_circle_rounded : Icons.remove_circle,
-                  color: added
-                      ? const Color(0xFF35B779)
-                      : const Color(0xFFC24A34),
-                  size: 19,
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    message,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: tokens.textPrimary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  showMusicNotice(
+    context,
+    icon: added ? Icons.check_rounded : Icons.remove_circle_outline,
+    title: message,
+    message: '',
+  );
 }
 
 class _CircleActionButton extends StatelessWidget {

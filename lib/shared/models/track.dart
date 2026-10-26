@@ -18,6 +18,8 @@ class Track {
     this.externalUrl = '',
     this.licenseUrl = '',
     this.availabilityMessage = '',
+    this.platformSongId = '',
+    this.playbackQuality = '',
   });
 
   final String id;
@@ -34,6 +36,14 @@ class Track {
   final String externalUrl;
   final String licenseUrl;
   final String availabilityMessage;
+
+  /// Upstream mixsongid/album_audio_id, independent of the playable file hash.
+  /// Optional for older local rows; comments can resolve it on demand.
+  final String platformSongId;
+
+  /// Actual quality returned by the platform, not the user's requested tier.
+  /// Optional so older saved tracks and other sources remain compatible.
+  final String playbackQuality;
 
   bool get isRemote => source != TrackSource.local;
   String get resolvedLyricsAsset {
@@ -72,6 +82,8 @@ class Track {
       'externalUrl': externalUrl,
       'licenseUrl': licenseUrl,
       'availabilityMessage': availabilityMessage,
+      'platformSongId': platformSongId,
+      'playbackQuality': playbackQuality,
     };
   }
 
@@ -94,6 +106,8 @@ class Track {
       externalUrl: json['externalUrl'] as String? ?? '',
       licenseUrl: json['licenseUrl'] as String? ?? '',
       availabilityMessage: json['availabilityMessage'] as String? ?? '',
+      platformSongId: json['platformSongId'] as String? ?? '',
+      playbackQuality: json['playbackQuality'] as String? ?? '',
     );
   }
 
@@ -116,23 +130,28 @@ class Track {
         'isPreview': isPreview,
         'externalUrl': externalUrl,
         'availabilityMessage': availabilityMessage,
+        'platformSongId': platformSongId,
+        'playbackQuality': playbackQuality,
       },
     );
   }
 
   Track copyWith({
+    Duration? duration,
     String? audioAsset,
     String? coverAsset,
     String? lyricsAsset,
     bool? isPreview,
     String? availabilityMessage,
+    String? platformSongId,
+    String? playbackQuality,
   }) {
     return Track(
       id: id,
       title: title,
       artist: artist,
       album: album,
-      duration: duration,
+      duration: duration ?? this.duration,
       audioAsset: audioAsset ?? this.audioAsset,
       coverAsset: coverAsset ?? this.coverAsset,
       lyricsAsset: lyricsAsset ?? this.lyricsAsset,
@@ -142,6 +161,8 @@ class Track {
       externalUrl: externalUrl,
       licenseUrl: licenseUrl,
       availabilityMessage: availabilityMessage ?? this.availabilityMessage,
+      platformSongId: platformSongId ?? this.platformSongId,
+      playbackQuality: playbackQuality ?? this.playbackQuality,
     );
   }
 }

@@ -7,6 +7,44 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   const resRoot = 'android/app/src/main/res';
 
+  test(
+    'Beta native warm-start windows do not reuse the coral startup canvas',
+    () {
+      const betaRes = 'android/app/src/beta/res';
+      for (final folder in ['values', 'values-night']) {
+        final colors = File('$betaRes/$folder/colors.xml').readAsStringSync();
+        final runtimeColor = folder == 'values' ? '#FFFFFF' : '#11141B';
+        expect(
+          colors,
+          contains(
+            '<color name="mesting_splash_background">$runtimeColor</color>',
+          ),
+        );
+        expect(
+          colors,
+          contains(
+            '<color name="mesting_runtime_background">$runtimeColor</color>',
+          ),
+        );
+        expect(
+          colors,
+          contains('<color name="mesting_coral_launch_light">#FFFFFF</color>'),
+        );
+        expect(
+          colors,
+          contains('<color name="mesting_coral_launch_dark">#11141B</color>'),
+        );
+        final styles = File('$betaRes/$folder/styles.xml').readAsStringSync();
+        expect(
+          styles,
+          contains(
+            '<item name="android:windowBackground">@color/mesting_runtime_background</item>',
+          ),
+        );
+      }
+    },
+  );
+
   test('launcher icons exist at every Android density', () {
     const expectedSizes = <String, int>{
       'mipmap-mdpi': 48,
@@ -399,14 +437,19 @@ void main() {
       expect(onCreate, isNot(contains('applyPendingBrandStyle()')));
       expect(activity, contains('"applyQueuedBrandStyle"'));
       expect(bootstrap, contains('updateLauncher: false'));
-      final firstFrameCallback = bootstrap.substring(
-        bootstrap.indexOf('WidgetsBinding.instance.addPostFrameCallback'),
-        bootstrap.indexOf('return dependencies;'),
-      );
-      expect(
-        firstFrameCallback,
-        isNot(contains('AppBrandStyleBridge.applyQueuedStyle()')),
-      );
+      // Persistence now starts after the startup film and the real app's first
+      // frame. Check the callback contract independently of its old position
+      // before `return dependencies`, which no longer owns that frame.
+      final firstFrameCallbacks = RegExp(
+        r'WidgetsBinding\.instance\.addPostFrameCallback\(\(_\)\s*\{([\s\S]*?)\}\);',
+      ).allMatches(bootstrap);
+      expect(firstFrameCallbacks, isNotEmpty);
+      for (final callback in firstFrameCallbacks) {
+        expect(
+          callback.group(1),
+          isNot(contains('AppBrandStyleBridge.applyQueuedStyle()')),
+        );
+      }
       final currentBrandStyle = activity.substring(
         activity.indexOf('private fun currentBrandStyle()'),
         activity.indexOf('private fun queueBrandStyle('),

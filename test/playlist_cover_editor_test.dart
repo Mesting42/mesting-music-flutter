@@ -1,22 +1,23 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mesting_music/features/playlists/presentation/playlist_editor_dialog.dart';
 
 void main() {
-  Future<void> openEditor(
+  Future<void> open(
     WidgetTester tester, {
-    String? initialCoverAsset,
+    String? cover,
+    Future<void> Function(PlaylistDraft)? save,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
           builder: (context) => Scaffold(
-            body: FilledButton(
+            body: TextButton(
               onPressed: () => showPlaylistEditorDialog(
                 context,
-                initialCoverAsset: initialCoverAsset,
+                initialCoverAsset: cover,
+                onSave: save,
               ),
               child: const Text('打开'),
             ),
@@ -28,153 +29,83 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('playlist editor exposes gallery and automatic cover', (
+  testWidgets('new playlist exposes cover templates and gallery in a sheet', (
     tester,
   ) async {
-    await openEditor(
-      tester,
-      initialCoverAsset: 'assets/images/theme_gallery/shinchan-avatar-v2.png',
-    );
-
-    expect(find.text('创建歌单'), findsOneWidget);
-    expect(find.text('从相册选择'), findsOneWidget);
-    expect(find.text('自动封面'), findsOneWidget);
-    expect(find.text('也可以使用歌曲封面'), findsNothing);
-    expect(
-      find.byKey(const ValueKey('playlist-editor-cover-stage')),
-      findsOneWidget,
-    );
+    await open(tester);
+    expect(find.text('新建歌单'), findsOneWidget);
+    expect(find.text('从相册选择封面'), findsOneWidget);
+    expect(find.byTooltip('保存歌单'), findsOneWidget);
     expect(find.byType(AlertDialog), findsNothing);
+  });
+  testWidgets('persisted local cover remains readable after reopening', (
+    tester,
+  ) async {
+    final path = File(
+      'assets/images/theme_gallery/shinchan-avatar-v2.png',
+    ).absolute.path;
+    await open(tester, cover: path);
+    final images = tester.widgetList<Image>(find.byType(Image));
     expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('playlist-editor-sheet')),
-        matching: find.byType(FilledButton),
-      ),
-      findsNothing,
+      images.any((widget) {
+        final provider = widget.image;
+        return provider is FileImage ||
+            (provider is ResizeImage && provider.imageProvider is FileImage);
+      }),
+      isTrue,
     );
   });
-
   testWidgets(
-    'playlist editor displays a persisted local cover with FileImage',
+    'failed save retains the draft and explicit retry commits it once',
     (tester) async {
-      final localCover = File(
-        '${Directory.current.path}${Platform.pathSeparator}'
-        'assets${Platform.pathSeparator}images${Platform.pathSeparator}'
-        'theme_gallery${Platform.pathSeparator}shinchan-avatar-v2.png',
+      final submitted = <PlaylistDraft>[];
+      await open(
+        tester,
+        save: (draft) async {
+          submitted.add(draft);
+          if (submitted.length == 1) throw StateError('网络中断，请重试');
+        },
       );
-      expect(localCover.existsSync(), isTrue);
-
-      await openEditor(tester, initialCoverAsset: localCover.path);
-
-      final fileImages = tester
-          .widgetList<Image>(find.byType(Image))
-          .where((image) => image.image is FileImage);
-      expect(fileImages, isNotEmpty);
+      await tester.enterText(
+        find.byKey(const ValueKey('playlist-editor-name-field')),
+        '夜行电台',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('playlist-editor-description-field')),
+        '慢慢听',
+      );
+      await tester.tap(find.byTooltip('保存歌单'));
+      await tester.pumpAndSettle();
+      expect(find.text('网络中断，请重试'), findsOneWidget);
+      expect(find.text('夜行电台'), findsOneWidget);
+      expect(find.text('慢慢听'), findsOneWidget);
+      expect(submitted, hasLength(1));
+      await tester.tap(find.byTooltip('保存歌单'));
+      await tester.pumpAndSettle();
+      expect(submitted, hasLength(2));
+      expect(submitted.last.name, submitted.first.name);
+      expect(find.byKey(const ValueKey('playlist-editor-sheet')), findsNothing);
     },
   );
-
-  testWidgets('playlist editor saves through the custom action bar', (
-    tester,
-  ) async {
-    PlaylistDraft? result;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: FilledButton(
-              onPressed: () async {
-                result = await showPlaylistEditorDialog(context);
-              },
-              child: const Text('打开'),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    await tester.tap(find.text('打开'));
-    await tester.pumpAndSettle();
-    final nameField = find.descendant(
-      of: find.byKey(const ValueKey('playlist-editor-name-field')),
-      matching: find.byType(TextField),
-    );
-    await tester.enterText(nameField, '夜行电台');
-    await tester.pump();
-    expect(find.text('4/30'), findsOneWidget);
-
-    await tester.tap(find.byKey(const ValueKey('playlist-editor-save')));
-    await tester.pumpAndSettle();
-
-    expect(result?.name, '夜行电台');
-    expect(find.byKey(const ValueKey('playlist-editor-sheet')), findsNothing);
-  });
-
-  testWidgets('playlist editor text sits in one clean aligned surface', (
-    tester,
-  ) async {
-    await openEditor(tester);
-
-    final nameField = tester.widget<TextField>(
-      find.descendant(
-        of: find.byKey(const ValueKey('playlist-editor-name-field')),
-        matching: find.byType(TextField),
-      ),
-    );
-    final descriptionField = tester.widget<TextField>(
-      find.descendant(
-        of: find.byKey(const ValueKey('playlist-editor-description-field')),
-        matching: find.byType(TextField),
-      ),
-    );
-
-    for (final field in [nameField, descriptionField]) {
-      expect(field.decoration?.filled, isFalse);
-      expect(field.decoration?.border, InputBorder.none);
-      expect(field.decoration?.enabledBorder, InputBorder.none);
-      expect(field.decoration?.focusedBorder, InputBorder.none);
-      expect(field.decoration?.contentPadding?.horizontal, 0);
-    }
-    expect(nameField.textAlignVertical, TextAlignVertical.center);
-    expect(descriptionField.textAlignVertical, TextAlignVertical.top);
-    expect(
-      descriptionField.decoration?.contentPadding,
-      const EdgeInsets.only(top: 6, bottom: 4),
-    );
-    expect(descriptionField.decoration?.hintMaxLines, 2);
-  });
-
-  testWidgets('playlist editor fits a narrow dark screen without overflow', (
-    tester,
-  ) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(320, 640);
-    addTearDown(() {
-      tester.view.resetDevicePixelRatio();
-      tester.view.resetPhysicalSize();
-    });
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: ThemeData(brightness: Brightness.dark),
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: FilledButton(
-              onPressed: () => showPlaylistEditorDialog(
-                context,
-                initialName: '通勤',
-                initialDescription: '让清晨慢慢醒来',
-              ),
-              child: const Text('打开'),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    await tester.tap(find.text('打开'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('编辑歌单'), findsOneWidget);
-    expect(find.text('保存修改'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+  testWidgets(
+    'short keyboard viewport keeps save accessible and rejects blank name',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(320, 640);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      await open(tester);
+      await tester.tap(find.byTooltip('保存歌单'));
+      await tester.pumpAndSettle();
+      expect(find.text('请先填写歌单名称'), findsOneWidget);
+      tester.view.viewInsets = const FakeViewPadding(bottom: 260);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.showKeyboard(
+        find.byKey(const ValueKey('playlist-editor-name-field')),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byTooltip('保存歌单'));
+      expect(tester.takeException(), null);
+    },
+  );
 }

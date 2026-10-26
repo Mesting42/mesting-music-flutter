@@ -33,6 +33,7 @@ migrate_working_dir/
 /build/
 /coverage/
 .codex-artifacts/
+.codex-backups/
 .codex-temp/
 .codex-*.png
 .codex-*.xml
@@ -41,6 +42,17 @@ migrate_working_dir/
 test_artifacts/
 assets/design-qa/
 release/*.apk
+
+# Local source archives and machine credentials are not part of a source snapshot.
+/Mesting-Music-*-source.zip
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.sample
+**/key.properties
+**/*.keystore
+**/*.jks
+**/local.properties
 
 # Symbolication related
 app.*.symbols

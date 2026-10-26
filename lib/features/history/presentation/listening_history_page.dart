@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/beta_glass_controls.dart';
+import '../../../core/platform/distribution_channel.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,6 +9,7 @@ import '../../../shared/widgets/artwork_image.dart';
 import '../../../shared/widgets/mesting_loading_indicator.dart';
 import '../../themes/music_theme_tokens.dart';
 import '../listening_history_providers.dart';
+import '../../player/presentation/beta_playback_actions.dart';
 
 const double listeningHistoryPrimaryShadowBlurRadius = 10;
 const double listeningHistoryAccentShadowBlurRadius = 14;
@@ -80,27 +83,33 @@ class _HistoryHeader extends StatelessWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
-        InkWell(
-          key: const ValueKey('listening-history-back'),
-          onTap: onBack,
-          borderRadius: BorderRadius.circular(18),
-          child: Ink(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: dark
-                  ? const Color(0xE71C1722)
-                  : Colors.white.withValues(alpha: .76),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
+        if (DistributionChannel.isBeta)
+          BetaGlassBackButton(
+            key: const ValueKey('listening-history-back'),
+            onPressed: onBack,
+          )
+        else
+          InkWell(
+            key: const ValueKey('listening-history-back'),
+            onTap: onBack,
+            borderRadius: BorderRadius.circular(18),
+            child: Ink(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
                 color: dark
-                    ? Colors.white.withValues(alpha: .14)
-                    : const Color(0x26596784),
+                    ? const Color(0xE71C1722)
+                    : Colors.white.withValues(alpha: .76),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: dark
+                      ? Colors.white.withValues(alpha: .14)
+                      : const Color(0x26596784),
+                ),
               ),
+              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
             ),
-            child: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           ),
-        ),
         const SizedBox(width: 14),
         const Expanded(
           child: Column(
@@ -213,12 +222,14 @@ class _HistoryList extends ConsumerWidget {
         return _HistoryTrackRow(
           item: item,
           rank: ranking ? index + 1 : null,
-          onTap: () => ref
-              .read(audioHandlerProvider)
-              .playSingleTrack(
-                item.track,
-                playbackContext: items.map((item) => item.track),
-              ),
+          onTap: () => DistributionChannel.isBeta
+              ? playBetaSelection(context, ref, item.track)
+              : ref
+                    .read(audioHandlerProvider)
+                    .playSingleTrack(
+                      item.track,
+                      playbackContext: items.map((item) => item.track),
+                    ),
         );
       },
     );

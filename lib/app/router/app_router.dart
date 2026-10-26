@@ -1,9 +1,16 @@
+import '../../shared/widgets/beta_page_motion.dart';
+import '../../features/experience/presentation/player_dismiss_motion.dart';
+import '../../features/experience/presentation/playback_pill_menu.dart';
+import '../../features/music_platform/data/platform_category_search.dart';
+import '../../features/music_platform/presentation/platform_catalog_detail_page.dart';
 import 'dart:ui';
+import '../../shared/widgets/beta_edge_back.dart';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/platform/sensitive_screen.dart';
+import '../../core/platform/distribution_channel.dart';
 import '../../features/auth/presentation/auth_page.dart';
 import '../../features/auth/presentation/account_deletion_page.dart';
 import '../../features/auth/presentation/auth_protected_page.dart';
@@ -34,6 +41,8 @@ import '../../features/profile/presentation/avatar_preview_page.dart';
 import '../../features/profile/presentation/profile_background_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/recommendation/presentation/recommendation_page.dart';
+import '../../features/experience/presentation/music_library_page.dart';
+import '../../features/experience/presentation/listening_replay_page.dart';
 
 /// App navigation graph.
 ///
@@ -58,6 +67,18 @@ final appRouter = GoRouter(
               _musicSlidePage(state: state, child: const MusicHomePage()),
         ),
         GoRoute(
+          path: '/music/library',
+          pageBuilder: (context, state) => _musicSlidePage(
+            state: state,
+            child: MusicLibraryPage(view: state.uri.queryParameters['view']),
+          ),
+        ),
+        GoRoute(
+          path: '/music/replay',
+          pageBuilder: (context, state) =>
+              _musicSlidePage(state: state, child: const ListeningReplayPage()),
+        ),
+        GoRoute(
           path: '/music/queue',
           pageBuilder: (context, state) =>
               _musicSlidePage(state: state, child: const QueuePage()),
@@ -68,12 +89,34 @@ final appRouter = GoRouter(
               _musicSlidePage(state: state, child: const MusicSearchPage()),
         ),
         GoRoute(
+          path: '/music/catalog/:kind/:id',
+          pageBuilder: (context, state) => _musicSlidePage(
+            state: state,
+            child: PlatformCatalogDetailPage(
+              hit: state.extra is PlatformSearchHit
+                  ? state.extra! as PlatformSearchHit
+                  : PlatformSearchHit(
+                      kind: PlatformSearchKind.values.firstWhere(
+                        (k) => k.name == state.pathParameters['kind'],
+                        orElse: () => PlatformSearchKind.albums,
+                      ),
+                      id: state.pathParameters['id']!,
+                      title: '音乐详情',
+                    ),
+            ),
+          ),
+        ),
+        GoRoute(
           path: '/music/discover',
+          redirect: (context, state) =>
+              DistributionChannel.isBeta ? '/music' : null,
           pageBuilder: (context, state) =>
               _collectionRevealPage(state: state, child: const DiscoverPage()),
         ),
         GoRoute(
           path: '/music/discover/:playlistId',
+          redirect: (context, state) =>
+              DistributionChannel.isBeta ? '/music' : null,
           pageBuilder: (context, state) => _musicSlidePage(
             state: state,
             child: CuratedPlaylistPage(
@@ -91,6 +134,7 @@ final appRouter = GoRouter(
             state: state,
             child: AuthProtectedPage(
               reason: '登录后才能查看和编辑个人歌单。',
+              allowBetaLocalLibrary: true,
               redirect: state.uri.toString(),
               child: PlaylistDetailPage(
                 playlistId: state.pathParameters['playlistId']!,
@@ -287,6 +331,7 @@ final appRouter = GoRouter(
           pageBuilder: (context, state) => _NowPlayingTransitionPage(
             key: state.pageKey,
             child: NowPlayingPage(
+              showLyricsInitially: state.extra is PlaybackPillLyricsIntent,
               vinylOrigin: state.extra is NowPlayingTransitionIntent
                   ? (state.extra! as NowPlayingTransitionIntent).vinylOrigin
                   : null,
@@ -322,25 +367,50 @@ class _NowPlayingTransitionPage extends Page<void> {
 
   @override
   Route<void> createRoute(BuildContext context) {
-    return _NowPlayingRoute(
+    late final _NowPlayingRoute route;
+    route = _NowPlayingRoute(
       settings: this,
       // The vinyl flight is rendered inside the live player page so it can use
       // the mini player's exact global bounds without route snapshot artifacts.
       // Snapshot static page bodies while the route itself slides/fades. The
       // shell player and navigation stay outside this route and remain live.
-      allowSnapshotting: true,
+      allowSnapshotting: !DistributionChannel.isBeta,
       opaque: false,
       transitionDuration: nowPlayingTransitionDuration,
       reverseTransitionDuration: nowPlayingReverseTransitionDuration,
-      pageBuilder: (context, animation, secondaryAnimation) => child,
+      pageBuilder: (context, animation, secondaryAnimation) =>
+          DistributionChannel.isBeta ? BetaEdgeBack(child: child) : child,
       // The player animates its vinyl and chrome from the route animation.
       transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          child,
+          DistributionChannel.isBeta
+          ? AnimatedBuilder(
+              animation: Listenable.merge([
+                animation,
+                route.playerDismissMotion,
+              ]),
+              builder: (context, child) {
+                final motion = route.playerDismissMotion;
+                final progress = motion.dragDriven
+                    ? animation.value
+                    : (animation.status == AnimationStatus.reverse
+                              ? Curves.easeInCubic
+                              : Curves.easeOutCubic)
+                          .transform(animation.value);
+                return FractionalTranslation(
+                  translation: Offset(0, 1 - progress),
+                  child: child,
+                );
+              },
+              child: RepaintBoundary(child: child),
+            )
+          : child,
     );
+    return route;
   }
 }
 
-class _NowPlayingRoute extends PageRouteBuilder<void> {
+class _NowPlayingRoute extends PageRouteBuilder<void>
+    implements PlayerDismissRoute {
   _NowPlayingRoute({
     required super.pageBuilder,
     required super.transitionsBuilder,
@@ -352,9 +422,34 @@ class _NowPlayingRoute extends PageRouteBuilder<void> {
   });
 
   @override
+  late final PlayerDismissMotion playerDismissMotion;
+
+  @override
+  void install() {
+    super.install();
+    playerDismissMotion = PlayerDismissMotion(controller!);
+  }
+
+  @override
+  bool didPop(void result) {
+    playerDismissMotion.markPopped();
+    return super.didPop(result);
+  }
+
+  @override
+  void dispose() {
+    playerDismissMotion.dispose();
+    super.dispose();
+  }
+
+  @override
   DelegatedTransitionBuilder get delegatedTransition =>
       (context, animation, secondaryAnimation, allowSnapshotting, child) {
         if (child == null) return null;
+        // The Beta player is a real sliding surface. Its underlay must stay
+        // painted throughout both route pop and handle dismissal. The formal
+        // vinyl flight uses its original two-phase choreography below.
+        if (DistributionChannel.isBeta) return child;
         return AnimatedBuilder(
           animation: secondaryAnimation,
           child: child,
@@ -390,6 +485,16 @@ Page<void> _musicSlidePage({
   required GoRouterState state,
   required Widget child,
 }) {
+  if (DistributionChannel.isBeta) {
+    return CustomTransitionPage<void>(
+      key: state.pageKey,
+      transitionDuration: const Duration(milliseconds: 360),
+      reverseTransitionDuration: const Duration(milliseconds: 320),
+      child: child is MusicSearchPage ? child : BetaEdgeBack(child: child),
+      transitionsBuilder: (context, animation, secondary, child) =>
+          BetaPageMotion(animation: animation, child: child),
+    );
+  }
   final intent = state.extra is MusicPageTransitionIntent
       ? state.extra! as MusicPageTransitionIntent
       : const MusicPageTransitionIntent.forward();
@@ -412,6 +517,7 @@ Page<void> _profileEditTransitionPage({
   required GoRouterState state,
   required Widget child,
 }) {
+  if (DistributionChannel.isBeta) child = BetaEdgeBack(child: child);
   final intent = state.extra is MusicPageTransitionIntent
       ? state.extra! as MusicPageTransitionIntent
       : const MusicPageTransitionIntent.forward();
@@ -438,6 +544,7 @@ Page<void> _messagesTransitionPage({
   required GoRouterState state,
   required Widget child,
 }) {
+  if (DistributionChannel.isBeta) child = BetaEdgeBack(child: child);
   final intent = state.extra is MusicPageTransitionIntent
       ? state.extra! as MusicPageTransitionIntent
       : const MusicPageTransitionIntent.forward();

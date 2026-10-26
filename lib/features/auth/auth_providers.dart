@@ -8,6 +8,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../core/persistence/app_preferences.dart';
+import '../../core/platform/distribution_channel.dart';
+import 'beta_account_choice.dart';
+import 'beta_entry_flow.dart';
 import '../../core/security/session_store.dart';
 import '../library/library_providers.dart';
 import 'data/auth_repository.dart';
@@ -101,8 +104,30 @@ class AuthController extends AsyncNotifier<AuthSession?> {
 
   @override
   Future<AuthSession?> build() async {
+    if (DistributionChannel.isBeta) {
+      ref.listen(betaAccountChoiceProvider, (previous, choice) {
+        if (choice == BetaAccountChoice.kugou ||
+            choice == BetaAccountChoice.guest) {
+          state = const AsyncData(null);
+        }
+      });
+      final choice = ref.read(betaAccountChoiceProvider);
+      if (choice == BetaAccountChoice.kugou ||
+          choice == BetaAccountChoice.guest) {
+        return null;
+      }
+    }
     final repository = _repository;
     final restored = await repository.restoreSession();
+    // A delayed CloudBase restoration cannot replace a newly selected platform
+    // account. This also keeps an unavailable CloudBase off the music path.
+    if (DistributionChannel.isBeta &&
+        {
+          BetaAccountChoice.kugou,
+          BetaAccountChoice.guest,
+        }.contains(ref.read(betaAccountChoiceProvider))) {
+      return null;
+    }
     if (restored != null && repository is BackgroundRefreshAuthRepository) {
       unawaited(
         _refreshRestoredAccount(
@@ -358,9 +383,23 @@ class AuthController extends AsyncNotifier<AuthSession?> {
   }
 
   Future<void> signOut() async {
+    final previous = state;
     state = const AsyncLoading();
-    await _repository.signOut();
-    state = const AsyncData(null);
+    try {
+      await _repository.signOut();
+      if (DistributionChannel.isBeta) {
+        await ref
+            .read(betaAccountChoiceProvider.notifier)
+            .select(BetaAccountChoice.guest);
+      }
+      state = const AsyncData(null);
+      if (DistributionChannel.isBeta) {
+        await ref.read(betaEntryFlowProvider.notifier).welcome();
+      }
+    } on Object {
+      state = previous;
+      rethrow;
+    }
   }
 
   Future<AuthSession?> rememberedAccount() {
@@ -427,6 +466,11 @@ class AuthController extends AsyncNotifier<AuthSession?> {
         return false;
       }
       await store.remember(restored);
+      if (DistributionChannel.isBeta) {
+        await ref
+            .read(betaAccountChoiceProvider.notifier)
+            .select(BetaAccountChoice.mesting);
+      }
       state = AsyncData(restored);
       if (_repository case final BackgroundRefreshAuthRepository repository) {
         unawaited(_refreshRestoredAccount(repository, restored));
@@ -449,7 +493,19 @@ class AuthController extends AsyncNotifier<AuthSession?> {
     lastError = null;
     if (previous == null) state = const AsyncLoading();
     try {
+      if (DistributionChannel.isBeta &&
+          ref.read(betaAccountChoiceProvider) == BetaAccountChoice.kugou) {
+        throw StateError('请先退出当前酷狗账号');
+      }
       final session = await request();
+      if (DistributionChannel.isBeta) {
+        if (ref.read(betaAccountChoiceProvider) == BetaAccountChoice.kugou) {
+          throw StateError('当前已切换为酷狗账号，请先退出');
+        }
+        await ref
+            .read(betaAccountChoiceProvider.notifier)
+            .select(BetaAccountChoice.mesting);
+      }
       state = AsyncData(session);
       return true;
     } on Object catch (error, stackTrace) {

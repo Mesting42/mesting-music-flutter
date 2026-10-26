@@ -3,15 +3,53 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/persistence/app_preferences.dart';
+import '../../core/platform/distribution_channel.dart';
 import 'app_brand_style.dart';
 import 'music_theme_preset.dart';
 
 const musicThemePreferenceKey = 'music_theme_preset';
 
+/// Beta.6 retires full IP skins, but keeps the independently selected progress
+/// palettes/characters. Migrate before the launch theme is chosen, so neither
+/// the first frame nor a later restore can resurrect a removed skin.
+Future<void> migrateBeta6Appearance(SharedPreferences preferences) async {
+  if (!DistributionChannel.isBeta) return;
+  final saved = preferences.getString(musicThemePreferenceKey);
+  final old = musicThemePresetById(saved);
+  if (saved != null && old.ip != MusicThemeIp.classic) {
+    for (final key in ['music_progress_style', 'music_progress_character']) {
+      if (preferences.getString(key) == 'followTheme') {
+        await preferences.setString(key, old.ip.name);
+      }
+    }
+    await preferences.setString(musicThemePreferenceKey, 'classic');
+  }
+  await preferences.remove('music_background_strength');
+  await preferences.remove('theme_performance_mode');
+}
+
+/// Beta.7 preserves explicit progress choices while retiring follow-theme aliases.
+Future<void> migrateBeta7Appearance(SharedPreferences preferences) async {
+  if (!DistributionChannel.isBeta) return;
+  for (final key in ['music_progress_style', 'music_progress_character']) {
+    if (preferences.getString(key) == 'followTheme') {
+      await preferences.setString(key, 'classic');
+    }
+  }
+  await preferences.setString(appBrandStylePreferenceKey, 'coral');
+}
+
+MusicThemePreset _availablePreset(String? id) {
+  final preset = musicThemePresetById(id);
+  return DistributionChannel.isBeta && preset.ip != MusicThemeIp.classic
+      ? musicThemePresetById('classic')
+      : preset;
+}
+
 ThemeMode savedMusicThemeMode(SharedPreferences preferences) {
   final saved = preferences.getString(musicThemePreferenceKey);
   final legacy = preferences.getString('music_theme_style');
-  final preset = musicThemePresetById(
+  final preset = _availablePreset(
     saved ?? (legacy == 'classic' ? 'classic' : 'classic-system'),
   );
   return musicThemeMode(preset);
@@ -27,7 +65,7 @@ class MusicThemeController extends Notifier<MusicThemePreset> {
   MusicThemePreset build() {
     final preferences = ref.watch(sharedPreferencesProvider);
     final saved = preferences.getString(musicThemePreferenceKey);
-    if (saved != null) return musicThemePresetById(saved);
+    if (saved != null) return _availablePreset(saved);
     final legacy = preferences.getString('music_theme_style');
     return musicThemePresetById(
       legacy == 'classic' ? 'classic' : 'classic-system',
@@ -35,7 +73,7 @@ class MusicThemeController extends Notifier<MusicThemePreset> {
   }
 
   Future<void> select(String presetId) async {
-    final preset = musicThemePresetById(presetId);
+    final preset = _availablePreset(presetId);
     state = preset;
     await ref
         .read(sharedPreferencesProvider)
@@ -93,6 +131,7 @@ class ThemePerformanceController extends Notifier<ThemePerformanceMode> {
 
   @override
   ThemePerformanceMode build() {
+    if (DistributionChannel.isBeta) return ThemePerformanceMode.automatic;
     final saved = ref.watch(sharedPreferencesProvider).getString(_key);
     return ThemePerformanceMode.values.firstWhere(
       (mode) => mode.name == saved,
@@ -151,7 +190,9 @@ class ThemeVisualSettingsController extends Notifier<ThemeVisualSettings> {
   ThemeVisualSettings build() {
     final preferences = ref.watch(sharedPreferencesProvider);
     return ThemeVisualSettings(
-      backgroundStrength: preferences.getDouble(_strengthKey) ?? .58,
+      backgroundStrength: DistributionChannel.isBeta
+          ? .58
+          : preferences.getDouble(_strengthKey) ?? .58,
       showIpDecoration: preferences.getBool(_decorationKey) ?? false,
       progressStyle: _readDecoration(preferences.getString(_progressStyleKey)),
       progressCharacter: _readDecoration(
@@ -161,6 +202,9 @@ class ThemeVisualSettingsController extends Notifier<ThemeVisualSettings> {
   }
 
   ProgressDecoration _readDecoration(String? value) {
+    if (DistributionChannel.isBeta && value == 'followTheme') {
+      return ProgressDecoration.classic;
+    }
     return ProgressDecoration.values.firstWhere(
       (item) => item.name == value,
       orElse: () => ProgressDecoration.classic,

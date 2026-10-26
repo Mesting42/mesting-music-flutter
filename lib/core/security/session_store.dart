@@ -1,12 +1,13 @@
 import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'retained_secure_storage.dart';
 
 import '../../features/auth/domain/auth_models.dart';
 
 class SessionStore {
   SessionStore([FlutterSecureStorage? storage])
-    : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? retainedSecureStorage;
 
   static const _sessionKey = 'mesting_auth_session_v1';
   static const _rememberedSessionKey = 'mesting_remembered_auth_session_v1';

@@ -36,6 +36,8 @@ class ShinchanProgressWalker extends StatefulWidget {
   final bool playing;
   final double width;
 
+  static Size sizeForWidth(double width) => Size(width, 84 * width / 104);
+
   @override
   State<ShinchanProgressWalker> createState() => _ShinchanProgressWalkerState();
 }
@@ -52,6 +54,11 @@ class _ShinchanProgressWalkerState extends State<ShinchanProgressWalker>
     'assets/images/theme_gallery/progress-shiro-walk-mid.png',
     'assets/images/theme_gallery/progress-shiro-walk-pass.png',
   ];
+  // Original 502 x 283 PNG frames include transparent pixels below the feet.
+  // Compensate in layout, so changing player size never makes either character
+  // float above the rail. Frame-specific padding preserves the walking gait.
+  static const _shinchanBottomPadding = [28.0, 28.0, 29.0];
+  static const _shiroBottomPadding = [55.0, 50.0, 54.0];
 
   late final AnimationController _walkController;
   late final AnimationController _weatherController;
@@ -146,7 +153,7 @@ class _ShinchanProgressWalkerState extends State<ShinchanProgressWalker>
     final scale = widget.width / 104;
     return SizedBox(
       width: widget.width,
-      height: 84 * scale,
+      height: ShinchanProgressWalker.sizeForWidth(widget.width).height,
       child: AnimatedBuilder(
         animation: Listenable.merge([
           _walkController,
@@ -182,7 +189,7 @@ class _ShinchanProgressWalkerState extends State<ShinchanProgressWalker>
               ),
               Positioned(
                 left: 0,
-                bottom: 0,
+                bottom: -_shinchanBottomPadding[frame] * widget.width / 502,
                 width: widget.width,
                 height: 59 * scale,
                 child: Transform.translate(
@@ -197,7 +204,7 @@ class _ShinchanProgressWalkerState extends State<ShinchanProgressWalker>
               ),
               Positioned(
                 right: 20 * scale,
-                bottom: -3 * scale,
+                bottom: -_shiroBottomPadding[frame] * 54 * scale / 502,
                 width: 54 * scale,
                 height: 36 * scale,
                 child: Transform.translate(

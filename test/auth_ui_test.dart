@@ -836,11 +836,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('创建歌单'), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('playlist-editor-cover-stage')),
-      findsOneWidget,
-    );
+    expect(find.text('新建歌单'), findsOneWidget);
+    expect(find.byKey(const ValueKey('playlist-editor-sheet')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -1010,7 +1007,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 220));
 
     expect(find.text('已安全退出'), findsOneWidget);
-    expect(find.text('云端数据仍为你保留'), findsOneWidget);
+    expect(find.text('云端数据仍为你保留'), findsNothing); // Compact status keeps the result title.
     expect(find.byIcon(Icons.logout_rounded), findsOneWidget);
     expect(find.byType(SnackBar), findsNothing);
   });
@@ -1199,7 +1196,7 @@ void main() {
 
     expect(find.text('个人资料入口'), findsOneWidget);
     expect(find.text('资料已保存'), findsOneWidget);
-    expect(find.text('头像、昵称、简介和更多资料已更新'), findsOneWidget);
+    expect(find.text('头像、昵称、简介和更多资料已更新'), findsNothing);
     expect(repository.session.user.nickname, 'Mest Music');
     expect(repository.session.user.age, 19);
     expect(repository.session.user.zodiac, '天秤座');

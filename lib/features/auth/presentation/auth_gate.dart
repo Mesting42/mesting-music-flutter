@@ -3,8 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../shared/widgets/liquid_glass_sheet.dart';
+import '../../../shared/widgets/music_notice.dart';
 import '../../themes/music_theme_tokens.dart';
 import '../auth_providers.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../music_platform/music_platform_providers.dart';
+import 'beta_login_navigation.dart';
 
 Future<bool> ensureAuthenticated(
   BuildContext context,
@@ -12,6 +16,16 @@ Future<bool> ensureAuthenticated(
   required String reason,
   String redirect = '/music',
 }) async {
+  if (DistributionChannel.isBeta &&
+      ref.read(platformAccountProvider).value != null) {
+    showMusicNotice(
+      context,
+      icon: Icons.info_outline_rounded,
+      title: '此功能属于 Mesting 账号',
+      message: '退出当前酷狗账号后可选择其他登录方式',
+    );
+    return false;
+  }
   var session = ref.read(authControllerProvider).value;
   if (ref.read(authControllerProvider).isLoading) {
     try {
@@ -22,6 +36,10 @@ Future<bool> ensureAuthenticated(
   }
   if (session != null) return true;
   if (!context.mounted) return false;
+  if (DistributionChannel.isBeta) {
+    await openBetaLogin(context, redirect: redirect);
+    return false;
+  }
 
   final accepted = await showLiquidGlassBottomSheet<bool>(
     context: context,

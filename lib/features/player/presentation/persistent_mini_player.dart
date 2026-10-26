@@ -9,6 +9,8 @@ import '../../../shared/widgets/artwork_image.dart';
 import '../../queue/presentation/queue_page.dart';
 import '../../themes/music_theme_tokens.dart';
 import 'now_playing_transition.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../experience/presentation/floating_playback_pill.dart';
 
 const double miniPlayerHeight = 64;
 const double miniPlayerVinylDiameter = 64;
@@ -186,6 +188,7 @@ class _PersistentMiniPlayerState extends ConsumerState<PersistentMiniPlayer> {
 
   @override
   Widget build(BuildContext context) {
+    if (DistributionChannel.isBeta) return const FloatingPlaybackPill();
     final mediaItem = ref.watch(currentMediaItemProvider).value;
     if (mediaItem == null) return const SizedBox.shrink();
 

@@ -2,16 +2,23 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import '../../music_platform/presentation/platform_quality_button.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/audio/playback_providers.dart';
+import '../../../core/platform/distribution_channel.dart';
 import '../../../core/errors/user_facing_error.dart';
 import '../../../shared/layout/adaptive_layout.dart';
 import '../../../shared/widgets/artwork_image.dart';
+import '../../../shared/models/track.dart';
 import '../../../shared/widgets/music_notice.dart';
 import '../../auth/auth_providers.dart';
 import '../../auth/presentation/auth_gate.dart';
+import '../../auth/account_capabilities.dart';
+import '../../library/presentation/library_access.dart';
+import '../../music_platform/presentation/platform_feedback.dart';
+import '../../music_platform/presentation/platform_comments_page.dart';
 import '../../library/library_providers.dart';
 import '../../lyrics/presentation/lyrics_panel.dart';
 import '../../social/domain/listen_together.dart';
@@ -31,6 +38,8 @@ import 'player_visual_stages.dart';
 import 'persistent_mini_player.dart';
 import 'now_playing_transition.dart';
 import 'vinyl_disc.dart';
+import '../../experience/presentation/cover_player_page.dart';
+import '../../experience/presentation/beta_now_playing_page.dart';
 
 const nowPlayingTonearmAsset = 'assets/images/player/netease-style-tonearm.png';
 const nowPlayingTonearmPlayingTurns = 0.0;
@@ -151,6 +160,12 @@ class _NowPlayingPageState extends ConsumerState<NowPlayingPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (DistributionChannel.isBeta) {
+      return BetaNowPlayingPage(lyricsInitially: widget.showLyricsInitially);
+    }
+    if (ref.watch(playerVisualStyleProvider) == PlayerVisualStyle.cover) {
+      return CoverPlayerPage(lyricsInitially: widget.showLyricsInitially);
+    }
     final track = ref.watch(currentTrackProvider);
     final playbackState = ref.watch(playbackStateProvider).value;
     final playing = playbackState?.playing ?? false;
@@ -174,14 +189,18 @@ class _NowPlayingPageState extends ConsumerState<NowPlayingPage> {
     );
 
     Future<void> toggleFavorite() async {
-      final allowed = await ensureAuthenticated(
+      final allowed = await ensureLibraryAccess(
         context,
         ref,
         reason: '登录后才能收藏歌曲，喜欢的音乐会跟随账号在不同设备间同步。',
         redirect: '/player',
       );
       if (!allowed || !mounted) return;
-      await ref.read(libraryRepositoryProvider).toggleFavorite(track);
+      try {
+        await ref.read(libraryRepositoryProvider).toggleFavorite(track);
+      } catch (error) {
+        if (context.mounted) showPlatformFailure(context, error);
+      }
     }
 
     Future<void> shareTrack() async {
@@ -679,7 +698,7 @@ class _NowPlayingPageState extends ConsumerState<NowPlayingPage> {
                   ),
                 ),
               ),
-            if (!_lyricsVisible)
+            if (!_lyricsVisible && ref.watch(showMestingFeaturesProvider))
               Positioned(
                 left: 72,
                 right: 72,
@@ -701,20 +720,49 @@ class _NowPlayingPageState extends ConsumerState<NowPlayingPage> {
                   ),
                 ),
               ),
-            Positioned(
-              right: 24,
-              top: safeTop + 8,
-              child: FadeTransition(
-                opacity: foregroundOpacity,
+            if (ref.watch(showPlatformFeaturesProvider) &&
+                track.source == TrackSource.kugou)
+              Positioned(
+                right: 24,
+                top: safeTop + 8,
                 child: _RoundGlassButton(
-                  tooltip: '分享给好友',
-                  icon: Icons.ios_share_rounded,
-                  onTap: shareTrack,
+                  tooltip: '酷狗歌曲评论',
+                  icon: Icons.comment_outlined,
+                  onTap: () => openPlatformSongComments(context, ref, track),
                   size: 42,
                   iconColor: Colors.white,
                 ),
               ),
-            ),
+            if (track.isPreview)
+              Positioned(
+                left: 90,
+                right: 90,
+                top: safeTop + 12,
+                child: const Center(
+                  child: Text('平台试听', style: TextStyle(color: Colors.white)),
+                ),
+              ),
+            if (DistributionChannel.isBeta && !_lyricsVisible)
+              Positioned(
+                left: 78,
+                top: safeTop + 8,
+                child: const PlatformQualityButton(),
+              ),
+            if (ref.watch(showMestingFeaturesProvider))
+              Positioned(
+                right: 24,
+                top: safeTop + 8,
+                child: FadeTransition(
+                  opacity: foregroundOpacity,
+                  child: _RoundGlassButton(
+                    tooltip: '分享给好友',
+                    icon: Icons.ios_share_rounded,
+                    onTap: shareTrack,
+                    size: 42,
+                    iconColor: Colors.white,
+                  ),
+                ),
+              ),
             Positioned(
               left: 0,
               right: 0,

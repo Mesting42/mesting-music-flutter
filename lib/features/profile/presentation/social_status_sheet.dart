@@ -1,3 +1,4 @@
+import '../../../shared/widgets/beta_text_editing.dart';
 import 'package:flutter/material.dart';
 
 import '../../../shared/widgets/liquid_glass_sheet.dart';
@@ -391,6 +392,9 @@ class _CustomStatusEditorState extends State<_CustomStatusEditor> {
                 ),
                 const SizedBox(height: 14),
                 TextField(
+                  contextMenuBuilder: buildBetaEditingMenu,
+                  selectionControls: mestingTextSelectionControls,
+                  cursorRadius: const Radius.circular(1),
                   key: const ValueKey('custom-social-status-field'),
                   controller: _controller,
                   autofocus: true,
