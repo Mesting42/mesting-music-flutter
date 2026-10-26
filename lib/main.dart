@@ -4,6 +4,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'app/branded_launch_screen.dart';
 import 'app/mesting_music_app.dart';
@@ -22,6 +23,7 @@ import 'shared/models/track.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (DistributionChannel.isBeta) await LiquidGlassWidgets.initialize();
   if (DistributionChannel.isBeta) PlatformCredits.register();
   final preferences = await SharedPreferences.getInstance();
   final brandStyle = await AppBrandStyleBridge.current();

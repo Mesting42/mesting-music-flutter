@@ -134,8 +134,8 @@ void main() {
         find.byKey(const ValueKey('listen-together-player-entry')),
         findsNothing,
       );
-      expect(find.byTooltip('酷狗歌曲评论'), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('classic-player-favorite')));
+      expect(find.byTooltip('歌曲评论'), findsOneWidget);
+      await tester.tap(find.byKey(ValueKey('favorite-button-${_track.id}')));
       await tester.pump();
       expect(library.toggles, 1);
       expect(container.read(currentUserProvider), null);

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import '../../../core/database/app_database.dart';
 import '../../../shared/models/track.dart';
@@ -27,6 +28,8 @@ class PlatformLibraryRepository extends LibraryRepository {
   List<Map<String, dynamic>> _snapshot = const [];
   Future<void> _pendingWrite = Future<void>.value();
   int _revision = 0;
+  final _createdDrafts = <String, String>{};
+  final _creationBaselines = <String, Set<String>>{};
 
   /// Serialize writes once, without retrying remote mutations automatically.
   Future<T> _write<T>(Future<T> Function() operation) {
@@ -306,19 +309,61 @@ class PlatformLibraryRepository extends LibraryRepository {
     String? coverAsset,
     String? coverCloudId,
   }) => _write(() async {
-    if (description.isNotEmpty ||
-        (coverAsset != null && coverAsset.isNotEmpty)) {
-      throw const MusicPlatformException('本轮云端新建歌单支持名称，封面与简介请在酷狗客户端设置');
+    final draftId = id.isEmpty
+        ? 'draft:${DateTime.now().microsecondsSinceEpoch}'
+        : id;
+    var createdId = _createdDrafts[draftId];
+    // A failed/timed-out create may already have reached the cloud. A manual
+    // retry of this draft only reconciles the difference; it never repeats add.
+    final attempted = _creationBaselines[draftId];
+    if (createdId == null && attempted != null) {
+      _invalidate();
+      final candidates = (await _loadLists())
+          .where(
+            (row) =>
+                !attempted.contains(_id(row)) &&
+                _owned(row) &&
+                row['name'] == name,
+          )
+          .toList();
+      if (candidates.length != 1) {
+        throw const MusicPlatformException('新建结果尚未确认，请刷新音乐库核对歌单，避免重复创建');
+      }
+      createdId = _id(candidates.single);
     }
-    await _get('/playlist/add', {
-      'name': name,
-      'type': '0',
-      'source': '1',
-      'list_create_userid': identity.userId,
-      'is_pri': '1',
-    });
-    // The caller's local UUID is intentionally ignored: the cloud allocates
-    // listid. A read-after-write supplies the actual ID for the next screen.
+    if (createdId == null) {
+      final baseline = (await _loadLists()).map(_id).toSet();
+      _creationBaselines[draftId] = baseline;
+      await _get('/playlist/add', {
+        'name': name,
+        'type': '0',
+        'source': '1',
+        'list_create_userid': identity.userId,
+        'is_pri': '1',
+      });
+      _invalidate();
+      final candidates = (await _loadLists())
+          .where(
+            (row) =>
+                !baseline.contains(_id(row)) &&
+                _owned(row) &&
+                row['name'] == name,
+          )
+          .toList();
+      if (candidates.length != 1) {
+        throw const MusicPlatformException('歌单已提交，平台暂未返回唯一标识，请刷新后核对');
+      }
+      createdId = _id(candidates.single);
+    }
+    _createdDrafts[draftId] = createdId;
+    if (description.isNotEmpty || (coverAsset?.isNotEmpty ?? false)) {
+      await _updateMetadata(
+        id: createdId,
+        name: name,
+        description: description,
+        coverAsset: coverAsset,
+      );
+    }
     _invalidate();
   });
 
@@ -339,28 +384,75 @@ class PlatformLibraryRepository extends LibraryRepository {
     required String? coverAsset,
     String? coverCloudId,
   }) => _write(() async {
+    await _updateMetadata(
+      id: id,
+      name: name,
+      description: description,
+      coverAsset: coverAsset,
+    );
+  });
+
+  Future<String?> _uploadCover(String? path, Map<String, dynamic> row) async {
+    if (path == null || path.isEmpty || path == _playlist(row).coverAsset) {
+      return null;
+    }
+    final uri = Uri.tryParse(path);
+    if (uri?.scheme == 'http' || uri?.scheme == 'https') {
+      throw const MusicPlatformException('请从相册或模板选择新封面');
+    }
+    final file = File(path);
+    if (!await file.exists() || await file.length() > 10 * 1024 * 1024) {
+      throw const MusicPlatformException('封面文件不存在或超过 10 MB，请重新选择');
+    }
+    final result = await api.post(
+      '/playlist/pic/upload',
+      expectedSession: identity,
+      query: {'file': path, 'type': 'custom', 'extendName': '.png'},
+      timeout: const Duration(seconds: 35),
+    );
+    final filename = '${result['FileName'] ?? ''}';
+    if ('${result['status']}' != '1' ||
+        filename.isEmpty ||
+        filename.contains('..') ||
+        filename.contains('://')) {
+      throw const MusicPlatformException('酷狗未能接收封面，请换一张图片或稍后重试');
+    }
+    return 'custom/$filename';
+  }
+
+  Future<void> _updateMetadata({
+    required String id,
+    required String name,
+    required String description,
+    required String? coverAsset,
+  }) async {
     final row = await _row(id);
     _requireOwned(row);
-    if (coverAsset != null && coverAsset != _playlist(row).coverAsset) {
-      throw const MusicPlatformException('本轮暂不支持上传酷狗云歌单封面');
-    }
+    if (_likes(row)) throw const MusicPlatformException('系统收藏歌单不能在此修改封面');
+    final picture = await _uploadCover(coverAsset, row);
     final snapshot = await _get('/user/playlist', {
       'page': '1',
       'pagesize': '30',
+      'userid': identity.userId,
     });
     final data = MusicPlatformApi.objectMap(snapshot['data']);
+    final version = data['total_ver'] ?? snapshot['total_ver'];
+    if (version == null || int.tryParse('$version') == null) {
+      throw const MusicPlatformException('未能读取歌单版本，请刷新后重试，输入已保留');
+    }
     await _get('/playlist/update', {
       'listid': '${row['listid']}',
       'name': name,
       'intro': description,
-      'total_ver': '${data['total_ver'] ?? snapshot['total_ver'] ?? 0}',
+      'pic': ?picture,
+      'total_ver': '$version',
       'type': '0',
       'sort': '${row['sort'] ?? 0}',
       'tags': '${row['tags'] ?? ''}',
       'is_pri': '${row['is_pri'] ?? 1}',
     });
     _invalidate();
-  });
+  }
 
   @override
   Future<void> reorderPlaylistTracks(

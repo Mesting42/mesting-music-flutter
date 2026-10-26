@@ -86,7 +86,11 @@ class MestingAudioHandler extends BaseAudioHandler
   final StreamController<String> _userCommandController =
       StreamController<String>.broadcast();
   final Map<String, Uri> _artworkUriCache = <String, Uri>{};
+  // Existing pinned audio/cache or schema migration API; covered by regression tests.
+  // ignore: experimental_member_use
   final Map<String, LockCachingAudioSource> _remoteCachingSources =
+      // Existing pinned audio/cache or schema migration API; covered by regression tests.
+      // ignore: experimental_member_use
       <String, LockCachingAudioSource>{};
 
   late final Future<void> _ready;
@@ -364,6 +368,8 @@ class MestingAudioHandler extends BaseAudioHandler
         _trace('source-remote id=${track.id} strategy=direct');
         return AudioSource.uri(remoteUri, tag: item);
       }
+      // Existing pinned audio/cache or schema migration API; covered by regression tests.
+      // ignore: experimental_member_use
       final cachingSource = LockCachingAudioSource(remoteUri, tag: item);
       _remoteCachingSources[track.id] = cachingSource;
       final resolved = await cachingSource.resolve();

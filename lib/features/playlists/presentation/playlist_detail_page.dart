@@ -159,16 +159,17 @@ class PlaylistDetailPage extends ConsumerWidget {
     WidgetRef ref,
     UserPlaylist playlist,
   ) async {
-    final draft = await showPlaylistEditorDialog(
+    final repository = ref.read(libraryRepositoryProvider);
+    await showPlaylistEditorDialog(
       context,
       initialName: playlist.name,
       initialDescription: playlist.description,
       initialCoverAsset: playlist.coverAsset,
-    );
-    if (draft == null) return;
-    await ref
-        .read(libraryRepositoryProvider)
-        .updatePlaylist(
+      onSave: (draft) async {
+        if (!identical(repository, ref.read(libraryRepositoryProvider))) {
+          throw StateError('账号已变化，请重新打开歌单');
+        }
+        await repository.updatePlaylist(
           id: playlistId,
           name: draft.name,
           description: draft.description,
@@ -177,6 +178,8 @@ class PlaylistDetailPage extends ConsumerWidget {
               ? playlist.coverCloudId
               : null,
         );
+      },
+    );
     ref.invalidate(playlistProvider(playlistId));
   }
 

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../../shared/widgets/mesting_loading_indicator.dart';
-import '../../player/presentation/music_hub_top_bar.dart';
 import '../../themes/music_theme_tokens.dart';
 
 /// Shared visual adapter for all imported platform surfaces. Business widgets
@@ -13,14 +11,12 @@ class PlatformStyle extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tokens = context.musicThemeTokens;
-    final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(18),
-    );
+    const shape = StadiumBorder();
     return Theme(
       data: theme.copyWith(
         inputDecorationTheme: theme.inputDecorationTheme.copyWith(
           filled: true,
-          fillColor: tokens.glass,
+          fillColor: theme.colorScheme.surfaceContainerLow,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 18,
             vertical: 17,
@@ -56,7 +52,7 @@ class PlatformStyle extends StatelessWidget {
             minimumSize: const Size(48, 48),
             shape: shape,
             side: BorderSide(color: tokens.borderStrong),
-            backgroundColor: tokens.glass,
+            backgroundColor: theme.colorScheme.surfaceContainerLow,
             foregroundColor: tokens.textPrimary,
           ),
         ),
@@ -70,7 +66,7 @@ class PlatformStyle extends StatelessWidget {
           ),
         ),
         chipTheme: theme.chipTheme.copyWith(
-          backgroundColor: tokens.glass,
+          backgroundColor: theme.colorScheme.surfaceContainerLow,
           selectedColor: theme.colorScheme.primary.withValues(alpha: .16),
           side: BorderSide.none,
           shape: const StadiumBorder(),
@@ -106,8 +102,11 @@ class PlatformPanel extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
   @override
-  Widget build(BuildContext context) => LiquidGlassSurface(
-    borderRadius: BorderRadius.circular(26),
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(22),
+    ),
     child: Padding(padding: padding, child: child),
   );
 }
@@ -138,12 +137,43 @@ class PlatformPageFrame extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Row(
                 children: [
+                  IconButton(
+                    tooltip: '返回',
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: MusicHubTopBar(
-                      title: title,
-                      subtitle: subtitle,
-                      showBack: true,
-                      onBack: () => Navigator.of(context).maybePop(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 25,
+                            fontWeight: FontWeight.w800,
+                            height: 1.2,
+                            color: context.musicThemeTokens.textPrimary,
+                            letterSpacing: -.5,
+                          ),
+                        ),
+                        if (subtitle.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 5),
+                            child: Text(
+                              subtitle,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: context.musicThemeTokens.textSecondary,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                   ...actions,

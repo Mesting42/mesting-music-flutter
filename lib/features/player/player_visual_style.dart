@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/persistence/app_preferences.dart';
+import '../../core/platform/distribution_channel.dart';
 
 enum PlayerVisualStyle {
+  cover,
   classic,
   aurora,
   cassette,
@@ -11,13 +13,15 @@ enum PlayerVisualStyle {
   String get id => name;
 
   String get displayName => switch (this) {
-    PlayerVisualStyle.classic => '经典',
+    PlayerVisualStyle.cover => '沉浸封面',
+    PlayerVisualStyle.classic => '黑胶唱片',
     PlayerVisualStyle.aurora => '流光唱片',
     PlayerVisualStyle.cassette => '星环脉冲',
     PlayerVisualStyle.lyricStage => '液态频谱',
   };
 
   String get description => switch (this) {
+    PlayerVisualStyle.cover => '封面取色与大字歌词',
     PlayerVisualStyle.classic => '沉浸唱片与主题背景',
     PlayerVisualStyle.aurora => '环形光轨与悬浮唱片',
     PlayerVisualStyle.cassette => '深空环阵随节拍扩张',
@@ -28,7 +32,9 @@ enum PlayerVisualStyle {
 PlayerVisualStyle playerVisualStyleById(String? id) =>
     PlayerVisualStyle.values.firstWhere(
       (style) => style.id == id,
-      orElse: () => PlayerVisualStyle.classic,
+      orElse: () => DistributionChannel.isBeta
+          ? PlayerVisualStyle.cover
+          : PlayerVisualStyle.classic,
     );
 
 class PlayerVisualStyleController extends Notifier<PlayerVisualStyle> {
@@ -36,7 +42,11 @@ class PlayerVisualStyleController extends Notifier<PlayerVisualStyle> {
 
   @override
   PlayerVisualStyle build() {
-    final saved = ref.watch(sharedPreferencesProvider).getString(preferenceKey);
+    final saved = ref
+        .watch(sharedPreferencesProvider)
+        .getString(
+          DistributionChannel.isBeta ? '${preferenceKey}_beta5' : preferenceKey,
+        );
     return playerVisualStyleById(saved);
   }
 
@@ -44,7 +54,10 @@ class PlayerVisualStyleController extends Notifier<PlayerVisualStyle> {
     state = style;
     await ref
         .read(sharedPreferencesProvider)
-        .setString(preferenceKey, style.id);
+        .setString(
+          DistributionChannel.isBeta ? '${preferenceKey}_beta5' : preferenceKey,
+          style.id,
+        );
   }
 }
 

@@ -1,22 +1,22 @@
 {
-  "versionName": "1.0.37-beta.4",
-  "versionCode": 4,
+  "versionName": "1.0.37-beta.5",
+  "versionCode": 5,
   "archivedOn": "2026-10-27",
   "sourceOrigin": "Frozen working-tree delivery archive; archive commit created now, not original development history.",
-  "originalArchiveName": "Mesting-Music-md3-Beta-1.0.37-beta.4-source.zip",
-  "originalArchiveBytes": 39683476,
-  "originalArchiveSha256": "70FA89AA4627B54BE553561698C8E8242DF8451748CC0EBF8A383DE3772E690C",
+  "originalArchiveName": "Mesting-Music-md3-Beta-1.0.37-beta.5-source.zip",
+  "originalArchiveBytes": 39731952,
+  "originalArchiveSha256": "2329CBD625812EA206804227237C6404196952C718C519022F260198D3AC1639",
   "archiveRootPrefixRemoved": "",
-  "fileCount": 645,
+  "fileCount": 660,
   "excludedFiles": [],
   "allArchiveEntriesReadAndHashed": true,
   "originalDeliveryMetadataHashMatches": {
     "apk": true,
     "source": true
   },
-  "apkName": "Mesting-Music-md3-Beta-1.0.37-beta.4.apk",
-  "apkBytes": 86880659,
-  "apkSha256": "B6C72AD8B3AE6CC7017A7980D72792DBCCE6FB716B4BA5142FA1919BC437EEA6",
+  "apkName": "Mesting-Music-md3-Beta-1.0.37-beta.5.apk",
+  "apkBytes": 88689488,
+  "apkSha256": "CFA49AF065598FC6BC19FEFD8C8A836537AF72EAC991FF0D5528E4C4A7A40028",
   "packageName": "com.mesting.music.beta",
   "architectures": [
     "arm64-v8a",
@@ -28,5 +28,5 @@
   "signerCertificateSha256": "08C3774545B89E3A30F5D20F162A30D1B48C13C19205A5073AA945CB8360AD4F",
   "historicalApkNotRebuiltOrResigned": true,
   "physicalDeviceRetestedDuringArchive": false,
-  "dependencyLockSha256": "5E00FE25B0CC366DCF30CA77B71CF9508062F30D9042FBE3D2130F4F650036EB"
+  "dependencyLockSha256": "D6451AD8331BC6CBCC9CF284B3801F202091FAA8D355194BF0CBA85DF94AADD1"
 }

@@ -22,6 +22,8 @@ import '../../../core/platform/distribution_channel.dart';
 import 'library_access.dart';
 import '../../music_platform/presentation/platform_discovery_page.dart';
 import '../../music_platform/presentation/platform_library_page.dart';
+import '../../experience/presentation/music_landing_page.dart';
+import '../../experience/presentation/music_library_page.dart';
 import '../../music_platform/music_platform_providers.dart';
 import '../../player/presentation/music_hub_top_bar.dart';
 import '../../player/presentation/music_page_transition.dart';
@@ -79,6 +81,9 @@ class _MusicHomePageState extends ConsumerState<MusicHomePage>
   @override
   Widget build(BuildContext context) {
     final betaView = GoRouterState.of(context).uri.queryParameters['view'];
+    if (DistributionChannel.isBeta && (betaView == 'favorites' || betaView == 'playlists')) {
+      return MusicLibraryPage(view: betaView);
+    }
     if (DistributionChannel.isBeta &&
         ref.watch(platformAccountProvider).value != null &&
         (betaView == 'favorites' || betaView == 'playlists')) {
@@ -87,7 +92,7 @@ class _MusicHomePageState extends ConsumerState<MusicHomePage>
     if (DistributionChannel.isBeta &&
         betaView != 'favorites' &&
         betaView != 'playlists') {
-      return PlatformDiscoveryPage(dailyOnly: betaView == 'daily');
+      return betaView == 'daily' ? const PlatformDiscoveryPage(dailyOnly: true) : const MusicLandingPage(discovery: true);
     }
     final selectedTheme = ref.watch(effectiveMusicThemeProvider);
     final favorites =

@@ -12,51 +12,12 @@ import 'platform_discovery_page.dart';
 import 'platform_feedback.dart';
 import 'platform_comments_page.dart';
 import 'platform_design.dart';
-
-Future<String?> _name(BuildContext context, {String initial = ''}) async {
-  final controller = TextEditingController(text: initial);
-  try {
-    return await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(initial.isEmpty ? '新建酷狗云端歌单' : '修改歌单名称'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLength: 80,
-          decoration: const InputDecoration(labelText: '歌单名称'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final name = controller.text.trim();
-              if (name.isNotEmpty) Navigator.pop(dialogContext, name);
-            },
-            child: const Text('保存'),
-          ),
-        ],
-      ),
-    );
-  } finally {
-    // The route's closing animation may still read the controller this frame.
-    Future<void>.delayed(const Duration(seconds: 1), controller.dispose);
-  }
-}
+import '../../experience/presentation/music_library_page.dart';
+import '../../playlists/presentation/playlist_editor_dialog.dart';
+import '../../experience/presentation/editorial_widgets.dart';
 
 Future<void> createPlatformPlaylist(BuildContext context, WidgetRef ref) async {
-  final repository = ref.read(libraryRepositoryProvider);
-  if (repository is! PlatformLibraryRepository) return;
-  final name = await _name(context);
-  if (name == null) return;
-  try {
-    await repository.createPlaylist(id: '', name: name);
-  } catch (error) {
-    if (context.mounted) showPlatformFailure(context, error);
-  }
+  await createEditorialPlaylist(context, ref);
 }
 
 class PlatformLibraryPage extends ConsumerWidget {
@@ -195,7 +156,7 @@ class PlatformCloudPlaylistPage extends ConsumerWidget {
             onSelected: (action) =>
                 _manage(context, ref, repository, playlist.value!, action),
             itemBuilder: (_) => const [
-              PopupMenuItem(value: 'rename', child: Text('修改名称')),
+              PopupMenuItem(value: 'rename', child: Text('编辑名称与封面')),
               PopupMenuItem(value: 'delete', child: Text('删除歌单')),
             ],
           ),
@@ -207,8 +168,14 @@ class PlatformCloudPlaylistPage extends ConsumerWidget {
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 140),
+          padding: const EdgeInsets.only(bottom: editorialBottomClearance),
           children: [
+            if (playlist.hasValue)
+              EditorialCollectionHero(
+                cover: playlist.value?.coverAsset ?? '',
+                description: playlist.value?.description ?? '',
+                tracks: ref.watch(playlistTracksProvider(id)).value ?? const [],
+              ),
             PlatformSongs(
               value: ref.watch(playlistTracksProvider(id)),
               retry: () => repository.synchronize(forcePull: true),
@@ -229,13 +196,22 @@ class PlatformCloudPlaylistPage extends ConsumerWidget {
   ) async {
     try {
       if (action == 'rename') {
-        final name = await _name(context, initial: playlist.name);
-        if (name == null) return;
-        await repository.updatePlaylist(
-          id: id,
-          name: name,
-          description: playlist.description,
-          coverAsset: null,
+        await showPlaylistEditorDialog(
+          context,
+          initialName: playlist.name,
+          initialDescription: playlist.description,
+          initialCoverAsset: playlist.coverAsset,
+          onSave: (draft) async {
+            if (!identical(ref.read(libraryRepositoryProvider), repository)) {
+              throw StateError('账号已变化，请重新打开歌单');
+            }
+            await repository.updatePlaylist(
+              id: id,
+              name: draft.name,
+              description: draft.description,
+              coverAsset: draft.coverAsset,
+            );
+          },
         );
         ref.invalidate(playlistProvider(id));
       } else {

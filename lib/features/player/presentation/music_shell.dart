@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/layout/adaptive_layout.dart';
+import '../../../core/platform/distribution_channel.dart';
 import '../../social/listen_together_providers.dart';
 import '../../themes/music_theme_background.dart';
 import 'music_navigation.dart';
@@ -64,7 +65,10 @@ class MusicShell extends ConsumerWidget {
                     ? bottomInset + 8
                     : useNavigationRail
                     ? bottomInset + 16
-                    : musicBottomNavigationContentHeight + bottomInset,
+                    : (DistributionChannel.isBeta
+                              ? betaMusicBottomNavigationContentHeight
+                              : musicBottomNavigationContentHeight) +
+                          bottomInset,
                 child: Align(
                   alignment: Alignment.bottomCenter,
                   child: ConstrainedBox(

@@ -21,6 +21,16 @@ import '../features/recommendation/recommendation_providers.dart';
 import '../features/search/search_providers.dart';
 import '../features/social/presentation/social_attention_coordinator.dart';
 import 'router/app_router.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+
+/// Fire on first mount as well as switches; a guest may never emit a login
+/// change, but still needs a playback owner for durable daily listening data.
+final playbackOwnerBindingProvider = Provider<void>((ref) {
+  final persistence = ref.watch(playbackPersistenceControllerProvider);
+  ref.listen(activeLibraryOwnerProvider, (previous, ownerId) {
+    unawaited(persistence.activateOwner(ownerId));
+  }, fireImmediately: true);
+});
 
 class MestingMusicApp extends ConsumerWidget {
   const MestingMusicApp({super.key});
@@ -40,7 +50,9 @@ class MestingMusicApp extends ConsumerWidget {
         // rather than a signed URL left over from a previous login/session.
         await ref.read(platformAccountProvider.future);
         final resolved = await source.resolveTrack(track);
-        if (!resolved.isPlayable) throw MusicPlatformException(resolved.availabilityMessage);
+        if (!resolved.isPlayable) {
+          throw MusicPlatformException(resolved.availabilityMessage);
+        }
         return resolved;
       });
     }
@@ -54,9 +66,7 @@ class MestingMusicApp extends ConsumerWidget {
     audioHandler.configureRadioTrackLoader(radioController.loadMore);
     // Start secure local account restoration with the app rather than waiting
     // until the user opens the profile tab or side panel.
-    ref.listen(activeLibraryOwnerProvider, (previous, ownerId) {
-      unawaited(playbackPersistence.activateOwner(ownerId));
-    });
+    ref.watch(playbackOwnerBindingProvider);
     ref.listen(hotMusicControllerProvider, (previous, next) {
       next.whenData((snapshot) {
         audioHandler.updateOnlineFallbackTracks(snapshot.recommendationTracks);
@@ -69,7 +79,7 @@ class MestingMusicApp extends ConsumerWidget {
         unawaited(audioHandler.prefetchRadioTracks());
       }
     });
-    return MaterialApp.router(
+    final application = MaterialApp.router(
       title: 'Mesting 音乐',
       debugShowCheckedModeBanner: false,
       theme: buildMestingTheme(musicTheme),
@@ -86,5 +96,11 @@ class MestingMusicApp extends ConsumerWidget {
         ),
       ),
     );
+    return DistributionChannel.isBeta
+        ? LiquidGlassWidgets.wrap(
+            brightnessResolver: Theme.maybeBrightnessOf,
+            child: application,
+          )
+        : application;
   }
 }

@@ -40,12 +40,14 @@ class MusicPlatformApi {
     String path, {
     Map<String, String> query = const {},
     required PlatformSession expectedSession,
+    Duration timeout = const Duration(seconds: 15),
   }) => _request(
     'POST',
     path,
     query: query,
     allowBusinessError: true,
     expectedSession: expectedSession,
+    timeout: timeout,
   );
 
   Future<Map<String, dynamic>> _request(
@@ -55,6 +57,7 @@ class MusicPlatformApi {
     required bool allowBusinessError,
     Future<void>? abortTrigger,
     PlatformSession? expectedSession,
+    Duration timeout = const Duration(seconds: 15),
   }) async {
     // Enforce the boundary even if a future caller passes a malformed path.
     if (!path.startsWith('/') || path.startsWith('//') || path.contains('?')) {
@@ -96,15 +99,17 @@ class MusicPlatformApi {
     }
     try {
       final response = await http.Response.fromStream(
-        await _client.send(request).timeout(const Duration(seconds: 15)),
-      ).timeout(const Duration(seconds: 15));
+        await _client.send(request).timeout(timeout),
+      ).timeout(timeout);
       final decoded = jsonDecode(utf8.decode(response.bodyBytes));
       if (decoded is! Map<String, dynamic>) {
         throw const FormatException('音乐平台返回了无法识别的数据');
       }
       if (!allowBusinessError &&
           (response.statusCode != 200 ||
-              decoded['status']?.toString() == '0')) {
+              decoded['status']?.toString() == '0' ||
+              (decoded['error_code'] != null &&
+                  decoded['error_code'].toString() != '0'))) {
         // Raw responses/URLs can contain credentials. Never log or expose them.
         throw const MusicPlatformException('音乐平台暂时未能完成请求，请稍后重试');
       }

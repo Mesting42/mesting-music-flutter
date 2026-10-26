@@ -836,11 +836,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('创建歌单'), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('playlist-editor-cover-stage')),
-      findsOneWidget,
-    );
+    expect(find.text('新建歌单'), findsOneWidget);
+    expect(find.byKey(const ValueKey('playlist-editor-sheet')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

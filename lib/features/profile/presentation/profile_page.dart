@@ -20,6 +20,7 @@ import '../../library/library_providers.dart';
 import '../../player/presentation/music_hub_top_bar.dart';
 import '../../player/presentation/music_page_transition.dart';
 import '../../playlists/presentation/playlist_editor_dialog.dart';
+import '../../experience/presentation/music_library_page.dart';
 import '../../social/social_providers.dart';
 import '../../social/social_attention.dart';
 import '../../social/domain/social_models.dart';
@@ -296,6 +297,10 @@ Future<void> _openProfileCreateMenu(
     builder: (sheetContext) => const _ProfileCreateSheet(),
   );
   if (!context.mounted || action != _ProfileQuickAction.createPlaylist) return;
+  if (DistributionChannel.isBeta) {
+    await createEditorialPlaylist(context, ref);
+    return;
+  }
   if (!signedIn) {
     context.push(
       '/auth?mode=register&redirect=${Uri.encodeComponent('/profile')}',

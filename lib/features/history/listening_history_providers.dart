@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/database/app_database.dart';
 import '../../shared/models/track.dart';
-import '../auth/auth_providers.dart';
 import '../library/library_providers.dart';
 
 class ListeningHistoryItem {
@@ -24,7 +23,7 @@ class ListeningHistoryItem {
 final listeningRankingProvider = StreamProvider<List<ListeningHistoryItem>>((
   ref,
 ) {
-  final ownerId = ref.watch(currentUserProvider)?.uid ?? legacyLibraryOwnerId;
+  final ownerId = ref.watch(activeLibraryOwnerProvider);
   return ref
       .watch(appDatabaseProvider)
       .watchListeningRanking(ownerId)
@@ -34,7 +33,7 @@ final listeningRankingProvider = StreamProvider<List<ListeningHistoryItem>>((
 final recentPlaybackProvider = StreamProvider<List<ListeningHistoryItem>>((
   ref,
 ) {
-  final ownerId = ref.watch(currentUserProvider)?.uid ?? legacyLibraryOwnerId;
+  final ownerId = ref.watch(activeLibraryOwnerProvider);
   return ref
       .watch(appDatabaseProvider)
       .watchPlaybackHistory(ownerId)

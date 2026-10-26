@@ -14,6 +14,10 @@ final platformDailyProvider = FutureProvider<List<Track>>((ref) async {
   await ref.watch(platformAccountProvider.future);
   return ref.watch(platformCatalogProvider).daily();
 });
+final platformNewSongsProvider = FutureProvider<List<Track>>((ref) async {
+  await ref.watch(platformAccountProvider.future);
+  return ref.watch(platformCatalogProvider).newSongs();
+});
 final platformDiscoveryProvider = FutureProvider<List<Track>>((ref) async {
   await ref.watch(platformAccountProvider.future);
   return ref.watch(platformCatalogProvider).discovery();

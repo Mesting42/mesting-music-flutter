@@ -34,6 +34,8 @@ import '../../features/profile/presentation/avatar_preview_page.dart';
 import '../../features/profile/presentation/profile_background_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/recommendation/presentation/recommendation_page.dart';
+import '../../features/experience/presentation/music_library_page.dart';
+import '../../features/experience/presentation/listening_replay_page.dart';
 
 /// App navigation graph.
 ///
@@ -56,6 +58,15 @@ final appRouter = GoRouter(
           path: '/music',
           pageBuilder: (context, state) =>
               _musicSlidePage(state: state, child: const MusicHomePage()),
+        ),
+        GoRoute(
+          path: '/music/library',
+          pageBuilder: (context, state) => _musicSlidePage(state: state,
+            child: MusicLibraryPage(view: state.uri.queryParameters['view'])),
+        ),
+        GoRoute(
+          path: '/music/replay',
+          pageBuilder: (context, state) => _musicSlidePage(state: state, child: const ListeningReplayPage()),
         ),
         GoRoute(
           path: '/music/queue',

@@ -17,6 +17,7 @@ import '../../auth/account_capabilities.dart';
 import 'platform_comments_page.dart';
 import 'platform_design.dart';
 import '../../themes/music_theme_tokens.dart';
+import '../../experience/presentation/editorial_widgets.dart';
 
 /// The incumbent Mesting shell with live upstream content. Each section owns
 /// its loading/error state; a failed playlist request cannot hide valid songs.
@@ -142,8 +143,8 @@ class _TrackList extends ConsumerWidget {
   final List<Track> tracks;
   final String? playlistId;
   @override
-  Widget build(BuildContext context, WidgetRef ref) => PlatformPanel(
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+  Widget build(BuildContext context, WidgetRef ref) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 4),
     child: Column(
       children: [
         for (final track in tracks)
@@ -295,10 +296,12 @@ class PlatformPublicPlaylistPage extends ConsumerWidget {
   const PlatformPublicPlaylistPage({
     required this.id,
     required this.name,
+    this.cover = '',
     super.key,
   });
   final String id;
   final String name;
+  final String cover;
   @override
   Widget build(BuildContext context, WidgetRef ref) => PlatformPageFrame(
     title: name,
@@ -313,8 +316,16 @@ class PlatformPublicPlaylistPage extends ConsumerWidget {
         ),
     ],
     child: ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+      padding: const EdgeInsets.only(bottom: 210),
       children: [
+        ref
+            .watch(platformPublicPlaylistProvider(id))
+            .when(
+              loading: () => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
+              data: (tracks) =>
+                  EditorialCollectionHero(cover: cover, tracks: tracks),
+            ),
         PlatformSongs(
           value: ref.watch(platformPublicPlaylistProvider(id)),
           retry: () => ref.invalidate(platformPublicPlaylistProvider(id)),

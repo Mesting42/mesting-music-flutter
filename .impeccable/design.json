@@ -1,0 +1,203 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-25T03:27:51.062Z",
+  "title": "Design System: Mesting Android Beta.5",
+  "extensions": {
+    "colorMeta": {
+      "primary-seed": {
+        "role": "primary",
+        "displayName": "经典浅色种子",
+        "tonalRamp": [
+          "oklch(15% .17 270)",
+          "oklch(25% .17 270)",
+          "oklch(35% .17 270)",
+          "oklch(45% .17 270)",
+          "oklch(55% .17 270)",
+          "oklch(65% .17 270)",
+          "oklch(80% .17 270)",
+          "oklch(95% .17 270)"
+        ]
+      },
+      "favorite": {
+        "role": "secondary",
+        "displayName": "收藏玫瑰红",
+        "tonalRamp": [
+          "oklch(15% .17 15)",
+          "oklch(25% .17 15)",
+          "oklch(35% .17 15)",
+          "oklch(45% .17 15)",
+          "oklch(55% .17 15)",
+          "oklch(65% .17 15)",
+          "oklch(80% .17 15)",
+          "oklch(95% .17 15)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "页面标题",
+        "purpose": "平台系统无衬线及中文回退；保持 TextScaler。"
+      },
+      "headline": {
+        "displayName": "分区标题",
+        "purpose": "横向书架与列表分区。"
+      },
+      "lyrics": {
+        "displayName": "同步大字歌词",
+        "purpose": "按真实文字高度测量，白色当前行与降亮度其余行。"
+      }
+    },
+    "shadows": [
+      {
+        "name": "player-cover",
+        "value": "0 16px 32px rgba(0,0,0,.4)",
+        "purpose": "沉浸播放器方封面的局部柔影，不是通用卡片阴影。"
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-cubic",
+        "value": "cubic-bezier(.215,.61,.355,1)",
+        "purpose": "Flutter Curves.easeOutCubic。"
+      },
+      {
+        "name": "cover-lyrics-switch",
+        "value": "320ms",
+        "purpose": "封面/歌词切换；disableAnimations 时归零。"
+      },
+      {
+        "name": "lyrics-follow",
+        "value": "460ms",
+        "purpose": "同步歌词滚动；disableAnimations 时归零。"
+      },
+      {
+        "name": "cover-carousel",
+        "value": "240ms",
+        "purpose": "封面选择 PageView 对齐。"
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "medium",
+        "value": "600px"
+      },
+      {
+        "name": "expanded",
+        "value": "840px"
+      },
+      {
+        "name": "library-four-columns",
+        "value": "650px"
+      }
+    ],
+    "previewNotes": [
+      "以下 HTML/CSS 是 Flutter 视觉规则的独立预览，不包含业务行为或真实 shader。",
+      "预览采用已复核的经典浅色强调色，生产读取当前 ColorScheme。",
+      "色带为展示用合成 OKLCH，不是生产新增色阶。",
+      "图像占位不冒充真实专辑封面。"
+    ]
+  },
+  "components": [
+    {
+      "name": "主要按钮",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "主题强调色与 onPrimary，胶囊最小 48dp。",
+      "html": "<button class=\"ds-button\">播放全部</button>",
+      "css": ".ds-button{min-height:48px;padding:12px 24px;border:0;border-radius:999px;background:#505B92;color:#fff;font:800 14px sans-serif;cursor:pointer}.ds-button:hover{filter:brightness(.96)}.ds-button:active{filter:brightness(.9)}.ds-button:disabled{opacity:.38}.ds-button:focus-visible,.ds-chip:focus-visible,.ds-nav button:focus-visible{outline:2px solid #505B92;outline-offset:3px}"
+    },
+    {
+      "name": "次要按钮",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "低阶表面、轻边框与主要文字。",
+      "html": "<button class=\"ds-button\">取消</button>",
+      "css": ".ds-button{min-height:48px;padding:12px 24px;border:1px solid rgba(255,255,255,.95);border-radius:999px;background:#F4F2FA;color:#20232B;font:600 14px sans-serif;cursor:pointer}.ds-button:hover{background:#E9E7F0}.ds-button:active{background:#E3E1E9}.ds-button:focus-visible,.ds-chip:focus-visible,.ds-nav button:focus-visible{outline:2px solid #505B92;outline-offset:3px}"
+    },
+    {
+      "name": "安静操作",
+      "kind": "button",
+      "refersTo": "button-text",
+      "description": "文字式重试与次级操作。",
+      "html": "<button class=\"ds-button\">重新加载</button>",
+      "css": ".ds-button{min-height:44px;padding:10px 16px;border:0;border-radius:999px;background:transparent;color:#505B92;font:700 14px sans-serif;cursor:pointer}.ds-button:hover{background:rgba(80,91,146,.08)}.ds-button:active{background:rgba(80,91,146,.13)}.ds-button:focus-visible,.ds-chip:focus-visible,.ds-nav button:focus-visible{outline:2px solid #505B92;outline-offset:3px}"
+    },
+    {
+      "name": "平台输入",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "稳定低阶表面与主题焦点边框。",
+      "html": "<label class=\"ds-field\">歌单名称<input class=\"ds-input\" placeholder=\"歌单名称\" maxlength=\"30\"/></label>",
+      "css": ".ds-field{display:grid;gap:8px;color:#5D6572;font:13px sans-serif}.ds-input{padding:17px 18px;border:1px solid rgba(255,255,255,.95);border-radius:18px;background:#F4F2FA;color:#20232B;font:16px sans-serif;min-width:0}.ds-input::placeholder{color:#7E8795}.ds-input:hover{border-color:#C4C6D0}.ds-input:focus-visible{outline:none;border:1.5px solid #505B92}.ds-input:disabled{opacity:.38}"
+    },
+    {
+      "name": "月份 chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "选中填充与语义状态共同表达当前期间。",
+      "html": "<div class=\"ds-chips\"><button class=\"ds-chip\">9 月</button><button class=\"ds-chip ds-selected\" aria-pressed=\"true\">10 月</button><button class=\"ds-chip\">11 月</button></div>",
+      "css": ".ds-chips{display:flex;gap:8px}.ds-chip{padding:8px 16px;min-height:32px;border:0;border-radius:999px;background:#F4F2FA;color:#20232B;font:700 14px sans-serif;cursor:pointer}.ds-selected{background:rgba(80,91,146,.16)}.ds-chip:hover{background:rgba(80,91,146,.11)}.ds-chip:active{background:rgba(80,91,146,.22)}.ds-button:focus-visible,.ds-chip:focus-visible,.ds-nav button:focus-visible{outline:2px solid #505B92;outline-offset:3px}"
+    },
+    {
+      "name": "内容面板",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "不透明主题表面，不应用折射。",
+      "html": "<section class=\"ds-panel\"><strong>暂时没有听歌记录</strong><p>播放第一首歌后，在这里继续聆听。</p></section>",
+      "css": ".ds-panel{padding:20px;border-radius:22px;background:#F4F2FA;color:#20232B;font:14px/1.6 sans-serif}.ds-panel strong{font-weight:800}.ds-panel p{margin:8px 0 0;color:#5D6572}"
+    },
+    {
+      "name": "四目的地导航",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "四目的地胶囊与独立搜索，预览以文字保留意义。",
+      "html": "<nav class=\"ds-nav\" aria-label=\"主导航\"><div class=\"ds-tabs\"><button aria-current=\"page\">首页</button><button>发现</button><button>音乐库</button><button>我的</button></div><button class=\"ds-search\" aria-label=\"搜索歌曲\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><circle cx=\"10\" cy=\"10\" r=\"6\"/><path d=\"m15 15 6 6\"/></svg></button></nav>",
+      "css": ".ds-nav{display:flex;gap:10px;align-items:center;width:362px;max-width:100%;font-family:sans-serif}.ds-tabs{display:flex;flex:1;padding:4px;border:1px solid rgba(255,255,255,.75);border-radius:999px;background:rgba(252,252,253,.8);backdrop-filter:blur(12px)}.ds-nav button{height:54px;min-width:0;flex:1;border:0;border-radius:999px;background:transparent;color:#20232B;font-size:10px;cursor:pointer}.ds-nav button[aria-current]{color:#505B92;background:rgba(80,91,146,.13)}.ds-nav button:hover{background:rgba(80,91,146,.09)}.ds-nav button:active{background:rgba(80,91,146,.2)}.ds-nav .ds-search{width:58px;height:58px;flex:none;background:rgba(252,252,253,.8)}@media(prefers-contrast:more){.ds-tabs,.ds-nav .ds-search{background:#FCFCFD;border:1px solid #74777F;backdrop-filter:none}}.ds-button:focus-visible,.ds-chip:focus-visible,.ds-nav button:focus-visible{outline:2px solid #505B92;outline-offset:3px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "封面主导的私人听歌空间",
+    "overview": "封面承担视觉重心，中文大标题与留白组织阅读顺序。横向内容组露出下一项，歌曲列表保持紧凑；播放与导航悬浮于内容之上。既有装扮、浅深色和跟随系统继续共用新布局。",
+    "keyCharacteristics": [
+      "封面主导，正文使用清楚稳定的主题表面。",
+      "大标题、粗体分区、紧凑曲目元数据形成层级。",
+      "当前主题强调色表达选择与确认，收藏使用独立功能色。",
+      "玻璃服务悬浮 chrome，加载、失败与归属具有中文表达。"
+    ],
+    "rules": [
+      {
+        "name": "The Theme Ownership Rule",
+        "body": "交互强调色来自当前主题，氛围来自当前歌曲封面，收藏使用独立功能色。",
+        "section": "colors"
+      },
+      {
+        "name": "The Readable Hierarchy Rule",
+        "body": "长内容换行、省略或滚动，不缩小整页文字来塞满首屏。",
+        "section": "typography"
+      },
+      {
+        "name": "The Reachable Content Rule",
+        "body": "编辑式正文保留 210dp 底部滚动余量；短屏播放器增加可滚动高度，文字缩放时增加空间，保留全部播放操作。导航包含手势安全区，搜索/设置/聊天/完整播放器/媒体预览分别控制悬浮层显示。",
+        "section": "layout"
+      },
+      {
+        "name": "The Floating Glass Rule",
+        "body": "内容封面、列表、表单与账号面板保持稳定表面，折射限定悬浮 chrome。封面模糊属于音乐背景。",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do 使用主题语义色并检查浅深色与装扮背景的最终对比。",
+      "Do 让封面、歌曲、歌手与有意义的推荐理由承担信息层级。",
+      "Do 提供中文 tooltip/语义标签、selected 状态、文字缩放及可达操作。",
+      "Do 让加载、空状态、失败、草稿与账号归属如实可见。"
+    ],
+    "donts": [
+      "Don't 把 Beta 条件组合推广为正式分支的全局布局或默认播放器。",
+      "Don't 给内容列表、表单与账号面板扩散液态玻璃。",
+      "Don't 以无意义眉题、重复圆角外框或装饰渐变替代真实内容。",
+      "Don't 把 fixture、歌曲封面、未记录月份或失败写入描述为生产素材、艺人肖像、历史统计或成功。",
+      "Don't 让浅色表单填充覆盖沉浸播放器的固定控件对比。"
+    ]
+  }
+}

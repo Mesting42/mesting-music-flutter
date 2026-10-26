@@ -1,4 +1,56 @@
-# md3Music integration Beta.4 handoff
+# md3Music integration Beta.5 handoff
+
+## Beta.5 presentation and library changes
+
+The approved composition now uses cover-led Home and separate Discovery, an
+owner-bound Library, four destinations plus independent search, a floating
+playback capsule, and a square-cover player with large synchronized lyrics.
+The existing black-vinyl and alternate player styles remain selectable.
+The Mesting dress-up themes and light/dark modes still own colors/backgrounds.
+`liquid_glass_widgets` is pinned to 1.15.0; effects are confined to floating
+chrome, with a high-contrast fallback. Content/forms use opaque theme surfaces.
+
+Build this snapshot with **Flutter 3.41.9 / Dart 3.11.5**. The independent SDK
+used here is `D:\flutter\mesting-beta5\flutter`; the original formal checkout
+and its SDK are unchanged. Run:
+
+```powershell
+.\tool\build_android_md3_beta_apk.ps1 -FlutterSdkRoot D:\flutter\mesting-beta5\flutter
+```
+
+This selects version `1.0.37-beta.5` / `5`, ARMv7 + ARM64. `pubspec.yaml`
+retains the formal baseline version; the distribution script supplies the Beta
+version. The source ZIP contains no signing private key or local SDK settings.
+
+Presentation lives in `features/experience/presentation`; it consumes existing
+catalog/library/audio contracts rather than owning another player or session.
+`PlatformCatalog.newSongs` always uses the public new-song chart; `daily`
+continues to choose personal recommendations only for a platform login.
+
+`history/listening_replay.dart` aggregates real daily records by active owner
+and calendar year/month. `playbackOwnerBindingProvider` binds the initial guest
+as well as later accounts. Missing historical periods are never reconstructed
+from lifetime totals. The Replay stream and library switch with the owner.
+
+The common playlist editor accepts an `onSave` callback, retaining the draft on
+failure. Gallery images and native Canvas templates are normalized to a 640px
+PNG in application documents. For an owned Kugou playlist, the repository
+uploads it using the embedded `/playlist/pic/upload` contract, reads `total_ver`,
+then commits `custom/<FileName>` through `/playlist/update`, preserving privacy
+and sort. Writes guard the original identity throughout and do not auto-retry.
+After a partially successful creation, a manual retry reconciles the created
+list rather than creating another. System favorite lists and subscribed lists
+cannot be edited as owned lists. Mesting/local libraries keep their own save
+contract. Mock upload success is not evidence of a live cloud-account write.
+
+Relevant tests: `beta5_cloud_cover_test.dart`, `beta5_replay_test.dart`,
+`beta5_ui_test.dart`, and `playlist_cover_editor_test.dart`, plus the retained
+Beta account/search/comments/library suites. UI screenshots use synthetic local
+fixtures. See DESIGN.md for the built design system and the packaged Chinese
+validation record for exact run counts and remaining device checks.
+
+The following Beta.4 integration details remain applicable unless superseded
+above. Comment like/unlike writes remain deferred with user acceptance.
 
 Beta.4 connects the upstream paged song-search flow directly, preserves recording
 IDs through saved/playback tracks, adds full comment browsing controls, and
@@ -13,7 +65,7 @@ library support. It is not a complete migration of every md3Music feature.
 - Integration branch: `integration/md3music-beta`.
 - Upstream md3Music: `a69503b84e8829f888684f67c163be03c589c014`,
   branch `rust-local-force`.
-- Flutter used for this build: 3.38.6; Dart: 3.10.7; Java: 17-compatible
+- Flutter used for Beta.4: 3.38.6; Dart: 3.10.7; Java: 17-compatible
   Android Studio JBR; Android NDK: 28.2.13676358.
 - `third_party/md3music` contains the original license, disclaimer and Rust
   server source. The three native libraries are upstream prebuilt artifacts;
@@ -169,7 +221,7 @@ flutter test --flavor beta test/music_platform_test.dart test/beta_login_entry_t
 .\tool\build_android_md3_beta_apk.ps1
 ```
 
-The build script selects `beta`, version `1.0.37-beta.4` / `4`, ARMv7 + ARM64,
+The build script selects `beta`, version `1.0.37-beta.5` / `5`, ARMv7 + ARM64,
 CloudBase authentication retained, and automatic update checks disabled. It does
 not publish an update manifest or deploy a backend. The package is
 `com.mesting.music.beta`, separate from formal and Java/MySQL packages.
@@ -196,8 +248,9 @@ that the playback failure occurs in guest mode. Beta.4 still needs phone
 acceptance of real search paging, comment IDs/read/write, guest full/preview
 audio, avatar images and account transitions. Mock protocol/UI tests cannot certify a third-party
 service's live behavior. No user's real cloud comments were posted or deleted
-during development. Music disk, MV, recognition, membership check-in, cover upload
-and track reordering remain separate migration work. Endpoint availability in the
+during development. Music disk, MV, recognition, membership check-in
+and track reordering remain separate migration work. Cover upload is connected
+in Beta.5 and still needs real-device/cloud acceptance. Endpoint availability in the
 Rust source alone does not mean a feature is connected to Mesting's interface.
 
 Before public distribution, reproduce native builds, establish a release signing

@@ -140,6 +140,8 @@ class AppDatabase extends _$AppDatabase {
     onUpgrade: (migrator, from, to) async {
       if (from < 2) {
         await migrator.alterTable(
+          // Existing pinned audio/cache or schema migration API; covered by regression tests.
+          // ignore: experimental_member_use
           TableMigration(
             favoriteTracks,
             newColumns: [
@@ -153,9 +155,13 @@ class AppDatabase extends _$AppDatabase {
           ),
         );
         await migrator.alterTable(
+          // Existing pinned audio/cache or schema migration API; covered by regression tests.
+          // ignore: experimental_member_use
           TableMigration(userPlaylists, newColumns: [userPlaylists.ownerId]),
         );
         await migrator.alterTable(
+          // Existing pinned audio/cache or schema migration API; covered by regression tests.
+          // ignore: experimental_member_use
           TableMigration(
             userPlaylistTracks,
             newColumns: [userPlaylistTracks.ownerId],
@@ -174,18 +180,24 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 5) {
         await migrator.alterTable(
+          // Existing pinned audio/cache or schema migration API; covered by regression tests.
+          // ignore: experimental_member_use
           TableMigration(
             playbackSessions,
             newColumns: [playbackSessions.ownerId],
           ),
         );
         await migrator.alterTable(
+          // Existing pinned audio/cache or schema migration API; covered by regression tests.
+          // ignore: experimental_member_use
           TableMigration(
             playbackHistories,
             newColumns: [playbackHistories.ownerId],
           ),
         );
         await migrator.alterTable(
+          // Existing pinned audio/cache or schema migration API; covered by regression tests.
+          // ignore: experimental_member_use
           TableMigration(
             playbackDailyHistories,
             newColumns: [playbackDailyHistories.ownerId],
@@ -1236,6 +1248,14 @@ class AppDatabase extends _$AppDatabase {
           ]))
         .watch();
   }
+
+  /// Replay reads durable daily facts for one owner. Aggregation stays outside
+  /// the database so calendar selection does not create a second history store.
+  Stream<List<PlaybackDailyHistory>> watchPlaybackDays(String ownerId) =>
+      (select(playbackDailyHistories)
+            ..where((row) => row.ownerId.equals(ownerId))
+            ..orderBy([(row) => OrderingTerm.desc(row.dayKey)]))
+          .watch();
 
   Stream<List<PlaybackDailyHistory>> watchPlaybackHistoryForDay(
     String ownerId,

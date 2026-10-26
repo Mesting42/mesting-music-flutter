@@ -42,7 +42,7 @@ class PlayerStyleAtmosphere extends StatelessWidget {
         Color(0xD919183F),
         Color(0xF2070918),
       ],
-      PlayerVisualStyle.classic => const [
+      PlayerVisualStyle.cover || PlayerVisualStyle.classic => const [
         Color(0x00000000),
         Color(0x00000000),
         Color(0x00000000),
@@ -70,7 +70,7 @@ class PlayerStyleAtmosphere extends StatelessWidget {
                       PlayerVisualStyle.aurora => const Color(0x183E9BFF),
                       PlayerVisualStyle.cassette => const Color(0x1F8B5CF6),
                       PlayerVisualStyle.lyricStage => const Color(0x1F2DD4BF),
-                      PlayerVisualStyle.classic => Colors.transparent,
+                      PlayerVisualStyle.cover || PlayerVisualStyle.classic => Colors.transparent,
                     },
                     boxShadow: [
                       BoxShadow(
@@ -80,7 +80,7 @@ class PlayerStyleAtmosphere extends StatelessWidget {
                           PlayerVisualStyle.lyricStage => const Color(
                             0x2E2DD4BF,
                           ),
-                          PlayerVisualStyle.classic => Colors.transparent,
+                          PlayerVisualStyle.cover || PlayerVisualStyle.classic => Colors.transparent,
                         },
                         blurRadius: 100,
                         spreadRadius: 30,
@@ -147,7 +147,7 @@ class AlternativePlayerStage extends StatelessWidget {
         onShowLyrics: onShowLyrics,
         topInset: topInset,
       ),
-      PlayerVisualStyle.classic => const SizedBox.shrink(),
+      PlayerVisualStyle.cover || PlayerVisualStyle.classic => const SizedBox.shrink(),
     };
     return FadeTransition(
       opacity: entrance,
@@ -230,7 +230,7 @@ class PlayerVisualStagePreview extends StatelessWidget {
           );
         },
       ),
-      PlayerVisualStyle.classic => VinylDisc(
+      PlayerVisualStyle.cover || PlayerVisualStyle.classic => VinylDisc(
         coverAsset: coverAsset,
         playing: previewPlaying,
         rotationDuration: const Duration(milliseconds: 2400),
@@ -238,7 +238,7 @@ class PlayerVisualStagePreview extends StatelessWidget {
       ),
     };
     final background = switch (style) {
-      PlayerVisualStyle.classic => const [Color(0xFFD8D2D4), Color(0xFFA8A1A4)],
+      PlayerVisualStyle.cover || PlayerVisualStyle.classic => const [Color(0xFFD8D2D4), Color(0xFFA8A1A4)],
       PlayerVisualStyle.aurora => const [Color(0xFF111D42), Color(0xFF090C1D)],
       PlayerVisualStyle.cassette => const [
         Color(0xFF151133),

@@ -1043,6 +1043,7 @@ class _PlayerStyleCard extends StatelessWidget {
 }
 
 Color _playerStyleAccent(PlayerVisualStyle style) => switch (style) {
+  PlayerVisualStyle.cover ||
   PlayerVisualStyle.classic => const Color(0xFF6C80EA),
   PlayerVisualStyle.aurora => const Color(0xFF6BDCF5),
   PlayerVisualStyle.cassette => const Color(0xFFA78BFA),
@@ -1061,6 +1062,18 @@ class _PlayerStylePreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (style == PlayerVisualStyle.cover) {
+      return Padding(
+        padding: const EdgeInsets.all(12),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.asset(
+            _ClassicPlayerStylePreview.previewCover,
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
+    }
     if (style == PlayerVisualStyle.classic) {
       return _ClassicPlayerStylePreview(active: active);
     }

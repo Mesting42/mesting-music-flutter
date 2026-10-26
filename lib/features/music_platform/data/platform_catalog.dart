@@ -51,6 +51,14 @@ class PlatformCatalog {
     return tracks(payload);
   }
 
+  /// Discovery is a public new-song chart even when daily picks are personal.
+  Future<List<Track>> newSongs() async => tracks(
+    await api.get(
+      '/top/song',
+      query: const {'type': '21608', 'pagesize': '30'},
+    ),
+  );
+
   Future<List<Track>> discovery() async => tracks(
     await api.get(
       '/home/discover',

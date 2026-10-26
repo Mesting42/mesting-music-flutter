@@ -36,6 +36,7 @@ import 'player_visual_stages.dart';
 import 'persistent_mini_player.dart';
 import 'now_playing_transition.dart';
 import 'vinyl_disc.dart';
+import '../../experience/presentation/cover_player_page.dart';
 
 const nowPlayingTonearmAsset = 'assets/images/player/netease-style-tonearm.png';
 const nowPlayingTonearmPlayingTurns = 0.0;
@@ -156,6 +157,9 @@ class _NowPlayingPageState extends ConsumerState<NowPlayingPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (ref.watch(playerVisualStyleProvider) == PlayerVisualStyle.cover) {
+      return CoverPlayerPage(lyricsInitially: widget.showLyricsInitially);
+    }
     final track = ref.watch(currentTrackProvider);
     final playbackState = ref.watch(playbackStateProvider).value;
     final playing = playbackState?.playing ?? false;

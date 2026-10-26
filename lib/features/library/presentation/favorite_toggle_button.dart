@@ -68,6 +68,9 @@ class FavoriteToggleButton extends ConsumerWidget {
           tooltip: favorite ? '取消收藏' : '收藏歌曲',
           padding: EdgeInsets.zero,
           style: IconButton.styleFrom(
+            // The circular favorite surface above owns its fill, including
+            // inside an immersive player with a different button theme.
+            backgroundColor: Colors.transparent,
             minimumSize: Size.square(dimension),
             maximumSize: Size.square(dimension),
             foregroundColor: favorite ? _favoriteAccent : tokens.textSecondary,

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../library/library_providers.dart';
-import '../../player/presentation/music_hub_top_bar.dart';
+import '../../experience/presentation/editorial_widgets.dart';
 import '../../themes/theme_gallery_page.dart';
 import '../music_platform_providers.dart';
 import 'platform_account_page.dart';
@@ -54,62 +54,64 @@ class PlatformProfile extends ConsumerWidget {
   const PlatformProfile({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) => PlatformStyle(
-    child: ListView(
-      padding: EdgeInsets.fromLTRB(
-        16,
-        MediaQuery.paddingOf(context).top + 12,
-        16,
-        140,
-      ),
+    child: EditorialScroll(
       children: [
-        const MusicHubTopBar(title: '我的', subtitle: '酷狗概念版'),
-        const SizedBox(height: 24),
-        const PlatformAccountTile(),
+        const EditorialHeader('我的'),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 22),
+          child: PlatformAccountTile(),
+        ),
         const SizedBox(height: 28),
-        const PlatformSectionTitle('我的音乐', subtitle: '收藏与歌单跟随当前酷狗账号'),
-        PlatformPanel(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          child: Column(
-            children: [
-              _ProfileLink(
-                icon: Icons.favorite_rounded,
-                title: '我的喜欢',
-                subtitle: '酷狗云端收藏',
-                onTap: () => context.push('/music?view=favorites'),
-              ),
-              _ProfileLink(
-                icon: Icons.library_music_rounded,
-                title: '我的歌单',
-                subtitle:
-                    '${ref.watch(playlistsProvider).value?.length ?? 0} 个酷狗云端歌单',
-                onTap: () => context.push('/music?view=playlists'),
-              ),
-              _ProfileLink(
-                icon: Icons.add_rounded,
-                title: '新建云端歌单',
-                onTap: () => createPlatformPlaylist(context, ref),
-              ),
-            ],
+        const EditorialSection('我的音乐'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 22),
+          child: PlatformPanel(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: Column(
+              children: [
+                _ProfileLink(
+                  icon: Icons.favorite_rounded,
+                  title: '我的喜欢',
+                  subtitle: '酷狗云端收藏',
+                  onTap: () => context.push('/music?view=favorites'),
+                ),
+                _ProfileLink(
+                  icon: Icons.library_music_rounded,
+                  title: '我的歌单',
+                  subtitle:
+                      '${ref.watch(playlistsProvider).value?.length ?? 0} 个酷狗云端歌单',
+                  onTap: () => context.push('/music?view=playlists'),
+                ),
+                _ProfileLink(
+                  icon: Icons.add_rounded,
+                  title: '新建云端歌单',
+                  onTap: () => createPlatformPlaylist(context, ref),
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 28),
-        const PlatformSectionTitle('应用与外观'),
-        PlatformPanel(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          child: Column(
-            children: [
-              _ProfileLink(
-                icon: Icons.palette_outlined,
-                title: '装扮',
-                subtitle: '皮肤与主题',
-                onTap: () => showDressUpCenterSheet(context),
-              ),
-              _ProfileLink(
-                icon: Icons.tune_rounded,
-                title: '设置',
-                onTap: () => context.push('/music/settings'),
-              ),
-            ],
+        const EditorialSection('应用与外观'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 22),
+          child: PlatformPanel(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: Column(
+              children: [
+                _ProfileLink(
+                  icon: Icons.palette_outlined,
+                  title: '装扮',
+                  subtitle: '皮肤与主题',
+                  onTap: () => showDressUpCenterSheet(context),
+                ),
+                _ProfileLink(
+                  icon: Icons.tune_rounded,
+                  title: '设置',
+                  onTap: () => context.push('/music/settings'),
+                ),
+              ],
+            ),
           ),
         ),
       ],

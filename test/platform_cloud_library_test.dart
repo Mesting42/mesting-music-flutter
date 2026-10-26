@@ -52,11 +52,13 @@ void main() {
   late MusicPlatformApi api;
   late PlatformLibraryRepository repository;
   late bool rejectWrite;
+  late Map<String, dynamic>? created;
   setUp(() {
     database = AppDatabase(NativeDatabase.memory());
     requests = [];
     favorites = [_song('AAA')];
     rejectWrite = false;
+    created = null;
     api = MusicPlatformApi(
       server: _LocalServer(),
       client: MockClient((request) async {
@@ -64,7 +66,7 @@ void main() {
         switch (request.url.path) {
           case '/user/playlist':
             return _ok({
-              'info': [_likes, _own],
+              'info': [_likes, _own, ?created],
               'total_ver': 17,
             });
           case '/playlist/track/all/new':
@@ -76,6 +78,13 @@ void main() {
                 'base': {'album_audio_id': 456},
               },
             ]);
+          case '/playlist/add':
+            created = {
+              ..._own,
+              'listid': 33,
+              'name': request.url.queryParameters['name'],
+            };
+            return _ok({});
           case '/playlist/tracks/add':
             if (rejectWrite) return http.Response('{"status":0}', 502);
             favorites.add(
@@ -196,8 +205,8 @@ void main() {
     'create, rename and delete use cloud IDs and preserve privacy and sort',
     () async {
       await repository.createPlaylist(id: 'local-uuid', name: '新歌单');
-      expect(requests.last.url.path, '/playlist/add');
-      expect(requests.last.url.queryParameters['is_pri'], '1');
+      final create = requests.singleWhere((r) => r.url.path == '/playlist/add');
+      expect(create.url.queryParameters['is_pri'], '1');
       await repository.updatePlaylist(
         id: 'kg:22',
         name: '改名',
@@ -254,7 +263,13 @@ void main() {
       catalogApi.session = _identity;
       await catalog.daily();
       await catalog.discovery();
-      expect(paths, ['/top/song', '/everyday/recommend', '/home/discover']);
+      await catalog.newSongs();
+      expect(paths, [
+        '/top/song',
+        '/everyday/recommend',
+        '/home/discover',
+        '/top/song',
+      ]);
     },
   );
 

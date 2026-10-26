@@ -80,6 +80,9 @@ void main() {
     for (final entity in Directory('lib').listSync(recursive: true)) {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;
       if (entity.path.endsWith('liquid_glass_sheet.dart')) continue;
+      // The cover editor deliberately uses an opaque, keyboard-aware surface;
+      // only floating navigation/playback controls use glass in Beta.5.
+      if (entity.path.endsWith('playlist_editor_dialog.dart')) continue;
       if (entity.readAsStringSync().contains('showModalBottomSheet')) {
         offenders.add(entity.path);
       }
