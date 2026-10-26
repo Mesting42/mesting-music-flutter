@@ -1,3 +1,4 @@
+import '../../shared/widgets/beta_page_motion.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/platform/distribution_channel.dart';
@@ -39,9 +40,9 @@ ThemeData buildMestingTheme(MusicThemePreset preset) {
     pageTransitionsTheme: DistributionChannel.isBeta
         ? const PageTransitionsTheme(
             builders: {
-              TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-              TargetPlatform.windows: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.android: BetaPageTransitionsBuilder(),
+              TargetPlatform.iOS: BetaPageTransitionsBuilder(),
+              TargetPlatform.windows: BetaPageTransitionsBuilder(),
             },
           )
         : const PageTransitionsTheme(),

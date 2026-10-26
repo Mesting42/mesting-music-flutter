@@ -8,6 +8,7 @@ import '../../themes/music_theme_tokens.dart';
 import '../auth_providers.dart';
 import '../../../core/platform/distribution_channel.dart';
 import '../../music_platform/music_platform_providers.dart';
+import 'beta_login_navigation.dart';
 
 Future<bool> ensureAuthenticated(
   BuildContext context,
@@ -35,6 +36,10 @@ Future<bool> ensureAuthenticated(
   }
   if (session != null) return true;
   if (!context.mounted) return false;
+  if (DistributionChannel.isBeta) {
+    await openBetaLogin(context, redirect: redirect);
+    return false;
+  }
 
   final accepted = await showLiquidGlassBottomSheet<bool>(
     context: context,

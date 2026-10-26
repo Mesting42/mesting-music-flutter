@@ -1,6 +1,111 @@
-# md3Music integration Beta.10 handoff
+# md3Music integration Beta.11 handoff
 
-## Beta.10 current implementation and verified release boundary
+## Beta.11 current implementation and verified release boundary
+
+Verified source/release identity: **Mesting Music / com.mesting.music.beta / 1.0.37-beta.11 / 11**, with successful **assembleBetaRelease**. This is a source-grounded record of the user-confirmed extension to Beta.10 and the actual final regression/release evidence. The historical filename `work/beta11/Beta11-统一账号与导航性能修改方案-待确认.md` reflects its draft state before confirmation; it is not an outstanding approval gate. The valuable dirty Beta.5–10 working tree, pinned md3Music provenance, account ownership and single MestingAudioHandler remain. No reset/clean, branch/worktree change, commit/push, phone installation or public release is part of this handoff.
+
+Visual authority remains the inherited Mesting/Apple Music world, original coral note/record duo, user's compact consent and five-category search screenshots, black Raycast simple-form reference and latest arrow placing the code action on the input's right side. Raycast's external login methods and the search reference's blue are outside the confirmed adaptation. **No separate QUALITY BAR card, approved ImageGen comp, approval sidecar or random FORM seed exists.** PRODUCT.md, DESIGN.md, its sidecar and the auth/music/search surface briefs describe this source state; the Beta.10 and earlier sections below preserve historical evidence.
+
+### Unified entry, consent, account and guest capability
+
+- BetaConsentRow centers the small circle, sentence and independently reachable agreement/privacy links as a compact group with shared visual alignment. The circle is 14dp within a 44dp semantic target; Wrap permits narrow/large-text reflow. The reference annotation rectangle is absent. Consent remains real state rather than decoration.
+- Phone is now a dedicated form: circular Back, quiet title/explanation, broad phone/code fields, one Login action and nearby real wait/error feedback. The code action stays inside the input's right edge, while field and action are **independent sibling premium glass surfaces in a Stack**. After reviewer R1 **partial**, the user explicitly chose continued repair and revalidation. Private _InlineCodeField owns layout only: TextScaler-aware measurements of six digits and normal/countdown action labels decide compact layout. Narrow/large text moves the visible code label above the field, wraps the suffix to two lines, grows field/action height and uses a 16dp input base while retaining system scaling; the wider layout keeps its 18dp base/44dp action. The button remains on the right inside the outline; the page still owns send/countdown/credential state. **responsive-code-tests.log is 2/2 passed**: at **320dp/1.6 light/dark**, all six digits **863432** remain visible with **maxScrollExtent<1**, and the external label plus keyboard Login are **hitTestable**. The reviewer inspected approved originals and marks R1 resolved. Prior full-row and pre-adaptive narrow screenshots are historical.
+- The user confirmed **“开源许可与致谢” removed from every login page**. Its shared showLicensePage destination now lives in the Beta Settings application group, key **settings-open-source**. The previous source had no independent Settings license entry, so this is a relocation into Settings rather than a claim that such an entry already existed. Agreement/privacy consent retains its real legal gate. **settings-capture-final.log is 1 passed**, after correcting the fixture route to **/music/settings**; **settings-final.png** is the correct final Settings image.
+- PlatformAccountPage.initialMethod isolates phone, WeChat, Kugou and QQ flows. QR pages show the chosen QR/status/refresh only; no method strip is mixed into the phone form. Other Methods marks **Mesting 账号登录 / 注册 · 暂不可用** and disables the new Beta route. Existing credentials/data and the formal authentication implementation remain.
+- BetaAccountCard replaces the separate platform row and old MESTING ACCOUNT promotional card in Profile and Settings. It uses one avatar/name/source and one login/manage operation; account source stays truthful. openBetaLogin coordinates guest and protected actions through `/auth` welcome instead of opening old entry modules. Credential repositories are not merged to simulate a unified card.
+- Actual logout success changes the above-router coordinator to welcome first, then resets old navigation under its cover. Back cannot reveal the prior account page. Pending logout deduplicates/disables; failure keeps the session and actionable retry. Fresh interactive login still yields success card → eight-page guide → app, while restored credentials/token refresh do not replay that flow; Guest enters directly and guide replay remains available in Settings.
+- Guest may browse/search public material, open real public details, play platform-provided playable resources and use the current queue/temporary upcoming list. Favorite/unfavorite, creation/editing of personal playlists and other account writes require login before mutation, at both component and LibraryRepository boundaries. Existing guest rows/history remain; no clear/migration/delete is performed. Playback permissions/trials still reflect actual platform responses.
+
+### SMS device-context repair and reproducible native source
+
+The genuine send path remains PlatformAccountPage → PlatformLoginService → local `/captcha/sent` → Rust `/v7/send_mobile_code`. Dart now awaits `ensureRegisteredDevice()` before a single explicit send, preserves platform business status, and starts the 60-second countdown **only after status=1**. Busy/countdown/generation guards reject duplicates and late disposed-page responses. Error 20015 remains visible as an actual rejection rather than being replaced by an optimistic timer or a different login method.
+
+`third_party/md3music/rust/src/modules/misc.rs` factors captcha_options and preserves registered **KUGOU_API_MID/dfid** used by request signing; the previous cleared context became `mid="-"` / `dfid="-"`. It removes token/userid/vip_token while keeping device identity and the outgoing mid alias. The corresponding native test checks that boundary. **46 native unit tests pass.** The two ARM libraries and x86_64 library were rebuilt from this patched source with **Rust 1.99.1, NDK 28.2 and Cargo --locked**. `tool/build_md3_beta_native.ps1` contains the reproducible ABI matrix, ELF symbol inspection, copy and SHA256 equality check; `third_party/md3music/NOTICE.md` records the local patch and rebuilt binaries. Release verification establishes the source native manifest → merged original hash → stripped output → packaged APK chain for both ARM libraries; both differ from Beta.10. The **four C FFI exports** start_server / stop_server / get_server_port / is_server_running are verified, as is **ARM64 ELF 16KiB** compatibility.
+
+| ABI | Rebuilt source / merged original SHA256 | Stripped / packaged APK SHA256 |
+| --- | --- | --- |
+| armeabi-v7a | E480C98CD9FB9EFFC203156004138CF80107A39D0AFE919816F2A03829133A10 | 7BBC0772CA8C9C6C9BE9AE4B77A72A3613351977C2648618F83F1D355C7E1AE2 |
+| arm64-v8a | BF111E46B00E7920DC00B8F82A7F145B9F8B3888802DD5E320A3AA523BA4C80C | A883ACFF54E17CE23106926EDC62D57AFDF4107ABE847D936A61CDCC66BB98F0 |
+| x86_64 | EE68F74143A6F8C0B30B7B79AA2E53B6FAB73D35F7A028DE278015390522F5CF | Additional rebuilt output; not included in the ARM release target |
+
+Unstripped source/merged hashes are compared within that stage; stripped/packaged hashes are compared within theirs. A source-unstripped hash is not expected to equal a stripped APK hash. `release-verification/artifact-verification.json` owns this verified mapping rather than a claim that all stages have identical bytes.
+
+This establishes a corrected client/native device context and software business-result handling. **Actual SMS delivery, real login/QR/token/logout and live account/cloud/CDN permissions have not been accepted.** No phone number/code/token is included in delivery evidence. A successful fixture response is not evidence that a real user received a message.
+
+### Five typed search categories and real details
+
+The compact rail is fixed as **歌曲 / 专辑 / 歌手 / 歌单 / 歌词**, replacing the large “搜索结果” heading while retaining Mesting light/dark typography, red selection and actual bottom glass search.
+
+| Category | Adaptation and real behavior |
+| --- | --- |
+| Songs | Existing lazy AppleSearchResults, 52dp covers, compact identity, heart/More, automatic paging and shared real playback; count remains 共 N 首 |
+| Albums | `/search/album`, phone two-column square-cover grid and real `/album/songs?album_id=…` detail |
+| Artists | `/search/artist`, including its bare-list response; circular identity rows and `/artist/audios?id=…` detail. Missing visible portraits use coalesced `/artist/detail` reads, at most 3 concurrent with 160 successful cached entries |
+| Playlists | `/search/special`, cover/name/actual supplied count; `gid` is retained as global collection identity and `/playlist/track/all` receives `global_collection_id`. Missing usable identity yields a recoverable error |
+| Lyrics | **`/search?type=lyric`** is content search, with genuine track identity and only returned lyric snippets. `/search/lyric` is a download-candidate endpoint and is not substituted. Song actions reuse the common player |
+
+CategorySearchController owns per-category slices with page/items/total/loading/error/more, loads only the selected category and preserves its prior cache. The existing song controller remains responsible for song paging. Each result pane owns its scroll controller, including rapid category re-entry; stale query/account generations cannot overwrite current data. Empty/error/retry and automatic next-page behavior use actual results. No lyric text, artist portrait or playlist count is fabricated to complete a layout.
+
+Search ends and suspends for different reasons. Choosing bottom Home/Discover/Library/Profile runs explicit end: clear input/query/five-category results/selected kind, invalidate late responses and reset the next search to Songs/landing. The result widget's **local PageStorageBucket is disposed when landing replaces results**, so even the same text in a later session starts at offset zero. Real history is retained. Player/album/artist/playlist routes suspend the mounted result instead: returning restores query/category/content/offset. System and edge Back retain results → landing → source.
+
+### Continuous page motion and playing-scroll work
+
+BetaPageMotion places the opaque theme surface **inside the same moving subtree as its body**. Entry/pop translate the whole page across a full page width, continuously revealing the actual prior page. A stationary cover no longer masks the parent until route disposal. Programmatic motion uses easeInOutCubic, content routes use 360ms in / 320ms out, interactive pop progress is linear and reduced motion returns the stable surface. Mounted source scroll/cache and local player/success/guide/menu motion ownership remain.
+
+BetaMusicShell compact geometry moves into a local ValueNotifier; repeated scroll notifications in one frame coalesce into a post-frame update. The stable body avoids shell setState churn, while the bottom bar keeps its work, actual library springs and complete accessory animation. **premium/full, blur/thickness/refraction/highlights and 88dp/24dp hysteresis remain.** In the identical **120 playing-scroll stimuli**, BetaMusicShell rebuilds changed **120→0**, while BetaMusicBottomBar stayed **120→120**. This measures Flutter rebuild work under a defined stimulus; it does not establish device FPS, GPU frame time or “all devices smooth”.
+
+### Beta.11 evidence at document freeze
+
+Evidence root: `C:/Users/Mest/Documents/Codex/2026-10-25/mesting-beta7-handoff-20261025/work/beta11`. Entries below deliberately distinguish initial results from required final runs. Groups overlap and must not be summed.
+
+| Evidence | Recorded result and limit |
+| --- | --- |
+| review-first.md | Historical **fix**, R1 inline-code captures and R2 cross-session scroll lifetime; later approved evidence supersedes it |
+| Subsequent R1 partial and latest user confirmation | Historical intermediate partial; user chose continued repair. _InlineCodeField adaptive layout and Settings-only license entry now have the final evidence below |
+| search-session-regression.log | **1 passed**, production appRouter: same session category/detail returns preserve offset=50; ended same-query new session starts offset=0. Reviewer now marks R2 **resolved** |
+| review-fix-tests.log | **3/3 passed** for that earlier source: pending→status=1→60s/duplicate send; production-router search storage lifecycle; identical 120 playing-scroll shell=0/bar=120. Does not establish the later adaptive field/license update pass |
+| Initial normal regression | **642 passed / 56 conditional skips / 0 failures**, before the final added behavioral/performance checks; not final ship count |
+| Initial Beta targeted | **159 passed / 0 failures**, before final additions; not final ship count |
+| analyze-full-first.log | Historical initial **No issues found**; final source analysis is analyze-approved below |
+| ui-captures-first.log | Historical **39 passed**, synthetic UI/capture checks; prior whole-row/narrow action images are superseded |
+| native-unit-final.log | **46 passed**, patched device-context behavior and embedded native unit scope |
+| Native build evidence / tool/build_md3_beta_native.ps1 | Patched arm64-v8a, armeabi-v7a and x86_64 outputs rebuilt with locked Cargo; source manifest→merged original→stripped→APK matches verified for the two packaged ARM libraries, both differ from Beta.10 |
+| live-read-probe.log | **8 genuine host read-only responses, status=1**: artist search, lyric content search, album search, playlist search, artist detail, album songs, playlist songs, artist songs. Parser-matching envelopes include bare lists and gid |
+| compact-before.log / compact-after.log | Same 120 playing-scroll stimuli: shell **120→0**, bar **120→120**; rebuild measurement only |
+| responsive-code-tests.log | **2/2 passed**, 320dp/1.6 light/dark, all six digits 863432, maxScrollExtent<1, external label and keyboard Login hitTestable |
+| ui-captures-approved.log | **43 passed** final software UI; approved original images inspected by reviewer |
+| settings-capture-final.log / settings-final.png | **1 passed**, corrected fixture **/music/settings**; settings-final.png is the correct final Settings image with relocated license entry |
+| motion-export.log / export-motion.py | **4/4 passed**, external fixture reuses current Beta.11 actual welcome/style components for four light/dark GIFs, each **36 frames / 80ms per frame**; no production source changes or old Beta.10 images presented as current, and no Android GPU/FPS claim |
+| Final reviewer | Approved originals reviewed, **R1 and R2 both resolved**. **review-final.md** records literal **disposition: ship**, **R1/R2 resolved**, license relocation **match**, and **no remaining material fix**, within its stated source/software/release evidence scope |
+| test-summary.json — normal | **644 passed / 58 conditional skips / 0 failures** |
+| test-summary.json — Beta | **163 passed / 0 skipped / 0 failed** |
+| analyze-approved.log | **No issues found** |
+| Earlier UI42 / analyzer 1-info | Historical intermediate stage, superseded by latest user fixes, approved43 and clean analysis; not current verification |
+| Release build / artifact-verification.json | **assembleBetaRelease successful**; **com.mesting.music.beta / Mesting Music / 1.0.37-beta.11 / 11**, same Beta test certificate, **16KiB ZIP**, four FFI exports, **ARM64 ELF16KiB**, packaged ARM provenance chain all verified |
+| APK exact bytes / SHA256 | **89,244,110 bytes** / **64B761F855B4E44F26979375C04CAE266D608A18DB954D500494B4334D3DC4F3** |
+| Source ZIP exact bytes / SHA256 | External **outputs/beta-1.0.37-beta.11/delivery-manifest.json** after documentation freeze. No archive hash is embedded in its own source content |
+
+Eight successful host responses prove the embedded service's public read-only structures at the time probed. They are separate from UI fixture screenshots and do not certify every app detail interaction, real playback, account permissions or a CDN session. Software captures use synthetic local data, Flutter software rendering and Windows QA Chinese fonts. **adb-devices is empty.** Native GPU glass/motion/FPS, real IME, physical/predictive Back, TalkBack, hardware volume, cold/upgrade entry, actual SMS/login/account/cloud/CDN remain unverified without corresponding device/live evidence. General Android compatibility and the user's complete effects/functions remain the scope.
+
+### Beta.11 implementation entry points
+
+| Entry | Responsibility |
+| --- | --- |
+| lib/features/auth/presentation/beta_consent_row.dart; beta_welcome_page.dart | Centered circle/independent legal links, real consent gate, chosen method and unavailable Mesting row |
+| lib/features/music_platform/presentation/platform_account_page.dart | initialMethod-isolated phone/QR; private layout-only _InlineCodeField with external compact label/two-line right-hand sibling glass action; page-owned business-result/countdown/login/manage state |
+| lib/features/auth/presentation/beta_account_card.dart; beta_login_navigation.dart; lib/features/settings/presentation/settings_page.dart; lib/features/music_platform/presentation/platform_profile.dart | Single account presentation/shared welcome navigation; Settings application group owns showLicensePage via settings-open-source |
+| lib/features/auth/account_capabilities.dart; lib/features/library/data/library_repository.dart; presentation/favorite_toggle_button.dart | Real account capabilities, guest personal-write guard and login entry without blocking listening/current queue |
+| lib/features/auth/beta_entry_flow.dart; presentation/beta_entry_coordinator.dart; lib/app/router/app_router.dart | Successful logout welcome cover before route reset, interactive login/restore distinction and retained success/eight-page guide |
+| lib/features/music_platform/music_platform_providers.dart; data/music_platform_api.dart | Device registration before explicit send, true business-result parsing and session context |
+| third_party/md3music/rust/src/modules/misc.rs; tool/build_md3_beta_native.ps1; third_party/md3music/NOTICE.md | Device-signing context repair, native test, locked three-ABI build/copy provenance |
+| lib/features/music_platform/data/platform_category_search.dart; platform_category_search_providers.dart | Five typed result contracts, genuine fields/gid, independent category pages and query/account generations |
+| lib/features/search/presentation/beta_category_search_results.dart; music_search_page.dart; lib/features/music_platform/platform_artist_portrait.dart | Compact rail, result-local scroll bucket, category layout/transition and bounded visible portrait recovery |
+| lib/features/music_platform/presentation/platform_catalog_detail_page.dart; lib/app/router/app_router.dart | Real album/artist/public-playlist content details and shared playback |
+| lib/features/experience/presentation/beta_music_shell.dart; beta_bottom_bar.dart; lib/shared/widgets/beta_page_motion.dart | Explicit search end/suspension, post-frame local compact state and whole opaque-page motion |
+
+## Historical Beta.10 implementation and verified release boundary
+
+The following Beta.10 section preserves its original verified implementation and evidence. All uses of “current” within this historical section refer to that Beta.10 handoff; its ship verdict, counts and binary equality do not establish a Beta.11 release pass. In particular, Beta.10's available Mesting new-login entry, login-page license/thanks button, old search coverage and unchanged native binaries are superseded by the Beta.11 contracts above.
 
 Current source/build-script target: **Mesting Music / com.mesting.music.beta / 1.0.37-beta.10 / 10**. The script selects the Beta flavor while `pubspec.yaml` retains the formal baseline version. This pass preserves the valuable dirty Beta.5–9 working tree, the fixed platform API/server, account ownership and the single MestingAudioHandler. It does not reset/clean the checkout or change branch, worktree or historical outputs. Shared improvements apply at explicit Beta call sites; they do not establish a formal-channel redesign.
 
@@ -641,8 +746,12 @@ library support. It is not a complete migration of every md3Music feature.
 - Flutter used for Beta.4: 3.38.6; Dart: 3.10.7; Java: 17-compatible
   Android Studio JBR; Android NDK: 28.2.13676358.
 - `third_party/md3music` contains the original license, disclaimer and Rust
-  server source. The three native libraries are upstream prebuilt artifacts;
-  they have not been reproduced from source in this environment.
+  server source. Historically through Beta.10 the three native libraries were
+  upstream prebuilts and had not been reproduced in this environment. Beta.11
+  rebuilds arm64-v8a, armeabi-v7a and x86_64 from patched Rust with locked Cargo;
+  the source/build/NOTICE entries above supersede that historical limitation.
+  The release script currently targets ARMv7 + ARM64; x86_64 remains an additional
+  rebuilt native source artifact, not a promise that it is in the release APK.
 - The source ZIP is a working-tree snapshot, including tracked and untracked
   source files. It contains no `.git` directory. The separate Git bundle holds
   the history before integration. No integration commit is implied by the ZIP.
@@ -670,7 +779,7 @@ library support. It is not a complete migration of every md3Music feature.
 | `features/music_platform/platform_profile_provider.dart` | Profile/avatar refresh independent of credential restoration |
 | `features/auth/account_capabilities.dart` | Shared menu, player and route capability boundaries |
 | `features/music_platform/data/embedded_kugou_music_source.dart` | Adapts search, rankings and fresh playback URLs to Mesting tracks |
-| `features/music_platform/presentation/platform_account_page.dart` | Phone and QR login, account choice and independent logout |
+| `features/music_platform/presentation/platform_account_page.dart` | initialMethod-isolated phone/QR form, sibling right-side code action and actual account management/logout |
 | `features/music_platform/presentation/platform_comments_page.dart`, `platform_comment_composer.dart` | Opaque comment/thread routes, one-row dropdowns and independent floating glass input/send with explicit reply/delete/write actions |
 | `features/music_platform/presentation/platform_design.dart` | Shared Mesting surfaces, fields, buttons, page frame and feedback |
 | `features/music_platform/presentation/platform_comment_card.dart` | Comment author/date/content/count presentation without network writes |
@@ -678,7 +787,7 @@ library support. It is not a complete migration of every md3Music feature.
 | `features/experience/presentation/beta_music_shell.dart`, `beta_bottom_bar.dart`, `floating_playback_pill.dart` | Official glass scaffold/searchable tabs/accessory composition with existing Mesting actions |
 | `features/themes/theme_controller.dart`, `theme_gallery_page.dart` | Beta appearance migration and settings; formal theme behavior retained |
 | `features/lyrics/data/lyrics_repository.dart` | Injectable JSON transport with existing lyric fallbacks |
-| `features/library/presentation/library_access.dart` | Beta local-library access without legacy cloud authentication |
+| `features/library/presentation/library_access.dart` | Real account guard for personal writes and shared welcome destination; guest listening remains available |
 | `android/app/src/beta` | Beta name, scoped cleartext network policy and native libraries only |
 
 Keep platform credentials out of the Mesting account repository. Do not add a
@@ -688,17 +797,20 @@ network or native startup failures must leave the guest entry usable.
 ## Account and data rules
 
 There are two credential formats and data owners, with one active login at a
-time. Both choices appear while signed out. Once logged in, all account surfaces
-show the selected identity; logout returns to guest mode and restores both
-choices. Do not fabricate a Mesting user from a Kugou identity. Delayed CloudBase
+time. Historically through Beta.10 both new-login choices appeared while signed
+out and were restored by logout. Beta.11 keeps existing sessions but disables new
+Mesting login/register with 暂不可用; the welcome remains the common destination,
+including after actual logout. Once logged in, all account surfaces show the
+selected identity. Do not fabricate a Mesting user from a Kugou identity. Delayed CloudBase
 restoration must not override a platform selection. On upgrade from Beta.1,
 an existing platform credential wins if there is no saved selection. A saved
 guest choice prevents old credentials from reactivating after logout.
 
 Kugou mode hides Mesting messages, friends/user search, sharing/listen-together
 and the Java/MySQL test app entry. A direct legacy route is blocked as well.
-Mesting mode keeps its own features and hides Kugou comments. Guest mode uses
-the local library. Player, list, lyrics-overlay and notification favorite actions
+Mesting mode keeps its own features and hides Kugou comments. Guest mode may
+read existing local library data and listen/use the current queue, but personal
+favorite/playlist mutations require login in Beta.11. Player, list, lyrics-overlay and notification favorite actions
 all use the active library repository; they must not require an unrelated login.
 Profile, drawer and account management share the current account's avatar. Only
 reading/display is implemented; an avatar failure must not invalidate login.
@@ -707,8 +819,9 @@ Account and comment routes explicitly use an opaque surface, because the shell
 deliberately has a transparent scaffold background for themed artwork. A new
 full-screen route must not inherit that transparency accidentally.
 
-Beta guest favorites and playlists live in the Beta sandbox. They are not
-silently migrated or synchronized to either cloud account. Mesting keeps its
+Existing Beta guest favorites and playlists remain in the Beta sandbox; Beta.11
+blocks new personal mutations without deleting those rows. They are not silently
+migrated or synchronized to either cloud account. Mesting keeps its
 original library owner. A Kugou login selects the cloud adapter: paginated lists,
 favorites, track add/remove, playlist create/rename/delete and explicit refresh.
 Every request checks its expected user and token before sending and after
@@ -800,7 +913,7 @@ flutter test --flavor beta test/music_platform_test.dart test/beta_login_entry_t
 .\tool\build_android_md3_beta_apk.ps1
 ```
 
-The build script selects `beta`, version `1.0.37-beta.10` / `10`, ARMv7 + ARM64,
+The build script selects `beta`, version `1.0.37-beta.11` / `11`, ARMv7 + ARM64,
 CloudBase authentication retained, and automatic update checks disabled. It does
 not publish an update manifest or deploy a backend. The package is
 `com.mesting.music.beta`, separate from formal and Java/MySQL packages.
@@ -822,8 +935,9 @@ device validation and is not mocked into a success claim.
 
 ## Remaining migration work
 
-The user confirmed real Kugou login and logged-in playback work, and clarified
-that the playback failure occurs in guest mode. Beta.4 still needs phone
+During the historical Beta.4 work, the user confirmed real Kugou login and
+logged-in playback, and clarified a guest playback failure. That older report
+does not establish Beta.11 live acceptance. Beta.4 still needed phone
 acceptance of real search paging, comment IDs/read/write, guest full/preview
 audio, avatar images and account transitions. Mock protocol/UI tests cannot certify a third-party
 service's live behavior. No user's real cloud comments were posted or deleted
@@ -832,6 +946,9 @@ and track reordering remain separate migration work. Cover upload is connected
 in Beta.5 and still needs real-device/cloud acceptance. Endpoint availability in the
 Rust source alone does not mean a feature is connected to Mesting's interface.
 
-Before public distribution, reproduce native builds, establish a release signing
-process, and resolve the upstream license/disclaimer wording recorded in NOTICE.
+Beta.11 has reproduced its patched three-ABI native outputs with locked
+dependencies; final source→merged→stripped→APK correspondence is verified for
+the two packaged ARM libraries, with x86_64 retained as an additional rebuilt output.
+Before public distribution, establish a release signing process and resolve the
+upstream license/disclaimer wording recorded in NOTICE.
 Keep all corresponding-source and attribution requirements with the derivative.

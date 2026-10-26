@@ -18,6 +18,12 @@ class MusicPlatformApi {
   final http.Client _client;
   PlatformSession? session;
   String? _dfid;
+  Future<void>? _registration;
+
+  /// Login must share the same registered device as subsequent signed requests.
+  /// This coalesces initialization only; an SMS request is never auto-retried.
+  Future<void> ensureRegisteredDevice() =>
+      _dfid?.isNotEmpty == true ? Future.value() : registerDevice();
 
   Future<Map<String, dynamic>> get(
     String path, {
@@ -140,10 +146,17 @@ class MusicPlatformApi {
     }
   }
 
-  Future<void> registerDevice() async {
+  Future<void> registerDevice() => _registration ??= _registerDevice()
+      .whenComplete(() => _registration = null);
+
+  Future<void> _registerDevice() async {
     final result = await get('/register/dev');
     final data = objectMap(result['data']);
-    _dfid = data['dfid']?.toString();
+    final dfid = data['dfid']?.toString() ?? '';
+    if (dfid.isEmpty || dfid == '-') {
+      throw const MusicPlatformException('设备注册尚未完成，请稍后重试');
+    }
+    _dfid = dfid;
   }
 
   static Map<String, dynamic> objectMap(Object? value) => value is Map

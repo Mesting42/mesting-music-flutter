@@ -117,7 +117,6 @@ class _AuthPageState extends ConsumerState<AuthPage>
   @override
   Widget build(BuildContext context) {
     if (DistributionChannel.isBeta &&
-        !widget.mestingOnly &&
         ref.watch(platformAccountProvider).value == null &&
         ref.watch(currentUserProvider) == null) {
       return BetaWelcomePage(
@@ -135,7 +134,8 @@ class _AuthPageState extends ConsumerState<AuthPage>
       );
     }
     if (DistributionChannel.isBeta &&
-        ref.watch(platformAccountProvider).value != null) {
+        (ref.watch(platformAccountProvider).value != null ||
+            ref.watch(currentUserProvider) != null)) {
       return const PlatformAccountPage();
     }
     final platformBrightness = MediaQuery.platformBrightnessOf(context);
@@ -206,7 +206,6 @@ class _AuthPageState extends ConsumerState<AuthPage>
                             SizedBox(height: widget.firstLaunch ? 54 : 24),
                             const _AuthBrand(),
                             if (DistributionChannel.isBeta &&
-                                !widget.mestingOnly &&
                                 authState.value == null) ...[
                               const SizedBox(height: 24),
                               OutlinedButton.icon(

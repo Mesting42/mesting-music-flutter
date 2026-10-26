@@ -263,9 +263,21 @@ class PlatformLoginService {
   }
 
   Future<void> sendCode(String phone) async {
-    final result = await api.get('/captcha/sent', query: {'mobile': phone});
+    if (!RegExp(r'^1\d{10}$').hasMatch(phone)) {
+      throw const MusicPlatformException('请输入正确的 11 位手机号');
+    }
+    await api.ensureRegisteredDevice();
+    final result = await api.get(
+      '/captcha/sent',
+      query: {'mobile': phone},
+      allowBusinessError: true,
+    );
     if ('${result['status']}' != '1') {
-      throw const MusicPlatformException('验证码未发送成功，请稍后重试');
+      final code = '${result['error_code'] ?? result['errcode'] ?? ''}';
+      throw MusicPlatformException(
+        code == '20015' ? '平台拒绝了验证码请求（20015），请核对手机号后重试' : '验证码未发送成功，请稍后重试',
+        code: code,
+      );
     }
   }
 

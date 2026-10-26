@@ -1,3 +1,8 @@
+import 'package:mesting_music/features/music_platform/data/platform_category_search.dart';
+import 'package:mesting_music/features/settings/presentation/settings_page.dart';
+import 'package:mesting_music/features/music_platform/platform_category_search_providers.dart';
+import 'package:mesting_music/features/search/presentation/beta_category_search_results.dart';
+import 'package:mesting_music/features/library/presentation/library_access.dart';
 import 'dart:async';
 import 'package:mesting_music/app/router/app_router.dart' as production;
 import 'package:mesting_music/features/experience/presentation/floating_playback_pill.dart';
@@ -102,6 +107,43 @@ class _QARecording extends Notifier<Track> {
   @override
   Track build() => _track;
   void select(Track track) => state = track;
+}
+
+/// Local UI catalogue fixtures; real wire parsing is covered separately.
+class _CategoryFixtures extends PlatformCategorySearchRepository {
+  _CategoryFixtures(super.api);
+  @override
+  Future<PlatformCategoryPage> search(
+    String query,
+    PlatformSearchKind kind, {
+    int page = 1,
+    Future<void>? abortTrigger,
+  }) async => PlatformCategoryPage(
+    [
+      for (var i = 0; i < 4; i++)
+        PlatformSearchHit(
+          kind: kind,
+          id: '$i',
+          title: kind == PlatformSearchKind.albums
+              ? ['意外', '绅士', '初学者', '天外来物'][i]
+              : kind == PlatformSearchKind.artists
+              ? ['薛之谦', '薛之谦(2)', '薛之谦fm', '薛之谦jokx'][i]
+              : kind == PlatformSearchKind.playlists
+              ? ['薛之谦必听热歌', '演唱会曲目', '夜深别听薛之谦', '精选伤感歌单'][i]
+              : '演员',
+          subtitle: '薛之谦',
+          cover: _track.coverAsset,
+          globalId: 'collection-real-$i',
+          count: 139 + i,
+          track: kind == PlatformSearchKind.lyrics ? _track : null,
+          lyric: kind == PlatformSearchKind.lyrics
+              ? '薛之谦 - 演员  词：薛之谦  曲：薛之谦'
+              : '',
+        ),
+    ],
+    4,
+    false,
+  );
 }
 
 class _Volume extends MediaVolumeController {
@@ -319,6 +361,9 @@ void main() {
           _Store(guest ? null : _identity),
         ),
         musicPlatformApiProvider.overrideWithValue(api),
+        platformCategorySearchRepositoryProvider.overrideWithValue(
+          _CategoryFixtures(api),
+        ),
         libraryRepositoryProvider.overrideWithValue(library),
         audioHandlerProvider.overrideWithValue(_Handler()),
         currentMediaItemProvider.overrideWith(
@@ -448,6 +493,7 @@ void main() {
           '/music/library',
           '/profile',
           '/music/search',
+          '/music/settings',
         ])
           GoRoute(
             path: path,
@@ -595,6 +641,18 @@ void main() {
           location: '/profile',
           dark: dark,
           capture: 'profile-$suffix',
+        );
+        await pump(
+          tester,
+          const SettingsPage(),
+          shell: true,
+          location: '/music/settings',
+          dark: dark,
+          capture: 'settings-$suffix',
+        );
+        expect(
+          find.byKey(const ValueKey('settings-open-source')),
+          findsOneWidget,
         );
         await pump(
           tester,
@@ -1204,7 +1262,11 @@ void main() {
         await tester.enterText(find.byType(CupertinoTextField).last, '薛之谦');
         await tester.testTextInput.receiveAction(TextInputAction.search);
         await frames();
-        expect(find.text('搜索结果'), findsOneWidget);
+        expect(find.text('搜索结果'), findsNothing);
+        expect(
+          find.byKey(const ValueKey('search-kind-albums')),
+          findsOneWidget,
+        );
       }
 
       await frames();
@@ -1527,6 +1589,251 @@ void main() {
         expect(transitions.every((w) => w.direction == (next ? 1 : -1)), true);
         await tester.pump(const Duration(milliseconds: 450));
       }
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta11 five categories retain results and destination navigation ends search',
+    (tester) async {
+      viewport(tester);
+      await prepare(guest: true);
+      for (final dark in [false, true]) {
+        await pump(tester, const BetaCategorySearchResults(), dark: dark);
+        await container
+            .read(musicSearchControllerProvider.notifier)
+            .submit('薛之谦');
+        for (final kind in PlatformSearchKind.values) {
+          await tester.tap(find.byKey(ValueKey('search-kind-${kind.name}')));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 450));
+          expect(find.text('搜索结果'), findsNothing);
+          expect(tester.takeException(), isNull);
+          await captureScreenshot(
+            tester,
+            'beta11-search-${kind.name}-${dark ? 'dark' : 'light'}',
+          );
+        }
+      }
+      await pump(tester, const MusicLandingPage(), shell: true);
+      await tester.tap(find.byIcon(CupertinoIcons.search).hitTestable().last);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 450));
+      await tester.enterText(find.byType(CupertinoTextField).last, '薛之谦');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.tap(find.byKey(const ValueKey('search-kind-albums')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 450));
+      final bar = tester.widget<BetaMusicBottomBar>(
+        find.byType(BetaMusicBottomBar),
+      );
+      bar.onTabSelected(0);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 450));
+      expect(container.read(musicSearchControllerProvider).query, '');
+      expect(
+        container.read(categorySearchProvider).selected,
+        PlatformSearchKind.songs,
+      );
+      expect(container.read(categorySearchProvider).pages, isEmpty);
+      await tester.tap(find.byIcon(CupertinoIcons.search).hitTestable().last);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 450));
+      expect(find.byType(PlatformSearchLanding), findsOneWidget);
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta11 guest writes are blocked while playback remains available',
+    (tester) async {
+      viewport(tester);
+      await prepare(guest: true);
+      // Check the actual provider guard, not the fixture repository override.
+      final guestRepo = LibraryRepository(
+        database,
+        ownerId: legacyLibraryOwnerId,
+        canWrite: () => false,
+      );
+      await expectLater(guestRepo.toggleFavorite(_track), throwsStateError);
+      await expectLater(
+        guestRepo.createPlaylist(id: 'forbidden', name: 'guest'),
+        throwsStateError,
+      );
+      expect(await guestRepo.isFavorite(_track.id), false);
+      bool? allowed;
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: buildMestingTheme(musicThemePresetById('classic')),
+            home: Scaffold(
+              body: Consumer(
+                builder: (context, ref, _) => TextButton(
+                  onPressed: () async => allowed = await ensureLibraryAccess(
+                    context,
+                    ref,
+                    reason: '登录后收藏',
+                    redirect: '/music',
+                  ),
+                  child: const Text('收藏'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('收藏'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 450));
+      expect(find.text('手机号登录'), findsOneWidget);
+      Navigator.of(tester.element(find.text('手机号登录'))).pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 450));
+      expect(allowed, false);
+      guestRepo.dispose();
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta11 result offsets survive categories/details but never a new same-query session',
+    (tester) async {
+      viewport(tester, const Size(320, 640));
+      await prepare(guest: true);
+      production.appRouter.go('/music/recommend');
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            routerConfig: production.appRouter,
+            theme: buildMestingTheme(musicThemePresetById('classic')),
+          ),
+        ),
+      );
+      Future<void> settle() async {
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 600));
+      }
+
+      await settle();
+      Future<void> openAlbums() async {
+        await tester.tap(find.byIcon(CupertinoIcons.search).hitTestable().last);
+        await settle();
+        await tester.enterText(find.byType(CupertinoTextField).last, '薛之谦');
+        await tester.testTextInput.receiveAction(TextInputAction.search);
+        await settle();
+        await tester.tap(find.byKey(const ValueKey('search-kind-albums')));
+        await settle();
+      }
+
+      ScrollController activeScroll() => tester
+          .widget<CustomScrollView>(
+            find
+                .descendant(
+                  of: find.byType(BetaCategorySearchResults),
+                  matching: find.byType(CustomScrollView),
+                )
+                .last,
+          )
+          .controller!;
+      await openAlbums();
+      activeScroll().jumpTo(50);
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('search-kind-songs')));
+      await settle();
+      await tester.tap(find.byKey(const ValueKey('search-kind-albums')));
+      await settle();
+      expect(activeScroll().offset, closeTo(50, 1));
+      final detail = production.appRouter.push(
+        '/music/catalog/albums/0',
+        extra: PlatformSearchHit(
+          kind: PlatformSearchKind.albums,
+          id: '0',
+          title: '意外',
+          cover: _track.coverAsset,
+        ),
+      );
+      await settle();
+      expect(
+        find.byType(BetaCategorySearchResults).hitTestable(),
+        findsNothing,
+      );
+      production.appRouter.pop();
+      await settle();
+      await detail;
+      expect(
+        find.byKey(const ValueKey('search-kind-albums')).hitTestable(),
+        findsOneWidget,
+      );
+      expect(activeScroll().offset, closeTo(50, 1));
+      tester
+          .widget<BetaMusicBottomBar>(find.byType(BetaMusicBottomBar))
+          .onTabSelected(0);
+      await settle();
+      await openAlbums();
+      expect(activeScroll().offset, 0);
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta11 playing-scroll compact rebuild benchmark',
+    (tester) async {
+      viewport(tester);
+      await prepare(playing: true);
+      await pump(tester, const MusicLandingPage(), shell: true);
+      final counts = <String, int>{};
+      final previous = debugOnRebuildDirtyWidget;
+      debugOnRebuildDirtyWidget = (element, _) {
+        final name = element.widget.runtimeType.toString();
+        if ([
+          'BetaMusicShell',
+          'BetaMusicBottomBar',
+          'FloatingPlaybackPill',
+          'MusicLandingPage',
+        ].contains(name)) {
+          counts[name] = (counts[name] ?? 0) + 1;
+        }
+      };
+      try {
+        final context = tester.element(find.byType(ListView).first);
+        // Same sequence, same clocks, one notification per simulated rendered
+        // frame; this measures rebuild scope, not Android GPU frame rate.
+        for (var frame = 0; frame < 120; frame++) {
+          ScrollUpdateNotification(
+            metrics: FixedScrollMetrics(
+              minScrollExtent: 0,
+              maxScrollExtent: 2000,
+              pixels: frame.isEven ? 300 : 0,
+              viewportDimension: 700,
+              axisDirection: AxisDirection.down,
+              devicePixelRatio: 1,
+            ),
+            context: context,
+            scrollDelta: frame.isEven ? 300 : -300,
+          ).dispatch(context);
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        await tester.pump(const Duration(milliseconds: 500));
+      } finally {
+        debugOnRebuildDirtyWidget = previous;
+      }
+      // ignore: avoid_print
+      print('BETA11_COMPACT_BENCH $counts');
+      expect(counts['BetaMusicShell'] ?? 0, 0);
+      expect(
+        tester
+            .widget<BetaMusicBottomBar>(find.byType(BetaMusicBottomBar))
+            .inline,
+        false,
+      );
       await disposeFixture(tester);
     },
     skip: !DistributionChannel.isBeta,

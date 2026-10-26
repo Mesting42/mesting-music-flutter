@@ -1,3 +1,11 @@
+import 'dart:async';
+import 'package:mesting_music/shared/widgets/beta_glass_controls.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:mesting_music/features/music_platform/data/embedded_music_server.dart';
+import 'package:mesting_music/features/music_platform/data/music_platform_api.dart';
+import 'package:mesting_music/features/music_platform/presentation/platform_account_page.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -22,6 +30,11 @@ import 'package:mesting_music/features/player/player_visual_style.dart';
 import 'package:mesting_music/features/themes/app_theme.dart';
 import 'package:mesting_music/features/themes/music_theme_preset.dart';
 import 'package:mesting_music/shared/widgets/beta_success_feedback.dart';
+
+class _Server implements MusicServer {
+  @override
+  Future<Uri> start() async => Uri.parse('http://127.0.0.1:12345');
+}
 
 class _Auth extends AuthController {
   @override
@@ -70,6 +83,7 @@ void main() {
     bool dark = false,
     double scale = 1,
     Map<String, Object> values = const {},
+    MusicPlatformApi? api,
   }) async {
     SharedPreferences.setMockInitialValues(values);
     final prefs = await SharedPreferences.getInstance();
@@ -77,6 +91,7 @@ void main() {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         authControllerProvider.overrideWith(_Auth.new),
+        if (api != null) musicPlatformApiProvider.overrideWithValue(api),
         platformAccountProvider.overrideWith(_Platform.new),
       ],
     );
@@ -167,7 +182,7 @@ void main() {
         await tester.tap(find.text('其他登录方式'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 400));
-        expect(find.text('Mesting 账号登录 / 注册'), findsOneWidget);
+        expect(find.text('Mesting 账号登录 / 注册 · 暂不可用'), findsOneWidget);
         expect(find.text('酷狗扫码登录'), findsOneWidget);
         expect(find.text('QQ 扫码登录'), findsOneWidget);
         await capture(tester, 'other-logins-${dark ? 'dark' : 'light'}');
@@ -224,6 +239,161 @@ void main() {
       },
     );
   }
+  for (final dark in [false, true]) {
+    testWidgets(
+      'beta11 dedicated phone form displays failed send without false countdown ($dark)',
+      (tester) async {
+        var sends = 0;
+        final api = MusicPlatformApi(
+          server: _Server(),
+          client: MockClient((r) async {
+            if (r.url.path == '/register/dev') {
+              return http.Response(
+                '{"status":1,"data":{"dfid":"device"}}',
+                200,
+              );
+            }
+            sends++;
+            return http.Response(
+              jsonEncode({'status': 0, 'error_code': 20015}),
+              502,
+              headers: {'content-type': 'application/json'},
+            );
+          }),
+        );
+        await prepare(
+          tester,
+          const PlatformAccountPage(),
+          dark: dark,
+          api: api,
+        );
+        expect(find.text('手机号登录'), findsOneWidget);
+        expect(find.byType(ChoiceChip), findsNothing);
+        expect(find.text('Mesting Music'), findsNothing);
+        await capture(tester, 'beta11-phone-${dark ? 'dark' : 'light'}');
+        await tester.enterText(
+          find.byKey(const ValueKey('beta11-phone-field')),
+          '13800138000',
+        );
+        await tester.tap(find.byKey(const ValueKey('beta11-send-code')));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+        expect(sends, 1);
+        expect(find.textContaining('20015'), findsOneWidget);
+        expect(find.text('获取验证码'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await capture(tester, 'beta11-phone-error-${dark ? 'dark' : 'light'}');
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+  testWidgets(
+    'beta11 inline code action owns pending, confirmed countdown and duplicate guard',
+    (tester) async {
+      final pending = Completer<http.Response>();
+      var sends = 0;
+      final api = MusicPlatformApi(
+        server: _Server(),
+        client: MockClient((r) async {
+          if (r.url.path == '/register/dev') {
+            return http.Response('{"status":1,"data":{"dfid":"device"}}', 200);
+          }
+          sends++;
+          return pending.future;
+        }),
+      );
+      await prepare(tester, const PlatformAccountPage(), api: api);
+      final field = find.byKey(const ValueKey('beta11-code-field'));
+      final action = find.byKey(const ValueKey('beta11-send-code'));
+      final rect = tester.getRect(field);
+      final button = tester.getRect(action);
+      expect(button.right, lessThanOrEqualTo(rect.right));
+      expect(button.left, greaterThan(rect.center.dx));
+      expect(button.center.dy, closeTo(rect.center.dy, 1));
+      expect(
+        find.ancestor(of: action, matching: find.byType(BetaGlassField)),
+        findsNothing,
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('beta11-phone-field')),
+        '13800138000',
+      );
+      await tester.tap(action);
+      await tester.pump();
+      expect(tester.widget<BetaGlassButton>(action).loading, true);
+      await capture(tester, 'beta11-phone-code-pending');
+      await tester.tap(action);
+      await tester.pump();
+      expect(sends, 1);
+      pending.complete(http.Response('{"status":1}', 200));
+      await tester.pump();
+      expect(find.text('60s 后重试'), findsOneWidget);
+      await capture(tester, 'beta11-phone-code-countdown');
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  for (final dark in [false, true]) {
+    testWidgets(
+      'beta11 dedicated phone keyboard and large text retain readable code ($dark)',
+      (tester) async {
+        await prepare(
+          tester,
+          const PlatformAccountPage(),
+          size: const Size(320, 640),
+          scale: 1.6,
+          dark: dark,
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('beta11-phone-field')),
+          '13800138000',
+        );
+        final code = find.byKey(const ValueKey('beta11-code-field'));
+        await tester.enterText(code, '863432');
+        await tester.pump();
+        final editable = tester
+            .state<EditableTextState>(
+              find.descendant(of: code, matching: find.byType(EditableText)),
+            )
+            .renderEditable;
+        expect(editable.maxScrollExtent, lessThan(1));
+        expect(
+          find.byKey(const ValueKey('beta11-code-label')).hitTestable(),
+          findsOneWidget,
+        );
+        expect(tester.widget<TextField>(code).controller!.text, '863432');
+        await capture(
+          tester,
+          'beta11-phone-small-code-${dark ? 'dark' : 'light'}',
+        );
+        await tester.showKeyboard(code);
+        tester.view.viewInsets = const FakeViewPadding(bottom: 250);
+        await tester.pump();
+        await tester.scrollUntilVisible(
+          find.byKey(const ValueKey('beta11-phone-submit')),
+          100,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(
+          find.byKey(const ValueKey('beta11-phone-submit')).hitTestable(),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('beta11-code-label')).hitTestable(),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+        await capture(
+          tester,
+          'beta11-phone-small-keyboard-${dark ? 'dark' : 'light'}',
+        );
+        tester.view.resetViewInsets();
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+
   testWidgets('small large-text welcome and guide keep actions reachable', (
     tester,
   ) async {

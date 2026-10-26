@@ -146,7 +146,10 @@ class EmbeddedKugouMusicSource extends KugouMusicSource {
               .join(' / ')
         : '';
     var duration =
-        int.tryParse(text(['duration', 'Duration', 'timelength'])) ?? 0;
+        int.tryParse(
+          text(['duration', 'Duration', 'timelength', 'TimeLength']),
+        ) ??
+        0;
     if (duration > 10000) duration ~/= 1000;
     return Track(
       id: 'kugou_$hash',

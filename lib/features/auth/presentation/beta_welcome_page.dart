@@ -18,8 +18,8 @@ import '../../music_platform/music_platform_providers.dart';
 import '../../music_platform/presentation/platform_account_page.dart';
 import '../beta_account_choice.dart';
 import '../beta_entry_flow.dart';
-import 'auth_page.dart';
 import 'mesting_music_companions.dart';
+import 'beta_consent_row.dart';
 
 /// Every entry/form uses a painted page with reversible spatial movement.
 Route<T> betaEntryRoute<T>(Widget page) => PageRouteBuilder<T>(
@@ -81,28 +81,6 @@ class _BetaWelcomePageState extends ConsumerState<BetaWelcomePage> {
     if (result == true) widget.onExperience?.call();
   }
 
-  Future<void> _mesting() async {
-    if (_opening || !await _consent() || !mounted) return;
-    setState(() => _opening = true);
-    await Navigator.of(context).push<bool>(
-      betaEntryRoute(
-        AuthPage(
-          initialMode: 'login',
-          redirect: '/music/recommend',
-          mestingOnly: true,
-          firstLaunch: true,
-          onExperience: () => Navigator.of(context).pop(true),
-        ),
-      ),
-    );
-    if (!mounted) return;
-    setState(() => _opening = false);
-    if (ref.read(betaEntryFlowProvider) == BetaEntryStage.success ||
-        ref.read(betaEntryFlowProvider) == BetaEntryStage.guide) {
-      widget.onExperience?.call();
-    }
-  }
-
   Future<void> _other() async {
     final choice = await showModalBottomSheet<String>(
       context: context,
@@ -123,10 +101,12 @@ class _BetaWelcomePageState extends ConsumerState<BetaWelcomePage> {
               for (final item in [
                 ('kugou', '酷狗扫码登录'),
                 ('qq', 'QQ 扫码登录'),
-                ('mesting', 'Mesting 账号登录 / 注册'),
+                ('mesting', 'Mesting 账号登录 / 注册 · 暂不可用'),
               ]) ...[
                 BetaGlassButton(
-                  onPressed: () => Navigator.pop(sheet, item.$1),
+                  onPressed: item.$1 == 'mesting'
+                      ? null
+                      : () => Navigator.pop(sheet, item.$1),
                   child: Text(item.$2),
                 ),
                 const SizedBox(height: 12),
@@ -142,8 +122,6 @@ class _BetaWelcomePageState extends ConsumerState<BetaWelcomePage> {
         await _platform(PlatformLoginMethod.kugouQr);
       case 'qq':
         await _platform(PlatformLoginMethod.qqQr);
-      case 'mesting':
-        await _mesting();
     }
   }
 
@@ -272,49 +250,14 @@ class _BetaWelcomePageState extends ConsumerState<BetaWelcomePage> {
                             ],
                           ),
                           const SizedBox(height: 24),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SizedBox(
-                                width: 32,
-                                height: 34,
-                                child: Checkbox(
-                                  value: _accepted,
-                                  activeColor: const Color(0xFFDE5757),
-                                  onChanged: (v) =>
-                                      setState(() => _accepted = v == true),
-                                ),
-                              ),
-                              Expanded(
-                                child: Wrap(
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  children: [
-                                    const Text(
-                                      '我已阅读并同意',
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                    TextButton(
-                                      onPressed: () => _legal(
-                                        LegalDocumentType.userAgreement,
-                                      ),
-                                      child: const Text(
-                                        '用户协议',
-                                        style: TextStyle(fontSize: 12),
-                                      ),
-                                    ),
-                                    TextButton(
-                                      onPressed: () => _legal(
-                                        LegalDocumentType.privacyPolicy,
-                                      ),
-                                      child: const Text(
-                                        '隐私政策',
-                                        style: TextStyle(fontSize: 12),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+                          BetaConsentRow(
+                            accepted: _accepted,
+                            onChanged: (value) =>
+                                setState(() => _accepted = value),
+                            onAgreement: () =>
+                                _legal(LegalDocumentType.userAgreement),
+                            onPrivacy: () =>
+                                _legal(LegalDocumentType.privacyPolicy),
                           ),
                           const Spacer(),
                         ],

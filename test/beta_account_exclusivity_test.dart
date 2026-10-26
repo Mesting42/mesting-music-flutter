@@ -202,7 +202,7 @@ void main() {
       );
       await tester.pump();
       expect(find.text('Mesting 账号登录 / 注册'), findsNothing);
-      expect(find.text('退出音乐平台账号'), findsOneWidget);
+      expect(find.text('退出登录'), findsOneWidget);
       await container.read(platformAccountProvider.notifier).signOut();
       await tester.pump();
       expect(find.text('手机号登录'), findsOneWidget);
@@ -210,7 +210,7 @@ void main() {
       await tester.tap(find.text('其他登录方式'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.text('Mesting 账号登录 / 注册'), findsOneWidget);
+      expect(find.text('Mesting 账号登录 / 注册 · 暂不可用'), findsOneWidget);
       expect(find.text('酷狗扫码登录'), findsOneWidget);
       expect(find.text('QQ 扫码登录'), findsOneWidget);
     },
@@ -349,7 +349,7 @@ void main() {
       expect(await container.read(platformProfileProvider.future), null);
       expect(container.read(showMestingFeaturesProvider), false);
       expect(container.read(showPlatformFeaturesProvider), false);
-      expect(container.read(canUseCurrentLibraryProvider), true);
+      expect(container.read(canUseCurrentLibraryProvider), false);
     },
     skip: !DistributionChannel.isBeta,
   );

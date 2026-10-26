@@ -15,6 +15,8 @@ class BetaGlassButton extends StatelessWidget {
     this.height = 52,
     this.width,
     this.accent = false,
+    this.fontSize = 15,
+    this.horizontalPadding = 18,
     super.key,
   });
   final Widget child;
@@ -22,6 +24,8 @@ class BetaGlassButton extends StatelessWidget {
   final bool loading, accent;
   final String? label;
   final double height;
+  final double fontSize;
+  final double horizontalPadding;
   final double? width;
 
   @override
@@ -43,12 +47,12 @@ class BetaGlassButton extends StatelessWidget {
         child: Padding(
           padding: width == height
               ? EdgeInsets.zero
-              : const EdgeInsets.symmetric(horizontal: 18),
+              : EdgeInsets.symmetric(horizontal: horizontalPadding),
           child: loading
               ? const BetaActivityIndicator()
               : DefaultTextStyle.merge(
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: fontSize,
                     fontWeight: FontWeight.w700,
                     color: accent
                         ? BetaAppearance.accent(Theme.of(context).brightness)

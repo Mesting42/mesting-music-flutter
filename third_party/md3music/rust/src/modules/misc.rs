@@ -134,6 +134,13 @@ pub fn handle_lastest_songs_listen(q: &Value, ctx: &Ctx) -> Result<ModuleRespons
 
 /// captcha_sent.js → /captcha/sent（手机验证码发送）。
 pub fn handle_captcha_sent(q: &Value, ctx: &Ctx) -> Result<ModuleResponse, ModuleResponse> {
+    ctx.send(&captcha_options(q))
+}
+
+/// The request factory reads KUGOU_API_MID/dfid, not the outgoing `mid` alias.
+/// Clearing this context made the signed request use mid="-" and dfid="-".
+/// Keep the registered device while excluding unrelated account credentials.
+pub(crate) fn captcha_options(q: &Value) -> RequestOptions {
     let data_map = json!({
         "businessid": 5,
         "mobile": q_str(q, "mobile", "undefined"),
@@ -142,16 +149,35 @@ pub fn handle_captcha_sent(q: &Value, ctx: &Ctx) -> Result<ModuleResponse, Modul
     let mut cookie = q_cookie(q);
     let mid = crate::modules::c_str(q, "KUGOU_API_MID");
     if let Some(m) = cookie.as_object_mut() {
-        m.clear();
+        for key in ["token", "userid", "vip_token"] {
+            m.remove(key);
+        }
         m.insert("mid".to_string(), json!(mid));
     }
-    let opts = RequestOptions::new("/v7/send_mobile_code")
+    RequestOptions::new("/v7/send_mobile_code")
         .post("/v7/send_mobile_code")
         .base_url("http://login.user.kugou.com")
         .json_body(data_map)
         .encrypt_type("android")
-        .cookie(cookie);
-    ctx.send(&opts)
+        .cookie(cookie)
+}
+
+#[cfg(test)]
+mod captcha_tests {
+    use super::*;
+    #[test]
+    fn captcha_keeps_signing_device_but_drops_account_credentials() {
+        let options = captcha_options(&json!({"mobile":"13800138000", "cookie": {
+            "KUGOU_API_MID":"registered-mid", "dfid":"registered-dfid",
+            "token":"not-for-sms", "userid":"7", "vip_token":"not-for-sms"
+        }}));
+        assert_eq!(options.cookie["KUGOU_API_MID"], "registered-mid");
+        assert_eq!(options.cookie["mid"], "registered-mid");
+        assert_eq!(options.cookie["dfid"], "registered-dfid");
+        assert!(options.cookie.get("token").is_none());
+        assert!(options.cookie.get("userid").is_none());
+        assert!(options.cookie.get("vip_token").is_none());
+    }
 }
 
 /// singer_list.js → /singer/list（歌手列表，nullish 默认）。

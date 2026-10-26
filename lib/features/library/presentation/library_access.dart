@@ -1,3 +1,4 @@
+import '../../auth/presentation/beta_login_navigation.dart';
 import 'package:flutter/material.dart';
 import '../../../shared/widgets/music_notice.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,8 +9,8 @@ import '../../auth/beta_account_choice.dart';
 import '../../auth/auth_providers.dart';
 import '../../music_platform/music_platform_providers.dart';
 
-/// Beta guests can own device-only collections. This permission applies only
-/// to library operations; social, profile and CloudBase actions stay protected.
+/// Listening stays available to guests; persistent personal mutations require
+/// a real account. All protected widgets share the same welcome destination.
 Future<bool> ensureLibraryAccess(
   BuildContext context,
   WidgetRef ref, {
@@ -23,7 +24,12 @@ Future<bool> ensureLibraryAccess(
       if (ref.read(betaAccountChoiceProvider) == BetaAccountChoice.mesting) {
         await ref.read(authControllerProvider.future);
       }
-      return true;
+      if (ref.read(platformAccountProvider).value != null ||
+          ref.read(currentUserProvider) != null) {
+        return true;
+      }
+      if (context.mounted) await openBetaLogin(context, redirect: redirect);
+      return false;
     } catch (_) {
       if (context.mounted) {
         showMusicNotice(

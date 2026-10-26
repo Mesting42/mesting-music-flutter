@@ -51,33 +51,6 @@ class AppleSearchResults extends ConsumerWidget {
         controller: controller,
         physics: const BouncingScrollPhysics(),
         slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(22, 22, 22, 2),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '搜索结果',
-                    style: theme.textTheme.headlineLarge?.copyWith(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -.6,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '“${state.query}”',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
           if (state.errorMessage != null)
             SliverToBoxAdapter(
               child: Padding(

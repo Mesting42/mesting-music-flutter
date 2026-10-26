@@ -111,6 +111,12 @@ final libraryRepositoryProvider = Provider<LibraryRepository>((ref) {
     database,
     ownerId: ownerId,
     syncApi: syncApi,
+    canWrite: DistributionChannel.isBeta
+        ? () =>
+              ref.mounted &&
+              user != null &&
+              ref.read(currentUserProvider)?.uid == user.uid
+        : null,
   );
   ref.onDispose(repository.dispose);
   if (user != null && syncApi != null) {

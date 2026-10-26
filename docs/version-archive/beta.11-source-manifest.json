@@ -1,22 +1,22 @@
 {
-  "versionName": "1.0.37-beta.10",
-  "versionCode": 10,
+  "versionName": "1.0.37-beta.11",
+  "versionCode": 11,
   "archivedOn": "2026-10-27",
   "sourceOrigin": "Frozen working-tree delivery archive; archive commit created now, not original development history.",
-  "originalArchiveName": "Mesting-Music-md3-Beta-1.0.37-beta.10-source.zip",
-  "originalArchiveBytes": 39724518,
-  "originalArchiveSha256": "1FEF812E13E1B344DF66EE646EDB1A376289BB0F12F492C5DEC672647BEEAA08",
+  "originalArchiveName": "Mesting-Music-md3-Beta-1.0.37-beta.11-source.zip",
+  "originalArchiveBytes": 39888836,
+  "originalArchiveSha256": "CA0FD207C025A51EBFA2EE11C07801D850E7273B1E619BFE3421250C83CFFB1D",
   "archiveRootPrefixRemoved": "",
-  "fileCount": 722,
+  "fileCount": 735,
   "excludedFiles": [],
   "allArchiveEntriesReadAndHashed": true,
   "originalDeliveryMetadataHashMatches": {
     "apk": true,
     "source": true
   },
-  "apkName": "Mesting-Music-md3-Beta-1.0.37-beta.10.apk",
-  "apkBytes": 89227526,
-  "apkSha256": "BEA94A3411EA23E9970AA32AE57EA772937D2ACE4337721E18B00A88A537776A",
+  "apkName": "Mesting-Music-md3-Beta-1.0.37-beta.11.apk",
+  "apkBytes": 89244110,
+  "apkSha256": "64B761F855B4E44F26979375C04CAE266D608A18DB954D500494B4334D3DC4F3",
   "packageName": "com.mesting.music.beta",
   "architectures": [
     "arm64-v8a",
@@ -37,18 +37,23 @@
     },
     {
       "file": ".impeccable/design.json",
-      "bytes": 59786,
-      "sha256": "1DD5761A34CE1EE8A00C4DD46B700D875BA4CFAF96D9C8F0B8E35F9BF1660989"
+      "bytes": 77828,
+      "sha256": "7C276617FEB646B6F0EC5D7276132D67992B2193C43D174D33151AC10C261BB5"
     },
     {
       "file": ".impeccable/surfaces/es-experience-presentation-music-landing-page-dart.md",
-      "bytes": 20943,
-      "sha256": "56863B81BA6D374743B2653D2F071EBD865261B2783FDB8CC1211AFB3895BF67"
+      "bytes": 26074,
+      "sha256": "0918CD3876FFE712D58A7CD498F4FF6273711098B170C7FE1EEB744DDE7812A6"
     },
     {
       "file": ".impeccable/surfaces/features-auth-presentation-beta-welcome-page-dart.md",
-      "bytes": 5066,
-      "sha256": "1C1A0AEBC5BEC565F0F3562635EC5BEEAE5D18165D85F8661DC7D49D2A7F9678"
+      "bytes": 11962,
+      "sha256": "0D5F1198FED7FB04E4BF262E36B5DEE25A200E960C55E9A687AF27DEE688709C"
+    },
+    {
+      "file": ".impeccable/surfaces/features-search-presentation-beta-category-search-results-dart.md",
+      "bytes": 5311,
+      "sha256": "70B614415F9C15668DE9D9CF18F550281573588EF23CACCB99D78CF1EC7F708B"
     },
     {
       "file": ".metadata",
@@ -62,13 +67,13 @@
     },
     {
       "file": "DESIGN.md",
-      "bytes": 25086,
-      "sha256": "4BBC7AF78F632832AEA6F94A3357DF89A6C49A5F053FF29A9685D6E606FB3F0D"
+      "bytes": 28455,
+      "sha256": "C426F25F65ADF118451A0CAEBF28E65D9CC97F96DD7C3FD24B836DEA5127BF2B"
     },
     {
       "file": "PRODUCT.md",
-      "bytes": 16508,
-      "sha256": "3504F0BD7BE0EE034610D11F481AE72371DA29709CD5F60BEF82CC0308E29AAE"
+      "bytes": 23855,
+      "sha256": "0A8317CAE0176972127A3CF2BC5BAD662075942C8BBF8CEE9D6EEDFDC1858029"
     },
     {
       "file": "README.md",
@@ -92,18 +97,18 @@
     },
     {
       "file": "android/app/src/beta/jniLibs/arm64-v8a/libkugou_server.so",
-      "bytes": 5338040,
-      "sha256": "45132D33E41C249B20CC3A12591788A594FD59CABD3D16EC37A3841DB5FDD1C9"
+      "bytes": 5398920,
+      "sha256": "BF111E46B00E7920DC00B8F82A7F145B9F8B3888802DD5E320A3AA523BA4C80C"
     },
     {
       "file": "android/app/src/beta/jniLibs/armeabi-v7a/libkugou_server.so",
-      "bytes": 3753804,
-      "sha256": "2FA74C7A95378276803BDB56DEFBA513F115A646DFEE645ECFF186874461ABC8"
+      "bytes": 3743160,
+      "sha256": "E480C98CD9FB9EFFC203156004138CF80107A39D0AFE919816F2A03829133A10"
     },
     {
       "file": "android/app/src/beta/jniLibs/x86_64/libkugou_server.so",
-      "bytes": 5630256,
-      "sha256": "F90CA60D9DD57CB908C2FF26D959531A73482A19287A0D714CC3EB96BF6C905D"
+      "bytes": 5761288,
+      "sha256": "EE68F74143A6F8C0B30B7B79AA2E53B6FAB73D35F7A028DE278015390522F5CF"
     },
     {
       "file": "android/app/src/beta/res/values/strings.xml",
@@ -1137,8 +1142,8 @@
     },
     {
       "file": "docs/MD3MUSIC_BETA.md",
-      "bytes": 74151,
-      "sha256": "0C99C49D7F0479610FF6D020DF7232010CDE0EDD3B99B98A9785B5097B11CCC3"
+      "bytes": 95211,
+      "sha256": "B45642049C5EE45503E90F6ABF03CA570667245C50D5DDE41B3566F8DC3FBA6B"
     },
     {
       "file": "docs/apk-downloads.md",
@@ -1212,8 +1217,8 @@
     },
     {
       "file": "lib/app/router/app_router.dart",
-      "bytes": 27807,
-      "sha256": "E0638862DB7ADF8ECA1B3E50B2C9D4F4250A56882048039E80700ADFD49CB1E4"
+      "bytes": 27951,
+      "sha256": "1427C45086A06EAE17AB2A4CE4FE2FA855078219560D6D3BD656D54097A86F0A"
     },
     {
       "file": "lib/core/audio/media_volume_controller.dart",
@@ -1377,8 +1382,8 @@
     },
     {
       "file": "lib/features/auth/account_capabilities.dart",
-      "bytes": 794,
-      "sha256": "BBAC0183CC6DCDFD310B2C041F4D128AC22F1114859168953F56CEF59D71697C"
+      "bytes": 893,
+      "sha256": "E2D442C0D0BFE6B9CA901278CC5BB025F83EFA70F6F4ABC3BD8107E017A1BAA6"
     },
     {
       "file": "lib/features/auth/auth_providers.dart",
@@ -1432,13 +1437,13 @@
     },
     {
       "file": "lib/features/auth/presentation/auth_gate.dart",
-      "bytes": 4881,
-      "sha256": "30A9F43EA7EBB3E4179E8C358C1C9A20C665D03A5C973E916FBF60383CF51607"
+      "bytes": 5030,
+      "sha256": "B1B5D6169ABFD3539D487A59FD0446F00660289DDB8BF17B853AF640BF23C13E"
     },
     {
       "file": "lib/features/auth/presentation/auth_page.dart",
-      "bytes": 58384,
-      "sha256": "EC6DE1F2E3D5EDF8CE42E0A9B055C8AE852D2E1225077980A5705407D3EF09D9"
+      "bytes": 58353,
+      "sha256": "05C531DB6162E0BABE49FBEC755F73B20E1F7168A7E35BFFCD30E3DE2CB922AD"
     },
     {
       "file": "lib/features/auth/presentation/auth_protected_page.dart",
@@ -1446,9 +1451,24 @@
       "sha256": "7EB23C698E19ADD2BAFC27C97E4403E5888A4E9F701115C728AF24786E3DB9DC"
     },
     {
+      "file": "lib/features/auth/presentation/beta_account_card.dart",
+      "bytes": 3813,
+      "sha256": "1CA6A87C8450129669AA8FD43435643BD8FE1F9F98BECEE1B2E107ECA4F160A9"
+    },
+    {
+      "file": "lib/features/auth/presentation/beta_consent_row.dart",
+      "bytes": 2630,
+      "sha256": "1FE278D2C2679A1A9AD1C2DA9F805346CCBAA4582C0A934C723B630AE60BE8CC"
+    },
+    {
       "file": "lib/features/auth/presentation/beta_entry_coordinator.dart",
       "bytes": 4387,
       "sha256": "F3735362121CD0943A37A8159ADC7919BACC41DC5D46A3F7BB2347C0ED546766"
+    },
+    {
+      "file": "lib/features/auth/presentation/beta_login_navigation.dart",
+      "bytes": 815,
+      "sha256": "B4A2C3374F6AFA34082FA44A6D2E04E0CDF3BA6F32578602E4B49B2CEFE0E373"
     },
     {
       "file": "lib/features/auth/presentation/beta_onboarding_page.dart",
@@ -1467,8 +1487,8 @@
     },
     {
       "file": "lib/features/auth/presentation/beta_welcome_page.dart",
-      "bytes": 13232,
-      "sha256": "28DC12C991732736B1D5E7685CE792B29175157D64C8721D5A421C1B445C3C08"
+      "bytes": 11132,
+      "sha256": "B9320A8AC5446187521CD0B8F242C664D9D3FD081926418742AFAE3F3A843A75"
     },
     {
       "file": "lib/features/auth/presentation/first_launch_auth_coordinator.dart",
@@ -1522,8 +1542,8 @@
     },
     {
       "file": "lib/features/experience/presentation/apple_player_controls.dart",
-      "bytes": 14630,
-      "sha256": "9B126713033B76BDD2817827DE9189CE6281E438B1C5DAB5A659A464B124C5D3"
+      "bytes": 14473,
+      "sha256": "F5243C6FF6B28F8754D70F11E41465994B08551C0D9875C943BA50370B2A1BA0"
     },
     {
       "file": "lib/features/experience/presentation/beta_bottom_bar.dart",
@@ -1532,8 +1552,8 @@
     },
     {
       "file": "lib/features/experience/presentation/beta_music_shell.dart",
-      "bytes": 12430,
-      "sha256": "E3F91C04C26F551DD40EC3BA56670F5B9E8A03C08A924379F163E4D67F0D9EFE"
+      "bytes": 14351,
+      "sha256": "A4BC27AB4CA89800F216D75594D15EB7DF9D22DCDBFE8D9803A47448D146C749"
     },
     {
       "file": "lib/features/experience/presentation/beta_now_playing_page.dart",
@@ -1572,8 +1592,8 @@
     },
     {
       "file": "lib/features/experience/presentation/music_library_page.dart",
-      "bytes": 11681,
-      "sha256": "58E7C1527DDA6B80C512BBA3316CAED36DCBDE845650689D106E2BCAE9AF27CE"
+      "bytes": 11957,
+      "sha256": "8633F06EEA94462813A61B71AB2D18F48633606BFA699275ECE09929BAC7665C"
     },
     {
       "file": "lib/features/experience/presentation/player_chrome_reveal.dart",
@@ -1627,8 +1647,8 @@
     },
     {
       "file": "lib/features/library/data/library_repository.dart",
-      "bytes": 6285,
-      "sha256": "5222F84EDA62CD53AE98B61538D51D804E4AA44929F62027A6C5326E80E555D2"
+      "bytes": 6978,
+      "sha256": "BCD2419E28BD05C2989EE9858DB8B174CF06BD4D87C420118DDE3C7BD0BBBA62"
     },
     {
       "file": "lib/features/library/data/library_sync_api.dart",
@@ -1642,8 +1662,8 @@
     },
     {
       "file": "lib/features/library/library_providers.dart",
-      "bytes": 6306,
-      "sha256": "51D60E77E4559C415AFFE43F6916F6D2D43C2AB1276F184EEC1621B44E125C21"
+      "bytes": 6505,
+      "sha256": "1FC8B0461928421FD02FF83AE1DF11A6B5F121A8F36B22E36937E33BA68B1527"
     },
     {
       "file": "lib/features/library/presentation/favorite_toggle_button.dart",
@@ -1652,8 +1672,8 @@
     },
     {
       "file": "lib/features/library/presentation/library_access.dart",
-      "bytes": 1400,
-      "sha256": "63D8FFC55A5F3D1B5EB6494F1F43FDB24C742FC21428C80336A50BBC1BC2D481"
+      "bytes": 1724,
+      "sha256": "4BE03130D20081D19A2BE6644289E315C45FE216A7C25AA12564D1C84259E5FF"
     },
     {
       "file": "lib/features/library/presentation/music_home_page.dart",
@@ -1692,8 +1712,8 @@
     },
     {
       "file": "lib/features/music_platform/data/embedded_kugou_music_source.dart",
-      "bytes": 5569,
-      "sha256": "B612B07249621D2AD12F5C38029810BE0DDF25416BDECBCAEC67BDFC2C2B6873"
+      "bytes": 5612,
+      "sha256": "6500DBAAD770EA07A7833981AA83D252E847499BB626CEA9C443CEBD9D0EE50B"
     },
     {
       "file": "lib/features/music_platform/data/embedded_music_server.dart",
@@ -1702,8 +1722,8 @@
     },
     {
       "file": "lib/features/music_platform/data/music_platform_api.dart",
-      "bytes": 5799,
-      "sha256": "3E964FE1705AA9D7B035522AECAF8858A7CAA27DE236BDC62B163BD9EF6110B1"
+      "bytes": 6388,
+      "sha256": "4571D7BD57C265BDF98A1512595EF78B8D866C191A5A35FEF01FCD3ACC6BAFCA"
     },
     {
       "file": "lib/features/music_platform/data/platform_artwork.dart",
@@ -1714,6 +1734,11 @@
       "file": "lib/features/music_platform/data/platform_catalog.dart",
       "bytes": 3054,
       "sha256": "3BEAF43240093F291FC3137CBBBE869FBB44CC16109C17286622C3A1C736AEB7"
+    },
+    {
+      "file": "lib/features/music_platform/data/platform_category_search.dart",
+      "bytes": 5338,
+      "sha256": "12C0CF8AEBD905B9FE65C76F773D4C014D25ABD7FA04ABAC495D47CDCF548A31"
     },
     {
       "file": "lib/features/music_platform/data/platform_comments_repository.dart",
@@ -1772,8 +1797,13 @@
     },
     {
       "file": "lib/features/music_platform/music_platform_providers.dart",
-      "bytes": 10676,
-      "sha256": "F903426391BB5DAE221D8BF0F246C3014CCEE514F57BE8413F61D10AE6E6799C"
+      "bytes": 11100,
+      "sha256": "BE8CDEAF395651A6BF8B2E1FCEB158722FDED8587AEFA1E51EEA48FD71283DF0"
+    },
+    {
+      "file": "lib/features/music_platform/platform_artist_portrait.dart",
+      "bytes": 1827,
+      "sha256": "AED6DA9D74059795CAB810F7193FC587CE09FF1A64394F9658ABCB06936DD196"
     },
     {
       "file": "lib/features/music_platform/platform_artwork_providers.dart",
@@ -1784,6 +1814,11 @@
       "file": "lib/features/music_platform/platform_catalog_providers.dart",
       "bytes": 1592,
       "sha256": "FD1A3C8DB592FA5F0CBB8C94A51473346D73F54A4CA628462A4F43878DC2F7E2"
+    },
+    {
+      "file": "lib/features/music_platform/platform_category_search_providers.dart",
+      "bytes": 4187,
+      "sha256": "34BC53F82E1619DB530CDB93DBB588B39A589DC7F239F60C825F0C921387AF1D"
     },
     {
       "file": "lib/features/music_platform/platform_credits.dart",
@@ -1812,13 +1847,18 @@
     },
     {
       "file": "lib/features/music_platform/presentation/platform_account_page.dart",
-      "bytes": 18599,
-      "sha256": "43FBABE162017068C45A5278BA00F71F5E73DB33B524504DD1FC160E4CFA6F3D"
+      "bytes": 23852,
+      "sha256": "66804D299FFB0C12C9444F7AE53835BDD20E34A6399FEE90635293616329E43A"
     },
     {
       "file": "lib/features/music_platform/presentation/platform_avatar.dart",
       "bytes": 638,
       "sha256": "A88B115E6D1AD106B8C363DE98EEEC0F138E8F4B9B5FCED8485349745EF9F21D"
+    },
+    {
+      "file": "lib/features/music_platform/presentation/platform_catalog_detail_page.dart",
+      "bytes": 4822,
+      "sha256": "8203156DA21356BAC739578BF69168FD34D46C56A541805D0638FE1BC99F5E5B"
     },
     {
       "file": "lib/features/music_platform/presentation/platform_comment_card.dart",
@@ -1857,8 +1897,8 @@
     },
     {
       "file": "lib/features/music_platform/presentation/platform_profile.dart",
-      "bytes": 6767,
-      "sha256": "CBAB5EB2C6620476B8A9AEA898F47D1FFD077F21AB67F68C8020EDB9E139C32B"
+      "bytes": 7189,
+      "sha256": "915451B5F3DAD29F0A6D06635B0D87F78C04CCE9663BE03530731CBA6E668BD9"
     },
     {
       "file": "lib/features/music_platform/presentation/platform_quality_button.dart",
@@ -1867,8 +1907,8 @@
     },
     {
       "file": "lib/features/music_platform/presentation/platform_recommendations_page.dart",
-      "bytes": 11233,
-      "sha256": "1ACC4D063F0176B688B1EE4EB4839150C8E5B7A4E6253D68C30B708824CF6F1C"
+      "bytes": 11129,
+      "sha256": "D62F7B383C6EDEE6DF5EA40BA03B8B935A582396DA204360C89C64E17C461BFF"
     },
     {
       "file": "lib/features/music_platform/presentation/platform_search_landing.dart",
@@ -1987,8 +2027,8 @@
     },
     {
       "file": "lib/features/profile/presentation/profile_page.dart",
-      "bytes": 56923,
-      "sha256": "6795D63B7BDF69CD7076CAAD94D91D8115D4D5FDECAE1CA39986C4D75EF40228"
+      "bytes": 58370,
+      "sha256": "4D775CEE7F0882D49EF0BFBCA6C4CE9BCCA1B4D2D02EC9D1E6B5F35DC46D010D"
     },
     {
       "file": "lib/features/profile/presentation/social_status_sheet.dart",
@@ -2097,13 +2137,18 @@
     },
     {
       "file": "lib/features/search/presentation/apple_search_results.dart",
-      "bytes": 11783,
-      "sha256": "FEF3020A796272EC1FA019B12057510165B1D18AF48BCC2300D7B937CD3BFA40"
+      "bytes": 11071,
+      "sha256": "AD6D823DCA405CF544E6A955352A9895912CDF5B09ABACFEED359303401840DB"
+    },
+    {
+      "file": "lib/features/search/presentation/beta_category_search_results.dart",
+      "bytes": 12577,
+      "sha256": "34BE18DF3A7F762411F614F8225FC06E8544F8339C12634B35C7C3DACF549CE8"
     },
     {
       "file": "lib/features/search/presentation/music_search_page.dart",
-      "bytes": 72827,
-      "sha256": "106FE3C60CAA0974ACEE9991101221188936DF98FCD29081A5BF8AD269C59129"
+      "bytes": 72548,
+      "sha256": "7224F637FC906EBC90035A0F5609AE56751A90CEF2313F7360F613EEE7344A95"
     },
     {
       "file": "lib/features/search/search_providers.dart",
@@ -2112,8 +2157,8 @@
     },
     {
       "file": "lib/features/settings/presentation/settings_page.dart",
-      "bytes": 23206,
-      "sha256": "09B376119265B776617DF68FC8AD898527DB6117A30ED15C188B1B2EA18666F5"
+      "bytes": 24223,
+      "sha256": "3F6E18451A445E65D07ADCB6424BA7C62F24A2A5628A6860FA3514A83631863A"
     },
     {
       "file": "lib/features/social/data/cloudbase_social_repository.dart",
@@ -2227,8 +2272,8 @@
     },
     {
       "file": "lib/features/themes/app_theme.dart",
-      "bytes": 4277,
-      "sha256": "06993A94CCA91052FE24AA70C89367FE9046FEF9112E98793F53E6768FD83808"
+      "bytes": 4433,
+      "sha256": "BDEF974AC7C6526BD2D358235AAF6C1BF3C92BBDDB7B8D81B6037EB4B0136EF8"
     },
     {
       "file": "lib/features/themes/beta_appearance.dart",
@@ -2327,8 +2372,13 @@
     },
     {
       "file": "lib/shared/widgets/beta_glass_controls.dart",
-      "bytes": 4031,
-      "sha256": "AAF808864A09F5363C671360274DE1858C0DAAD1C903CEA33E7F8003076D4E82"
+      "bytes": 4162,
+      "sha256": "95DB8E05B607CE75BC6998735BA9EF41022C8E1A502D0732ACCA2A86DC0B1972"
+    },
+    {
+      "file": "lib/shared/widgets/beta_page_motion.dart",
+      "bytes": 2181,
+      "sha256": "ACF655137370C3BF76E2C04D0AB23D000CDA82ED478FD7E87BE19F9F4866FC9C"
     },
     {
       "file": "lib/shared/widgets/beta_success_feedback.dart",
@@ -2457,8 +2507,8 @@
     },
     {
       "file": "test/beta10_entry_test.dart",
-      "bytes": 12321,
-      "sha256": "DCE34218B1FFAD2593F3D2F99E300EFF2B9074AFA823820FFD7273A811E98798"
+      "bytes": 18786,
+      "sha256": "16FF6CEB758D060ED7B15E0B923B9D635F9E331379A11124C4D7BCD1617A1CD7"
     },
     {
       "file": "test/beta10_feedback_test.dart",
@@ -2469,6 +2519,16 @@
       "file": "test/beta10_quality_test.dart",
       "bytes": 5352,
       "sha256": "8061D2183BD405C491B28DF25FD91FCFBA74967EC6468831C98D8E7AE9834829"
+    },
+    {
+      "file": "test/beta11_login_test.dart",
+      "bytes": 2408,
+      "sha256": "A9EA005DE93E5DCB5137159D8C15A7E30009CA825BF17CA96F306FF1385637D5"
+    },
+    {
+      "file": "test/beta11_search_test.dart",
+      "bytes": 6442,
+      "sha256": "B4531DA0363D7FFD91264C903EAA12BBE429906099DF59BD1105A978EBA0C415"
     },
     {
       "file": "test/beta5_cloud_cover_test.dart",
@@ -2482,8 +2542,8 @@
     },
     {
       "file": "test/beta5_ui_test.dart",
-      "bytes": 58231,
-      "sha256": "A43BEB2AAD759DC04D27AE5078323DCC1FE0329A5F978360727B93D90B5A9A16"
+      "bytes": 69704,
+      "sha256": "7D008D60D44D0475A6599BF394E14CB7E14914F512A0B99B217E02E8D78C0358"
     },
     {
       "file": "test/beta6_audio_refresh_test.dart",
@@ -2527,13 +2587,13 @@
     },
     {
       "file": "test/beta_account_exclusivity_test.dart",
-      "bytes": 20872,
-      "sha256": "C9BE0B5CA3C8ECBF157334B0A60443F35BBCA1154DB2536A8D69CABA8399278D"
+      "bytes": 20877,
+      "sha256": "69FC96DDE3778E0EE010D09211A881B8FA50FEA4AD0BE76855202097BD3AA580"
     },
     {
       "file": "test/beta_login_entry_test.dart",
-      "bytes": 3751,
-      "sha256": "BA5C38E322F4A7104D0514C634E9410305FD2CD4A78E53984DE7FF09D14EAD4D"
+      "bytes": 3831,
+      "sha256": "37EAF97AC9171EE9E99A1980B82219D33691741756591C695DCA16AF05FDF274"
     },
     {
       "file": "test/beta_player_library_actions_test.dart",
@@ -3017,8 +3077,8 @@
     },
     {
       "file": "third_party/md3music/NOTICE.md",
-      "bytes": 1281,
-      "sha256": "5D69FAD2FD6B390EF47BC6EE21E14D996002ED8CDFC4F839F7AE84229703F831"
+      "bytes": 1551,
+      "sha256": "71B3D317E88BAFE0D49BC9F140E7C9E87A543F072ABEAB2F234B8184F03A1B6B"
     },
     {
       "file": "third_party/md3music/UPSTREAM_DISCLAIMER.md",
@@ -3207,8 +3267,8 @@
     },
     {
       "file": "third_party/md3music/rust/src/modules/misc.rs",
-      "bytes": 6997,
-      "sha256": "7B3E4EE6EBB9283E137DA118E7B1499BD4F4D8B4B06C37DEB3D8E6A86B823DC0"
+      "bytes": 8148,
+      "sha256": "6975C5B5ED5090FBCFDC077A7B75C00BE2AD345828D1EFA2896E832D7788F3B4"
     },
     {
       "file": "third_party/md3music/rust/src/modules/mod.rs",
@@ -3618,7 +3678,12 @@
     {
       "file": "tool/build_android_md3_beta_apk.ps1",
       "bytes": 2011,
-      "sha256": "6093F46B04869095E7C921AB60674248FC870D666F128E56E02628660249DA64"
+      "sha256": "02C250F715D00DC14CC38F2FA91F9D70C98A0DAB320D047E1E51431D5A7C1270"
+    },
+    {
+      "file": "tool/build_md3_beta_native.ps1",
+      "bytes": 2767,
+      "sha256": "DAB3510DF92A2FB0CD65F60F74B2E4AE2C712A338C2F40BC3115D4A06981E8BE"
     },
     {
       "file": "tool/generate_brand_assets.py",

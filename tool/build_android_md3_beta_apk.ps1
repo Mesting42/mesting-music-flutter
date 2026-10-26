@@ -1,6 +1,6 @@
 param(
-    [string]$VersionName = '1.0.37-beta.10',
-    [ValidateRange(1, 2147483647)][int]$VersionCode = 10,
+    [string]$VersionName = '1.0.37-beta.11',
+    [ValidateRange(1, 2147483647)][int]$VersionCode = 11,
     [ValidateSet('debug', 'release')][string]$Mode = 'release',
     [string]$TargetPlatform = 'android-arm,android-arm64',
     [string]$FlutterSdkRoot = $env:MESTING_BETA_FLUTTER_ROOT

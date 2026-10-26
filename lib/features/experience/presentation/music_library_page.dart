@@ -11,6 +11,7 @@ import '../../../shared/widgets/track_artwork.dart';
 import '../../themes/music_theme_tokens.dart';
 import 'editorial_widgets.dart';
 import '../../player/presentation/beta_playback_actions.dart';
+import '../../library/presentation/library_access.dart';
 
 /// One collection shell for Kugou, Mesting and guest. Ownership is supplied by
 /// libraryRepositoryProvider, and no UI branch copies data between accounts.
@@ -292,6 +293,15 @@ Future<void> createEditorialPlaylist(
   BuildContext context,
   WidgetRef ref,
 ) async {
+  if (!await ensureLibraryAccess(
+        context,
+        ref,
+        reason: '登录后才能创建自己的歌单',
+        redirect: '/music/library',
+      ) ||
+      !context.mounted) {
+    return;
+  }
   final repository = ref.read(libraryRepositoryProvider);
   final draftId = 'playlist_${DateTime.now().microsecondsSinceEpoch}';
   await showPlaylistEditorDialog(

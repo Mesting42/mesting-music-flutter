@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-25T13:43:22.7962412Z",
-  "title": "Design System: Mesting Music Android Beta.10",
+  "generatedAt": "2026-10-25T16:26:31.8776708Z",
+  "title": "Design System: Mesting Music Android Beta.11",
   "extensions": {
     "colorMeta": {
       "primary-seed": {
@@ -393,6 +393,11 @@
         "name": "login-success-paired",
         "value": "300ms in / 220ms out",
         "purpose": "居中成功卡进入/退出；1400ms 计时后先退场再推进指南。标记自身 560ms，尊重其减少动画分支；不宣称全部计时器停止。"
+      },
+      {
+        "name": "beta-content-route-paired",
+        "value": "360ms in / 320ms out",
+        "purpose": "BetaPageMotion将不透明surface与正文共同横移一整页，easeInOutCubic；手势线性，减少动画返回稳定surface，源页连续显露。"
       }
     ],
     "breakpoints": [
@@ -446,7 +451,7 @@
           "spacing": 8,
           "maximumTextScaleHeightAddition": 28
         },
-        "behavior": "手机和宽屏共用底栏，无左轨及88dp占位；正文宽度仍约束。官方组件拥有安全区和搜索键盘抬升。shell在播放器/设置后方保持挂载，仅改变chrome透明度/显露；下拉显露由小ValueNotifier连接。超过88dp才收拢，回到24dp才展开。迷你条只有播放/暂停和下一首，订阅playing布尔值并调用共享实时toggle，保留打开和横滑。"
+        "behavior": "手机和宽屏共用底栏，无左轨及88dp占位；正文宽度仍约束。官方组件拥有安全区和搜索键盘抬升。shell在播放器/设置后方保持挂载，仅改变chrome透明度/显露；下拉显露由小ValueNotifier连接。超过88dp才收拢，回到24dp才展开。迷你条只有播放/暂停和下一首，订阅playing布尔值并调用共享实时toggle，保留打开和横滑。 Beta.11 compact状态为局部ValueNotifier，同帧滚动合并至帧后，只让底栏重建；目的地导航明确结束搜索，临时页面仅暂存。"
       },
       "existingMestingGlass": {
         "quality": "standard",
@@ -503,11 +508,12 @@
         "quality": "premium",
         "settings": "betaMusicPillGlass(context)",
         "layerOwnership": "Each control owns useOwnLayer and an independent RepaintBoundary; no nested glass",
-        "scope": "指定 Beta 欢迎/账号/验证码/退出/许可操作、账号字段与圆形返回；列表/阅读正文背景保持稳定，正式渠道按原调用。",
+        "scope": "指定 Beta 欢迎/账号/验证码/退出操作、账号字段与圆形返回；列表/阅读正文背景保持稳定，正式渠道按原调用。所有登录页移除许可/致谢按钮，许可入口属于Beta设置应用分组。",
         "button": "默认 52dp、横向18dp、15dp/700、height/2胶囊；各调用点可覆写高度。",
-        "field": "24dp圆角；20/17dp字段内距，外加横向3dp；保留焦点/错误/键盘语义。",
+        "field": "24dp圆角，保留焦点/错误/键盘语义。_InlineCodeField仅管理布局，按TextScaler测量六位数字与normal/countdown标签；窄屏大字显示框外14dp标签、两行suffix并增高，compact输入基准16dp继续系统缩放，正常18dp/44dp操作。输入与框内右侧按钮始终为Stack独立兄弟premium层；320dp/1.6浅深响应验证2/2通过，六位863432 maxScrollExtent<1，标签/键盘主登录hitTestable；review R1 resolved。",
         "back": "48x48dp，返回语义",
-        "validation": "Live Flutter premium implementation; static previews/software captures do not certify Android GPU optics."
+        "validation": "Live Flutter premium implementation; static previews/software captures do not certify Android GPU optics.",
+        "licenseEntry": "Historical Beta10 login license glass is superseded. Beta Settings application group settings-open-source calls shared showLicensePage; no login-page license button in current Beta11."
       }
     },
     "beta6Behavior": {
@@ -525,9 +531,15 @@
       "当前无Android设备；截图使用合成数据、软件渲染和Windows QA中文字体。硬件音量、TalkBack、预测返回/物理手势、真实IME、GPU动画/帧率、冷/升级启动和线上服务仍待验收。",
       "同一100次播放位置事件：Beta.8胶囊99次重建，Beta.9为0；仅Flutter debug工作量，不是FPS。",
       "历史Beta.9有界独立复核ship/R1–R5闭合；普通619通过/52条件跳过、Beta132通过、软件UI23通过、命令交互21通过，组间重叠不可相加；analyze无问题，发布身份/签名/对齐/ARM已验证，源归档哈希待清单。",
-      "当前Beta.10有界最终review为ship，R1–R8 resolved；普通635通过/54条件跳过、Beta150通过、软件UI34通过，组间重叠不相加；analyze无问题，发布APK身份/签名/对齐/ARM/bytes/SHA256已验证。源码归档身份由冻结后生成的外部delivery-manifest.json记录。",
+      "历史Beta.10有界最终review为ship，R1–R8 resolved；普通635通过/54条件跳过、Beta150通过、软件UI34通过，组间重叠不相加；analyze无问题，发布APK身份/签名/对齐/ARM/bytes/SHA256已验证。源码归档身份由冻结后生成的外部delivery-manifest.json记录。",
       "Beta.10独立玻璃账号控件按指定调用点扩展，列表/正文背景不变；HTML仅示意，非Flutter光学或业务验收。",
-      "motion-export.log另4通过，欢迎/样式浅深GIF每个36帧/80ms；软件fixture演示，不是Android原生GPU或FPS验收。"
+      "motion-export.log另4通过，欢迎/样式浅深GIF每个36帧/80ms；软件fixture演示，不是Android原生GPU或FPS验收。",
+      "当前Beta.11最终review-final literal disposition ship，R1/R2 resolved、许可迁移match；常规644/58条件跳过/0失败，Beta163/0/0，approvedUI43，设置1，responsive2，analyze无问题；APK身份/签名/16KiB/原生对应/bytes/SHA已验证，组不相加。",
+      "Beta.11参考为已确认Mesting/Apple世界、居中协议截图、Raycast简洁表单、最新右侧验证码操作及五分类截图；无独立comp/QUALITY BAR/随机seed。",
+      "同120次playing-scroll刺激：shell重建120→0、bar仍120；八类主机只读响应status=1与合成UI fixture分开，不表示FPS、真实短信或账号/CDN已验收。",
+      "最新用户确认：登录类移除开源许可与致谢，Beta设置应用分组settings-open-source调用共享showLicensePage；原登录页许可按钮只属于历史Beta10。",
+      "R1 partial后修复已通过两项320dp/1.6浅深六位863432、标签/键盘主登录验证；外部标签/两行inside-right兄弟premium层及TextScaler保留，最终review R1/R2 resolved。",
+      "Beta.11 motion-export 4/4通过：外部fixture复用当前真实欢迎/样式组件，四个浅深GIF各36帧80ms；无生产源码变更，不用Beta10旧图冒充，不是设备GPU/FPS。"
     ],
     "beta7Behavior": {
       "selectedChrome": "BetaAppearance提供参考红色与深色明红，导航选中图标/文字、个人页图标及相关选择统一；个人页面板浅红/深红。进度/角色红色选中框使用主要文字标签，显式IP图案保留自身配色。",
@@ -722,6 +734,175 @@
         "lib/core/audio/playback_providers.dart",
         "lib/features/music_platform/data/platform_playback_resolver.dart"
       ]
+    },
+    "beta11Behavior": {
+      "status": "Verified release and final records complete. review-final.md literal disposition: ship; R1/R2 resolved, license relocation match, no remaining material fix in its bounded scope. Native/device/live limitations remain explicit; source ZIP identity stays external after freeze.",
+      "identity": {
+        "displayName": "Mesting Music",
+        "applicationId": "com.mesting.music.beta",
+        "versionName": "1.0.37-beta.11",
+        "versionCode": 11,
+        "releaseVerified": true
+      },
+      "provenance": "Inherited Mesting/Apple Music world, coral vector duo, confirmed Beta.11 plan, compact consent/search screenshots, black Raycast simple form and latest right-side code-action arrow. No separate QUALITY BAR card, ImageGen approved comp, approval sidecar or random FORM seed. Latest user confirmation removes all login license entries, relocates the shared license page into Settings and authorizes continued R1 repair/revalidation.",
+      "consent": "Centered Wrap of 14dp circle in 44dp semantic target, sentence and independent legal links; real accepted gate, narrow/large text reflow; reference annotation rectangle absent.",
+      "login": "Phone-only quiet title/circular Back/wide inputs/one Login. Private _InlineCodeField owns only layout: TextScaler measurement, external visible compact label, two-line inside-right action and increased height. Compact input base 16dp, wider 18dp with default 44dp action, scaling retained; independent Stack sibling premium layers. Page owns send/countdown/credentials. responsive-code-tests.log 2/2: 320dp/1.6 light/dark all six digits 863432 with maxScrollExtent<1, label and keyboard Login hitTestable. Approved originals reviewed; R1 resolved. initialMethod isolates QR pages; Mesting new login/register disabled 暂不可用; old sessions/data remain.",
+      "account": "BetaAccountCard is shared Profile/Settings identity and login/manage operation; openBetaLogin uses welcome. Existing credential controllers remain independent. Successful logout covers welcome before old-stack reset; pending deduplicated, failure retains session.",
+      "guest": "Public browsing/search/details/listening/current queue available; personal favorites/playlist writes guarded in widgets and LibraryRepository. Existing guest rows and history retained without deletion/migration.",
+      "sms": {
+        "dart": "ensureRegisteredDevice then one explicit /captcha/sent request; status=1 starts countdown; busy/countdown/generation guards",
+        "native": "misc.rs captcha_options retains registered KUGOU_API_MID/dfid and mid alias while dropping token/userid/vip_token; no signing-device reset to dash",
+        "build": "Rust 1.99.1 / NDK 28.2 / Cargo --locked; arm64-v8a, armeabi-v7a, x86_64 rebuilt; tool/build_md3_beta_native.ps1 and NOTICE record provenance",
+        "liveDelivery": "unverified"
+      },
+      "search": {
+        "order": [
+          "歌曲",
+          "专辑",
+          "歌手",
+          "歌单",
+          "歌词"
+        ],
+        "layout": "Compact category rail without big 搜索结果 heading; songs lazy list, albums/playlists phone two-column square covers, artists circular identities, lyrics true returned snippets",
+        "endpoints": [
+          "/search",
+          "/search/album",
+          "/search/artist",
+          "/search/special",
+          "/search?type=lyric"
+        ],
+        "lyricBoundary": "/search/lyric retrieves download candidates, not lyric content search",
+        "parser": "Artist bare arrays and playlist gid/global_collection_id adapted to real returns",
+        "portraits": "Visible missing artist portraits: coalesced /artist/detail, 3 concurrent, 160 successful cache",
+        "details": [
+          "/album/songs",
+          "/artist/audios",
+          "/playlist/track/all"
+        ],
+        "state": "Per-category on-demand slices/cache/page/error/retry/scroll; song provider retained; query/account generations invalidate stale responses",
+        "lifecycle": "Bottom destination ends search and removes result-local PageStorageBucket when landing replaces results; same-query later session begins at 0/Songs. Category and temporary detail/player returns retain current query/category/offset. History retained."
+      },
+      "motion": "Whole opaque colorScheme.surface and body move together with BetaPageMotion; no stationary cover to disposal; mounted source/scroll retained. Local player/success/guide/menu motion remains separate.",
+      "compact": "Local ValueNotifier with coalesced post-frame scroll update; shell stable, bar still rebuilds. premium/full optics, 88/24dp hysteresis and full accessory animation preserved.",
+      "evidence": {
+        "initialReview": "Historical review-first.md: fix, subsequent R1 partial; user-authorized repair completed and final review ship with R1/R2 resolved",
+        "searchSession": "search-session-regression.log: 1 passed; production appRouter category/detail offset=50 retained, same-query new session offset=0",
+        "reviewFix": "review-fix-tests.log: 3/3 passed for earlier source; code pending/status1/60s+duplicate guard, production router session offsets, 120 playing-scroll rebuild stimulus. Does not establish later adaptive field/license changes pass.",
+        "initialNormal": "642 passed / 56 conditional skips / 0 failures, before two final behavioral/performance additions",
+        "initialBeta": "159 passed / 0 failures, before final additions",
+        "initialUI": "ui-captures-first.log: 39 passed; fixtures; old full-row code-action captures superseded",
+        "initialAnalyze": "analyze-full-first.log: No issues found",
+        "nativeUnit": "native-unit-final.log: 46 passed",
+        "liveRead": "live-read-probe.log: 8 genuine host public read-only responses status=1; parser-matching artist/lyric/album/playlist searches and artist detail/album/playlist/artist songs",
+        "benchmark": "Identical 120 playing-scroll stimuli: BetaMusicShell 120 to 0; BetaMusicBottomBar 120 to 120. Flutter rebuild work only, not FPS.",
+        "groupsOverlap": true,
+        "finalReview": "review-final.md: disposition: ship; R1 resolved, R2 resolved, license relocation match, no remaining material fix in bounded source/software/release scope",
+        "finalRegression": "normal-tests-approved.jsonl / test-summary.json: 644 passed / 58 conditional skips / 0 failures",
+        "finalAnalyze": "analyze-approved.log: No issues found, rerun after final fixture correction (13.5s)",
+        "finalCaptures": "ui-captures-approved.log: 43 passed; approved originals reviewed. settings-capture-final.log: 1 passed; correct /music/settings fixture and settings-final.png. Earlier UI42 and wrong-route settings images superseded.",
+        "releaseBuild": "assembleBetaRelease successful; com.mesting.music.beta / Mesting Music / 1.0.37-beta.11 / 11; same Beta certificate, 16KiB ZIP, four C FFI exports, ARM64 ELF16KiB, source manifest->merged original->stripped->APK two-ARM correspondence verified; both differ from Beta10. x86_64 extra rebuilt output only; unstripped and stripped hashes compared within stages.",
+        "apkBytes": 89244110,
+        "apkSHA256": "64B761F855B4E44F26979375C04CAE266D608A18DB954D500494B4334D3DC4F3",
+        "sourceArchiveManifest": "outputs/beta-1.0.37-beta.11/delivery-manifest.json is external post-document-freeze authority for source ZIP bytes/SHA256; never embed self-referential archive hash",
+        "limits": "Synthetic UI fixtures/software renderer/Windows QA Chinese fonts; no attached Android acceptance. Native GPU/FPS, real IME/Back/TalkBack/volume, cold/upgrade, SMS/login/QR/account/cloud/CDN unverified. Host read-only probes do not replace UI/device/live acceptance.",
+        "finalBeta": "beta-tests-approved.jsonl / test-summary.json: 163 passed / 0 skipped / 0 failed",
+        "responsiveCode": "responsive-code-tests.log: 2/2 passed; 320dp/1.6 light/dark all six digits 863432, RenderEditable.maxScrollExtent<1, external label and keyboard Login hitTestable",
+        "settingsCapture": "settings-capture-final.log: 1 passed; corrected /music/settings route, settings-final.png and approved Settings images replace wrong-route harness image",
+        "testSummary": {
+          "normal": {
+            "success": 644,
+            "skipped": 58,
+            "runnerSuccess": true
+          },
+          "beta": {
+            "success": 163,
+            "runnerSuccess": true
+          },
+          "softwareUI": {
+            "passed": 43,
+            "failed": 0,
+            "log": "ui-captures-approved.log"
+          },
+          "native": {
+            "passed": 46,
+            "failed": 0,
+            "log": "native-unit-final.log"
+          },
+          "overlapNotice": "Groups overlap; do not sum. Hidden loading/setup/teardown excluded."
+        },
+        "nativeSourceLibraries": [
+          {
+            "abi": "arm64-v8a",
+            "sourceSha256": "BF111E46B00E7920DC00B8F82A7F145B9F8B3888802DD5E320A3AA523BA4C80C",
+            "rebuiltFromPatchedSource": true
+          },
+          {
+            "abi": "armeabi-v7a",
+            "sourceSha256": "E480C98CD9FB9EFFC203156004138CF80107A39D0AFE919816F2A03829133A10",
+            "rebuiltFromPatchedSource": true
+          },
+          {
+            "abi": "x86_64",
+            "sourceSha256": "EE68F74143A6F8C0B30B7B79AA2E53B6FAB73D35F7A028DE278015390522F5CF",
+            "rebuiltFromPatchedSource": true
+          }
+        ],
+        "nativeServers": [
+          {
+            "abi": "armeabi-v7a",
+            "sourceSha256": "E480C98CD9FB9EFFC203156004138CF80107A39D0AFE919816F2A03829133A10",
+            "mergedMatchesRebuild": true,
+            "packagedSha256": "7BBC0772CA8C9C6C9BE9AE4B77A72A3613351977C2648618F83F1D355C7E1AE2",
+            "packagedMatchesStripped": true,
+            "differsFromBeta10": true,
+            "ffiExportsVerified": true
+          },
+          {
+            "abi": "arm64-v8a",
+            "sourceSha256": "BF111E46B00E7920DC00B8F82A7F145B9F8B3888802DD5E320A3AA523BA4C80C",
+            "mergedMatchesRebuild": true,
+            "packagedSha256": "A883ACFF54E17CE23106926EDC62D57AFDF4107ABE847D936A61CDCC66BB98F0",
+            "packagedMatchesStripped": true,
+            "differsFromBeta10": true,
+            "ffiExportsVerified": true
+          }
+        ],
+        "superseded": "Initial normal642/56, Beta159, UI39, intermediate UI42 and analyzer 1-info are historical stages; final normal644/58, Beta163, approvedUI43 and clean analyze replace them. Groups overlap; no aggregate sum.",
+        "deviceEvidence": "release-verification/adb-devices.txt: empty; no attached Android device acceptance",
+        "motionExport": "motion-export.log: 4/4 passed; export-motion.py uses external fixture with actual current Beta11 welcome/style components for four light/dark GIFs, 36 frames each at 80ms/frame. No production source changes or historical Beta10 images passed as current. Software demonstration, not Android GPU/FPS."
+      },
+      "sourceEntries": [
+        "lib/features/auth/presentation/beta_consent_row.dart",
+        "lib/features/auth/presentation/beta_welcome_page.dart",
+        "lib/features/auth/presentation/beta_account_card.dart",
+        "lib/features/auth/presentation/beta_login_navigation.dart",
+        "lib/features/auth/presentation/beta_entry_coordinator.dart",
+        "lib/features/auth/beta_entry_flow.dart",
+        "lib/features/auth/account_capabilities.dart",
+        "lib/features/settings/presentation/settings_page.dart",
+        "lib/features/music_platform/presentation/platform_profile.dart",
+        "lib/features/music_platform/presentation/platform_account_page.dart",
+        "lib/features/music_platform/music_platform_providers.dart",
+        "lib/features/music_platform/data/music_platform_api.dart",
+        "lib/features/library/data/library_repository.dart",
+        "lib/features/library/presentation/favorite_toggle_button.dart",
+        "lib/features/music_platform/data/platform_category_search.dart",
+        "lib/features/music_platform/platform_category_search_providers.dart",
+        "lib/features/music_platform/platform_artist_portrait.dart",
+        "lib/features/music_platform/presentation/platform_catalog_detail_page.dart",
+        "lib/features/search/presentation/beta_category_search_results.dart",
+        "lib/features/search/presentation/music_search_page.dart",
+        "lib/features/search/search_providers.dart",
+        "lib/features/experience/presentation/beta_music_shell.dart",
+        "lib/features/experience/presentation/beta_bottom_bar.dart",
+        "lib/shared/widgets/beta_page_motion.dart",
+        "lib/app/router/app_router.dart",
+        "third_party/md3music/rust/src/modules/misc.rs",
+        "tool/build_md3_beta_native.ps1",
+        "third_party/md3music/NOTICE.md",
+        "lib/features/library/presentation/library_access.dart"
+      ],
+      "settingsLicense": "All login pages remove 开源许可与致谢. Beta Settings application group settings-open-source calls shared showLicensePage; prior source had no separate Settings entry. settings-capture-final.log 1 passed with corrected /music/settings fixture; settings-final.png is the correct final image. Agreement/privacy gate remains separate; reviewer license relocation match."
     }
   },
   "components": [
@@ -801,14 +982,14 @@
       "name": "Beta 独立玻璃账号字段",
       "kind": "input",
       "refersTo": "glass-field",
-      "description": "同pill材质的24dp字段，账号/手机/验证码按Beta调用点接入，保留原生焦点/校验语义；不嵌套玻璃。静态示意不含认证行为。",
-      "html": "<label class=\"ds-auth-label\">手机号<span class=\"ds-auth-field\"><input class=\"ds-auth-input\" inputmode=\"tel\" autocomplete=\"tel\" placeholder=\"请输入手机号\"/></span></label>",
-      "css": ".ds-auth-label{display:grid;gap:8px;max-width:360px;color:#5D6572;font:13px sans-serif}.ds-auth-field{display:block;padding:0 3px;border:1px solid rgba(255,255,255,.65);border-radius:24px;background:rgba(242,242,247,.8);backdrop-filter:blur(2px)}.ds-auth-input{width:100%;box-sizing:border-box;padding:17px 20px;border:0;border-radius:24px;background:transparent;color:#20232B;font:16px sans-serif}.ds-auth-input::placeholder{color:#7E8795}.ds-auth-field:hover{background:rgba(242,242,247,.88)}.ds-auth-field:focus-within{outline:2px solid #DE3A3D;outline-offset:2px}.ds-auth-input:focus-visible{outline:none}.ds-auth-input:disabled{opacity:.38}.ds-auth-input[aria-invalid=true]{color:#B3261E}"
+      "description": "当前_InlineCodeField的compact结构示意：框外标签、两行inside-right操作与独立兄弟玻璃层，输入继续系统缩放；实际尺寸按Flutter TextScaler测量。320dp/1.6浅深响应2/2与approved原图已通过有界复核；HTML仅结构示意，不认证原生GPU或真实登录。",
+      "html": "<div class=\"ds-auth-label\"><label for=\"ds-code\">验证码</label><div class=\"ds-code-row\"><span class=\"ds-auth-field\"><input id=\"ds-code\" class=\"ds-auth-input\" inputmode=\"numeric\" autocomplete=\"one-time-code\" placeholder=\"\" maxlength=\"6\"/></span><button class=\"ds-code-action\" type=\"button\" aria-label=\"获取验证码\">获取<br/>验证码</button></div></div>",
+      "css": ".ds-auth-label{display:grid;gap:8px;max-width:320px;color:#5D6572;font:14px sans-serif}.ds-auth-label>label{padding-left:16px}.ds-code-row{position:relative}.ds-auth-field{display:block;padding:0 3px;border:1px solid rgba(255,255,255,.65);border-radius:24px;background:rgba(242,242,247,.8);backdrop-filter:blur(2px)}.ds-auth-input{width:100%;box-sizing:border-box;min-height:80px;padding:17px 106px 17px 12px;border:0;border-radius:24px;background:transparent;color:#20232B;font:16px sans-serif}.ds-auth-field:hover{background:rgba(242,242,247,.88)}.ds-auth-field:focus-within{outline:2px solid #DE3A3D;outline-offset:2px}.ds-auth-input:focus-visible{outline:none}.ds-auth-input:disabled{opacity:.38}.ds-auth-input[aria-invalid=true]{color:#B3261E}.ds-code-action{position:absolute;right:7px;top:50%;transform:translateY(-50%);min-height:68px;padding:0 12px;border:1px solid rgba(255,255,255,.65);border-radius:999px;background:rgba(242,242,247,.82);backdrop-filter:blur(2px);color:#20232B;font:700 13px/1.3 sans-serif;text-align:center;cursor:pointer}.ds-code-action:hover{background:rgba(242,242,247,.94)}.ds-code-action:active{filter:brightness(.94)}.ds-code-action:focus-visible{outline:2px solid #DE3A3D;outline-offset:2px}.ds-code-action:disabled{opacity:.38;cursor:default}"
     }
   ],
   "narrative": {
     "northStar": "封面主导的私人听歌空间",
-    "overview": "封面承担视觉重心，中文大标题与留白组织阅读顺序。横向内容组露出下一项，歌曲列表保持紧凑；播放与导航悬浮于内容之上。Beta 使用用户参考图采样的红色强调，经典浅色、深色和跟随系统共用布局，进度条样式与角色独立选择。\n\n本文按当前 Beta.10 源码更新已经确认的设计系统，沿用 Apple Music 视觉依据与同一 North Star。可见名称为 Mesting Music。经典浅色使用中性白灰面板与既有红色强调，深色和封面播放器配色保留；入口与指南在此世界内使用珊瑚红原创音乐双角色和局部暖色背景。Beta 门限为 DistributionChannel.isBeta（Android appFlavor == beta）；正式 flavor 的页面、导航、迷你播放器、完整主题、定制推荐与默认黑胶契约保留，共享工具按调用点生效。\n\n当前发布构建已验证为 Mesting Music / com.mesting.music.beta / 1.0.37-beta.10 / 10；最终重捕获及有界独立复核为 ship，R1–R8 resolved，回归/analyze 与发布包身份、签名、对齐、ARM 一致性已验证。精确计数和 APK 哈希见 docs/MD3MUSIC_BETA.md；源码归档身份由冻结后生成的外部交付清单记录，不嵌入待归档内容。Beta.9 的已验结论继续属于其历史构建。软件捕获和逐帧 GIF 使用合成数据、Flutter 软件渲染及 Windows QA 中文字体，不能证明原生 GPU 折射、帧率、硬件音量、TalkBack、真实 IME 或线上服务。入口方向来自既有 Mesting 世界、用户参考构图、珊瑚红矢量双角色选择及确认后的文字方案；没有独立 ImageGen 批准图、approval sidecar 或随机 FORM seed。",
+    "overview": "封面承担视觉重心，中文大标题与留白组织阅读顺序。横向内容组露出下一项，歌曲列表保持紧凑；播放与导航悬浮于内容之上。Beta 使用用户参考图采样的红色强调，经典浅色、深色和跟随系统共用布局，进度条样式与角色独立选择。\n\n本文按当前 Beta.11 源码更新已经确认的设计系统，沿用 Apple Music 视觉依据与同一 North Star。可见名称为 Mesting Music。经典浅色使用中性白灰面板与既有红色强调，深色和封面播放器配色保留；入口与指南在此世界内使用珊瑚红原创音乐双角色和局部暖色背景。Beta.11 在这个世界内加入居中同意组、Raycast 参考适配的简洁按方式登录、统一账号模块与真实五类搜索，不引入新全局配色。Beta 门限为 DistributionChannel.isBeta（Android appFlavor == beta）；正式 flavor 的页面、导航、迷你播放器、完整主题、定制推荐与默认黑胶契约保留，共享工具按调用点生效。\n\n当前发布 APK 已验证为 Mesting Music / com.mesting.music.beta / 1.0.37-beta.11 / 11，assembleBetaRelease 成功；最终常规 644 通过/58 条件跳过/0 失败、Beta163 通过/0 跳过/0 失败、approved 软件 UI43 通过，后补设置捕获1通过，analyze-approved 无问题，组间重叠不可相加。_InlineCodeField 的外部标签/两行右侧操作在 320dp/1.6 浅深色通过两项六位数字/标签/键盘操作验证，reviewer 已看 approved 原图并确认 R1、R2 resolved；新 review-final.md 的独立有界结论为 disposition: ship，R1/R2 resolved、许可迁移 match，无剩余 material fix；它不扩大设备/线上证据范围。登录页许可按钮已移入设置应用分组，正确设置截图为 settings-final.png。APK 身份、同一证书、16KiB ZIP、ARM64 ELF16KiB 与原始→merged→stripped→APK 的两种 ARM 库对应链已核验；精确字节/哈希见 docs/MD3MUSIC_BETA.md。源码归档身份留冻结后的外部 manifest，不嵌入自引用 ZIP 哈希。Beta.10 的 ship、计数及哈希仅属于历史构建。当前 Beta.11 motion-export 4/4 通过，外部 fixture 复用实际欢迎/样式组件导出浅深四个 GIF，各36帧/80ms，无生产源码变更；不是沿用旧版图。软件捕获和 GIF 使用合成数据、Flutter 软件渲染及 Windows QA 中文字体；adb-devices 为空，不能证明原生 GPU 折射、帧率、硬件音量、TalkBack、真实 IME 或线上服务，八类 genuine host 只读响应也不等于真实收码或 CDN 验收。入口方向来自既有 Mesting 世界、用户参考构图、珊瑚红矢量双角色选择及确认后的 Beta.10/Beta.11 文字方案；没有独立 ImageGen 批准图、approval sidecar、QUALITY BAR card 或随机 FORM seed。",
     "keyCharacteristics": [
       "封面主导，正文使用清楚稳定的主题表面。",
       "大标题、粗体分区、紧凑曲目元数据形成层级。",
@@ -840,7 +1021,7 @@
       },
       {
         "name": "The Transition Surface Rule",
-        "body": "搜索与普通路由移动中的整页背景读取当前主题不透明 colorScheme.surface；源页保留挂载、焦点/语义/触摸按可见状态切换，不能用透明 scaffoldBackgroundColor 作为遮挡。播放器退场仍连续显露真实下层与已挂载胶囊。",
+        "body": "搜索与普通路由的正文及当前主题不透明 colorScheme.surface 一起移动，进退连续显露真实上级页面；不把静止整屏遮罩留到卸载终帧。源页保留挂载、焦点/语义/触摸按可见状态切换，不能用透明 scaffoldBackgroundColor 作为遮挡。播放器退场仍连续显露真实下层与已挂载胶囊。",
         "section": "layout"
       },
       {

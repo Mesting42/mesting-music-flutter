@@ -1,9 +1,9 @@
+import 'beta_category_search_results.dart';
 import '../../../shared/widgets/beta_edge_back.dart';
 import 'package:flutter/material.dart';
 import '../../../shared/widgets/beta_glass_controls.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'apple_search_results.dart';
 
 import '../../../core/audio/playback_providers.dart';
 import '../../../core/errors/user_facing_error.dart';
@@ -253,6 +253,8 @@ class MusicSearchResultsBody extends ConsumerWidget {
           ? (DistributionChannel.isBeta
                 ? PlatformSearchLanding(onSearch: onSearch)
                 : _SearchLanding(onSearch: onSearch))
+          : DistributionChannel.isBeta
+          ? const BetaCategorySearchResults()
           : state.isLoading
           ? _SearchLoading(query: state.query)
           : _SearchResults(state: state, onSearch: onSearch),
@@ -1038,20 +1040,7 @@ class _SearchResultsState extends ConsumerState<_SearchResults> {
         : const AsyncData<List<SocialUser>>(<SocialUser>[]);
     final hasUserResults = userResults.value?.isNotEmpty == true;
     final allUsers = userResults.value ?? const <SocialUser>[];
-    if (DistributionChannel.isBeta && showTracks) {
-      return Column(
-        children: [
-          if (ref.watch(showMestingFeaturesProvider))
-            _SearchResultTabs(
-              selected: _category,
-              onSelected: (category) => setState(() => _category = category),
-            ),
-          Expanded(
-            child: AppleSearchResults(state: state, controller: _scroll),
-          ),
-        ],
-      );
-    }
+    if (DistributionChannel.isBeta) return const BetaCategorySearchResults();
     return Column(
       children: [
         if (ref.watch(showMestingFeaturesProvider))

@@ -1,5 +1,5 @@
 ---
-name: Mesting Music Android Beta.10
+name: Mesting Music Android Beta.11
 description: 封面主导、红色强调与共享播放控件的中文私人听歌空间
 colors:
   beta-accent: "#DE3A3D"
@@ -73,7 +73,7 @@ components:
   glass-back: {rounded: "{rounded.capsule}", height: "48px", width: "48px"}
 ---
 
-# Design System: Mesting Music Android Beta.10
+# Design System: Mesting Music Android Beta.11
 
 ## Overview
 
@@ -81,9 +81,9 @@ components:
 
 封面承担视觉重心，中文大标题与留白组织阅读顺序。横向内容组露出下一项，歌曲列表保持紧凑；播放与导航悬浮于内容之上。Beta 使用用户参考图采样的红色强调，经典浅色、深色和跟随系统共用布局，进度条样式与角色独立选择。
 
-本文按当前 Beta.10 源码更新已经确认的设计系统，沿用 Apple Music 视觉依据与同一 North Star。可见名称为 Mesting Music。经典浅色使用中性白灰面板与既有红色强调，深色和封面播放器配色保留；入口与指南在此世界内使用珊瑚红原创音乐双角色和局部暖色背景。Beta 门限为 DistributionChannel.isBeta（Android appFlavor == beta）；正式 flavor 的页面、导航、迷你播放器、完整主题、定制推荐与默认黑胶契约保留，共享工具按调用点生效。
+本文按当前 Beta.11 源码更新已经确认的设计系统，沿用 Apple Music 视觉依据与同一 North Star。可见名称为 Mesting Music。经典浅色使用中性白灰面板与既有红色强调，深色和封面播放器配色保留；入口与指南在此世界内使用珊瑚红原创音乐双角色和局部暖色背景。Beta.11 在这个世界内加入居中同意组、Raycast 参考适配的简洁按方式登录、统一账号模块与真实五类搜索，不引入新全局配色。Beta 门限为 DistributionChannel.isBeta（Android appFlavor == beta）；正式 flavor 的页面、导航、迷你播放器、完整主题、定制推荐与默认黑胶契约保留，共享工具按调用点生效。
 
-当前发布构建已验证为 Mesting Music / com.mesting.music.beta / 1.0.37-beta.10 / 10；最终重捕获及有界独立复核为 ship，R1–R8 resolved，回归/analyze 与发布包身份、签名、对齐、ARM 一致性已验证。精确计数和 APK 哈希见 docs/MD3MUSIC_BETA.md；源码归档身份由冻结后生成的外部交付清单记录，不嵌入待归档内容。Beta.9 的已验结论继续属于其历史构建。软件捕获和逐帧 GIF 使用合成数据、Flutter 软件渲染及 Windows QA 中文字体，不能证明原生 GPU 折射、帧率、硬件音量、TalkBack、真实 IME 或线上服务。入口方向来自既有 Mesting 世界、用户参考构图、珊瑚红矢量双角色选择及确认后的文字方案；没有独立 ImageGen 批准图、approval sidecar 或随机 FORM seed。
+当前发布 APK 已验证为 Mesting Music / com.mesting.music.beta / 1.0.37-beta.11 / 11，assembleBetaRelease 成功；最终常规 644 通过/58 条件跳过/0 失败、Beta163 通过/0 跳过/0 失败、approved 软件 UI43 通过，后补设置捕获1通过，analyze-approved 无问题，组间重叠不可相加。_InlineCodeField 的外部标签/两行右侧操作在 320dp/1.6 浅深色通过两项六位数字/标签/键盘操作验证，reviewer 已看 approved 原图并确认 R1、R2 resolved；新 review-final.md 的独立有界结论为 disposition: ship，R1/R2 resolved、许可迁移 match，无剩余 material fix；它不扩大设备/线上证据范围。登录页许可按钮已移入设置应用分组，正确设置截图为 settings-final.png。APK 身份、同一证书、16KiB ZIP、ARM64 ELF16KiB 与原始→merged→stripped→APK 的两种 ARM 库对应链已核验；精确字节/哈希见 docs/MD3MUSIC_BETA.md。源码归档身份留冻结后的外部 manifest，不嵌入自引用 ZIP 哈希。Beta.10 的 ship、计数及哈希仅属于历史构建。当前 Beta.11 motion-export 4/4 通过，外部 fixture 复用实际欢迎/样式组件导出浅深四个 GIF，各36帧/80ms，无生产源码变更；不是沿用旧版图。软件捕获和 GIF 使用合成数据、Flutter 软件渲染及 Windows QA 中文字体；adb-devices 为空，不能证明原生 GPU 折射、帧率、硬件音量、TalkBack、真实 IME 或线上服务，八类 genuine host 只读响应也不等于真实收码或 CDN 验收。入口方向来自既有 Mesting 世界、用户参考构图、珊瑚红矢量双角色选择及确认后的 Beta.10/Beta.11 文字方案；没有独立 ImageGen 批准图、approval sidecar、QUALITY BAR card 或随机 FORM seed。
 
 **Key Characteristics:**
 
@@ -127,9 +127,9 @@ Flutter 数值为逻辑像素；frontmatter 的 px 是可移植记法，文字�
 
 **The Reachable Content Rule.** 编辑式正文保留底部滚动余量；短屏播放器增加可滚动高度，文字缩放时增加空间，保留全部播放操作。搜索内容延伸到悬浮玻璃后方，清空原先整条不透明白底；搜索正文内部保留底部余量。官方底栏处理手势安全区和搜索键盘抬升，shell 仅为搜索正文避让键盘，不能重复移动底栏。设置/聊天/完整播放器/媒体预览分别控制悬浮层显示。
 
-**The Transition Surface Rule.** 搜索与普通路由移动中的整页背景读取当前主题不透明 colorScheme.surface；源页保留挂载、焦点/语义/触摸按可见状态切换，不能用透明 scaffoldBackgroundColor 作为遮挡。播放器退场仍连续显露真实下层与已挂载胶囊。
+**The Transition Surface Rule.** 搜索与普通路由的正文及当前主题不透明 colorScheme.surface 一起移动，进退连续显露真实上级页面；不把静止整屏遮罩留到卸载终帧。源页保留挂载、焦点/语义/触摸按可见状态切换，不能用透明 scaffoldBackgroundColor 作为遮挡。播放器退场仍连续显露真实下层与已挂载胶囊。
 
-搜索结果用单一 CustomScrollView / SliverList 惰性构建，保留 52dp 封面、紧凑元数据、裸心、更多和真实分页。热搜每页最多 10 词，常规两列、≥650dp 三列，分榜/排名/换页仍在。更多菜单窄屏/大字可换行滚动。AutomaticSongPaging 按新布局的滚动指标提前加载，距离末端不超过 480dp 时可请求下一页；短列表按新指标填充视口，隐藏页面暂停请求。正常状态不显示手动加载按钮，失败保留列表并提供重试；搜索只显示“共 N 首”。
+搜索结果顶部是固定顺序的歌曲/专辑/歌手/歌单/歌词分类，取消“搜索结果”大标题。歌曲类别用单一 CustomScrollView / SliverList 惰性构建，保留 52dp 封面、紧凑元数据、裸心、更多和“共 N 首”；专辑/歌单为手机双列方封面，歌手为圆头像列表，歌词以歌曲身份和真实返回片段构成列表。每类按需加载、分别保留分页/重试/滚动，并有成对分类切换；结束搜索销毁本次位置，临时详情/播放器往返仍恢复。同次结果的本地 PageStorageBucket 不越过搜索首页。热搜每页最多 10 词，常规两列、≥650dp 三列，分榜/排名/换页仍在。更多菜单窄屏/大字可换行滚动。AutomaticSongPaging 按新布局的滚动指标提前加载，距离末端不超过 480dp 时可请求下一页；短列表按新指标填充视口，隐藏页面暂停请求。正常状态不显示手动加载按钮，失败保留列表并提供重试。
 
 ## Elevation & Depth
 
@@ -156,9 +156,11 @@ BetaGlassButton、BetaGlassField 和 BetaGlassBackButton 复用 betaMusicPillGla
 - **收藏**：裸心统一 48×48dp 透明目标，compact 仅改 glyph；按压缩放 .88/120ms。真实成功状态驱动 420ms 局部填充/轮廓与缩放动画，喜欢峰值 1.24、取消喜欢 .8 后归位，方向可中断，减少动画直接终态；失败不播放虚假成功庆祝。保留键盘激活和账号归属。经典唱片/唱臂保留播放和暂停的旋转区别。
 - **播放选择与历史**：单点只播放一首，明确“播放全部”才导入集合；已有手动待播提供保留/替换选择，手动项优先自动项。普通队列耗尽在完成或下一首时由平台继续，自动项在当前队列中有独立标识。上一首根据实际播放历史返回，无历史则重播当前；普通自动续播不取得 FM 反馈归属。MestingAudioHandler 是唯一播放 owner；后来暂停/停止/seek 会使慢速下一首结果失效。
 
-- **按钮与表单**：既有 PlatformStyle 填充/描边最小 48×48dp，文字按钮 44×44dp；primary/onPrimary、低阶表面或安静文字区分层级。普通输入 18dp 圆角，焦点 primary 1.5dp 描边，错误使用主题 error。Beta.10 指定账号操作改用 BetaGlassButton：默认高 52dp、横向内距 18dp、15dp/700，强调版本使用当前亮度 Beta 红文字；调用点可设高度，不能把所有调用都记成 52dp。BetaGlassBackButton 为 48dp 圆形和中文返回语义。BetaGlassField 为 24dp 圆角，字段内距 20/17dp、外加横向 3dp，字段自身保留焦点、校验、键盘与错误语义。Mesting 登录/注册的六个字段和两个主操作也使用这些组件，正式渠道继续原控件。
+- **按钮与表单**：既有 PlatformStyle 填充/描边最小 48×48dp，文字按钮 44×44dp；primary/onPrimary、低阶表面或安静文字区分层级。普通输入 18dp 圆角，焦点 primary 1.5dp 描边，错误使用主题 error。Beta 指定账号操作使用 BetaGlassButton：默认高 52dp、横向内距 18dp、15dp/700，强调版本使用当前亮度 Beta 红文字；调用点可设高度，不能把所有调用都记成 52dp。BetaGlassBackButton 为 48dp 圆形和中文返回语义。BetaGlassField 为 24dp 圆角，字段内距 20/17dp、外加横向 3dp，字段自身保留焦点、校验、键盘与错误语义。Beta.11 手机号页采用简洁标题、圆形返回、宽输入与单一主操作；_InlineCodeField 仅管理布局，验证码操作默认高 44dp、13dp/700，按 TextScaler 和六位数字测量宽度。窄屏大字将 14dp 标签移至框外，suffix 分为两行并增高，输入基准由 18dp 调整为 16dp 且继续使用系统 TextScaler，字段保留完整六位数字所需空间；320dp/1.6 浅深软件验证中六位 863432 的 maxScrollExtent<1，外标签/键盘主登录 hitTestable。按钮始终位于框内右侧，结构上为 Stack 内独立兄弟 premium 玻璃；旧整行操作已被最新要求取代。Mesting 新登录/注册在 Beta 标“暂不可用”并禁用，保留实现与既有会话；正式渠道继续原控件。
+- **许可入口**：所有登录类页面移除“开源许可与致谢”；Beta 设置应用分组中的 settings-open-source 项调用共享 showLicensePage，登录表单聚焦认证与真实协议/隐私同意。Beta.10 登录页许可按钮仅作为历史实现保留在交付记录。
+- **统一账号与同意组**：BetaAccountCard 在我的/设置复用头像、真实昵称/来源与一个登录或管理操作，取代双账号宣传模块；游客登录进入共享欢迎页。BetaConsentRow 将 14dp 小圆标放在 44dp 语义目标中，与正文及独立协议链接整组居中，使用紧凑 Wrap 适应大字/小屏；标注红框不属于产品边框。具体入口构图留在 auth surface brief。
 - **Chip / 面板**：普通 chip 选中为 primary 轻填充。PlatformPanel 为 22dp 圆角、20dp 内距的不透明 surfaceContainerLow。Beta 进度样式/角色选择用红色轻填充、边线与轻影，标签保持主题主要文字；加载、失败、空数据及适用重试如实显示。
-- **导航**：四目的地和独立搜索延续，首页实心图标，选中图标/文字用 Beta 红色。底栏基础 64dp、搜索/accessory 50dp，随 TextScaler 最多加 28dp；内距 20/16dp、间距 8dp。滚动超过 88dp 收拢 accessory，回到 24dp 才展开，再点当前 tab 回顶部。MusicShell 持久持有来源 tab 与滚动位置，BetaMusicShell 在播放器/设置后方保持挂载，chrome 仅改变透明度与显露。BetaEdgeBack 占左右 32dp 边缘；BackButtonListener 先接系统返回，二级页和内嵌/独立搜索按“结果→搜索首页→来源页”返回，保留内部书架/滑块手势。
+- **导航**：四目的地和独立搜索延续，首页实心图标，选中图标/文字用 Beta 红色。底栏基础 64dp、搜索/accessory 50dp，随 TextScaler 最多加 28dp；内距 20/16dp、间距 8dp。滚动超过 88dp 收拢 accessory，回到 24dp 才展开，再点当前 tab 回顶部。局部 ValueNotifier 合并同帧滚动通知到帧后更新，只让底栏读取几何状态，premium/full 参数与完整动画不变。MusicShell 持久持有来源 tab 与滚动位置，BetaMusicShell 在播放器/设置后方保持挂载，chrome 仅改变透明度与显露。底部目的地结束本次搜索，临时路由仅暂存；BetaEdgeBack 占左右 32dp 边缘，BackButtonListener 先接系统返回，二级页和内嵌/独立搜索按“结果→搜索首页→来源页”返回，保留内部书架/滑块手势。
 - **播放条**：有当前媒体才显示，作为官方底栏 accessory；32dp 方封面、歌曲/歌手，仅保留播放/暂停与下一首两个裸图标。点击打开播放器、左右滑动切歌。较窄且文字放大时可省略歌手；不按宽度添加队列按钮。GlassButton.custom 基础高度 64dp，只订阅 playing 布尔值避免随进度事件重建，播放/暂停使用共享实时 toggle 操作以便快速再次点击取消淡出；复用既有音频服务。
 - **播放器**：Beta 默认沉浸封面；cover、classic、aurora、cassette、lyricStage 五种样式保留上半区各自视觉/动态身份，下半区统一使用 ApplePlayerControls。顺序为进度与时间、裸白色 Cupertino 上一首/播放暂停/下一首、真实系统媒体音量、评论/音质/当前队列；封面和歌词两种状态都保留同一组控件。顶部小封面、歌名/歌手与模糊封面背景组织歌词页，点击同步歌词跳转进度。PlayerContentTransition 使用局部淡变、微移和缩放的成对入退，默认进入 360ms/退出 280ms；封面/歌词方向相反，上一首/下一首读取 userCommandStream，样式按枚举方向切换；共享 transport 与音频 owner 不重建，减少动画时该过渡归零。
 - **滑块语义与系统音量**：进度合并语义“播放进度”读已播/总时长，音量“系统媒体音量”读百分比，保留原生可调动作。音量轨纤细视觉与 48dp 高响应区并存，拖动本地即时更新。Dart 串行保留最新待写值，Kotlin 抑制重复事件和相同步进，前台刷新 STREAM_MUSIC，无宿主禁用。原生写入工作量与 Android 硬件/TalkBack/帧率属于不同验证边界，后者仍待真机。
@@ -192,4 +194,4 @@ BetaGlassButton、BetaGlassField 和 BetaGlassBackButton 复用 betaMusicPillGla
 - **Don't** 给共享播放 transport 恢复大圆面，或把两个滑块合成无名且不可调的语义节点。
 - **Don't** 以软件截图宣称真机 TalkBack、硬件音量、GPU Apple 效果或线上服务已验收。
 
-未固化为规则：软件渲染中的平面玻璃外观不是原生 GPU 光学保证；局部减少动画仍不完整，部分局部时钟与固定计时继续存在；收起 handle 的 112×36dp 手势区和指南跳过等紧凑目标按实际尺寸披露，不能推广为触控尺寸规范；重复测试人像不是素材规范；教程中的字体 glyph 绘制是现有演示实现，不推广为后续图标系统。首轮捕获曾有缺图/字形/轮廓问题，已在有界最终复核闭合，不把它们编成设计规则。范围为通用 Android 兼容，没有机型专属优化，效果/动画/功能均保留；软件捕获、36 帧/80ms GIF 和边界工作量不替代真机 GPU/FPS 或线上验收。
+未固化为规则：软件渲染中的平面玻璃外观不是原生 GPU 光学保证；局部减少动画仍不完整，部分局部时钟与固定计时继续存在；收起 handle 的 112×36dp 手势区和指南跳过等紧凑目标按实际尺寸披露，不能推广为触控尺寸规范；重复测试人像不是素材规范；教程中的字体 glyph 绘制是现有演示实现，不推广为后续图标系统。Beta.10 首轮缺图/字形/轮廓曾在该版最终复核闭合；Beta.11 旧整行/先前窄屏验证码截图被 approved 原图与响应验证取代，R1/R2 已 resolved，不把旧缺陷编成设计规则。范围为通用 Android 兼容，没有机型专属优化，效果/动画/功能均保留；软件捕获、36 帧/80ms GIF、120 帧刺激下的重建工作量与八类主机只读查询均不替代真机 GPU/FPS、真实短信/账号或线上播放验收。

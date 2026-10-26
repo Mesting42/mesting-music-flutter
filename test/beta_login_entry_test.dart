@@ -67,10 +67,10 @@ void main() {
       await tester.tap(find.text('手机号登录'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.text('音乐平台账号'), findsOneWidget);
-      expect(find.text('酷狗扫码'), findsOneWidget);
-      expect(find.text('微信扫码'), findsOneWidget);
-      expect(find.text('QQ 扫码'), findsOneWidget);
+      expect(find.text('手机号登录'), findsOneWidget);
+      expect(find.text('酷狗扫码'), findsNothing);
+      expect(find.text('微信扫码'), findsNothing);
+      expect(find.text('QQ 扫码'), findsNothing);
       await tester.tap(find.byTooltip('返回'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));

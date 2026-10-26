@@ -43,7 +43,12 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
   final _searchText = TextEditingController();
   final _focus = FocusNode();
   final _positions = <String, ScrollPosition>{};
-  bool _mini = false, _searching = false, _focused = false;
+  final _compact = ValueNotifier(false);
+  bool get _mini => _compact.value;
+  set _mini(bool value) => _compact.value = value;
+  bool _compactScheduled = false;
+  bool? _pendingCompact;
+  bool _searching = false, _focused = false;
   bool _hasOpenedSearch = false;
   bool _searchBeforeOverlay = false;
   late int _selected = musicBottomNavigationIndexForLocation(widget.location);
@@ -69,6 +74,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
 
   @override
   void dispose() {
+    _compact.dispose();
     _searchMotion.dispose();
     _searchText.dispose();
     _focus.dispose();
@@ -88,10 +94,15 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
           _rootTab(oldWidget.location) != null) {
         _mini = false;
       }
-      if (oldWidget.chromeVisible && !widget.chromeVisible) {
-        _searchBeforeOverlay = _searching;
+      if ((oldWidget.chromeVisible && !widget.chromeVisible) ||
+          (_rootTab(oldWidget.location) != null &&
+              _rootTab(widget.location) == null)) {
+        _searchBeforeOverlay = _searchBeforeOverlay || _searching;
         _searching = false;
-      } else if (!oldWidget.chromeVisible && widget.chromeVisible) {
+      } else if ((!oldWidget.chromeVisible &&
+              widget.chromeVisible &&
+              _rootTab(widget.location) != null) ||
+          (_rootTab(widget.location) != null && _searchBeforeOverlay)) {
         _searching = _searchBeforeOverlay;
         _searchBeforeOverlay = false;
       } else {
@@ -113,6 +124,16 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
     if (!active) _focus.unfocus();
   }
 
+  /// Destination navigation ends a search; overlays only suspend its view.
+  /// Clearing the query cancels all five category generations but keeps history.
+  void _endSearch() {
+    _searchText.clear();
+    ref.read(musicSearchControllerProvider.notifier).setQuery('');
+    _searchBeforeOverlay = false;
+    _pendingCompact = null;
+    _search(false);
+  }
+
   void _submit(String text) {
     if (text.trim().isEmpty) return;
     _searchText.text = text;
@@ -131,17 +152,34 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
     if (position != null) _positions[widget.location] = position;
     // Hysteresis avoids toggling two costly glass geometries at one pixel
     // boundary during overscroll, slow drags and inertial settling.
-    final mini = _mini
+    final mini = (_pendingCompact ?? _mini)
         ? notification.metrics.pixels > 24
         : notification.metrics.pixels > 88;
-    if (mini != _mini) setState(() => _mini = mini);
+    if (mini != (_pendingCompact ?? _mini)) {
+      _pendingCompact = mini;
+      if (!_compactScheduled) {
+        _compactScheduled = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _compactScheduled = false;
+          if (!mounted) return;
+          final value = _pendingCompact;
+          _pendingCompact = null;
+          if (value != null && !_searching && widget.chromeVisible) {
+            _mini = value;
+          }
+        });
+        WidgetsBinding.instance.ensureVisualUpdate();
+      }
+    }
     return false;
   }
 
   @override
   Widget build(BuildContext context) {
     final selected = widget.navigationOwner ?? _selected;
-    final hasTrack = ref.watch(currentMediaItemProvider).value != null;
+    final hasTrack = ref.watch(
+      currentMediaItemProvider.select((s) => s.value != null),
+    );
     final inset = MediaQuery.viewInsetsOf(context).bottom;
     final shell = PopScope(
       canPop: !_searching,
@@ -237,46 +275,49 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
               // GlassScaffold is Cupertino-based. Supply Mesting's normal text
               // defaults here so labels never inherit WidgetsApp's error style.
               type: MaterialType.transparency,
-              child: BetaMusicBottomBar(
-                selectedIndex: selected,
-                isSearchActive: _mini || _searching,
-                inline: _mini && !_searching,
-                accessory: hasTrack ? const FloatingPlaybackPill() : null,
-                accessoryEnabled: !_focused,
-                onTabSelected: (index) {
-                  if (index == selected &&
-                      _mini &&
-                      !_searching &&
-                      _rootTab(widget.location) != null) {
-                    setState(() => _mini = false);
-                    return;
-                  }
-                  _search(false);
-                  setState(() => _selected = index);
-                  context.go(betaMusicRoutes[index]);
-                },
-                searchConfig: GlassSearchBarConfig(
-                  controller: _searchText,
-                  focusNode: _focus,
-                  autoFocusOnExpand: false,
-                  showsCancelButton: true,
-                  expandWhenActive: !_mini || _searching,
-                  hintText: '搜索歌曲、歌手',
-                  onSearchToggle: _search,
-                  onSearchFocusChanged: (focused) {
-                    if (mounted) setState(() => _focused = focused);
+              child: ValueListenableBuilder<bool>(
+                valueListenable: _compact,
+                builder: (context, compact, _) => BetaMusicBottomBar(
+                  selectedIndex: selected,
+                  isSearchActive: compact || _searching,
+                  inline: compact && !_searching,
+                  accessory: hasTrack ? const FloatingPlaybackPill() : null,
+                  accessoryEnabled: !_focused,
+                  onTabSelected: (index) {
+                    if (index == selected &&
+                        _mini &&
+                        !_searching &&
+                        _rootTab(widget.location) != null) {
+                      _mini = false;
+                      return;
+                    }
+                    _endSearch();
+                    setState(() => _selected = index);
+                    context.go(betaMusicRoutes[index]);
                   },
-                  onChanged: (text) => ref
-                      .read(musicSearchControllerProvider.notifier)
-                      .setQuery(text),
-                  onSubmitted: _submit,
-                  trailingBuilder: (context) => IconButton(
-                    tooltip: '搜索',
-                    icon: const Icon(Icons.arrow_upward_rounded),
-                    onPressed: () => _submit(_searchText.text),
+                  searchConfig: GlassSearchBarConfig(
+                    controller: _searchText,
+                    focusNode: _focus,
+                    autoFocusOnExpand: false,
+                    showsCancelButton: true,
+                    expandWhenActive: !compact || _searching,
+                    hintText: '搜索歌曲、歌手',
+                    onSearchToggle: _search,
+                    onSearchFocusChanged: (focused) {
+                      if (mounted) setState(() => _focused = focused);
+                    },
+                    onChanged: (text) => ref
+                        .read(musicSearchControllerProvider.notifier)
+                        .setQuery(text),
+                    onSubmitted: _submit,
+                    trailingBuilder: (context) => IconButton(
+                      tooltip: '搜索',
+                      icon: const Icon(Icons.arrow_upward_rounded),
+                      onPressed: () => _submit(_searchText.text),
+                    ),
+                    cancelButtonSemanticLabel: '关闭搜索',
+                    clearButtonSemanticLabel: '清空搜索',
                   ),
-                  cancelButtonSemanticLabel: '关闭搜索',
-                  clearButtonSemanticLabel: '清空搜索',
                 ),
               ),
             ),

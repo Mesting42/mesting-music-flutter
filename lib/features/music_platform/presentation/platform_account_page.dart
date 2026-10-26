@@ -1,19 +1,18 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/liquid_glass_sheet.dart';
-import '../../../shared/widgets/mesting_loading_indicator.dart';
 import '../../../shared/widgets/beta_glass_controls.dart';
 import '../data/music_platform_api.dart';
 import '../music_platform_providers.dart';
 import '../../auth/auth_providers.dart';
 import '../platform_profile_provider.dart';
 import 'platform_avatar.dart';
-import 'platform_design.dart';
-import '../../themes/music_theme_tokens.dart';
 
 /// Uses Mesting's inherited theme, with account state owned entirely outside
 /// CloudBase. Closing this route cancels scans without affecting either login.
@@ -134,6 +133,7 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
   }
 
   Future<void> _sendCode() async {
+    if (_busy || _countdown > 0) return;
     _busyAction = 'code';
     if (!RegExp(r'^1\d{10}$').hasMatch(_phone.text.trim())) {
       setState(() => _message = '请输入正确的 11 位手机号');
@@ -171,6 +171,7 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
   }
 
   Future<void> _phoneLogin() async {
+    if (_busy) return;
     _busyAction = 'login';
     final phone = _phone.text.trim();
     final code = _code.text.trim();
@@ -248,173 +249,174 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
     PlatformLoginMethod.qqQr => 'QQ 扫码',
   };
 
+  Future<void> _logout() async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _busyAction = 'logout';
+      _message = null;
+    });
+    try {
+      if (ref.read(platformAccountProvider).value != null) {
+        await ref.read(platformAccountProvider.notifier).signOut();
+      } else {
+        await ref.read(authControllerProvider.notifier).signOut();
+      }
+    } catch (_) {
+      if (mounted) setState(() => _message = '退出未完成，请重试');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// A dedicated method page: identity/form/waiting are separate from the
+  /// welcome's choice of account. Each field/button retains its own glass layer.
   @override
   Widget build(BuildContext context) {
-    if (ref.watch(currentUserProvider) != null) {
-      return Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        appBar: AppBar(title: const Text('当前账号')),
-        body: const Center(
-          child: Text(
-            '当前已登录 Mesting 账号\n退出后可选择其他登录方式',
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
-    }
     final account = ref.watch(platformAccountProvider);
     final session = account.value;
+    final user = ref.watch(currentUserProvider);
     final profile = session == null
         ? null
         : ref.watch(platformProfileProvider).value;
-    return PlatformPageFrame(
-      pageKey: const ValueKey('platform-account-opaque-page'),
-      title: '音乐平台账号',
-      subtitle: '酷狗概念版',
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
-          child: ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              const SizedBox(height: 16),
-              Center(
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: Image.asset(
-                      'assets/branding/mesting-app-icon.png',
-                      fit: BoxFit.cover,
-                      cacheWidth: 216,
-                      semanticLabel: 'Mesting',
-                    ),
+    final signedIn = session != null || user != null;
+    final scheme = Theme.of(context).colorScheme;
+    final title = signedIn
+        ? '当前账号'
+        : _method == PlatformLoginMethod.phone
+        ? '手机号登录'
+        : '${_label(_method)}登录';
+    final codeLabel = _countdown > 0 ? '${_countdown}s 后重试' : '获取验证码';
+    return Scaffold(
+      key: const ValueKey('platform-account-opaque-page'),
+      backgroundColor: scheme.surface,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 14, 22, 8),
+                  child: Row(
+                    children: [
+                      const BetaGlassBackButton(),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 25,
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Mesting Music',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w900,
-                  color: context.musicThemeTokens.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                session == null
-                    ? '选择酷狗账号登录。登录后可使用云端歌单、收藏和个性化推荐。'
-                    : '当前使用酷狗账号，退出后可以重新选择登录方式。',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 24),
-              PlatformPanel(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (account.isLoading)
-                      const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: MestingLoadingIndicator(),
-                      )
-                    else if (session != null) ...[
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: PlatformAvatar(
-                          url: profile?.avatarUrl ?? session.avatarUrl,
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(24, 30, 24, 32),
+                    children: [
+                      if (account.isLoading)
+                        const Center(child: BetaActivityIndicator())
+                      else if (signedIn) ...[
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: PlatformAvatar(
+                            url:
+                                profile?.avatarUrl ??
+                                session?.avatarUrl ??
+                                user?.avatarUrl ??
+                                '',
+                          ),
+                          title: Text(
+                            profile?.nickname ??
+                                session?.nickname ??
+                                user?.nickname ??
+                                '当前账号',
+                          ),
+                          subtitle: Text(
+                            session != null ? '酷狗账号 · 已登录' : 'Mesting 账号 · 已登录',
+                          ),
                         ),
-                        title: Text(
-                          (profile?.nickname ?? session.nickname).isEmpty
-                              ? '酷狗账号'
-                              : (profile?.nickname ?? session.nickname),
+                        const SizedBox(height: 24),
+                        BetaGlassButton(
+                          loading: _busy && _busyAction == 'logout',
+                          onPressed: _busy ? null : _logout,
+                          child: const Text('退出登录'),
                         ),
-                        subtitle: Text('ID：${session.userId}'),
-                      ),
-                      BetaGlassButton(
-                        loading: _busy && _busyAction == 'logout',
-                        onPressed: _busy
-                            ? null
-                            : () async {
-                                setState(() {
-                                  _busy = true;
-                                  _busyAction = 'logout';
-                                });
-                                try {
-                                  await ref
-                                      .read(platformAccountProvider.notifier)
-                                      .signOut();
-                                } on Object {
-                                  if (mounted) {
-                                    setState(() => _message = '退出未完成，请重试');
-                                  }
-                                } finally {
-                                  if (mounted) setState(() => _busy = false);
-                                }
-                              },
-                        child: const Text('退出音乐平台账号'),
-                      ),
-                    ] else ...[
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          for (final method in PlatformLoginMethod.values)
-                            ChoiceChip(
-                              label: Text(_label(method)),
-                              selected: _method == method,
-                              onSelected: _busy ? null : (_) => _select(method),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      if (_method == PlatformLoginMethod.phone) ...[
-                        BetaGlassField(
-                          child: TextField(
-                            controller: _phone,
-                            keyboardType: TextInputType.phone,
-                            enabled: !_busy,
-                            maxLength: 11,
-                            autofillHints: const [
-                              AutofillHints.telephoneNumberNational,
+                      ] else if (_method == PlatformLoginMethod.phone) ...[
+                        Text(
+                          '使用酷狗账号手机号，继续你的音乐。',
+                          style: TextStyle(
+                            fontSize: 15,
+                            height: 1.6,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+                        AutofillGroup(
+                          child: Column(
+                            children: [
+                              BetaGlassField(
+                                child: TextField(
+                                  key: const ValueKey('beta11-phone-field'),
+                                  controller: _phone,
+                                  keyboardType: TextInputType.phone,
+                                  enabled: !_busy,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                    LengthLimitingTextInputFormatter(11),
+                                  ],
+                                  autofillHints: const [
+                                    AutofillHints.telephoneNumberNational,
+                                  ],
+                                  style: const TextStyle(fontSize: 18),
+                                  decoration: const InputDecoration(
+                                    hintText: '手机号码',
+                                    prefixText: '+86  ',
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              _InlineCodeField(
+                                controller: _code,
+                                enabled: !_busy,
+                                label: codeLabel,
+                                loading: _busy && _busyAction == 'code',
+                                onSend: _busy || _countdown > 0
+                                    ? null
+                                    : _sendCode,
+                                onSubmitted: (_) => _phoneLogin(),
+                              ),
                             ],
-                            decoration: const InputDecoration(
-                              labelText: '酷狗账号手机号',
-                            ),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        BetaGlassField(
-                          child: TextField(
-                            controller: _code,
-                            keyboardType: TextInputType.number,
-                            enabled: !_busy,
-                            maxLength: 6,
-                            autofillHints: const [AutofillHints.oneTimeCode],
-                            decoration: const InputDecoration(labelText: '验证码'),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 18),
                         BetaGlassButton(
-                          loading: _busy && _busyAction == 'code',
-                          onPressed: _busy || _countdown > 0 ? null : _sendCode,
-                          child: Text(
-                            _countdown > 0 ? '${_countdown}s 后重试' : '获取验证码',
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        BetaGlassButton(
+                          key: const ValueKey('beta11-phone-submit'),
+                          accent: true,
                           loading: _busy && _busyAction == 'login',
                           onPressed: _busy ? null : _phoneLogin,
-                          child: const Text('登录音乐平台'),
+                          child: const Text('登录'),
                         ),
                       ] else ...[
+                        Text(
+                          '使用${_label(_method).replaceAll('扫码', '')}扫描二维码并确认登录。',
+                          style: TextStyle(
+                            fontSize: 15,
+                            height: 1.6,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        if (_busy)
+                          const Center(
+                            child: BetaActivityIndicator(label: '正在获取二维码'),
+                          ),
                         if (_challenge != null)
                           Center(
                             child: Container(
@@ -425,51 +427,196 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
                                 width: 220,
                                 height: 220,
                                 semanticLabel: '${_label(_method)}登录二维码',
-                                errorBuilder: (_, error, stack) =>
+                                errorBuilder: (_, _, _) =>
                                     const Text('二维码无法显示，请刷新'),
                               ),
                             ),
                           ),
-                        const SizedBox(height: 16),
-                        OutlinedButton.icon(
+                        const SizedBox(height: 24),
+                        BetaGlassButton(
                           onPressed: _busy ? null : () => _select(_method),
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('刷新二维码'),
+                          child: const Text('刷新二维码'),
                         ),
-                        if (_method == PlatformLoginMethod.qqQr)
-                          const Text('QQ 扫码可能受平台风控影响，失败时可选择其他方式。'),
+                        if (_polling)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 20),
+                            child: Center(
+                              child: BetaActivityIndicator(label: '等待扫码确认'),
+                            ),
+                          ),
                       ],
+                      if (_message != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 20),
+                          child: Semantics(
+                            liveRegion: true,
+                            child: Text(
+                              _message!,
+                              style: TextStyle(
+                                color: scheme.onSurfaceVariant,
+                                height: 1.6,
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              if (_busy)
-                const Padding(
-                  padding: EdgeInsets.only(top: 16),
-                  child: Center(child: BetaActivityIndicator()),
-                ),
-              if (_polling)
-                const Padding(
-                  padding: EdgeInsets.only(top: 16),
-                  child: Center(child: BetaActivityIndicator(label: '等待扫码确认')),
-                ),
-              if (_message != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 16),
-                  child: Semantics(liveRegion: true, child: Text(_message!)),
-                ),
-              const SizedBox(height: 24),
-              BetaGlassButton(
-                onPressed: () => showLicensePage(
-                  context: context,
-                  applicationName: 'Mesting 音乐 Beta',
-                ),
-                child: const Text('开源许可与致谢'),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+/// Only layout lives here; sending, countdown and credentials remain owned by
+/// the method page. Narrow/large-text layouts keep the identifier above the
+/// field and wrap the suffix, reserving room for a complete six-digit code.
+class _InlineCodeField extends StatelessWidget {
+  const _InlineCodeField({
+    required this.controller,
+    required this.enabled,
+    required this.label,
+    required this.loading,
+    required this.onSend,
+    required this.onSubmitted,
+  });
+
+  final TextEditingController controller;
+  final bool enabled, loading;
+  final String label;
+  final VoidCallback? onSend;
+  final ValueChanged<String> onSubmitted;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final scaler = MediaQuery.textScalerOf(context);
+      final textStyle = DefaultTextStyle.of(context).style;
+      double measure(String text, double fontSize, {bool bold = false}) {
+        final painter = TextPainter(
+          text: TextSpan(
+            text: text,
+            style: textStyle.copyWith(
+              fontSize: fontSize,
+              fontWeight: bold ? FontWeight.w700 : FontWeight.normal,
+            ),
+          ),
+          textDirection: Directionality.of(context),
+          textScaler: scaler,
+        )..layout();
+        final width = painter.width;
+        painter.dispose();
+        return width;
+      }
+
+      // Stable width across pending/countdown/retry avoids moving the caret.
+      final fullAction =
+          math.max(
+            measure('获取验证码', 13, bold: true),
+            measure('60s 后重试', 13, bold: true),
+          ) +
+          36;
+      final compact =
+          constraints.maxWidth < fullAction + measure('000000', 18) + 54;
+      final actionWidth = compact
+          ? math.max(
+                  measure('验证码', 13, bold: true),
+                  measure('60s', 13, bold: true),
+                ) +
+                24
+          : fullAction;
+      final actionHeight = compact
+          ? math.max(44.0, scaler.scale(13) * 2.6 + 14)
+          : 44.0;
+      final actionLabel = compact
+          ? label == '获取验证码'
+                ? '获取\n验证码'
+                : label.replaceFirst(' ', '\n')
+          : label;
+      final fieldSize = compact ? 16.0 : 18.0;
+      final fieldHeight = math.max(
+        actionHeight + 12,
+        scaler.scale(fieldSize) * 1.4 + 34,
+      );
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (compact) ...[
+            Padding(
+              padding: const EdgeInsets.only(left: 16, bottom: 8),
+              child: Text(
+                '验证码',
+                key: const ValueKey('beta11-code-label'),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+          // Independent sibling glass layers retain premium refraction even
+          // though the action is visually placed inside the field's outline.
+          Stack(
+            alignment: Alignment.centerRight,
+            children: [
+              BetaGlassField(
+                child: SizedBox(
+                  height: fieldHeight,
+                  child: Center(
+                    child: Semantics(
+                      label: compact ? '验证码' : null,
+                      child: TextField(
+                        key: const ValueKey('beta11-code-field'),
+                        controller: controller,
+                        keyboardType: TextInputType.number,
+                        enabled: enabled,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(6),
+                        ],
+                        autofillHints: const [AutofillHints.oneTimeCode],
+                        style: TextStyle(fontSize: fieldSize),
+                        onSubmitted: onSubmitted,
+                        decoration: InputDecoration(
+                          contentPadding: EdgeInsets.fromLTRB(
+                            compact ? 8 : 20,
+                            17,
+                            actionWidth + (compact ? 10 : 14),
+                            17,
+                          ),
+                          hintText: compact ? null : '验证码',
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 7,
+                top: 0,
+                bottom: 0,
+                width: actionWidth,
+                child: Center(
+                  child: BetaGlassButton(
+                    key: const ValueKey('beta11-send-code'),
+                    label: label,
+                    width: actionWidth,
+                    height: actionHeight,
+                    fontSize: 13,
+                    horizontalPadding: compact ? 12 : 18,
+                    loading: loading,
+                    onPressed: onSend,
+                    child: Text(actionLabel, textAlign: TextAlign.center),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    },
+  );
 }

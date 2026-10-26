@@ -1,3 +1,5 @@
+import '../../auth/presentation/beta_account_card.dart';
+import '../../../core/platform/distribution_channel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +21,7 @@ class PlatformAccountTile extends ConsumerWidget {
   const PlatformAccountTile({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (DistributionChannel.isBeta) return const BetaAccountCard();
     final session = ref.watch(platformAccountProvider).value;
     final profile = ref.watch(platformProfileProvider).value;
     return PlatformPanel(
@@ -72,19 +75,22 @@ class PlatformProfile extends ConsumerWidget {
                 _ProfileLink(
                   icon: Icons.favorite_rounded,
                   title: '我的喜欢',
-                  subtitle: '酷狗云端收藏',
+                  subtitle: ref.watch(platformAccountProvider).value != null
+                      ? '酷狗云端收藏'
+                      : '登录后同步喜欢的音乐',
                   onTap: () => context.push('/music?view=favorites'),
                 ),
                 _ProfileLink(
                   icon: Icons.library_music_rounded,
                   title: '我的歌单',
-                  subtitle:
-                      '${ref.watch(playlistsProvider).value?.length ?? 0} 个酷狗云端歌单',
+                  subtitle: ref.watch(platformAccountProvider).value != null
+                      ? '${ref.watch(playlistsProvider).value?.length ?? 0} 个酷狗云端歌单'
+                      : '登录后管理自己的歌单',
                   onTap: () => context.push('/music?view=playlists'),
                 ),
                 _ProfileLink(
                   icon: Icons.add_rounded,
-                  title: '新建云端歌单',
+                  title: '新建歌单',
                   onTap: () => createPlatformPlaylist(context, ref),
                 ),
               ],

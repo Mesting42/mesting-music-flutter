@@ -6,7 +6,7 @@ import '../data/platform_recommendations.dart';
 import '../music_platform_providers.dart';
 import '../platform_catalog_providers.dart';
 import '../platform_recommendation_providers.dart';
-import 'platform_account_page.dart';
+import '../../auth/presentation/beta_login_navigation.dart';
 import 'platform_design.dart';
 import 'platform_feedback.dart';
 import '../../../shared/widgets/automatic_song_paging.dart';
@@ -66,11 +66,7 @@ class PlatformFmSection extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 22),
             child: TextButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const PlatformAccountPage(),
-                ),
-              ),
+              onPressed: () => openBetaLogin(context, redirect: '/music'),
               icon: const Icon(Icons.login),
               label: const Text('登录酷狗后查看猜你喜欢和实时推荐'),
             ),

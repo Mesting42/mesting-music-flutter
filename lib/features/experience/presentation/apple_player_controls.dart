@@ -7,7 +7,7 @@ import '../../../core/audio/media_volume_controller.dart';
 import '../../../core/audio/playback_providers.dart';
 import '../../../shared/utils/duration_format.dart';
 import '../../music_platform/music_platform_providers.dart';
-import '../../music_platform/presentation/platform_account_page.dart';
+import '../../auth/presentation/beta_login_navigation.dart';
 import '../../music_platform/presentation/platform_comments_page.dart';
 import '../../music_platform/presentation/platform_feedback.dart';
 import '../../music_platform/presentation/platform_quality_button.dart';
@@ -296,11 +296,7 @@ class _ApplePlayerControlsState extends ConsumerState<ApplePlayerControls> {
                 size: 26,
                 onPressed: () async {
                   if (ref.read(platformAccountProvider).value == null) {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const PlatformAccountPage(),
-                      ),
-                    );
+                    await openBetaLogin(context, redirect: '/player');
                     if (!context.mounted) return;
                   }
                   if (context.mounted) {

@@ -1,3 +1,4 @@
+import '../../auth/presentation/beta_account_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -63,7 +64,9 @@ class SettingsPage extends ConsumerWidget {
               const SizedBox(height: 18),
               const _SettingsSectionLabel('账号'),
               _SettingsSurface(
-                child: platform != null
+                child: DistributionChannel.isBeta
+                    ? const BetaAccountCard()
+                    : platform != null
                     ? const PlatformAccountTile()
                     : auth.isLoading && user == null
                     ? const _SettingsLoadingTile()
@@ -146,6 +149,22 @@ class SettingsPage extends ConsumerWidget {
                         subtitle: '独立安装 · 不影响稳定版 · 仅限自愿测试',
                         onTap: () => showJavaMysqlTestChannelSheet(context),
                       ),
+                    if (DistributionChannel.isBeta) ...[
+                      const _SettingsDivider(),
+                      _SettingsTile(
+                        key: const ValueKey('settings-open-source'),
+                        icon: Icons.description_outlined,
+                        iconColor: const Color(0xFF6F83D8),
+                        title: '开源许可与致谢',
+                        subtitle: '查看依赖许可与开源项目',
+                        // Legal attribution belongs to settings, keeping every
+                        // dedicated login method focused on authentication.
+                        onTap: () => showLicensePage(
+                          context: context,
+                          applicationName: 'Mesting Music',
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

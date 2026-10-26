@@ -16,5 +16,8 @@ final showPlatformFeaturesProvider = Provider<bool>(
       ref.watch(platformAccountProvider).value != null,
 );
 final canUseCurrentLibraryProvider = Provider<bool>(
-  (ref) => DistributionChannel.isBeta || ref.watch(isAuthenticatedProvider),
+  (ref) =>
+      ref.watch(isAuthenticatedProvider) ||
+      (DistributionChannel.isBeta &&
+          ref.watch(platformAccountProvider).value != null),
 );

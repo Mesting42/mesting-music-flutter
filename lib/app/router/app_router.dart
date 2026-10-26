@@ -1,3 +1,6 @@
+import '../../shared/widgets/beta_page_motion.dart';
+import '../../features/music_platform/data/platform_category_search.dart';
+import '../../features/music_platform/presentation/platform_catalog_detail_page.dart';
 import 'dart:ui';
 import '../../shared/widgets/beta_edge_back.dart';
 
@@ -82,6 +85,24 @@ final appRouter = GoRouter(
           path: '/music/search',
           pageBuilder: (context, state) =>
               _musicSlidePage(state: state, child: const MusicSearchPage()),
+        ),
+        GoRoute(
+          path: '/music/catalog/:kind/:id',
+          pageBuilder: (context, state) => _musicSlidePage(
+            state: state,
+            child: PlatformCatalogDetailPage(
+              hit: state.extra is PlatformSearchHit
+                  ? state.extra! as PlatformSearchHit
+                  : PlatformSearchHit(
+                      kind: PlatformSearchKind.values.firstWhere(
+                        (k) => k.name == state.pathParameters['kind'],
+                        orElse: () => PlatformSearchKind.albums,
+                      ),
+                      id: state.pathParameters['id']!,
+                      title: '音乐详情',
+                    ),
+            ),
+          ),
         ),
         GoRoute(
           path: '/music/discover',
@@ -431,34 +452,11 @@ Page<void> _musicSlidePage({
   if (DistributionChannel.isBeta) {
     return CustomTransitionPage<void>(
       key: state.pageKey,
-      transitionDuration: const Duration(milliseconds: 320),
-      reverseTransitionDuration: const Duration(milliseconds: 260),
+      transitionDuration: const Duration(milliseconds: 360),
+      reverseTransitionDuration: const Duration(milliseconds: 320),
       child: child is MusicSearchPage ? child : BetaEdgeBack(child: child),
-      transitionsBuilder: (context, animation, secondary, child) {
-        if (MediaQuery.disableAnimationsOf(context)) return child;
-        final motion = CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutCubic,
-          reverseCurve: Curves.easeInCubic,
-        );
-        return ColoredBox(
-          key: const ValueKey('beta10-route-surface'),
-          color: Theme.of(context).colorScheme.surface,
-          child: FadeTransition(
-            opacity: Tween(begin: .88, end: 1.0).animate(motion),
-            child: SlideTransition(
-              position: Tween(
-                begin: const Offset(.12, 0),
-                end: Offset.zero,
-              ).animate(motion),
-              child: ColoredBox(
-                color: Theme.of(context).colorScheme.surface,
-                child: RepaintBoundary(child: child),
-              ),
-            ),
-          ),
-        );
-      },
+      transitionsBuilder: (context, animation, secondary, child) =>
+          BetaPageMotion(animation: animation, child: child),
     );
   }
   final intent = state.extra is MusicPageTransitionIntent

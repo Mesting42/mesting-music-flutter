@@ -1,0 +1,148 @@
+import 'dart:async';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../search/search_providers.dart';
+import 'music_platform_providers.dart';
+import 'data/platform_category_search.dart';
+import 'data/music_platform_api.dart';
+
+final platformCategorySearchRepositoryProvider = Provider(
+  (ref) =>
+      PlatformCategorySearchRepository(ref.watch(musicPlatformApiProvider)),
+);
+
+class CategorySearchSlice {
+  const CategorySearchSlice({
+    this.items = const [],
+    this.page = 0,
+    this.total,
+    this.more = true,
+    this.loading = false,
+    this.error,
+  });
+  final List<PlatformSearchHit> items;
+  final int page;
+  final int? total;
+  final bool more, loading;
+  final String? error;
+}
+
+class CategorySearchState {
+  const CategorySearchState(
+    this.query, {
+    this.selected = PlatformSearchKind.songs,
+    this.pages = const {},
+  });
+  final String query;
+  final PlatformSearchKind selected;
+  final Map<PlatformSearchKind, CategorySearchSlice> pages;
+  CategorySearchSlice get current =>
+      pages[selected] ?? const CategorySearchSlice();
+}
+
+final categorySearchProvider =
+    NotifierProvider<CategorySearchController, CategorySearchState>(
+      CategorySearchController.new,
+    );
+
+/// Each category owns its request/page/cache. Selection does not cancel another
+/// category's valid public response; changing query/account invalidates them all.
+class CategorySearchController extends Notifier<CategorySearchState> {
+  var _generation = 0;
+  final _abort = <PlatformSearchKind, Completer<void>>{};
+  void _cancel() {
+    for (final value in _abort.values) {
+      if (!value.isCompleted) value.complete();
+    }
+    _abort.clear();
+  }
+
+  @override
+  CategorySearchState build() {
+    ref.onDispose(_cancel);
+    ref.listen(
+      musicSearchControllerProvider.select((s) => s.query),
+      (_, query) => reset(query),
+    );
+    ref.listen(platformAccountProvider.select((s) => s.value?.userId), (
+      before,
+      after,
+    ) {
+      if (before != after) reset(state.query);
+    });
+    return CategorySearchState(ref.read(musicSearchControllerProvider).query);
+  }
+
+  void reset(String query) {
+    ++_generation;
+    _cancel();
+    state = CategorySearchState(query);
+  }
+
+  Future<void> select(PlatformSearchKind kind) async {
+    state = CategorySearchState(
+      state.query,
+      selected: kind,
+      pages: state.pages,
+    );
+    if (kind != PlatformSearchKind.songs && !state.pages.containsKey(kind)) {
+      await loadMore();
+    }
+  }
+
+  Future<void> loadMore() async {
+    final kind = state.selected;
+    if (kind == PlatformSearchKind.songs || state.query.isEmpty) return;
+    final old = state.current;
+    if (old.loading || !old.more) return;
+    final generation = _generation;
+    final query = state.query;
+    final abort = Completer<void>();
+    _abort[kind] = abort;
+    void put(CategorySearchSlice value) {
+      if (ref.mounted && generation == _generation) {
+        state = CategorySearchState(
+          state.query,
+          selected: state.selected,
+          pages: {...state.pages, kind: value},
+        );
+      }
+    }
+
+    put(
+      CategorySearchSlice(
+        items: old.items,
+        page: old.page,
+        total: old.total,
+        more: old.more,
+        loading: true,
+      ),
+    );
+    try {
+      final result = await ref
+          .read(platformCategorySearchRepositoryProvider)
+          .search(query, kind, page: old.page + 1, abortTrigger: abort.future);
+      final seen = old.items.map((e) => e.id).toSet();
+      final added = result.items.where((e) => seen.add(e.id)).toList();
+      put(
+        CategorySearchSlice(
+          items: [...old.items, ...added],
+          page: old.page + 1,
+          total: result.total,
+          more: result.hasMore && added.isNotEmpty,
+        ),
+      );
+    } catch (error) {
+      put(
+        CategorySearchSlice(
+          items: old.items,
+          page: old.page,
+          total: old.total,
+          more: old.more,
+          error: error is MusicPlatformException ? error.message : '加载未完成，请重试',
+        ),
+      );
+    } finally {
+      if (identical(_abort[kind], abort)) _abort.remove(kind);
+    }
+  }
+}
