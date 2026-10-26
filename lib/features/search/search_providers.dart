@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import '../../core/persistence/app_preferences.dart';
 import '../../core/platform/distribution_channel.dart';
 import '../music_platform/data/embedded_kugou_music_source.dart';
+import '../music_platform/data/platform_search_repository.dart';
+import '../music_platform/data/music_platform_api.dart';
 import '../music_platform/music_platform_providers.dart';
 import '../../shared/models/track.dart';
 import 'data/audius_music_source.dart';
@@ -93,6 +95,10 @@ final musicSearchControllerProvider =
       MusicSearchController.new,
     );
 
+final platformSearchRepositoryProvider = Provider<PlatformSearchRepository>(
+  (ref) => PlatformSearchRepository(ref.watch(musicPlatformApiProvider)),
+);
+
 class MusicSearchController extends Notifier<MusicSearchState> {
   static const _recentSearchesKey = 'music_recent_searches';
   static const _debounceDuration = Duration(milliseconds: 450);
@@ -100,6 +106,14 @@ class MusicSearchController extends Notifier<MusicSearchState> {
 
   Timer? _debounce;
   var _generation = 0;
+  int _page = 0;
+  Completer<void>? _platformAbort;
+
+  void _cancelPlatform() {
+    final abort = _platformAbort;
+    _platformAbort = null;
+    if (abort != null && !abort.isCompleted) abort.complete();
+  }
 
   @override
   MusicSearchState build() {
@@ -107,6 +121,7 @@ class MusicSearchController extends Notifier<MusicSearchState> {
     ref.onDispose(() {
       _debounce?.cancel();
       repository.cancelActiveSearch();
+      _cancelPlatform();
     });
     final preferences = ref.watch(sharedPreferencesProvider);
     return MusicSearchState(
@@ -118,6 +133,7 @@ class MusicSearchController extends Notifier<MusicSearchState> {
     final query = rawQuery.trim();
     _debounce?.cancel();
     _generation += 1;
+    _cancelPlatform();
     ref.read(musicSearchRepositoryProvider).cancelActiveSearch();
 
     if (query.isEmpty) {
@@ -129,6 +145,10 @@ class MusicSearchController extends Notifier<MusicSearchState> {
         isLoading: false,
         fromCache: false,
         clearError: true,
+        hasMore: false,
+        isLoadingMore: false,
+        clearTotal: true,
+        clearMoreError: true,
       );
       return;
     }
@@ -141,6 +161,10 @@ class MusicSearchController extends Notifier<MusicSearchState> {
       fromCache: false,
       clearError: true,
       warnings: const [],
+      hasMore: false,
+      isLoadingMore: false,
+      clearTotal: true,
+      clearMoreError: true,
     );
     final generation = _generation;
     _debounce = Timer(_debounceDuration, () => _search(query, generation));
@@ -153,6 +177,7 @@ class MusicSearchController extends Notifier<MusicSearchState> {
     }
     _debounce?.cancel();
     _generation += 1;
+    _cancelPlatform();
     ref.read(musicSearchRepositoryProvider).cancelActiveSearch();
     state = state.copyWith(
       query: query,
@@ -162,6 +187,10 @@ class MusicSearchController extends Notifier<MusicSearchState> {
       fromCache: false,
       clearError: true,
       warnings: const [],
+      hasMore: false,
+      isLoadingMore: false,
+      clearTotal: true,
+      clearMoreError: true,
     );
     await _search(query, _generation);
   }
@@ -176,6 +205,10 @@ class MusicSearchController extends Notifier<MusicSearchState> {
   void clearRecentSearches() => _saveRecentSearches(const []);
 
   Future<void> _search(String query, int generation) async {
+    if (DistributionChannel.isBeta) {
+      await _searchPlatform(query, generation, reset: true);
+      return;
+    }
     try {
       final result = await ref
           .read(musicSearchRepositoryProvider)
@@ -222,6 +255,77 @@ class MusicSearchController extends Notifier<MusicSearchState> {
     }
   }
 
+  /// Paging has its own busy/error state so an append never replaces the
+  /// visible list with a full-page spinner. Late responses cannot cross queries.
+  Future<void> loadMore() async {
+    if (!DistributionChannel.isBeta ||
+        state.isLoading ||
+        state.isLoadingMore ||
+        !state.hasMore ||
+        state.query.isEmpty) {
+      return;
+    }
+    await _searchPlatform(state.query, _generation, reset: false);
+  }
+
+  Future<void> _searchPlatform(
+    String query,
+    int generation, {
+    required bool reset,
+  }) async {
+    final abort = Completer<void>();
+    _platformAbort = abort;
+    final page = reset ? 1 : _page + 1;
+    if (!reset) {
+      state = state.copyWith(isLoadingMore: true, clearMoreError: true);
+    }
+    try {
+      final result = await ref
+          .read(platformSearchRepositoryProvider)
+          .search(query, page: page, abortTrigger: abort.future);
+      if (generation != _generation) return;
+      // Remove repeated file IDs only; never collapse distinct recordings by
+      // title/artist or re-rank upstream results with the legacy fuzzy matcher.
+      final merged = <String, Track>{
+        if (!reset)
+          for (final track in state.onlineTracks) track.id: track,
+      };
+      final previousLength = merged.length;
+      for (final track in result.tracks) {
+        merged.putIfAbsent(track.id, () => track);
+      }
+      final progressed = reset || merged.length > previousLength;
+      _page = page;
+      _rememberQuery(query);
+      state = state.copyWith(
+        onlineTracks: merged.values.toList(growable: false),
+        localTracks: const [],
+        isLoading: false,
+        isLoadingMore: false,
+        total: result.total,
+        hasMore: result.hasMore && progressed,
+        clearError: true,
+        clearMoreError: true,
+        fromCache: false,
+      );
+    } on http.RequestAbortedException {
+      // A newer query owns state now.
+    } catch (error) {
+      if (generation != _generation) return;
+      final message = error is MusicPlatformException
+          ? error.message
+          : '搜索暂时不可用，请重试';
+      state = state.copyWith(
+        isLoading: false,
+        isLoadingMore: false,
+        errorMessage: reset ? message : null,
+        moreError: reset ? null : message,
+      );
+    } finally {
+      if (identical(_platformAbort, abort)) _platformAbort = null;
+    }
+  }
+
   List<Track> _localMatches(String query) {
     return const <Track>[];
   }
@@ -255,6 +359,10 @@ class MusicSearchState {
     this.isLoading = false,
     this.fromCache = false,
     this.errorMessage,
+    this.total,
+    this.hasMore = false,
+    this.isLoadingMore = false,
+    this.moreError,
   });
 
   final String query;
@@ -265,6 +373,10 @@ class MusicSearchState {
   final bool isLoading;
   final bool fromCache;
   final String? errorMessage;
+  final int? total;
+  final bool hasMore;
+  final bool isLoadingMore;
+  final String? moreError;
 
   bool get hasResults => localTracks.isNotEmpty || onlineTracks.isNotEmpty;
 
@@ -278,6 +390,12 @@ class MusicSearchState {
     bool? fromCache,
     String? errorMessage,
     bool clearError = false,
+    int? total,
+    bool clearTotal = false,
+    bool? hasMore,
+    bool? isLoadingMore,
+    String? moreError,
+    bool clearMoreError = false,
   }) {
     return MusicSearchState(
       query: query ?? this.query,
@@ -288,6 +406,10 @@ class MusicSearchState {
       isLoading: isLoading ?? this.isLoading,
       fromCache: fromCache ?? this.fromCache,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
+      total: clearTotal ? null : total ?? this.total,
+      hasMore: hasMore ?? this.hasMore,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      moreError: clearMoreError ? null : moreError ?? this.moreError,
     );
   }
 }

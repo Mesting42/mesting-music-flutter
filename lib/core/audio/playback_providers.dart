@@ -58,5 +58,10 @@ final currentTrackProvider = Provider<Track>((ref) {
             item?.artUri?.toString() ??
             '',
         lyricsAsset: item?.extras?['lyricsAsset']?.toString() ?? '',
+        platformSongId: item?.extras?['platformSongId']?.toString() ?? '',
+        source: TrackSource.values.firstWhere(
+          (source) => source.name == item?.extras?['source'],
+          orElse: () => TrackSource.local,
+        ),
       );
 });

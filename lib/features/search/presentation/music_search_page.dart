@@ -952,6 +952,25 @@ class _SearchResults extends ConsumerStatefulWidget {
 
 class _SearchResultsState extends ConsumerState<_SearchResults> {
   _SearchResultCategory _category = _SearchResultCategory.tracks;
+  final _scroll = ScrollController();
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(() {
+      if (_scroll.hasClients &&
+          _scroll.position.extentAfter < 320 &&
+          widget.state.moreError == null &&
+          _category == _SearchResultCategory.tracks) {
+        ref.read(musicSearchControllerProvider.notifier).loadMore();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -975,6 +994,7 @@ class _SearchResultsState extends ConsumerState<_SearchResults> {
         Expanded(
           child: ListView(
             key: const ValueKey('search-results-scroll'),
+            controller: _scroll,
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(18, 14, 18, 96),
             children: [
@@ -1016,11 +1036,38 @@ class _SearchResultsState extends ConsumerState<_SearchResults> {
                   suffix: state.fromCache
                       ? '已从缓存加载'
                       : DistributionChannel.isBeta
-                      ? '酷狗概念版'
+                      ? (state.total == null ? '酷狗概念版' : '共 ${state.total} 首')
                       : '酷狗优先 · 网易云补充',
                 ),
                 const SizedBox(height: 8),
                 _TrackResults(tracks: state.onlineTracks),
+                if (DistributionChannel.isBeta)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: state.isLoadingMore
+                        ? const MestingLoadingIndicator(
+                            semanticLabel: '正在加载更多歌曲',
+                          )
+                        : state.moreError != null
+                        ? _MessageCard(
+                            icon: Icons.refresh_rounded,
+                            message: state.moreError!,
+                            actionLabel: '重试加载',
+                            onAction: ref
+                                .read(musicSearchControllerProvider.notifier)
+                                .loadMore,
+                          )
+                        : state.hasMore
+                        ? TextButton.icon(
+                            key: const ValueKey('platform-search-more'),
+                            onPressed: ref
+                                .read(musicSearchControllerProvider.notifier)
+                                .loadMore,
+                            icon: const Icon(Icons.expand_more_rounded),
+                            label: const Text('继续加载歌曲'),
+                          )
+                        : const Center(child: Text('已显示全部搜索结果')),
+                  ),
               ],
               if (_category == _SearchResultCategory.tracks &&
                   !state.hasResults &&
@@ -1671,7 +1718,7 @@ class _TrackResults extends ConsumerWidget {
           final track = tracks[index];
           final active = currentId == track.id;
           return ListTile(
-            onTap: () {
+            onTap: () async {
               if (!track.isPlayable) {
                 ScaffoldMessenger.of(context)
                   ..hideCurrentSnackBar()
@@ -1688,9 +1735,13 @@ class _TrackResults extends ConsumerWidget {
               }
               // Search results remain outside the explicit upcoming queue,
               // but provide an invisible ordered context for previous/next.
-              ref
-                  .read(audioHandlerProvider)
-                  .playSingleTrack(track, playbackContext: tracks);
+              try {
+                await ref
+                    .read(audioHandlerProvider)
+                    .playSingleTrack(track, playbackContext: tracks);
+              } catch (error) {
+                if (context.mounted) showPlatformFailure(context, error);
+              }
             },
             leading: ClipRRect(
               borderRadius: BorderRadius.circular(13),
@@ -1718,6 +1769,14 @@ class _TrackResults extends ConsumerWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       FavoriteToggleButton(track: track, compact: true),
+                      if (ref.watch(showPlatformFeaturesProvider) &&
+                          track.source == TrackSource.kugou)
+                        IconButton(
+                          tooltip: '酷狗歌曲评论',
+                          icon: const Icon(Icons.comment_outlined, size: 19),
+                          onPressed: () =>
+                              openPlatformSongComments(context, ref, track),
+                        ),
                       _SearchQueueButton(
                         onTap: () async {
                           try {

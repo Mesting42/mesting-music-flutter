@@ -15,6 +15,8 @@ import '../music_platform_providers.dart';
 import '../platform_catalog_providers.dart';
 import '../../auth/account_capabilities.dart';
 import 'platform_comments_page.dart';
+import 'platform_design.dart';
+import '../../themes/music_theme_tokens.dart';
 
 /// The incumbent Mesting shell with live upstream content. Each section owns
 /// its loading/error state; a failed playlist request cannot hide valid songs.
@@ -26,70 +28,72 @@ class PlatformDiscoveryPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final signedIn = ref.watch(platformAccountProvider).value != null;
     final daily = ref.watch(platformDailyProvider);
-    return RefreshIndicator(
-      onRefresh: () async {
-        ref.invalidate(platformDailyProvider);
-        ref.invalidate(platformDiscoveryProvider);
-        ref.invalidate(platformFeaturedProvider);
-        ref.invalidate(hotMusicControllerProvider);
-        // Each section renders its own error, including a failed refresh.
-        await ref
-            .read(platformDailyProvider.future)
-            .then<void>((_) {}, onError: (Object _) {});
-      },
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(
-          16,
-          MediaQuery.paddingOf(context).top + 12,
-          16,
-          140,
-        ),
-        children: [
-          MusicHubTopBar(
-            title: dailyOnly ? '每日推荐' : '发现音乐',
-            subtitle: signedIn ? '酷狗概念版 · 为你推荐' : '酷狗概念版 · 公共推荐',
-            showBack: dailyOnly,
-            onBack: dailyOnly
-                ? () => context.canPop()
-                      ? context.pop()
-                      : context.go('/music/recommend')
-                : null,
+    return PlatformStyle(
+      child: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(platformDailyProvider);
+          ref.invalidate(platformDiscoveryProvider);
+          ref.invalidate(platformFeaturedProvider);
+          ref.invalidate(hotMusicControllerProvider);
+          // Each section renders its own error, including a failed refresh.
+          await ref
+              .read(platformDailyProvider.future)
+              .then<void>((_) {}, onError: (Object _) {});
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            MediaQuery.paddingOf(context).top + 12,
+            16,
+            140,
           ),
-          const SizedBox(height: 24),
-          _SectionTitle(signedIn ? '你的每日推荐' : '新歌推荐'),
-          PlatformSongs(
-            value: daily,
-            retry: () => ref.invalidate(platformDailyProvider),
-          ),
-          if (!dailyOnly) ...[
-            const SizedBox(height: 24),
-            const _SectionTitle('精选歌单'),
-            _FeaturedPlaylists(),
-            const SizedBox(height: 24),
-            const _SectionTitle('发现更多音乐'),
-            PlatformSongs(
-              value: ref.watch(platformDiscoveryProvider),
-              retry: () => ref.invalidate(platformDiscoveryProvider),
+          children: [
+            MusicHubTopBar(
+              title: dailyOnly ? '每日推荐' : '发现音乐',
+              subtitle: signedIn ? '酷狗概念版 · 为你推荐' : '酷狗概念版 · 公共推荐',
+              showBack: dailyOnly,
+              onBack: dailyOnly
+                  ? () => context.canPop()
+                        ? context.pop()
+                        : context.go('/music/recommend')
+                  : null,
             ),
             const SizedBox(height: 24),
-            const _SectionTitle('实时榜单'),
-            ref
-                .watch(hotMusicControllerProvider)
-                .when(
-                  loading: () => const LinearProgressIndicator(),
-                  error: (error, stack) => _Retry(
-                    retry: () => ref.invalidate(hotMusicControllerProvider),
+            _SectionTitle(signedIn ? '你的每日推荐' : '新歌推荐'),
+            PlatformSongs(
+              value: daily,
+              retry: () => ref.invalidate(platformDailyProvider),
+            ),
+            if (!dailyOnly) ...[
+              const SizedBox(height: 24),
+              const _SectionTitle('精选歌单'),
+              _FeaturedPlaylists(),
+              const SizedBox(height: 24),
+              const _SectionTitle('发现更多音乐'),
+              PlatformSongs(
+                value: ref.watch(platformDiscoveryProvider),
+                retry: () => ref.invalidate(platformDiscoveryProvider),
+              ),
+              const SizedBox(height: 24),
+              const _SectionTitle('实时榜单'),
+              ref
+                  .watch(hotMusicControllerProvider)
+                  .when(
+                    loading: () => const PlatformFeedbackState(loading: true),
+                    error: (error, stack) => _Retry(
+                      retry: () => ref.invalidate(hotMusicControllerProvider),
+                    ),
+                    data: (snapshot) => snapshot.tracks.isEmpty
+                        ? _Retry(
+                            retry: () =>
+                                ref.invalidate(hotMusicControllerProvider),
+                          )
+                        : _TrackList(tracks: snapshot.tracks),
                   ),
-                  data: (snapshot) => snapshot.tracks.isEmpty
-                      ? _Retry(
-                          retry: () =>
-                              ref.invalidate(hotMusicControllerProvider),
-                        )
-                      : _TrackList(tracks: snapshot.tracks),
-                ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -99,10 +103,7 @@ class _SectionTitle extends StatelessWidget {
   const _SectionTitle(this.text);
   final String text;
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: Text(text, style: Theme.of(context).textTheme.titleLarge),
-  );
+  Widget build(BuildContext context) => PlatformSectionTitle(text);
 }
 
 class _Retry extends StatelessWidget {
@@ -110,18 +111,9 @@ class _Retry extends StatelessWidget {
   final VoidCallback retry;
   final bool empty;
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 16),
-    child: Column(
-      children: [
-        Text(empty ? '平台暂未返回内容' : '内容暂时未能加载，请重试'),
-        TextButton.icon(
-          onPressed: retry,
-          icon: const Icon(Icons.refresh),
-          label: const Text('重新加载'),
-        ),
-      ],
-    ),
+  Widget build(BuildContext context) => PlatformFeedbackState(
+    message: empty ? '平台暂未返回内容' : '内容暂时未能加载，请重试',
+    retry: retry,
   );
 }
 
@@ -137,7 +129,7 @@ class PlatformSongs extends StatelessWidget {
   final String? playlistId;
   @override
   Widget build(BuildContext context) => value.when(
-    loading: () => const LinearProgressIndicator(),
+    loading: () => const PlatformFeedbackState(loading: true),
     error: (error, stack) => _Retry(retry: retry),
     data: (tracks) => tracks.isEmpty
         ? _Retry(retry: retry, empty: true)
@@ -150,79 +142,94 @@ class _TrackList extends ConsumerWidget {
   final List<Track> tracks;
   final String? playlistId;
   @override
-  Widget build(BuildContext context, WidgetRef ref) => Column(
-    children: [
-      for (final track in tracks)
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: ArtworkImage(uri: track.coverAsset, width: 48, height: 48),
-          ),
-          title: Text(
-            track.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          subtitle: Text(
-            track.artist,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              FavoriteToggleButton(track: track, compact: true),
-              PopupMenuButton<String>(
-                tooltip: '歌曲操作',
-                icon: const Icon(Icons.more_horiz),
-                itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'add', child: Text('加入歌单')),
-                  if (ref.read(showPlatformFeaturesProvider))
-                    const PopupMenuItem(
-                      value: 'comments',
-                      child: Text('酷狗歌曲评论'),
-                    ),
-                  if (playlistId != null)
-                    const PopupMenuItem(
-                      value: 'remove',
-                      child: Text('从云端歌单移除'),
-                    ),
-                ],
-                onSelected: (action) async {
-                  if (!context.mounted) return;
-                  if (action == 'add') {
-                    await showAddToPlaylistSheet(context, ref, track);
-                  }
-                  if (action == 'comments' && context.mounted) {
-                    await openPlatformSongComments(context, ref, track);
-                  }
-                  if (action == 'remove' && playlistId != null) {
-                    try {
-                      await ref
-                          .read(libraryRepositoryProvider)
-                          .removeTrackFromPlaylist(playlistId!, track.id);
-                    } catch (error) {
-                      if (context.mounted) showPlatformFailure(context, error);
+  Widget build(BuildContext context, WidgetRef ref) => PlatformPanel(
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+    child: Column(
+      children: [
+        for (final track in tracks)
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(vertical: 6),
+            titleTextStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: context.musicThemeTokens.textPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+            ),
+            subtitleTextStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: context.musicThemeTokens.textSecondary,
+              fontSize: 12,
+              height: 1.6,
+            ),
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: ArtworkImage(uri: track.coverAsset, width: 48, height: 48),
+            ),
+            title: Text(
+              track.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: Text(
+              track.artist,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FavoriteToggleButton(track: track, compact: true),
+                PopupMenuButton<String>(
+                  tooltip: '歌曲操作',
+                  icon: const Icon(Icons.more_horiz),
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(value: 'add', child: Text('加入歌单')),
+                    if (ref.read(showPlatformFeaturesProvider))
+                      const PopupMenuItem(
+                        value: 'comments',
+                        child: Text('酷狗歌曲评论'),
+                      ),
+                    if (playlistId != null)
+                      const PopupMenuItem(
+                        value: 'remove',
+                        child: Text('从云端歌单移除'),
+                      ),
+                  ],
+                  onSelected: (action) async {
+                    if (!context.mounted) return;
+                    if (action == 'add') {
+                      await showAddToPlaylistSheet(context, ref, track);
                     }
-                  }
-                },
-              ),
-            ],
-          ),
-          onTap: () async {
-            try {
-              await ref
-                  .read(audioHandlerProvider)
-                  .playSingleTrack(track, playbackContext: tracks);
-            } catch (error) {
-              if (context.mounted) {
-                showPlatformFailure(context, error);
+                    if (action == 'comments' && context.mounted) {
+                      await openPlatformSongComments(context, ref, track);
+                    }
+                    if (action == 'remove' && playlistId != null) {
+                      try {
+                        await ref
+                            .read(libraryRepositoryProvider)
+                            .removeTrackFromPlaylist(playlistId!, track.id);
+                      } catch (error) {
+                        if (context.mounted) {
+                          showPlatformFailure(context, error);
+                        }
+                      }
+                    }
+                  },
+                ),
+              ],
+            ),
+            onTap: () async {
+              try {
+                await ref
+                    .read(audioHandlerProvider)
+                    .playSingleTrack(track, playbackContext: tracks);
+              } catch (error) {
+                if (context.mounted) {
+                  showPlatformFailure(context, error);
+                }
               }
-            }
-          },
-        ),
-    ],
+            },
+          ),
+      ],
+    ),
   );
 }
 
@@ -231,7 +238,7 @@ class _FeaturedPlaylists extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => ref
       .watch(platformFeaturedProvider)
       .when(
-        loading: () => const LinearProgressIndicator(),
+        loading: () => const PlatformFeedbackState(loading: true),
         error: (error, stack) =>
             _Retry(retry: () => ref.invalidate(platformFeaturedProvider)),
         data: (rows) {
@@ -293,21 +300,19 @@ class PlatformPublicPlaylistPage extends ConsumerWidget {
   final String id;
   final String name;
   @override
-  Widget build(BuildContext context, WidgetRef ref) => Scaffold(
-    backgroundColor: Theme.of(context).colorScheme.surface,
-    appBar: AppBar(
-      title: Text(name),
-      actions: [
-        if (ref.watch(showPlatformFeaturesProvider))
-          IconButton(
-            tooltip: '酷狗歌单评论',
-            icon: const Icon(Icons.comment_outlined),
-            onPressed: () =>
-                openPlatformPlaylistComments(context, ref, id: id, name: name),
-          ),
-      ],
-    ),
-    body: ListView(
+  Widget build(BuildContext context, WidgetRef ref) => PlatformPageFrame(
+    title: name,
+    subtitle: '酷狗精选歌单',
+    actions: [
+      if (ref.watch(showPlatformFeaturesProvider))
+        IconButton(
+          tooltip: '酷狗歌单评论',
+          icon: const Icon(Icons.comment_outlined),
+          onPressed: () =>
+              openPlatformPlaylistComments(context, ref, id: id, name: name),
+        ),
+    ],
+    child: ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
       children: [
         PlatformSongs(

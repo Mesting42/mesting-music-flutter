@@ -1,10 +1,10 @@
-# md3Music integration Beta.3 handoff
+# md3Music integration Beta.4 handoff
 
-Beta.3 adds bounded guest playback/preview resolution, account-specific feature
-boundaries, current-account avatars and Kugou song/playlist comments. It retains
-Beta.2's live concept-platform discovery and cloud library, with Mesting's theme,
-application shell and single audio handler. It is not a complete migration of
-every md3Music feature.
+Beta.4 connects the upstream paged song-search flow directly, preserves recording
+IDs through saved/playback tracks, adds full comment browsing controls, and
+reuses Mesting collection/components throughout imported platform surfaces.
+It retains guest playback resolution, account isolation, avatars and cloud
+library support. It is not a complete migration of every md3Music feature.
 
 ## Source baseline and provenance
 
@@ -36,11 +36,15 @@ every md3Music feature.
 | `features/music_platform/data/platform_library_repository.dart` | Existing library contract backed by the current Kugou cloud identity |
 | `features/music_platform/data/platform_playback_resolver.dart` | Bounded media lookup, device registration retry and permitted preview fallback |
 | `features/music_platform/data/platform_comments_repository.dart` | Resource IDs, paging and explicit comment writes pinned to one Kugou identity |
+| `features/music_platform/data/platform_song_identity.dart` | Recording ID aliases and bounded parsing of nested metadata; skips zero IDs |
+| `features/music_platform/data/platform_search_repository.dart` | Upstream 30-row search pages, server order and result totals |
 | `features/music_platform/platform_profile_provider.dart` | Profile/avatar refresh independent of credential restoration |
 | `features/auth/account_capabilities.dart` | Shared menu, player and route capability boundaries |
 | `features/music_platform/data/embedded_kugou_music_source.dart` | Adapts search, rankings and fresh playback URLs to Mesting tracks |
 | `features/music_platform/presentation/platform_account_page.dart` | Phone and QR login, account choice and independent logout |
 | `features/music_platform/presentation/platform_comments_page.dart` | Opaque comment/thread routes, compose, reply and delete-own actions |
+| `features/music_platform/presentation/platform_design.dart` | Shared Mesting surfaces, fields, buttons, page frame and feedback |
+| `features/music_platform/presentation/platform_comment_card.dart` | Comment author/date/content/count presentation without network writes |
 | `core/audio/mesting_audio_handler.dart` | Existing playback queue with optional URL resolver callback |
 | `features/lyrics/data/lyrics_repository.dart` | Injectable JSON transport with existing lyric fallbacks |
 | `features/library/presentation/library_access.dart` | Beta local-library access without legacy cloud authentication |
@@ -112,6 +116,47 @@ actions and are never retried automatically. Identity is checked before and afte
 HTTP; stale pages stop showing another account's comment controls. The server's
 permissions, moderation and security challenges remain authoritative.
 
+## Beta.4 search and comment corrections
+
+Beta search bypasses the legacy MusicSearchRepository's fuzzy reordering and
+title/artist deduplication. It follows upstream KugouApiClient.search parameters:
+`/search`, `keywords`, `type=song`, page starting at 1 and `pagesize=30`.
+`total`/`total_count` are displayed separately from loaded rows. Appending removes
+only repeated file IDs and preserves distinct recordings and server order. A
+generation token, abort signal and account checks reject stale responses. Failed
+appends retain the visible list and retry the same page. Repeated pages stop
+loading instead of creating an infinite request loop. The main result list
+supports near-bottom loading and an explicit load-more/retry action.
+
+Track.platformSongId is an optional, backward-compatible JSON/media extra; no
+database schema migration or local-data clearing is necessary. Search/catalog
+metadata and refreshed playback responses populate it. Older hash-only rows
+resolve /audio, then /song/url metadata if necessary. The resolver accepts
+AlbumAudioID, MixSongID, Audioid/audio_id and structured list/base/audio_info
+responses as the upstream model does. It does not guess an ID from the file hash
+or choose another same-title recording. Comment entry opens a loading/retry route
+immediately, so resolution failure no longer prevents entering the page.
+
+Song hottest comments first resolve childrenid from /comment/music, then request
+/comment/music/topliked. Playlist hot ordering and latest/earliest ordering are
+applied to loaded rows, matching the limits of the upstream client. All/singer/
+mine scope filters explicitly describe their loaded-data scope. Dates, singer
+flags, like counts, reply counts and nested replies are displayed. The childrenid
+is retained for ranking rows that omit it, so replies/deletion still use the real
+pool. Sorting/paging responses are guarded against newer selections.
+
+Comment like/unlike writes are **not implemented**. The pinned upstream and its
+published API documentation provide counts/ranking but no verified reaction
+write contract. The user explicitly accepted deferral if a real implementation
+could not be established. The app shows platform counts without inventing a
+local success toggle or posting to an unverified endpoint.
+
+Favorites and playlist collections reuse FavoriteCollectionView and
+MyPlaylistsCollectionView. The account/login, profile, discovery, playlist and
+comment surfaces share Mesting tokens and themed controls. Opaque full-screen
+routes use PlatformPageFrame; themed shell pages retain the shell background.
+UI tests cover light/dark modes, a 320-pixel viewport and keyboard insets.
+
 ## Build and checks
 
 Put Flutter on PATH and run from the extracted project root:
@@ -120,11 +165,11 @@ Put Flutter on PATH and run from the extracted project root:
 flutter pub get
 flutter analyze
 flutter test
-flutter test --flavor beta test/music_platform_test.dart test/beta_login_entry_test.dart test/beta_update_isolation_test.dart test/remote_lyrics_repository_test.dart test/platform_cloud_library_test.dart test/beta_account_exclusivity_test.dart test/platform_guest_playback_test.dart test/platform_comments_test.dart test/beta_player_library_actions_test.dart
+flutter test --flavor beta test/music_platform_test.dart test/beta_login_entry_test.dart test/beta_update_isolation_test.dart test/remote_lyrics_repository_test.dart test/platform_cloud_library_test.dart test/beta_account_exclusivity_test.dart test/platform_guest_playback_test.dart test/platform_comments_test.dart test/beta_player_library_actions_test.dart test/platform_search_paging_test.dart test/platform_beta4_ui_test.dart
 .\tool\build_android_md3_beta_apk.ps1
 ```
 
-The build script selects `beta`, version `1.0.37-beta.3` / `3`, ARMv7 + ARM64,
+The build script selects `beta`, version `1.0.37-beta.4` / `4`, ARMv7 + ARM64,
 CloudBase authentication retained, and automatic update checks disabled. It does
 not publish an update manifest or deploy a backend. The package is
 `com.mesting.music.beta`, separate from formal and Java/MySQL packages.
@@ -147,9 +192,9 @@ device validation and is not mocked into a success claim.
 ## Remaining migration work
 
 The user confirmed real Kugou login and logged-in playback work, and clarified
-that the playback failure occurs in guest mode. Beta.3 still needs phone
-acceptance of guest full/preview audio, real comment read/write, avatar images
-and account transitions. Mock protocol/UI tests cannot certify a third-party
+that the playback failure occurs in guest mode. Beta.4 still needs phone
+acceptance of real search paging, comment IDs/read/write, guest full/preview
+audio, avatar images and account transitions. Mock protocol/UI tests cannot certify a third-party
 service's live behavior. No user's real cloud comments were posted or deleted
 during development. Music disk, MV, recognition, membership check-in, cover upload
 and track reordering remain separate migration work. Endpoint availability in the

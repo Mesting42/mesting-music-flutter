@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../../../shared/models/track.dart';
 import '../domain/platform_session.dart';
 import 'music_platform_api.dart';
+import 'platform_song_identity.dart';
 
 /// Resolves media independently of search, catalog UI and the audio engine.
 /// Guest requests keep the upstream permitted-preview fallback. A membership
@@ -108,6 +109,9 @@ class PlatformPlaybackResolver {
           int.tryParse('${data['fileSize'] ?? data['file_size'] ?? 0}') ?? 0;
       return track.copyWith(
         audioAsset: mediaUrl(data),
+        platformSongId: PlatformSongIdentity.fromPayload(data).isEmpty
+            ? track.platformSongId
+            : PlatformSongIdentity.fromPayload(data),
         isPreview:
             preview ||
             (fail is List && fail.contains('buy')) ||

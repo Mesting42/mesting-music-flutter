@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/audio/playback_providers.dart';
+import '../../library/presentation/music_home_page.dart';
 import '../../library/library_providers.dart';
 import '../../player/presentation/music_hub_top_bar.dart';
 import '../data/platform_library_repository.dart';
 import 'platform_discovery_page.dart';
 import 'platform_feedback.dart';
 import 'platform_comments_page.dart';
+import 'platform_design.dart';
 
 Future<String?> _name(BuildContext context, {String initial = ''}) async {
   final controller = TextEditingController(text: initial);
@@ -62,72 +65,88 @@ class PlatformLibraryPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final repository = ref.watch(libraryRepositoryProvider);
-    return RefreshIndicator(
-      onRefresh: () async {
-        await repository.synchronize(forcePull: true);
-      },
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(
-          16,
-          MediaQuery.paddingOf(context).top + 12,
-          16,
-          140,
-        ),
-        children: [
-          MusicHubTopBar(
-            title: favorites ? '我的喜欢' : '我的歌单',
-            subtitle: '酷狗云端曲库',
-            showBack: true,
-            onBack: () =>
-                context.canPop() ? context.pop() : context.go('/profile'),
+    return PlatformStyle(
+      child: RefreshIndicator(
+        onRefresh: () async {
+          await repository.synchronize(forcePull: true);
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            MediaQuery.paddingOf(context).top + 12,
+            16,
+            140,
           ),
-          const SizedBox(height: 20),
-          if (favorites)
-            PlatformSongs(
-              value: ref.watch(favoriteTracksProvider),
-              retry: () => repository.synchronize(forcePull: true),
-            )
-          else ...[
-            Align(
-              alignment: Alignment.centerLeft,
-              child: FilledButton.icon(
-                onPressed: () => createPlatformPlaylist(context, ref),
-                icon: const Icon(Icons.add),
-                label: const Text('新建歌单'),
-              ),
+          children: [
+            MusicHubTopBar(
+              title: favorites ? '我的喜欢' : '我的歌单',
+              subtitle: '酷狗云端曲库',
+              showBack: true,
+              onBack: () =>
+                  context.canPop() ? context.pop() : context.go('/profile'),
             ),
-            ref
-                .watch(playlistsProvider)
-                .when(
-                  loading: () => const LinearProgressIndicator(),
-                  error: (error, stack) => TextButton.icon(
-                    onPressed: () => repository.synchronize(forcePull: true),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('云端歌单加载失败，点击重试'),
-                  ),
-                  data: (items) => items.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Text('酷狗账号中还没有歌单'),
-                        )
-                      : Column(
-                          children: [
-                            for (final playlist in items)
-                              ListTile(
-                                leading: const Icon(Icons.queue_music),
-                                title: Text(playlist.name),
-                                subtitle: const Text('酷狗云端'),
-                                trailing: const Icon(Icons.chevron_right),
-                                onTap: () => context.push(
-                                  '/music/playlists/${Uri.encodeComponent(playlist.id)}',
-                                ),
-                              ),
-                          ],
-                        ),
+            const SizedBox(height: 20),
+            if (favorites)
+              ref
+                  .watch(favoriteTracksProvider)
+                  .when(
+                    loading: () => const PlatformFeedbackState(loading: true),
+                    error: (error, stack) => PlatformFeedbackState(
+                      message: '云端收藏暂时无法加载',
+                      retry: () => repository.synchronize(forcePull: true),
+                    ),
+                    data: (tracks) => FavoriteCollectionView(
+                      tracks: tracks,
+                      currentTrackId: ref
+                          .watch(currentMediaItemProvider)
+                          .value
+                          ?.id,
+                      playing:
+                          ref.watch(playbackStateProvider).value?.playing ??
+                          false,
+                      onPlayAll: tracks.isEmpty
+                          ? null
+                          : () => ref
+                                .read(audioHandlerProvider)
+                                .replaceQueue(tracks),
+                      onPlayTrack: (track) => ref
+                          .read(audioHandlerProvider)
+                          .playSingleTrack(track, playbackContext: tracks),
+                      onAddTrack: (track) => ref
+                          .read(audioHandlerProvider)
+                          .appendToUpcomingQueue(track),
+                      onExplore: () => context.push('/music/search'),
+                    ),
+                  )
+            else ...[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton.icon(
+                  onPressed: () => createPlatformPlaylist(context, ref),
+                  icon: const Icon(Icons.add),
+                  label: const Text('新建歌单'),
                 ),
+              ),
+              ref
+                  .watch(playlistsProvider)
+                  .when(
+                    loading: () => const PlatformFeedbackState(loading: true),
+                    error: (error, stack) => TextButton.icon(
+                      onPressed: () => repository.synchronize(forcePull: true),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('云端歌单加载失败，点击重试'),
+                    ),
+                    data: (items) => items.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.all(24),
+                            child: Text('酷狗账号中还没有歌单'),
+                          )
+                        : MyPlaylistsCollectionView(playlists: items),
+                  ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -148,42 +167,40 @@ class PlatformCloudPlaylistPage extends ConsumerWidget {
       );
     }
     final playlist = ref.watch(playlistProvider(id));
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        title: Text(playlist.value?.name ?? '酷狗云端歌单'),
-        actions: [
-          IconButton(
-            tooltip: '酷狗歌单评论',
-            icon: const Icon(Icons.comment_outlined),
-            onPressed: () async {
-              try {
-                final commentId = await repository.commentId(id);
-                if (context.mounted) {
-                  openPlatformPlaylistComments(
-                    context,
-                    ref,
-                    id: commentId,
-                    name: playlist.value?.name ?? '歌单',
-                  );
-                }
-              } catch (error) {
-                if (context.mounted) showPlatformFailure(context, error);
+    return PlatformPageFrame(
+      title: playlist.value?.name ?? '酷狗云端歌单',
+      subtitle: '酷狗云端歌单',
+      actions: [
+        IconButton(
+          tooltip: '酷狗歌单评论',
+          icon: const Icon(Icons.comment_outlined),
+          onPressed: () async {
+            try {
+              final commentId = await repository.commentId(id);
+              if (context.mounted) {
+                openPlatformPlaylistComments(
+                  context,
+                  ref,
+                  id: commentId,
+                  name: playlist.value?.name ?? '歌单',
+                );
               }
-            },
+            } catch (error) {
+              if (context.mounted) showPlatformFailure(context, error);
+            }
+          },
+        ),
+        if (playlist.value != null && repository.canManage(id))
+          PopupMenuButton<String>(
+            onSelected: (action) =>
+                _manage(context, ref, repository, playlist.value!, action),
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'rename', child: Text('修改名称')),
+              PopupMenuItem(value: 'delete', child: Text('删除歌单')),
+            ],
           ),
-          if (playlist.value != null && repository.canManage(id))
-            PopupMenuButton<String>(
-              onSelected: (action) =>
-                  _manage(context, ref, repository, playlist.value!, action),
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'rename', child: Text('修改名称')),
-                PopupMenuItem(value: 'delete', child: Text('删除歌单')),
-              ],
-            ),
-        ],
-      ),
-      body: RefreshIndicator(
+      ],
+      child: RefreshIndicator(
         onRefresh: () async {
           await repository.synchronize(forcePull: true);
           ref.invalidate(playlistProvider(id));

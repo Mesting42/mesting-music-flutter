@@ -66,7 +66,7 @@ void main() {
       expect(find.text('酷狗扫码'), findsOneWidget);
       expect(find.text('微信扫码'), findsOneWidget);
       expect(find.text('QQ 扫码'), findsOneWidget);
-      await tester.pageBack();
+      await tester.tap(find.byTooltip('返回'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(milliseconds: 400));

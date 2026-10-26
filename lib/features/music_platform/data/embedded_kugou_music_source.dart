@@ -2,6 +2,7 @@ import '../../../shared/models/track.dart';
 import '../../search/data/kugou_music_source.dart';
 import 'music_platform_api.dart';
 import 'platform_playback_resolver.dart';
+import 'platform_song_identity.dart';
 
 /// Translates md3Music data into existing Mesting tracks and uses its one audio
 /// handler. Other distribution channels keep their existing source selection.
@@ -167,7 +168,8 @@ class EmbeddedKugouMusicSource extends KugouMusicSource {
       ]).replaceAll('{size}', '400'),
       lyricsAsset: '',
       source: TrackSource.kugou,
-      provider: '酷狗音乐 · md3Music',
+      provider: '酷狗概念版',
+      platformSongId: PlatformSongIdentity.fromPayload(row),
       availabilityMessage: '需要联网获取播放地址',
     );
   }

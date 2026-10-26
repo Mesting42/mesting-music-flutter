@@ -7,6 +7,8 @@ import 'package:mesting_music/features/music_platform/data/platform_comments_rep
 import 'package:mesting_music/features/music_platform/data/embedded_music_server.dart';
 import 'package:mesting_music/features/music_platform/data/music_platform_api.dart';
 import 'package:mesting_music/features/music_platform/domain/platform_session.dart';
+import 'package:mesting_music/features/music_platform/data/embedded_kugou_music_source.dart';
+import 'package:mesting_music/shared/models/track.dart';
 
 class _Server implements MusicServer {
   @override
@@ -53,6 +55,81 @@ void main() {
     )..session = _identity;
     repository = PlatformCommentsRepository(api, _identity);
   });
+
+  test(
+    'comment identity survives search, queue copy and saved track roundtrip',
+    () async {
+      final track = EmbeddedKugouMusicSource.platformTrack({
+        'FileHash': 'HASH',
+        'SongName': '认真的雪',
+        'album_audio_id': 0,
+        'MixSongID': '98765',
+      })!;
+      final stored = Track.fromJson(
+        track.copyWith(audioAsset: 'https://media.example/test.mp3').toJson(),
+      );
+      final resource = await repository.songResource(stored);
+      expect(resource.id, '98765');
+      expect(stored.toMediaItem().extras?['platformSongId'], '98765');
+      expect(requests, isEmpty); // Valid source IDs do not depend on /audio.
+    },
+  );
+
+  test(
+    'old hash-only songs resolve nested audio lists and Audioid alias',
+    () async {
+      response = {
+        'status': 1,
+        'data': {
+          'audio_info': [
+            {
+              'base': {'album_audio_id': 0, 'Audioid': 98765},
+            },
+          ],
+        },
+      };
+      final track = EmbeddedKugouMusicSource.platformTrack({
+        'hash': 'HASH',
+        'songname': '歌曲',
+      })!;
+      expect((await repository.songResource(track)).id, '98765');
+      expect(requests.single.url.path, '/audio');
+    },
+  );
+
+  test(
+    'hot ranking uses childrenid; comments parse dates, likes and singer flags',
+    () async {
+      response = {
+        'status': 1,
+        'data': {
+          'list': [
+            {
+              'id': 'hot',
+              'user_id': 7,
+              'content': '评论',
+              'like': {'count': 109},
+              'createtime': 1783728000,
+              'isAuthor': 1,
+            },
+          ],
+        },
+      };
+      final result = await repository.load(
+        _song,
+        hottestChildrenId: 'real-child',
+      );
+      expect(requests.single.url.path, '/comment/music/topliked');
+      expect(requests.single.url.queryParameters['childrenid'], 'real-child');
+      expect(
+        requests.single.url.queryParameters.containsKey('mixsongid'),
+        false,
+      );
+      expect(result.comments.single.likes, 109);
+      expect(result.comments.single.isSinger, true);
+      expect(result.comments.single.time?.year, 2026);
+    },
+  );
 
   test(
     'song and playlist comments use distinct resource identifiers and paginate',

@@ -18,6 +18,7 @@ class Track {
     this.externalUrl = '',
     this.licenseUrl = '',
     this.availabilityMessage = '',
+    this.platformSongId = '',
   });
 
   final String id;
@@ -34,6 +35,10 @@ class Track {
   final String externalUrl;
   final String licenseUrl;
   final String availabilityMessage;
+
+  /// Upstream mixsongid/album_audio_id, independent of the playable file hash.
+  /// Optional for older local rows; comments can resolve it on demand.
+  final String platformSongId;
 
   bool get isRemote => source != TrackSource.local;
   String get resolvedLyricsAsset {
@@ -72,6 +77,7 @@ class Track {
       'externalUrl': externalUrl,
       'licenseUrl': licenseUrl,
       'availabilityMessage': availabilityMessage,
+      'platformSongId': platformSongId,
     };
   }
 
@@ -94,6 +100,7 @@ class Track {
       externalUrl: json['externalUrl'] as String? ?? '',
       licenseUrl: json['licenseUrl'] as String? ?? '',
       availabilityMessage: json['availabilityMessage'] as String? ?? '',
+      platformSongId: json['platformSongId'] as String? ?? '',
     );
   }
 
@@ -116,6 +123,7 @@ class Track {
         'isPreview': isPreview,
         'externalUrl': externalUrl,
         'availabilityMessage': availabilityMessage,
+        'platformSongId': platformSongId,
       },
     );
   }
@@ -126,6 +134,7 @@ class Track {
     String? lyricsAsset,
     bool? isPreview,
     String? availabilityMessage,
+    String? platformSongId,
   }) {
     return Track(
       id: id,
@@ -142,6 +151,7 @@ class Track {
       externalUrl: externalUrl,
       licenseUrl: licenseUrl,
       availabilityMessage: availabilityMessage ?? this.availabilityMessage,
+      platformSongId: platformSongId ?? this.platformSongId,
     );
   }
 }

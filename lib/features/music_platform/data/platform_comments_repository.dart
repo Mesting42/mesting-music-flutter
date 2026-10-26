@@ -1,9 +1,13 @@
 import '../../../shared/models/track.dart';
 import '../domain/platform_session.dart';
 import 'music_platform_api.dart';
-import 'platform_playback_resolver.dart';
+import 'platform_song_identity.dart';
 
 enum PlatformCommentKind { song, playlist }
+
+enum PlatformCommentSort { hottest, newest, oldest }
+
+enum PlatformCommentScope { all, singer, mine }
 
 class PlatformCommentResource {
   const PlatformCommentResource({
@@ -30,6 +34,10 @@ class PlatformComment {
     this.avatar = '',
     this.specialId = '',
     this.replies = 0,
+    this.likes = 0,
+    this.liked = false,
+    this.isSinger = false,
+    this.time,
   });
   final String id;
   final String userId;
@@ -38,12 +46,20 @@ class PlatformComment {
   final String avatar;
   final String specialId;
   final int replies;
+  final int likes;
+  final bool liked;
+  final bool isSinger;
+  final DateTime? time;
 
   factory PlatformComment.fromJson(
     Map<String, dynamic> row, {
     String childrenId = '',
   }) {
     final user = MusicPlatformApi.objectMap(row['user']);
+    final like = MusicPlatformApi.objectMap(row['like']);
+    final vinfo = MusicPlatformApi.objectMap(row['vinfo9']);
+    final rawTime = row['createtime'] ?? row['addtime'] ?? row['time'];
+    final stamp = int.tryParse('$rawTime');
     return PlatformComment(
       id: '${row['commentid'] ?? row['id'] ?? row['comment_id'] ?? ''}',
       userId:
@@ -62,14 +78,41 @@ class PlatformComment {
           '${row['special_child_id'] ?? row['special_id'] ?? row['childrenid'] ?? childrenId}',
       replies:
           int.tryParse('${row['reply_num'] ?? row['reply_count'] ?? 0}') ?? 0,
+      likes:
+          int.tryParse(
+            '${like['count'] ?? row['like_count'] ?? row['likes'] ?? row['like_num'] ?? row['reply_like_count'] ?? 0}',
+          ) ??
+          0,
+      liked: '${like['is_like'] ?? row['is_like'] ?? row['liked'] ?? 0}' == '1',
+      isSinger:
+          [
+            true,
+            1,
+            '1',
+          ].contains(row['isAuthor'] ?? row['is_author'] ?? row['is_star']) ||
+          '${vinfo['singer_status']}' == '4',
+      time: stamp != null && stamp > 0
+          ? DateTime.fromMillisecondsSinceEpoch(
+              stamp > 100000000000 ? stamp : stamp * 1000,
+            )
+          : DateTime.tryParse('$rawTime'),
     );
   }
 }
 
 class PlatformCommentPage {
-  const PlatformCommentPage(this.comments, this.hasMore);
+  const PlatformCommentPage(
+    this.comments,
+    this.hasMore, {
+    this.childrenId = '',
+    this.total,
+    this.singerComments = const [],
+  });
   final List<PlatformComment> comments;
   final bool hasMore;
+  final String childrenId;
+  final int? total;
+  final List<PlatformComment> singerComments;
 }
 
 /// The repository is pinned to a real platform credential. Mesting credentials
@@ -84,17 +127,29 @@ class PlatformCommentsRepository {
     if (track.source != TrackSource.kugou || !track.id.startsWith('kugou_')) {
       throw const MusicPlatformException('此歌曲不属于酷狗评论区');
     }
-    final result = await api.get(
-      '/audio',
-      query: {'hash': track.id.substring(6)},
-      expectedSession: identity,
-    );
-    final data = PlatformPlaybackResolver.audioData(result);
-    final base = MusicPlatformApi.objectMap(data['base']);
-    final audio = MusicPlatformApi.objectMap(data['audio_info']);
-    final id =
-        '${data['album_audio_id'] ?? data['mixsongid'] ?? data['MixSongID'] ?? base['album_audio_id'] ?? base['mixsongid'] ?? audio['album_audio_id'] ?? ''}';
-    if (int.tryParse(id) == null || id == '0') {
+    var id = (int.tryParse(track.platformSongId) ?? 0) > 0
+        ? track.platformSongId
+        : '';
+    // Older saved rows have only a hash. Resolve structured metadata without
+    // guessing a numeric ID from that hash or from a same-title recording.
+    if (id.isEmpty) {
+      final result = await api.get(
+        '/audio',
+        query: {'hash': track.id.substring(6)},
+        expectedSession: identity,
+      );
+      id = PlatformSongIdentity.fromPayload(result);
+    }
+    if (id.isEmpty) {
+      final result = await api.get(
+        '/song/url',
+        query: {'hash': track.id.substring(6), 'quality': '128'},
+        expectedSession: identity,
+        allowBusinessError: true,
+      );
+      id = PlatformSongIdentity.fromPayload(result);
+    }
+    if (id.isEmpty) {
       throw const MusicPlatformException('平台未返回歌曲评论标识，请稍后重试');
     }
     return PlatformCommentResource(
@@ -108,13 +163,16 @@ class PlatformCommentsRepository {
     PlatformCommentResource resource, {
     int page = 1,
     PlatformComment? thread,
+    String? hottestChildrenId,
   }) async {
     final reply = thread != null;
     if (reply && thread.specialId.isEmpty) {
       throw const MusicPlatformException('此评论缺少回复标识，请刷新评论区');
     }
     final payload = await api.get(
-      reply
+      hottestChildrenId != null
+          ? '/comment/music/topliked'
+          : reply
           ? '/comment/floor'
           : resource.kind == PlatformCommentKind.song
           ? '/comment/music'
@@ -122,7 +180,9 @@ class PlatformCommentsRepository {
       query: {
         'page': '$page',
         'pagesize': '30',
-        if (reply) ...{
+        if (hottestChildrenId != null)
+          'childrenid': hottestChildrenId
+        else if (reply) ...{
           'special_id': thread.specialId,
           'tid': thread.id,
           'resource_type': resource.kind.name,
@@ -138,7 +198,7 @@ class PlatformCommentsRepository {
     final raw = data['list'] ?? data['comments'] ?? const [];
     if (raw is! List) throw const MusicPlatformException('评论数据格式异常，请重试');
     final childrenId =
-        '${data['childrenid'] ?? payload['childrenid'] ?? thread?.specialId ?? ''}';
+        '${data['childrenid'] ?? payload['childrenid'] ?? hottestChildrenId ?? thread?.specialId ?? ''}';
     final comments = raw
         .whereType<Map>()
         .map(
@@ -155,7 +215,35 @@ class PlatformCommentsRepository {
     return PlatformCommentPage(
       comments,
       total == null ? raw.length == 30 : page * 30 < total,
+      childrenId: childrenId,
+      total: total,
+      singerComments: _singers(data),
     );
+  }
+
+  static List<PlatformComment> _singers(Map<String, dynamic> data) {
+    final result = <String, PlatformComment>{};
+    for (final key in [
+      'star_cmts',
+      'star_comment',
+      'weight_list',
+      'hot_list',
+    ]) {
+      final candidate = data[key];
+      final rows = candidate is Map ? candidate['list'] : candidate;
+      if (rows is! List) continue;
+      for (final row in rows.whereType<Map>()) {
+        final parsed = PlatformComment.fromJson({
+          ...MusicPlatformApi.objectMap(row),
+          if (key.startsWith('star')) 'is_star': 1,
+        }, childrenId: '${data['childrenid'] ?? ''}');
+        if (parsed.id.isNotEmpty &&
+            (key.startsWith('star') || parsed.isSinger)) {
+          result[parsed.id] = parsed;
+        }
+      }
+    }
+    return result.values.toList();
   }
 
   Future<void> _write(String path, Map<String, String> query) async {
