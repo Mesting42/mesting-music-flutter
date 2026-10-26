@@ -23,6 +23,7 @@ import '../search_providers.dart';
 import '../../../core/platform/distribution_channel.dart';
 import '../../auth/account_capabilities.dart';
 import '../../music_platform/presentation/platform_feedback.dart';
+import '../../music_platform/presentation/platform_search_landing.dart';
 import '../../music_platform/presentation/platform_comments_page.dart';
 
 List<Track> selectedSearchPlaybackQueue(Track selectedTrack) =>
@@ -221,9 +222,11 @@ class MusicSearchResultsBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(musicSearchControllerProvider);
     return Material(
-      color: Theme.of(context).colorScheme.surface,
+      color: Colors.transparent,
       child: state.query.isEmpty
-          ? _SearchLanding(onSearch: onSearch)
+          ? (DistributionChannel.isBeta
+                ? PlatformSearchLanding(onSearch: onSearch)
+                : _SearchLanding(onSearch: onSearch))
           : state.isLoading
           ? _SearchLoading(query: state.query)
           : _SearchResults(state: state, onSearch: onSearch),
@@ -281,6 +284,9 @@ class _SearchLandingState extends ConsumerState<_SearchLanding> {
 
   @override
   Widget build(BuildContext context) {
+    if (DistributionChannel.isBeta) {
+      return PlatformSearchLanding(onSearch: widget.onSearch);
+    }
     final tokens = context.musicThemeTokens;
     final hotRanking = ref.watch(hotMusicControllerProvider);
     final hotSnapshot = hotRanking.value;
@@ -1739,17 +1745,14 @@ class _TrackResults extends ConsumerWidget {
           return ListTile(
             onTap: () async {
               if (!track.isPlayable) {
-                ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        track.availabilityMessage.isEmpty
-                            ? '这首歌当前不可播放'
-                            : track.availabilityMessage,
-                      ),
-                    ),
-                  );
+                showMusicNotice(
+                  context,
+                  icon: Icons.error_outline_rounded,
+                  title: track.availabilityMessage.isEmpty
+                      ? '这首歌当前不可播放'
+                      : track.availabilityMessage,
+                  message: '',
+                );
                 return;
               }
               // Search results remain outside the explicit upcoming queue,

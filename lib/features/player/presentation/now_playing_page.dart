@@ -39,6 +39,7 @@ import 'persistent_mini_player.dart';
 import 'now_playing_transition.dart';
 import 'vinyl_disc.dart';
 import '../../experience/presentation/cover_player_page.dart';
+import '../../experience/presentation/beta_now_playing_page.dart';
 
 const nowPlayingTonearmAsset = 'assets/images/player/netease-style-tonearm.png';
 const nowPlayingTonearmPlayingTurns = 0.0;
@@ -159,6 +160,9 @@ class _NowPlayingPageState extends ConsumerState<NowPlayingPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (DistributionChannel.isBeta) {
+      return BetaNowPlayingPage(lyricsInitially: widget.showLyricsInitially);
+    }
     if (ref.watch(playerVisualStyleProvider) == PlayerVisualStyle.cover) {
       return CoverPlayerPage(lyricsInitially: widget.showLyricsInitially);
     }

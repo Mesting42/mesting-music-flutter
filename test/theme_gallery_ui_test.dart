@@ -387,7 +387,7 @@ void main() {
       if (find.text('晨雾律动已保存').evaluate().isNotEmpty) break;
     }
     expect(find.text('晨雾律动已保存'), findsOneWidget);
-    expect(find.text('下次启动生效'), findsOneWidget);
+    expect(find.text('下次启动生效'), findsNothing); // Compact HUD no longer repeats explanatory copy.
   });
 
   testWidgets(

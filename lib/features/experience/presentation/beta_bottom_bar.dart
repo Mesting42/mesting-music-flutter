@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
+import '../../themes/beta_appearance.dart';
+
 /// Composition and optical values from liquid_glass_widgets' official
 /// example/lib/apple_music/apple_music_demo.dart (MIT). Keep these centralized:
 /// the package owns the spring, press/drag physics and accessory morphing.
@@ -88,8 +90,8 @@ class BetaMusicBottomBar extends StatelessWidget {
       horizontalPadding: 20,
       verticalPadding: 16,
       spacing: 8,
-      selectedIconColor: Theme.of(context).colorScheme.primary,
-      selectedLabelColor: Theme.of(context).colorScheme.primary,
+      selectedIconColor: BetaAppearance.red,
+      selectedLabelColor: BetaAppearance.red,
       unselectedIconColor: foreground.withValues(alpha: .9),
       unselectedLabelColor: foreground.withValues(alpha: .9),
       indicatorColor: foreground.withValues(alpha: .2),

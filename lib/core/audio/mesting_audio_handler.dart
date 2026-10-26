@@ -126,6 +126,8 @@ class MestingAudioHandler extends BaseAudioHandler
   bool _currentSourceFromCache = false;
   final Set<String> _directRemoteSourceIds = <String>{};
   RadioTrackLoader? _radioTrackLoader;
+  bool _preserveServerOrder = false;
+  void Function()? _onExplicitPlayback;
   TrackPlaybackResolver? _trackPlaybackResolver;
   bool _refreshingSource = false;
 
@@ -954,6 +956,7 @@ class MestingAudioHandler extends BaseAudioHandler
         if (target != null) {
           await playSingleTrack(target, preservePendingAdvance: true);
           advanced = true;
+          if (_preserveServerOrder) unawaited(_ensureRadioFallbackTracks());
           return;
         }
       }
@@ -1040,6 +1043,11 @@ class MestingAudioHandler extends BaseAudioHandler
         _consecutiveRadioRefillMisses < _radioRefillAttemptLimit) {
       return null;
     }
+    if (_preserveServerOrder) {
+      // Platform batches already carry recommendation order. Never shuffle or
+      // mix in history/library tracks after the explicit queue is exhausted.
+      return unplayedPool.firstOrNull;
+    }
     final candidates = unplayedPool.isEmpty ? pool : unplayedPool;
     final recentIds = _playbackHistory.reversed
         .take(_recentFallbackWindow)
@@ -1062,6 +1070,7 @@ class MestingAudioHandler extends BaseAudioHandler
   }
 
   List<Track> get _fallbackPool {
+    if (_preserveServerOrder) return _radioFallbackTracks;
     final result = <Track>[];
     final seen = <String>{};
     final candidates = _mode == PlaybackMode.random
@@ -1111,7 +1120,13 @@ class MestingAudioHandler extends BaseAudioHandler
     if (next.isNotEmpty) _resumePendingAdvance();
   }
 
-  void configureRadioTrackLoader(RadioTrackLoader loader) {
+  void configureRadioTrackLoader(
+    RadioTrackLoader loader, {
+    bool preserveServerOrder = false,
+    void Function()? onExplicitPlayback,
+  }) {
+    _preserveServerOrder = preserveServerOrder;
+    _onExplicitPlayback = onExplicitPlayback;
     _radioTrackLoader = loader;
     unawaited(_ensureRadioFallbackTracks());
   }
@@ -1133,7 +1148,8 @@ class MestingAudioHandler extends BaseAudioHandler
   Future<void> _ensureRadioFallbackTracks({bool force = false}) async {
     final loader = _radioTrackLoader;
     if (loader == null) return;
-    if (!force && _availableRadioTrackCount >= _radioPrefetchThreshold) return;
+    final threshold = _preserveServerOrder ? 4 : _radioPrefetchThreshold;
+    if (!force && _availableRadioTrackCount >= threshold) return;
     final active = _radioLoadInFlight;
     if (active != null) return active;
 
@@ -1143,7 +1159,7 @@ class MestingAudioHandler extends BaseAudioHandler
       try {
         var attempts = 0;
         while (attempts < _radioRefillAttemptLimit &&
-            _availableRadioTrackCount < _radioPrefetchThreshold) {
+            _availableRadioTrackCount < threshold) {
           attempts += 1;
           final excluded = <String>{
             ..._autoplaySessionTrackKeys,
@@ -1159,7 +1175,9 @@ class MestingAudioHandler extends BaseAudioHandler
             _trace('radio-refill-stale generation=$generation');
             break;
           }
-          final added = _mergeRadioFallbackTracks(tracks);
+          final added = _preserveServerOrder
+              ? await _appendRecommendationBatch(tracks, generation)
+              : _mergeRadioFallbackTracks(tracks);
           if (added == 0) {
             _consecutiveRadioRefillMisses += 1;
           } else {
@@ -1199,13 +1217,43 @@ class MestingAudioHandler extends BaseAudioHandler
     return request;
   }
 
-  int get _availableRadioTrackCount => _radioFallbackTracks
-      .where(
-        (track) =>
-            !_autoplaySessionTrackKeys.contains(_semanticTrackKey(track)) &&
-            track.id != mediaItem.value?.id,
-      )
-      .length;
+  /// Upstream FM/discover prefetch becomes the actual visible upcoming queue,
+  /// preserving server order, rather than a hidden randomized fallback pool.
+  Future<int> _appendRecommendationBatch(
+    List<Track> tracks,
+    int generation,
+  ) async {
+    final ids = {
+      mediaItem.value?.id,
+      ..._upcomingMediaItems.map((item) => item.id),
+    };
+    final fresh = tracks
+        .where((track) => track.isPlayable && ids.add(track.id))
+        .toList();
+    final items = await Future.wait(fresh.map(_mediaItemFor));
+    if (generation != _radioRecommendationGeneration) return 0;
+    for (final track in fresh) {
+      _knownTracks[track.id] = track;
+    }
+    _tracks = [..._tracks, ...fresh];
+    queue.add([...queue.value, ...items]);
+    _upcomingMediaItems = [..._upcomingMediaItems, ...items];
+    _publishUpcomingQueue();
+    _resumePendingAdvance();
+    return fresh.length;
+  }
+
+  int get _availableRadioTrackCount => _preserveServerOrder
+      ? _upcomingMediaItems.length
+      : _radioFallbackTracks
+            .where(
+              (track) =>
+                  !_autoplaySessionTrackKeys.contains(
+                    _semanticTrackKey(track),
+                  ) &&
+                  track.id != mediaItem.value?.id,
+            )
+            .length;
 
   bool get _canDiscoverRadioFallback => _radioTrackLoader != null;
 
@@ -1249,7 +1297,8 @@ class MestingAudioHandler extends BaseAudioHandler
     _autoplaySessionTrackKeys.add(key);
   }
 
-  static String _semanticTrackKey(Track track) {
+  String _semanticTrackKey(Track track) {
+    if (_preserveServerOrder) return track.id;
     String normalize(String value) => value
         .toLowerCase()
         .replaceAll(RegExp(r'\([^)]*\)|（[^）]*）|\[[^]]*\]'), '')
@@ -1276,6 +1325,7 @@ class MestingAudioHandler extends BaseAudioHandler
     if (!preservePendingAdvance) _consecutiveLoadFailures = 0;
     if (_mode == PlaybackMode.random) _rememberAutoplaySelection(track);
     if (playbackContext != null) {
+      _onExplicitPlayback?.call();
       _replacePlaybackContext(playbackContext);
     }
     _knownTracks[track.id] = track;
@@ -1401,7 +1451,9 @@ class MestingAudioHandler extends BaseAudioHandler
     int initialIndex = 0,
     Duration initialPosition = Duration.zero,
     bool autoplay = true,
+    bool recommendationContext = false,
   }) async {
+    if (!recommendationContext) _onExplicitPlayback?.call();
     _markUserCommand('replaceQueue');
     _consecutiveLoadFailures = 0;
     if (tracks.isNotEmpty) {

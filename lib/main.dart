@@ -26,8 +26,16 @@ Future<void> main() async {
   if (DistributionChannel.isBeta) await LiquidGlassWidgets.initialize();
   if (DistributionChannel.isBeta) PlatformCredits.register();
   final preferences = await SharedPreferences.getInstance();
+  await migrateBeta7Appearance(preferences);
   await migrateBeta6Appearance(preferences);
-  final brandStyle = await AppBrandStyleBridge.current();
+  final currentBrand = await AppBrandStyleBridge.current();
+  if (DistributionChannel.isBeta && currentBrand != AppBrandStyle.coral) {
+    await AppBrandStyleBridge.select(AppBrandStyle.coral);
+    await AppBrandStyleBridge.applyQueuedStyle();
+  }
+  final brandStyle = DistributionChannel.isBeta
+      ? AppBrandStyle.coral
+      : currentBrand;
   final launchThemeMode = savedMusicThemeMode(preferences);
   await AppBrandStyleBridge.syncLaunchTheme(
     launchThemeMode,

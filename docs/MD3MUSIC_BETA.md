@@ -1,6 +1,190 @@
-# md3Music integration Beta.6 handoff
+# md3Music integration Beta.7 handoff
 
-## Beta.6 cover, official chrome, quality and appearance handoff
+## Beta.7 accepted implementation and delivery boundary
+
+This section is the current built truth for **1.0.37-beta.7 / 7**, merged after
+final finish review on 2026-10-25. The disposition is **SHIP WITH STATED
+VALIDATION LIMITS**: R1–R3 are resolved in the reviewed source/widget/capture
+scope. Earlier Beta.6/Beta.5/Beta.4 records below remain historical context;
+where behavior differs, this section takes precedence. No commit or clean
+working tree is implied. Preserve formal-channel decisions, existing account
+ownership, comments, paged song search, cloud library and the one audio service.
+
+The delivery target is
+`C:/Users/Mest/Documents/Codex/2026-10-25/mesting-beta5-handoff-20261025/outputs/beta-1.0.37-beta.7`.
+The final delivery manifest owns exact artifact bytes, SHA256, signing/package
+inspection and archive contents. Do not reuse a rebuild's intermediate hash or
+the historical Beta.6 APK identity below as the Beta.7 identity.
+
+### Red appearance and simplified dress-up
+
+`BetaAppearance` owns the user's sampled reference red and its dark adaptation.
+All four selected destination icons/text and related selection chrome use it;
+profile icons are red and profile panels are pale red/dark red. The red outer
+selection fill/border/shadow for progress styles and characters does not recolor
+explicit IP artwork. Primary text remains readable on selected choices. The
+final local correction closes R3 and removes the `DRESS UP` eyebrow.
+
+Beta removes the complete brand picker and redundant Skin title/description/
+classic card, retaining light/dark/system, custom image/video, player styles,
+independent progress palettes/characters and IP decoration. Launcher/splash
+identity is fixed to `coral`, with old brand preferences migrated. Beta.7 hides
+`followTheme` choices and migrates residual aliases to `classic`. Earlier
+Beta.6 migration already converted some legacy full-IP choices into explicit IP
+values; those explicit selections remain. Full IP skins stay retired, background
+strength stays .58 and performance `automatic`. Formal flavor retains its
+existing complete themes, brand controls, navigation and default vinyl.
+
+### One control layout across all five players
+
+`BetaNowPlayingPage` routes `cover`, `classic`, `aurora`, `cassette` and
+`lyricStage` through one `ApplePlayerControls`. Keep each upper scene and motion,
+then use the exact same lower order in both cover and lyrics modes:
+
+1. Progress rail and elapsed/remaining time.
+2. Bare white Cupertino previous / play-pause / next glyphs, without large circle
+   backgrounds.
+3. Real Android system-media-volume rail.
+4. Song comments / quality / current queue.
+
+Classic preserves the grey turntable with local dark translucent fills behind
+collapse/more, a stronger lower veil and opaque white artist text. These close
+R1; they do not replace the shared bare transport. Lyrics show small top artwork
+and song identity, blurred-cover atmosphere, left-aligned synced lines, bright
+active text, dim inactive text and fading edges. Their current base size is
+**24dp** (down from 30dp) with TextScaler and measured line heights; synced lines
+remain tap-to-seek. Short/large-text layouts scroll rather than remove controls.
+
+Seek and volume use merged semantics with distinct Chinese labels and native
+adjustable actions: `播放进度` announces elapsed/total duration and `系统媒体音量`
+announces percentage. Every player style has focused semantic-node assertions.
+`MediaVolumeController` probes MethodChannel support before subscribing to
+EventChannel, avoiding missing-host errors in non-Android/widget environments.
+The lifecycle-scoped Kotlin `MediaVolumeBridge` reads/writes `STREAM_MUSIC`,
+observes system changes and refreshes on foreground return; missing hosts leave
+a truthful disabled rail. Channel read/set/event/missing-host tests pass. This
+closes R2 at widget/source level; hardware keys and TalkBack still need a device.
+
+All five styles retain shared standard/high/lossless/Hi-Res preference and the
+existing state-preserving source refresh. The player quality chooser is now a
+dark translucent rounded popup. Preference is not a guarantee of delivered tier;
+unknown metadata, trial and permitted downgrade remain explicit.
+
+### Official chrome, mini player and status feedback
+
+The official liquid_glass_widgets **1.15.0** `GlassScaffold`,
+`GlassTabBar.searchable` and `GlassButton.custom` composition, optical settings,
+press/drag springs and accessory morphing remain. Phone and wide windows share
+one bottom bar. The mini accessory has exactly two bare icon actions—play/pause
+and next—while keeping open-player and horizontal-swipe behavior. A wide layout
+no longer adds a queue button; queue remains in the full player.
+
+Search content extends behind the glass with internal bottom clearance. The
+entire opaque white background strip is removed; the shell avoids the keyboard
+for content and the official bar owns its own lift and safe area. Do not add the
+inset twice. Stable content/forms and account routes remain opaque theme surfaces.
+
+`showMusicNotice` now presents one replaceable translucent HUD below the top
+safe area. It keeps a short title and glyph, light/dark adaptation, motion and
+live-region semantics. Ordinary obsolete subtitles are omitted; warning/error
+messages retain actionable detail. Replacing a HUD does not fabricate operation
+success or introduce a second business-state system.
+
+### Platform recommendation provenance and real search discovery
+
+Beta ports recommendation contracts from upstream md3Music
+**a69503b84e8829f888684f67c163be03c589c014** (`rust-local-force`), including
+API parameters, parsing, server ordering, refresh, feedback and continuation.
+The local artist-scoring recommender and personal hot list are removed from
+Beta entry paths; the other distribution keeps its existing custom recommender.
+
+The discovery surface has four modules: private FM, daily recommendations,
+`/home/discover` and new songs. FM station choices are heart/explore/niche/radio
+(红心/探索/小众/电台), retaining the matching mode/pool and `cur_mark` feedback
+context; each garbage/dislike replacement batch registers its own cur_mark before playback. Playtime/completion, favorite/cancel-favorite and dislike reports apply
+only to the active owned FM stream and current platform account. Platform
+permissions remain authoritative; anonymous browsing does not create membership.
+
+`PlatformRecommendationSession` owns provenance. Fetching a preview does not
+start an FM session. An explicit FM/home-discover queue starts continuation;
+when actual remaining upcoming items are **≤3**, fetched results append to the
+real visible upcoming queue in strict server order, without library-pool or
+random fallback. Explicit non-recommendation playback ends the stream even if
+it selects the same recording. Account/session checks and generation guards
+reject stale starts/refills/feedback; disposed account streams cannot repopulate
+a replacement owner's queue. Pull-to-refresh reloads platform modules.
+
+Both shell and standalone Beta search route to `PlatformSearchLanding` with
+real `/search/hot` keyword boards, search history and exploration categories
+(theme playlists, scenes, popular playlists, rankings and new albums). Hot words
+trigger a real keyword search, never fake playable songs. Scene chips currently
+present categories without a tap action and theme rows are display-only; do not
+claim full feature migration from endpoint presence. Legacy curated routes
+redirect Beta into discovery. Existing real song search preserves upstream
+paging, recording IDs and server order as described in the Beta.4 section.
+
+### Evidence and limits
+
+Evidence root:
+`C:/Users/Mest/Documents/Codex/2026-10-25/mesting-beta5-handoff-20261025/work`.
+`beta7-finish-verdict.md` closes R1–R3. Current captures are in
+`beta7/screenshots-verdict`; classic/semantics closure also retains the preceding
+`beta7/screenshots-approved` evidence. The previously known search chip/subtitle
+CJK tofu was a QA font-coverage issue; explicit fixture fonts repaired it and the
+final captures clear it. It is not an outstanding product defect or a claim of
+Android typography acceptance.
+
+- `beta7/regression-shipped.jsonl`: **587 passed, 41 conditional skips,
+  0 failures**, terminal `done.success=true`. This supersedes the earlier
+  586/40 and 586/41 runs after the standalone Beta-search guard and per-batch FM feedback-context regression.
+- `beta7/targeted-shipped.jsonl`: **81 passed**, terminal success.
+- `beta7/ui-verdict.log`: **8 passed**, including five-style semantic assertions
+  and standalone Beta search not reading the legacy recommendation scorer.
+- `beta7/logic-approved.log`: **14 passed**, including ordered continuation,
+  account-change stale response protection, quality-state preservation and
+  media-volume channels.
+- These groups **overlap**. Do not add them into a single test total. Tests and
+  widget screenshots use synthetic fixtures; they are not live cloud writes.
+- `beta7/analyze-shipped.log` reports **No issues found**. Release assembly in `beta7/build-shipped.log` has
+  succeeded; the delivery manifest/validation
+  record identifies the final rebuilt APK and exact signature/hash checks.
+- The design detector was run once for Beta.7 and returned no findings (`[]`).
+  Finish documentation did not rerun it or initiate a new UI defect hunt.
+
+No Android device is connected. Hardware/system-volume synchronization,
+TalkBack speech/gestures, real IME transitions, GPU glass/motion performance,
+launcher/splash upgrade migration, live CDN playback/quality switching and live
+account/cloud operations remain unverified. Captures use local synthetic data,
+Windows QA fonts and Flutter software rendering; they cannot promise exact
+native Apple GPU fidelity. These limits travel with the private Beta delivery.
+
+### Beta.7 implementation entry points
+
+All paths below are relative to the project root.
+
+| Module | Responsibility |
+| --- | --- |
+| `lib/features/themes/beta_appearance.dart`, `app_theme.dart` | Red/dark accent and pale-red/dark-red semantic panels |
+| `lib/features/themes/theme_controller.dart`, `app_brand_style.dart`, `theme_gallery_page.dart` | Beta-only appearance choices, followTheme/coral migration and explicit IP preservation |
+| `lib/features/experience/presentation/beta_now_playing_page.dart`, `apple_player_controls.dart`, `immersive_lyrics.dart` | Five upper scenes, shared controls, readable classic and 24dp synced lyrics |
+| `lib/core/audio/media_volume_controller.dart`, `android/app/src/main/kotlin/com/mesting/mesting_music/MediaVolumeBridge.kt`, `MainActivity.kt` | Lifecycle-scoped Android media-volume bridge |
+| `lib/features/experience/presentation/beta_music_shell.dart`, `beta_bottom_bar.dart`, `floating_playback_pill.dart` | Official chrome, search clearance and two-action mini accessory |
+| `lib/shared/widgets/music_notice.dart` | Single replaceable top status HUD |
+| `lib/features/music_platform/data/platform_recommendations.dart`, `platform_recommendation_providers.dart` | Pinned platform API/order, FM provenance, feedback and account/generation guards |
+| `lib/features/music_platform/data/platform_explore.dart`, `presentation/platform_recommendations_page.dart`, `presentation/platform_search_landing.dart` | Four discovery modules, actual hot-search boards and connected exploration |
+| `lib/core/audio/mesting_audio_handler.dart` | Existing audio service, visible ordered continuation and state-preserving source refresh |
+| `lib/features/search/presentation/music_search_page.dart`, `lib/app/router/app_router.dart` | Standalone Beta landing and legacy-route redirection boundaries |
+
+Build with **Flutter 3.41.9 / Dart 3.11.5**. The script defaults to Beta.7 name/code
+and ARMv7 + ARM64 while retaining the formal pubspec baseline, CloudBase auth,
+Beta package identity and disabled update checks. It does not deploy a backend
+or publish an update manifest. See the retained build command below.
+
+## Historical Beta.6 cover, official chrome, quality and appearance handoff
+
+The following section records the earlier Beta.6 build and review. Its artifact
+bytes/hash and test counts identify Beta.6 only. Beta.7 behavior and final
+artifact identity are governed by the current section and delivery manifest.
 
 Beta.6 repairs missing artwork across recommendations, search, playlists and
 players. `PlatformArtwork` selects valid HTTP/HTTPS URLs from upstream cover
@@ -90,7 +274,7 @@ and its SDK are unchanged. Run:
 .\tool\build_android_md3_beta_apk.ps1 -FlutterSdkRoot D:\flutter\mesting-beta5\flutter
 ```
 
-This selects version `1.0.37-beta.6` / `6`, ARMv7 + ARM64. `pubspec.yaml`
+The current script selects version `1.0.37-beta.7` / `7`, ARMv7 + ARM64. `pubspec.yaml`
 retains the formal baseline version; the distribution script supplies the Beta
 version. The source ZIP contains no signing private key or local SDK settings.
 
@@ -300,7 +484,7 @@ flutter test --flavor beta test/music_platform_test.dart test/beta_login_entry_t
 .\tool\build_android_md3_beta_apk.ps1
 ```
 
-The build script selects `beta`, version `1.0.37-beta.6` / `6`, ARMv7 + ARM64,
+The build script selects `beta`, version `1.0.37-beta.7` / `7`, ARMv7 + ARM64,
 CloudBase authentication retained, and automatic update checks disabled. It does
 not publish an update manifest or deploy a backend. The package is
 `com.mesting.music.beta`, separate from formal and Java/MySQL packages.

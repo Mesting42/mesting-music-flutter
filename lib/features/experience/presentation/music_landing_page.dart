@@ -12,6 +12,8 @@ import '../../music_platform/presentation/platform_design.dart';
 import '../../search/search_providers.dart';
 import '../../themes/music_theme_tokens.dart';
 import 'editorial_widgets.dart';
+import '../../music_platform/presentation/platform_recommendations_page.dart';
+import '../../music_platform/data/platform_recommendations.dart';
 
 /// Home and discovery share presentation primitives, never the same content
 /// composition. All recommendation data still comes from the concept adapter.
@@ -21,6 +23,7 @@ class MusicLandingPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (discovery) return const PlatformRecommendationHome();
     final daily = ref.watch(platformDailyProvider);
     final newSongs = ref.watch(platformNewSongsProvider);
     final discoverySongs = ref.watch(platformDiscoveryProvider);
@@ -67,8 +70,8 @@ class MusicLandingPage extends ConsumerWidget {
                             EditorialCover(
                               cover: tracks.first.coverAsset,
                               track: tracks.first,
-                              title: signedIn ? '你的每日推荐' : '今日新声',
-                              subtitle: signedIn ? '跟随你的音乐口味' : '从一首新歌开始',
+                              title: '每日推荐',
+                              subtitle: signedIn ? '跟随你的音乐口味' : '来自酷狗的每日推荐',
                               width: width,
                               feature: true,
                               onTap: () => context.push('/music?view=daily'),
@@ -239,10 +242,10 @@ class MusicLandingPage extends ConsumerWidget {
             },
           ),
           if (!discovery) ...[
-            const EditorialSection('换一种心情'),
-            _SongGroups(
-              value: discoverySongs,
-              retry: () => ref.invalidate(platformDiscoveryProvider),
+            const PlatformFmSection(),
+            const PlatformRecommendedSection(
+              title: '刷歌推荐',
+              kind: PlatformRecommendationKind.discover,
             ),
             EditorialSection(
               '听见你的这一年',

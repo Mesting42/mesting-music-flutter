@@ -12,6 +12,7 @@ import '../player/presentation/player_visual_stages.dart';
 import '../player/presentation/vinyl_disc.dart';
 import '../player/player_visual_style.dart';
 import 'app_brand_style.dart';
+import 'beta_appearance.dart';
 import 'custom_background_controller.dart';
 import 'music_theme_preset.dart';
 import 'theme_follow_icons.dart';
@@ -191,17 +192,19 @@ class _ThemeSettingsPanelState extends ConsumerState<_ThemeSettingsPanel> {
                     children: [
                       const _PanelHeader(),
                       const SizedBox(height: 16),
-                      const _SettingsHeading(
-                        title: '品牌套装',
-                        description: '成套切换桌面图标与下一次启动时的启动页。',
-                      ),
-                      const SizedBox(height: 11),
-                      _BrandStylePicker(
-                        selected: brandStyle,
-                        applying: _applyingBrandStyle,
-                        onSelected: _selectBrandStyle,
-                      ),
-                      const SizedBox(height: 24),
+                      if (!DistributionChannel.isBeta) ...[
+                        const _SettingsHeading(
+                          title: '品牌套装',
+                          description: '成套切换桌面图标与下一次启动时的启动页。',
+                        ),
+                        const SizedBox(height: 11),
+                        _BrandStylePicker(
+                          selected: brandStyle,
+                          applying: _applyingBrandStyle,
+                          onSelected: _selectBrandStyle,
+                        ),
+                        const SizedBox(height: 24),
+                      ],
                       const _SettingsHeading(
                         title: '播放器样式',
                         description: '切换全屏播放器的布局与控制质感，播放状态不会中断。',
@@ -228,42 +231,44 @@ class _ThemeSettingsPanelState extends ConsumerState<_ThemeSettingsPanel> {
                         effectivePreset: effectiveTheme,
                       ),
                       const SizedBox(height: 21),
-                      const _SettingsHeading(
-                        title: '皮肤',
-                        description: '选择浅色、深色或跟随系统，角色可在进度条中独立设置。',
-                      ),
-                      const SizedBox(height: 11),
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: DistributionChannel.isBeta
-                            ? 1
-                            : MusicThemeIp.values.length,
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 9,
-                              mainAxisSpacing: 9,
-                              mainAxisExtent: 70,
-                            ),
-                        itemBuilder: (context, index) {
-                          final ip = MusicThemeIp.values[index];
-                          return _IpCategoryCard(
-                            ip: ip,
-                            active: activeIp == ip,
-                            onTap: () {
-                              setState(() => _activeIp = ip);
-                              if (ip == MusicThemeIp.classic &&
-                                  selected.ip != MusicThemeIp.classic) {
-                                ref
-                                    .read(musicThemeProvider.notifier)
-                                    .select('classic');
-                              }
-                            },
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 13),
+                      if (!DistributionChannel.isBeta) ...[
+                        const _SettingsHeading(
+                          title: '皮肤',
+                          description: '选择浅色、深色或跟随系统，角色可在进度条中独立设置。',
+                        ),
+                        const SizedBox(height: 11),
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: DistributionChannel.isBeta
+                              ? 1
+                              : MusicThemeIp.values.length,
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 9,
+                                mainAxisSpacing: 9,
+                                mainAxisExtent: 70,
+                              ),
+                          itemBuilder: (context, index) {
+                            final ip = MusicThemeIp.values[index];
+                            return _IpCategoryCard(
+                              ip: ip,
+                              active: activeIp == ip,
+                              onTap: () {
+                                setState(() => _activeIp = ip);
+                                if (ip == MusicThemeIp.classic &&
+                                    selected.ip != MusicThemeIp.classic) {
+                                  ref
+                                      .read(musicThemeProvider.notifier)
+                                      .select('classic');
+                                }
+                              },
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 13),
+                      ],
                       if (staticThemes.isNotEmpty)
                         _PresetGroup(
                           title: '静态皮肤',
@@ -449,16 +454,6 @@ class _PanelHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'DRESS UP',
-            style: TextStyle(
-              color: Color(0xFF4F65D1),
-              fontSize: 10,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 2,
-            ),
-          ),
-          const SizedBox(height: 5),
           Text(
             '装扮',
             style: TextStyle(
@@ -471,7 +466,7 @@ class _PanelHeader extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '把皮肤、角色与品牌视觉组合成你的音乐空间。',
+            '选择播放器、背景与进度角色，装扮你的音乐空间。',
             style: TextStyle(
               color: tokens.textSecondary,
               fontSize: 12,
@@ -980,7 +975,9 @@ class _PlayerStyleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.musicThemeTokens;
-    final accent = _playerStyleAccent(style);
+    final accent = DistributionChannel.isBeta
+        ? BetaAppearance.red
+        : _playerStyleAccent(style);
     return SizedBox(
       width: 134,
       child: Material(
@@ -1048,8 +1045,7 @@ class _PlayerStyleCard extends StatelessWidget {
 }
 
 Color _playerStyleAccent(PlayerVisualStyle style) => switch (style) {
-  PlayerVisualStyle.cover ||
-  PlayerVisualStyle.classic => const Color(0xFF6C80EA),
+  PlayerVisualStyle.cover || PlayerVisualStyle.classic => BetaAppearance.red,
   PlayerVisualStyle.aurora => const Color(0xFF6BDCF5),
   PlayerVisualStyle.cassette => const Color(0xFFA78BFA),
   PlayerVisualStyle.lyricStage => const Color(0xFF5EEAD4),
@@ -1194,7 +1190,7 @@ class _IpCategoryCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: active ? const Color(0xFF8296F2) : tokens.border,
+              color: active ? BetaAppearance.red : tokens.border,
             ),
           ),
           child: Row(
@@ -1236,7 +1232,7 @@ class _IpCategoryCard extends StatelessWidget {
                 active
                     ? Icons.check_circle_rounded
                     : Icons.chevron_right_rounded,
-                color: active ? const Color(0xFF4F65D1) : tokens.textMuted,
+                color: active ? BetaAppearance.red : tokens.textMuted,
                 size: 21,
               ),
             ],
@@ -1441,7 +1437,9 @@ class _ThemeModePresetCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(17),
               border: Border.all(
                 color: active
-                    ? preset.accent
+                    ? (DistributionChannel.isBeta
+                          ? BetaAppearance.red
+                          : preset.accent)
                     : Colors.white.withValues(
                         alpha: mode == ThemeMode.light ? .74 : .2,
                       ),
@@ -1489,7 +1487,9 @@ class _ThemeModePresetCard extends StatelessWidget {
                               width: 21,
                               height: 21,
                               decoration: BoxDecoration(
-                                color: preset.accent,
+                                color: DistributionChannel.isBeta
+                                    ? BetaAppearance.red
+                                    : preset.accent,
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: Colors.white.withValues(alpha: .9),
@@ -1611,7 +1611,12 @@ class _IllustratedPresetCard extends StatelessWidget {
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: preset.accent, width: 2),
+                          border: Border.all(
+                            color: DistributionChannel.isBeta
+                                ? BetaAppearance.red
+                                : preset.accent,
+                            width: 2,
+                          ),
                         ),
                       ),
                     ),
@@ -1652,7 +1657,9 @@ class _DecorationPicker extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: EdgeInsets.zero,
-      itemCount: ProgressDecoration.values.length,
+      itemCount: DistributionChannel.isBeta
+          ? ProgressDecoration.values.length - 1
+          : ProgressDecoration.values.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 9,
@@ -1660,7 +1667,8 @@ class _DecorationPicker extends StatelessWidget {
         mainAxisExtent: 48,
       ),
       itemBuilder: (context, index) {
-        final value = ProgressDecoration.values[index];
+        final value = ProgressDecoration
+            .values[index + (DistributionChannel.isBeta ? 1 : 0)];
         return _DecorationChoice(
           value: value,
           active: selected == value,
@@ -1688,6 +1696,9 @@ class _DecorationChoice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.musicThemeTokens;
+    final selectionAccent = DistributionChannel.isBeta
+        ? BetaAppearance.accent(Theme.of(context).brightness)
+        : const Color(0xFF6C80EA);
     final label = character
         ? switch (value) {
             ProgressDecoration.followTheme => '跟随皮肤',
@@ -1699,7 +1710,10 @@ class _DecorationChoice extends StatelessWidget {
         : progressDecorationLabel(value);
     return Material(
       color: active
-          ? Color.alphaBlend(const Color(0x1F6C80EA), tokens.glassSubtle)
+          ? Color.alphaBlend(
+              selectionAccent.withValues(alpha: .12),
+              tokens.glassSubtle,
+            )
           : tokens.glassSubtle,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
@@ -1710,12 +1724,14 @@ class _DecorationChoice extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: active ? const Color(0x9E6C80EA) : tokens.border,
+              color: active
+                  ? selectionAccent.withValues(alpha: .62)
+                  : tokens.border,
             ),
             boxShadow: active
-                ? const [
+                ? [
                     BoxShadow(
-                      color: Color(0x1F6C80EA),
+                      color: selectionAccent.withValues(alpha: .12),
                       blurRadius: 16,
                       offset: Offset(0, 6),
                     ),
@@ -1846,7 +1862,7 @@ class _SettingsAction extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 20, color: const Color(0xFF6C80EA)),
+              Icon(icon, size: 20, color: BetaAppearance.red),
               const SizedBox(width: 9),
               Text(
                 label,
@@ -1903,10 +1919,10 @@ class _VisualControls extends StatelessWidget {
             const SizedBox(height: 5),
             SliderTheme(
               data: SliderTheme.of(context).copyWith(
-                activeTrackColor: const Color(0xFF6C80EA),
+                activeTrackColor: BetaAppearance.red,
                 inactiveTrackColor: tokens.borderStrong,
                 trackHeight: 4,
-                thumbColor: const Color(0xFF6C80EA),
+                thumbColor: BetaAppearance.red,
                 thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
                 overlayShape: SliderComponentShape.noOverlay,
               ),
@@ -1991,7 +2007,7 @@ class _MusicToggle extends StatelessWidget {
           height: 28,
           padding: const EdgeInsets.all(3),
           decoration: BoxDecoration(
-            color: value ? const Color(0xFF6C80EA) : tokens.borderStrong,
+            color: value ? BetaAppearance.red : tokens.borderStrong,
             borderRadius: BorderRadius.circular(999),
           ),
           child: AnimatedAlign(
@@ -2071,7 +2087,7 @@ class _PerformancePicker extends StatelessWidget {
                                       : Icons.circle_outlined,
                                   size: 17,
                                   color: mode == selected
-                                      ? const Color(0xFF6C80EA)
+                                      ? BetaAppearance.red
                                       : tokens.textMuted,
                                 ),
                                 const SizedBox(width: 7),

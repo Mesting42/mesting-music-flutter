@@ -324,14 +324,17 @@ class EditorialTrackRow extends ConsumerWidget {
     required this.track,
     required this.contextTracks,
     this.rank,
+    this.onPlay,
     super.key,
   });
+  final VoidCallback? onPlay;
   final Track track;
   final List<Track> contextTracks;
   final int? rank;
   @override
   Widget build(BuildContext context, WidgetRef ref) => InkWell(
-    onTap: () => playEditorialTrack(context, ref, track, contextTracks),
+    onTap:
+        onPlay ?? () => playEditorialTrack(context, ref, track, contextTracks),
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 9),
       child: Row(

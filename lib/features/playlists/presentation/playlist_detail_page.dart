@@ -828,63 +828,12 @@ void _showPlaylistNotice(
   String message, {
   required bool added,
 }) {
-  final tokens = context.musicThemeTokens;
-  final messenger = ScaffoldMessenger.of(context);
-  messenger
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
-      SnackBar(
-        duration: const Duration(milliseconds: 1350),
-        behavior: SnackBarBehavior.floating,
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        margin: const EdgeInsets.fromLTRB(56, 0, 56, 142),
-        padding: EdgeInsets.zero,
-        content: DecoratedBox(
-          decoration: BoxDecoration(
-            color: tokens.glassStrong,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: tokens.borderStrong),
-            boxShadow: [
-              BoxShadow(
-                color: tokens.shadow,
-                blurRadius: 24,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  added ? Icons.check_circle_rounded : Icons.remove_circle,
-                  color: added
-                      ? const Color(0xFF35B779)
-                      : const Color(0xFFC24A34),
-                  size: 19,
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    message,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: tokens.textPrimary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  showMusicNotice(
+    context,
+    icon: added ? Icons.check_rounded : Icons.remove_circle_outline,
+    title: message,
+    message: '',
+  );
 }
 
 class _CircleActionButton extends StatelessWidget {

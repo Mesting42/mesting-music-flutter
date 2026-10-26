@@ -51,10 +51,17 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 open class MainActivity : AudioServiceActivity() {
+    private var mediaVolumeBridge: MediaVolumeBridge? = null
     private lateinit var lyricsChannel: MethodChannel
     private var secureScreenRequests = 0
     private var pendingImageSave: PendingImageSave? = null
     private var pendingPhoneNumberResult: MethodChannel.Result? = null
+
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        mediaVolumeBridge?.dispose()
+        mediaVolumeBridge = null
+        super.cleanUpFlutterEngine(flutterEngine)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,6 +75,8 @@ open class MainActivity : AudioServiceActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        mediaVolumeBridge?.dispose()
+        mediaVolumeBridge = MediaVolumeBridge(this, flutterEngine.dartExecutor.binaryMessenger)
         lyricsChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             LYRICS_CHANNEL,

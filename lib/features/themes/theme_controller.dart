@@ -28,6 +28,17 @@ Future<void> migrateBeta6Appearance(SharedPreferences preferences) async {
   await preferences.remove('theme_performance_mode');
 }
 
+/// Beta.7 preserves explicit progress choices while retiring follow-theme aliases.
+Future<void> migrateBeta7Appearance(SharedPreferences preferences) async {
+  if (!DistributionChannel.isBeta) return;
+  for (final key in ['music_progress_style', 'music_progress_character']) {
+    if (preferences.getString(key) == 'followTheme') {
+      await preferences.setString(key, 'classic');
+    }
+  }
+  await preferences.setString(appBrandStylePreferenceKey, 'coral');
+}
+
 MusicThemePreset _availablePreset(String? id) {
   final preset = musicThemePresetById(id);
   return DistributionChannel.isBeta && preset.ip != MusicThemeIp.classic
@@ -191,6 +202,9 @@ class ThemeVisualSettingsController extends Notifier<ThemeVisualSettings> {
   }
 
   ProgressDecoration _readDecoration(String? value) {
+    if (DistributionChannel.isBeta && value == 'followTheme') {
+      return ProgressDecoration.classic;
+    }
     return ProgressDecoration.values.firstWhere(
       (item) => item.name == value,
       orElse: () => ProgressDecoration.classic,

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/persistence/app_preferences.dart';
+import '../../core/platform/distribution_channel.dart';
 
 const appBrandStylePreferenceKey = 'app_brand_style';
 
@@ -104,6 +105,7 @@ class AppBrandStyleBridge {
 class AppBrandStyleController extends Notifier<AppBrandStyle> {
   @override
   AppBrandStyle build() {
+    if (DistributionChannel.isBeta) return AppBrandStyle.coral;
     final saved = ref
         .watch(sharedPreferencesProvider)
         .getString(appBrandStylePreferenceKey);
@@ -111,6 +113,7 @@ class AppBrandStyleController extends Notifier<AppBrandStyle> {
   }
 
   Future<void> select(AppBrandStyle style) async {
+    if (DistributionChannel.isBeta) style = AppBrandStyle.coral;
     if (style == state) return;
     final previous = state;
     final preferences = ref.read(sharedPreferencesProvider);

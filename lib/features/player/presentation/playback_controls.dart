@@ -74,13 +74,15 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
     }
 
     final styleAccent = switch (widget.visualStyle) {
-      PlayerVisualStyle.cover || PlayerVisualStyle.classic => const Color(0xFF5F75DE),
+      PlayerVisualStyle.cover ||
+      PlayerVisualStyle.classic => const Color(0xFF5F75DE),
       PlayerVisualStyle.aurora => const Color(0xFF73E0FF),
       PlayerVisualStyle.cassette => const Color(0xFFA78BFA),
       PlayerVisualStyle.lyricStage => const Color(0xFF5EEAD4),
     };
     final dockColor = switch (widget.visualStyle) {
-      PlayerVisualStyle.cover || PlayerVisualStyle.classic => Colors.transparent,
+      PlayerVisualStyle.cover ||
+      PlayerVisualStyle.classic => Colors.transparent,
       PlayerVisualStyle.aurora => const Color(0x221D397A),
       PlayerVisualStyle.cassette => const Color(0x4D17123C),
       PlayerVisualStyle.lyricStage => const Color(0x4D102F3B),

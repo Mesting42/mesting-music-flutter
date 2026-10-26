@@ -244,7 +244,7 @@ void main() {
   );
 
   test(
-    'catalog uses public new songs for guest and upstream daily endpoint after login',
+    'catalog follows upstream daily endpoint for both guest and account requests',
     () async {
       final paths = <String>[];
       final catalogApi = MusicPlatformApi(
@@ -265,7 +265,7 @@ void main() {
       await catalog.discovery();
       await catalog.newSongs();
       expect(paths, [
-        '/top/song',
+        '/everyday/recommend',
         '/everyday/recommend',
         '/home/discover',
         '/top/song',

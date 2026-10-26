@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../shared/models/track.dart';
 import 'data/platform_catalog.dart';
 import 'music_platform_providers.dart';
+import 'platform_recommendation_providers.dart';
 
 final platformCatalogProvider = Provider<PlatformCatalog>(
   (ref) => PlatformCatalog(ref.watch(musicPlatformApiProvider)),
@@ -20,7 +21,9 @@ final platformNewSongsProvider = FutureProvider<List<Track>>((ref) async {
 });
 final platformDiscoveryProvider = FutureProvider<List<Track>>((ref) async {
   await ref.watch(platformAccountProvider.future);
-  return ref.watch(platformCatalogProvider).discovery();
+  final repository = ref.watch(platformRecommendationsProvider);
+  await repository.discover();
+  return repository.discoverySongs;
 });
 final platformFeaturedProvider = FutureProvider<List<Map<String, dynamic>>>((
   ref,

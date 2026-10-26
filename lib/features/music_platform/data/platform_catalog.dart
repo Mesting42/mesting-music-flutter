@@ -43,15 +43,11 @@ class PlatformCatalog {
       .toList(growable: false);
 
   Future<List<Track>> daily() async {
-    final loggedIn = api.session != null;
-    final payload = await api.get(
-      loggedIn ? '/everyday/recommend' : '/top/song',
-      query: loggedIn ? const {} : const {'type': '21608', 'pagesize': '30'},
-    );
+    final payload = await api.get('/everyday/recommend');
     return tracks(payload);
   }
 
-  /// Discovery is a public new-song chart even when daily picks are personal.
+  /// Public new-song chart, separate from account-based daily recommendations.
   Future<List<Track>> newSongs() async => tracks(
     await api.get(
       '/top/song',
@@ -66,16 +62,8 @@ class PlatformCatalog {
     ),
   );
 
-  Future<List<Map<String, dynamic>>> featured() async => rows(
-    await api.get(
-      '/top/playlist',
-      query: {
-        'page': '1',
-        'pagesize': '12',
-        'userid': api.session?.userId ?? '0',
-      },
-    ),
-  );
+  Future<List<Map<String, dynamic>>> featured() async =>
+      rows(await api.get('/top/playlist', query: const {'page': '1'}));
 
   Future<List<Track>> publicPlaylist(String globalId) async {
     final result = <Track>[];

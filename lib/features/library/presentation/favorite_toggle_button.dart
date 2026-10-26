@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/models/track.dart';
+import '../../../shared/widgets/music_notice.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../themes/beta_appearance.dart';
 import 'library_access.dart';
 import '../../themes/mesting_palette.dart';
 import '../../themes/music_theme_tokens.dart';
@@ -73,7 +76,11 @@ class FavoriteToggleButton extends ConsumerWidget {
             backgroundColor: Colors.transparent,
             minimumSize: Size.square(dimension),
             maximumSize: Size.square(dimension),
-            foregroundColor: favorite ? _favoriteAccent : tokens.textSecondary,
+            foregroundColor: favorite
+                ? (DistributionChannel.isBeta
+                      ? BetaAppearance.red
+                      : _favoriteAccent)
+                : tokens.textSecondary,
             overlayColor: _favoriteAccent.withValues(alpha: .10),
           ),
           onPressed: () async {
@@ -86,6 +93,16 @@ class FavoriteToggleButton extends ConsumerWidget {
             if (!allowed || !context.mounted) return;
             try {
               await ref.read(libraryRepositoryProvider).toggleFavorite(track);
+              if (context.mounted) {
+                showMusicNotice(
+                  context,
+                  icon: favorite
+                      ? Icons.heart_broken_outlined
+                      : Icons.favorite_rounded,
+                  title: favorite ? '已取消喜欢' : '已添加到喜欢',
+                  message: '',
+                );
+              }
             } catch (error) {
               if (context.mounted) showPlatformFailure(context, error);
             }

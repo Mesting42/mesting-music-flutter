@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/models/track.dart';
+import '../../../shared/widgets/music_notice.dart';
 import '../data/platform_comments_repository.dart';
 import '../data/music_platform_api.dart';
 import '../music_platform_providers.dart';
@@ -271,9 +272,12 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
       setState(() => _reply = null);
       await _load(reset: true);
       if (mounted) {
-        ScaffoldMessenger.of(
+        showMusicNotice(
           context,
-        ).showSnackBar(const SnackBar(content: Text('已提交到酷狗，显示时间以平台审核为准')));
+          icon: Icons.check_rounded,
+          title: '已提交到酷狗，等待平台审核',
+          message: '',
+        );
       }
     } catch (error) {
       if (mounted) showPlatformFailure(context, error);

@@ -1,12 +1,12 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-25T04:24:52.000Z",
-  "title": "Design System: Mesting Android Beta.6",
+  "generatedAt": "2026-10-25T06:13:37.4256696Z",
+  "title": "Design System: Mesting Android Beta.7",
   "extensions": {
     "colorMeta": {
       "primary-seed": {
         "role": "primary",
-        "displayName": "经典浅色种子",
+        "displayName": "正式渠道经典浅色种子",
         "tonalRamp": [
           "oklch(15% .17 270)",
           "oklch(25% .17 270)",
@@ -31,6 +31,35 @@
           "oklch(80% .17 15)",
           "oklch(95% .17 15)"
         ]
+      },
+      "beta-accent": {
+        "role": "primary",
+        "displayName": "参考珊瑚红",
+        "tonalRamp": [
+          "oklch(15% .19 25)",
+          "oklch(25% .19 25)",
+          "oklch(35% .19 25)",
+          "oklch(45% .19 25)",
+          "oklch(55% .19 25)",
+          "oklch(65% .19 25)",
+          "oklch(80% .19 25)",
+          "oklch(95% .19 25)"
+        ]
+      },
+      "beta-accent-dark": {
+        "role": "primary",
+        "displayName": "深色明红",
+        "purpose": "深色主题的导航、个人页图标与选择 chrome。"
+      },
+      "beta-panel-light": {
+        "role": "neutral",
+        "displayName": "浅红面板",
+        "purpose": "Beta primaryContainer 与 surfaceContainerLow。"
+      },
+      "beta-panel-dark": {
+        "role": "neutral",
+        "displayName": "深红面板",
+        "purpose": "深色 Beta primaryContainer 与 surfaceContainerLow。"
       }
     },
     "typographyMeta": {
@@ -44,7 +73,7 @@
       },
       "lyrics": {
         "displayName": "同步大字歌词",
-        "purpose": "按真实文字高度测量，白色当前行与降亮度其余行。"
+        "purpose": "当前基准 24dp / 700 / 1.4，左对齐；按真实文字与 TextScaler 测量，白色当前行、降亮度其余行和渐隐边缘。"
       }
     },
     "shadows": [
@@ -74,6 +103,16 @@
         "name": "cover-carousel",
         "value": "240ms",
         "purpose": "封面选择 PageView 对齐。"
+      },
+      {
+        "name": "status-hud-enter",
+        "value": "240ms",
+        "purpose": "淡入、顶部滑入和缩放；减少动画时保持终态。"
+      },
+      {
+        "name": "status-hud-exit",
+        "value": "180ms",
+        "purpose": "停留1900ms后反向退出；新提示立即替换旧提示。"
       }
     ],
     "breakpoints": [
@@ -94,43 +133,97 @@
       "betaChrome": {
         "source": "third_party/liquid_glass_widgets/apple_music_demo.reference.dart.txt",
         "runtimeDependency": "liquid_glass_widgets 1.15.0",
-        "components": ["GlassScaffold", "GlassTabBar.searchable", "GlassButton.custom"],
+        "components": [
+          "GlassScaffold",
+          "GlassTabBar.searchable",
+          "GlassButton.custom"
+        ],
         "quality": "premium",
         "interactionBehavior": "full",
-        "settings": {"blur": 2, "thickness": 30, "lightIntensity": 0.2, "chromaticAberration": 0.01, "saturation": 1.2, "fresnelStrength": 0},
-        "barGlassColor": {"light": "#AAF2F2F7", "dark": "#AA1C1C1E"},
-        "playPillOverrides": {"lightIntensity": 0.18, "glassColorLight": "#CCF2F2F7", "glassColorDark": "#CC1C1C1E"},
-        "layout": {"barHeight": 64, "searchBarHeight": 50, "accessoryHeight": 50, "horizontalPadding": 20, "verticalPadding": 16, "spacing": 8, "maximumTextScaleHeightAddition": 28},
-        "behavior": "手机和宽屏共用一个底栏，无左轨及88dp占位；正文宽度仍约束。库处理安全区和搜索键盘抬升，透明Material提供正常文字默认值。滚动超过50dp收拢accessory，重复点击当前tab回顶部。"
+        "settings": {
+          "blur": 2,
+          "thickness": 30,
+          "lightIntensity": 0.2,
+          "chromaticAberration": 0.01,
+          "saturation": 1.2,
+          "fresnelStrength": 0
+        },
+        "barGlassColor": {
+          "light": "#AAF2F2F7",
+          "dark": "#AA1C1C1E"
+        },
+        "playPillOverrides": {
+          "lightIntensity": 0.18,
+          "glassColorLight": "#CCF2F2F7",
+          "glassColorDark": "#CC1C1C1E"
+        },
+        "layout": {
+          "barHeight": 64,
+          "searchBarHeight": 50,
+          "accessoryHeight": 50,
+          "horizontalPadding": 20,
+          "verticalPadding": 16,
+          "spacing": 8,
+          "maximumTextScaleHeightAddition": 28
+        },
+        "behavior": "手机和宽屏共用底栏，无左轨及88dp占位；正文宽度仍约束。库处理安全区和搜索键盘抬升，透明Material提供正常文字默认值。搜索移除全宽不透明底并延伸到玻璃后，正文内部留底部余量。滚动超过50dp收拢accessory，重复点击当前tab回顶部。迷你条只有播放/暂停与下一首两个裸图标，保留打开/横滑。"
       },
       "existingMestingGlass": {
         "quality": "standard",
-        "settings": {"blur": 12, "thickness": 22, "lightIntensity": 0.22, "chromaticAberration": 0.005, "saturation": 1.12},
+        "settings": {
+          "blur": 12,
+          "thickness": 22,
+          "lightIntensity": 0.22,
+          "chromaticAberration": 0.005,
+          "saturation": 1.12
+        },
         "highContrast": "不透明surface与outline，仅适用于此组件；不代表官方底栏的降级路径。"
       }
     },
     "beta6Behavior": {
       "quality": "五种播放器共用标准/高品质/无损/Hi-Res持久化偏好；保留进度、播放/暂停、队列与模式。实际音质取自平台返回，未知不标成所选值，试听和降档如实披露。",
-      "appearance": "移除三种角色完整主题并迁移为classic，旧followTheme进度样式/角色保留原角色外观；背景强度.58、性能automatic，保留IP装饰开关和独立进度条选择。正式flavor保持既有行为。",
-      "artwork": "统一有效URL解析与只读元数据回退；合并请求、3并发、256成功缓存，失败不永久缓存。"
+      "appearance": "Beta.6完整IP主题退役为classic，背景强度.58、性能automatic，保留IP装饰与显式进度选择。Beta.6已转成显式IP的值保留；残留followTheme别名在Beta.7转classic。正式flavor保持既有行为。",
+      "artwork": "统一有效URL解析与只读元数据回退；合并请求、3并发、256成功缓存，失败不永久缓存。",
+      "status": "历史记录；quality/artwork继续适用，appearance中的followTheme处理由beta7Behavior.appearance补充。"
     },
     "previewNotes": [
-      "以下 HTML/CSS 是 Flutter 视觉规则的独立预览，不包含业务行为或真实 shader。",
-      "预览采用已复核的经典浅色强调色，生产读取当前 ColorScheme。",
-      "色带为展示用合成 OKLCH，不是生产新增色阶。",
+      "以下HTML/CSS是Flutter视觉规则的独立预览，不含业务行为、官方shader或真实原生系统音量。",
+      "Beta预览使用已实现的参考红色与浅红面板；正式flavor仍读取原主题。",
+      "色带为展示用合成OKLCH，不是生产新增色阶；颜色原值由DESIGN.md frontmatter所有。",
       "图像占位不冒充真实专辑封面。",
-      "Beta.6导航预览仅表示静态形态；实际按压、拖动、弹簧、搜索与accessory形变由官方Flutter组件提供。",
-      "批准截图为合成测试证据；测试字体覆盖边界不代表真机缺陷，也不验证GPU、CDN或真实音质切换。"
-    ]
+      "官方按压、拖动、弹簧、搜索与accessory形变由Flutter组件提供；静态预览不能证明Apple原生GPU保真度。",
+      "最终处置为SHIP WITH STATED VALIDATION LIMITS，R1-R3已闭合；截图用合成数据和Windows QA字体。",
+      "已知搜索chip/subtitle中文缺字在最终捕获中修复；Android字体、TalkBack、硬件音量、GPU、IME、迁移、CDN和云操作仍未真机验收。"
+    ],
+    "beta7Behavior": {
+      "selectedChrome": "BetaAppearance提供参考红色与深色明红，导航选中图标/文字、个人页图标及相关选择统一；个人页面板浅红/深红。进度/角色红色选中框使用主要文字标签，显式IP图案保留自身配色。",
+      "sharedControls": "cover/classic/aurora/cassette/lyricStage和封面/歌词模式共用ApplePlayerControls：进度/时间、裸白Cupertino上一首/播放暂停/下一首、Android系统媒体音量、评论/音质/当前队列。保留上半区各自视觉/动态。",
+      "classicContrast": "灰色唱机保留；顶部收起/更多局部深色半透明底，下部加强深色罩层，歌手不透明白字。共享transport仍无大圆面。",
+      "sliderSemantics": "MergeSemantics保留原生可调动作；播放进度读已播/总时长，系统媒体音量读百分比。五样式widget语义已测试，不等于Android TalkBack验收。",
+      "volume": "MediaVolumeController/MediaVolumeBridge操作STREAM_MUSIC，方法探测后订阅事件，前台刷新；无宿主显示禁用。读写/事件/缺失宿主测试通过，硬件键仍待真机。",
+      "quality": "既有偏好/实际返回/状态保持契约保留；播放器内为深色半透明30dp圆角音质弹层。",
+      "appearance": "移除品牌选择器、重复皮肤标题/说明/经典卡片、DRESS UP眉题和followTheme选项；固定coral图标/启动页并迁移旧品牌。残留followTheme转classic，显式IP选择保留。保留浅/深/系统、自定义图片/视频、进度样式/角色和IP装饰。",
+      "notice": "一个可替换的顶部安全区半透明HUD；短标题+图标、浅深色和liveRegion，普通旧说明省略，错误/警告保留可行动原因。",
+      "recommendationSurface": "四个上游发现模块和真实热搜/历史/探索入口，排序/续播来源归平台provider；具体a69503b来源、可见队列和账号边界见PRODUCT.md。",
+      "sourceEntries": [
+        "lib/features/themes/beta_appearance.dart",
+        "lib/features/themes/app_theme.dart",
+        "lib/features/experience/presentation/beta_now_playing_page.dart",
+        "lib/features/experience/presentation/apple_player_controls.dart",
+        "lib/features/experience/presentation/immersive_lyrics.dart",
+        "lib/features/experience/presentation/floating_playback_pill.dart",
+        "lib/shared/widgets/music_notice.dart"
+      ]
+    }
   },
   "components": [
     {
       "name": "主要按钮",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "主题强调色与 onPrimary，胶囊最小 48dp。",
+      "description": "Beta主题强调色与onPrimary，胶囊最小48dp；正式渠道读取原主题。",
       "html": "<button class=\"ds-button\">播放全部</button>",
-      "css": ".ds-button{min-height:48px;padding:12px 24px;border:0;border-radius:999px;background:#505B92;color:#fff;font:800 14px sans-serif;cursor:pointer}.ds-button:hover{filter:brightness(.96)}.ds-button:active{filter:brightness(.9)}.ds-button:disabled{opacity:.38}.ds-button:focus-visible,.ds-chip:focus-visible,.ds-nav button:focus-visible{outline:2px solid #505B92;outline-offset:3px}"
+      "css": ".ds-button{min-height:48px;padding:12px 24px;border:0;border-radius:999px;background:#DE3A3D;color:#fff;font:800 14px sans-serif;cursor:pointer}.ds-button:hover{filter:brightness(.96)}.ds-button:active{filter:brightness(.9)}.ds-button:disabled{opacity:.38}.ds-button:focus-visible,.ds-chip:focus-visible,.ds-nav button:focus-visible{outline:2px solid #DE3A3D;outline-offset:3px}"
     },
     {
       "name": "次要按钮",
@@ -138,7 +231,7 @@
       "refersTo": "button-secondary",
       "description": "低阶表面、轻边框与主要文字。",
       "html": "<button class=\"ds-button\">取消</button>",
-      "css": ".ds-button{min-height:48px;padding:12px 24px;border:1px solid rgba(255,255,255,.95);border-radius:999px;background:#F4F2FA;color:#20232B;font:600 14px sans-serif;cursor:pointer}.ds-button:hover{background:#E9E7F0}.ds-button:active{background:#E3E1E9}.ds-button:focus-visible,.ds-chip:focus-visible,.ds-nav button:focus-visible{outline:2px solid #505B92;outline-offset:3px}"
+      "css": ".ds-button{min-height:48px;padding:12px 24px;border:1px solid rgba(255,255,255,.95);border-radius:999px;background:#FCF0F0;color:#20232B;font:600 14px sans-serif;cursor:pointer}.ds-button:hover{background:#E9E7F0}.ds-button:active{background:#E3E1E9}.ds-button:focus-visible,.ds-chip:focus-visible,.ds-nav button:focus-visible{outline:2px solid #DE3A3D;outline-offset:3px}"
     },
     {
       "name": "安静操作",
@@ -146,7 +239,7 @@
       "refersTo": "button-text",
       "description": "文字式重试与次级操作。",
       "html": "<button class=\"ds-button\">重新加载</button>",
-      "css": ".ds-button{min-height:44px;padding:10px 16px;border:0;border-radius:999px;background:transparent;color:#505B92;font:700 14px sans-serif;cursor:pointer}.ds-button:hover{background:rgba(80,91,146,.08)}.ds-button:active{background:rgba(80,91,146,.13)}.ds-button:focus-visible,.ds-chip:focus-visible,.ds-nav button:focus-visible{outline:2px solid #505B92;outline-offset:3px}"
+      "css": ".ds-button{min-height:44px;padding:10px 16px;border:0;border-radius:999px;background:transparent;color:#DE3A3D;font:700 14px sans-serif;cursor:pointer}.ds-button:hover{background:rgba(222,58,61,.08)}.ds-button:active{background:rgba(222,58,61,.13)}.ds-button:focus-visible,.ds-chip:focus-visible,.ds-nav button:focus-visible{outline:2px solid #DE3A3D;outline-offset:3px}"
     },
     {
       "name": "平台输入",
@@ -154,15 +247,15 @@
       "refersTo": "input",
       "description": "稳定低阶表面与主题焦点边框。",
       "html": "<label class=\"ds-field\">歌单名称<input class=\"ds-input\" placeholder=\"歌单名称\" maxlength=\"30\"/></label>",
-      "css": ".ds-field{display:grid;gap:8px;color:#5D6572;font:13px sans-serif}.ds-input{padding:17px 18px;border:1px solid rgba(255,255,255,.95);border-radius:18px;background:#F4F2FA;color:#20232B;font:16px sans-serif;min-width:0}.ds-input::placeholder{color:#7E8795}.ds-input:hover{border-color:#C4C6D0}.ds-input:focus-visible{outline:none;border:1.5px solid #505B92}.ds-input:disabled{opacity:.38}"
+      "css": ".ds-field{display:grid;gap:8px;color:#5D6572;font:13px sans-serif}.ds-input{padding:17px 18px;border:1px solid rgba(255,255,255,.95);border-radius:18px;background:#FCF0F0;color:#20232B;font:16px sans-serif;min-width:0}.ds-input::placeholder{color:#7E8795}.ds-input:hover{border-color:#C4C6D0}.ds-input:focus-visible{outline:none;border:1.5px solid #DE3A3D}.ds-input:disabled{opacity:.38}"
     },
     {
       "name": "月份 chip",
       "kind": "chip",
       "refersTo": "chip",
-      "description": "选中填充与语义状态共同表达当前期间。",
+      "description": "选中轻填充与语义状态共同表达当前期间；主要文字保留对比。",
       "html": "<div class=\"ds-chips\"><button class=\"ds-chip\">9 月</button><button class=\"ds-chip ds-selected\" aria-pressed=\"true\">10 月</button><button class=\"ds-chip\">11 月</button></div>",
-      "css": ".ds-chips{display:flex;gap:8px}.ds-chip{padding:8px 16px;min-height:32px;border:0;border-radius:999px;background:#F4F2FA;color:#20232B;font:700 14px sans-serif;cursor:pointer}.ds-selected{background:rgba(80,91,146,.16)}.ds-chip:hover{background:rgba(80,91,146,.11)}.ds-chip:active{background:rgba(80,91,146,.22)}.ds-button:focus-visible,.ds-chip:focus-visible,.ds-nav button:focus-visible{outline:2px solid #505B92;outline-offset:3px}"
+      "css": ".ds-chips{display:flex;gap:8px}.ds-chip{padding:8px 16px;min-height:32px;border:0;border-radius:999px;background:#FCF0F0;color:#20232B;font:700 14px sans-serif;cursor:pointer}.ds-selected{background:rgba(222,58,61,.16)}.ds-chip:hover{background:rgba(222,58,61,.11)}.ds-chip:active{background:rgba(222,58,61,.22)}.ds-button:focus-visible,.ds-chip:focus-visible,.ds-nav button:focus-visible{outline:2px solid #DE3A3D;outline-offset:3px}"
     },
     {
       "name": "内容面板",
@@ -170,30 +263,59 @@
       "refersTo": "panel",
       "description": "不透明主题表面，不应用折射。",
       "html": "<section class=\"ds-panel\"><strong>暂时没有听歌记录</strong><p>播放第一首歌后，在这里继续聆听。</p></section>",
-      "css": ".ds-panel{padding:20px;border-radius:22px;background:#F4F2FA;color:#20232B;font:14px/1.6 sans-serif}.ds-panel strong{font-weight:800}.ds-panel p{margin:8px 0 0;color:#5D6572}"
+      "css": ".ds-panel{padding:20px;border-radius:22px;background:#FCF0F0;color:#20232B;font:14px/1.6 sans-serif}.ds-panel strong{font-weight:800}.ds-panel p{margin:8px 0 0;color:#5D6572}"
     },
     {
       "name": "四目的地导航",
       "kind": "nav",
       "refersTo": "navigation",
-      "description": "Beta.6官方可搜索四目的地底栏，手机与宽屏共用；64dp基础高度，premium/full，独立播放accessory。此HTML仅静态示意。",
+      "description": "Beta官方可搜索四目的地底栏，选中图标/文字参考红；手机与宽屏共用，64dp基础高度，premium/full。HTML仅静态示意。",
       "html": "<nav class=\"ds-nav\" aria-label=\"主导航\"><div class=\"ds-tabs\"><button aria-current=\"page\">首页</button><button>发现</button><button>音乐库</button><button>我的</button></div><button class=\"ds-search\" aria-label=\"搜索歌曲\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><circle cx=\"10\" cy=\"10\" r=\"6\"/><path d=\"m15 15 6 6\"/></svg></button></nav>",
-      "css": ".ds-nav{display:flex;gap:8px;align-items:center;width:362px;max-width:100%;font-family:sans-serif}.ds-tabs{display:flex;flex:1;height:64px;box-sizing:border-box;padding:4px;border:1px solid rgba(255,255,255,.75);border-radius:999px;background:rgba(242,242,247,.667);backdrop-filter:blur(2px)}.ds-nav button{height:54px;min-width:0;flex:1;border:0;border-radius:999px;background:transparent;color:#20232B;font-size:10px;cursor:pointer}.ds-nav button[aria-current]{color:#505B92;background:rgba(32,35,43,.2)}.ds-nav button:hover{background:rgba(80,91,146,.09)}.ds-nav button:active{background:rgba(80,91,146,.2)}.ds-nav .ds-search{width:50px;height:50px;flex:none;background:rgba(242,242,247,.667);backdrop-filter:blur(2px)}.ds-button:focus-visible,.ds-chip:focus-visible,.ds-nav button:focus-visible{outline:2px solid #505B92;outline-offset:3px}"
+      "css": ".ds-nav{display:flex;gap:8px;align-items:center;width:362px;max-width:100%;font-family:sans-serif}.ds-tabs{display:flex;flex:1;height:64px;box-sizing:border-box;padding:4px;border:1px solid rgba(255,255,255,.75);border-radius:999px;background:rgba(242,242,247,.667);backdrop-filter:blur(2px)}.ds-nav button{height:54px;min-width:0;flex:1;border:0;border-radius:999px;background:transparent;color:#20232B;font-size:10px;cursor:pointer}.ds-nav button[aria-current]{color:#DE3A3D;background:rgba(32,35,43,.2)}.ds-nav button:hover{background:rgba(222,58,61,.09)}.ds-nav button:active{background:rgba(222,58,61,.2)}.ds-nav .ds-search{width:50px;height:50px;flex:none;background:rgba(242,242,247,.667);backdrop-filter:blur(2px)}.ds-button:focus-visible,.ds-chip:focus-visible,.ds-nav button:focus-visible{outline:2px solid #DE3A3D;outline-offset:3px}"
+    },
+    {
+      "name": "共享播放器控件",
+      "kind": "custom",
+      "refersTo": "player-transport",
+      "description": "五种样式与封面/歌词共用的透明白色transport及两条独立可调节轨；静态预览无原生音量连接。",
+      "html": "<section class=\"ds-player\" aria-label=\"共享播放器控件\"><label class=\"ds-rail\">播放进度<input type=\"range\" value=\"14\" aria-label=\"播放进度\" aria-valuetext=\"0分37秒，共4分19秒\"/></label><div class=\"ds-times\"><span>0:37</span><span>-3:42</span></div><div class=\"ds-transports\"><button aria-label=\"上一首\"><svg viewBox=\"0 0 36 36\" aria-hidden=\"true\"><path d=\"M17 7 3 18l14 11V7Zm16 0L19 18l14 11V7Z\"/></svg></button><button class=\"ds-main-play\" aria-label=\"播放\"><svg viewBox=\"0 0 36 36\" aria-hidden=\"true\"><path d=\"m10 5 23 13-23 13V5Z\"/></svg></button><button aria-label=\"下一首\"><svg viewBox=\"0 0 36 36\" aria-hidden=\"true\"><path d=\"m3 7 14 11L3 29V7Zm16 0 14 11-14 11V7Z\"/></svg></button></div><label class=\"ds-rail\">系统媒体音量<input type=\"range\" value=\"55\" aria-label=\"系统媒体音量\" aria-valuetext=\"55%\"/></label><div class=\"ds-player-actions\"><button>评论</button><button>音质</button><button>当前队列</button></div></section>",
+      "css": ".ds-player{width:330px;max-width:100%;padding:20px 26px;background:#17191F;color:#fff;font:13px sans-serif}.ds-rail{display:grid;gap:5px;color:rgba(255,255,255,.6);font-size:11px}.ds-rail input{width:100%;height:5px;margin:8px 0;accent-color:white}.ds-times{display:flex;justify-content:space-between;color:rgba(255,255,255,.6);font-size:11px}.ds-transports{display:flex;align-items:center;justify-content:space-evenly;margin:14px 0 12px}.ds-player button{border:0;background:transparent;color:white;min-width:48px;min-height:48px;padding:8px;cursor:pointer}.ds-transports svg{width:35px;height:35px;fill:currentColor}.ds-transports .ds-main-play{width:84px;height:74px}.ds-main-play svg{width:49px;height:49px}.ds-player button:hover{opacity:.8}.ds-player button:active{opacity:.6}.ds-player button:focus-visible,.ds-rail input:focus-visible{outline:2px solid white;outline-offset:3px}.ds-player-actions{display:flex;justify-content:space-around;margin-top:6px}"
+    },
+    {
+      "name": "双操作播放胶囊",
+      "kind": "custom",
+      "refersTo": "playback-pill",
+      "description": "仅播放/暂停和下一首，保留封面与歌曲身份；实际玻璃交互由官方组件负责。",
+      "html": "<div class=\"ds-mini\"><div class=\"ds-art\" aria-label=\"封面占位\"></div><div class=\"ds-mini-copy\"><strong>当前歌曲</strong><span>歌手</span></div><button aria-label=\"播放\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m6 3 15 9-15 9V3Z\"/></svg></button><button aria-label=\"下一首\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m3 3 14 9-14 9V3Zm15 0h3v18h-3V3Z\"/></svg></button></div>",
+      "css": ".ds-mini{display:flex;gap:10px;align-items:center;width:330px;max-width:100%;min-height:64px;padding:0 16px;border-radius:32px;background:rgba(242,242,247,.8);backdrop-filter:blur(2px);color:#20232B;font-family:sans-serif}.ds-art{width:32px;height:32px;flex:none;border-radius:8px;background:#94969D}.ds-mini-copy{display:grid;flex:1;gap:3px;min-width:0;font-size:14px}.ds-mini-copy span{font-size:12px;opacity:.7}.ds-mini button{width:44px;height:44px;padding:0;flex:none;border:0;background:transparent;color:inherit;cursor:pointer}.ds-mini svg{width:23px;height:23px;fill:currentColor}.ds-mini button:hover{opacity:.75}.ds-mini button:active{opacity:.55}.ds-mini button:focus-visible{outline:2px solid #DE3A3D;outline-offset:2px}"
+    },
+    {
+      "name": "顶部状态HUD",
+      "kind": "custom",
+      "description": "单个短状态替换旧提示；普通提示只有标题，错误/警告保留可行动原因。",
+      "html": "<div class=\"ds-hud\" role=\"status\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m5 12 4 4L19 6\"/></svg><span>已加入音乐库</span></div>",
+      "css": ".ds-hud{display:inline-flex;align-items:center;gap:10px;max-width:380px;min-height:50px;padding:0 18px;border-radius:25px;border:1px solid rgba(255,255,255,.7);background:rgba(249,249,251,.8);backdrop-filter:blur(24px);color:#212124;font:600 14px/1.25 sans-serif}.ds-hud svg{width:22px;height:22px;fill:none;stroke:#DE3A3D;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}"
     }
   ],
   "narrative": {
     "northStar": "封面主导的私人听歌空间",
-    "overview": "封面承担视觉重心，中文大标题与留白组织阅读顺序。横向内容组露出下一项，歌曲列表保持紧凑；播放与导航悬浮于内容之上。经典浅色、深色和跟随系统继续共用新布局，进度条样式与角色独立选择。",
+    "overview": "封面承担视觉重心，中文大标题与留白组织阅读顺序。横向内容组露出下一项，歌曲列表保持紧凑；播放与导航悬浮于内容之上。Beta 使用用户参考图采样的红色强调，经典浅色、深色和跟随系统共用布局，进度条样式与角色独立选择。\n\n本文合并记录已经实现的 Android Beta.7，并替代先前 Beta.6 中关于主题强调色、圆面 transport、迷你队列按钮和 followTheme 选项的描述。Beta 门限为 DistributionChannel.isBeta（Android appFlavor == beta）；正式 flavor 保留既有页面、导航、迷你播放器、完整主题、定制推荐与默认黑胶。共享主题工具、反馈组件和 PlatformStyle 不构成全局发布开关。\n\n依据为当前主题、导航、播放器、装扮源码，以及 2026-10-25 的 Beta.7 finish verdict、screenshots-verdict 和已闭合的 R1–R3 证据。最终处置为 **SHIP WITH STATED VALIDATION LIMITS**。截图使用合成本地数据和 Windows 中文 QA 字体；先前搜索 chip 字形缺失已经在最终捕获中修复。Widget 截图不能证明 Android TalkBack、硬件音量、GPU 折射/动态、真实 IME、升级迁移、CDN 或云端链路已验证，也不承诺与原生 Apple GPU 效果逐像素一致。",
     "keyCharacteristics": [
       "封面主导，正文使用清楚稳定的主题表面。",
       "大标题、粗体分区、紧凑曲目元数据形成层级。",
-      "当前主题强调色表达选择与确认，收藏使用独立功能色。",
+      "Beta 红色统一导航和选中 chrome，显式 IP 图案与角色保留自身配色。",
+      "五种播放器共用白色播放操作、进度、系统媒体音量与底部功能。",
       "玻璃服务悬浮 chrome，加载、失败与归属具有中文表达。"
     ],
     "rules": [
       {
         "name": "The Theme Ownership Rule",
-        "body": "交互强调色来自当前主题，氛围来自当前歌曲封面，收藏使用独立功能色。",
+        "body": "Beta 红色拥有导航与选择 chrome，歌曲封面拥有氛围，显式 IP 图案与角色拥有自身配色；正式 flavor 继续读取原主题。",
+        "section": "colors"
+      },
+      {
+        "name": "The Local Contrast Rule",
+        "body": "经典灰色唱机的顶部收起/更多操作使用局部深色半透明底，底部加强深色罩层，歌手为不透明白字；共享上一首/播放/下一首仍是裸白色图标。",
         "section": "colors"
       },
       {
@@ -203,18 +325,18 @@
       },
       {
         "name": "The Reachable Content Rule",
-        "body": "编辑式正文保留 210dp 底部滚动余量；短屏播放器增加可滚动高度，文字缩放时增加空间，保留全部播放操作。官方底栏处理手势安全区和搜索键盘抬升，shell 仅为搜索正文避让键盘，不能重复移动底栏。设置/聊天/完整播放器/媒体预览分别控制悬浮层显示。",
+        "body": "编辑式正文保留底部滚动余量；短屏播放器增加可滚动高度，文字缩放时增加空间，保留全部播放操作。搜索内容延伸到悬浮玻璃后方，清空原先整条不透明白底；搜索正文内部保留底部余量。官方底栏处理手势安全区和搜索键盘抬升，shell 仅为搜索正文避让键盘，不能重复移动底栏。设置/聊天/完整播放器/媒体预览分别控制悬浮层显示。",
         "section": "layout"
       },
       {
         "name": "The Floating Glass Rule",
-        "body": "内容封面、列表、表单与账号面板保持稳定表面，折射限定悬浮 chrome。封面模糊属于音乐背景。",
+        "body": "内容封面、列表、表单与账号面板保持稳定表面，折射限定悬浮 chrome。封面模糊、播放器音质弹层和短时状态 HUD 各按自身局部背景处理。",
         "section": "elevation"
       }
     ],
     "dos": [
-      "Do 使用主题语义色并检查浅深色与装扮背景的最终对比。",
-      "Do 让封面、歌曲、歌手与有意义的推荐理由承担信息层级。",
+      "Do 使用语义色并检查浅深色、红色选中 chrome 与装扮背景的最终对比。",
+      "Do 让封面、歌曲、歌手与真实平台内容承担信息层级。",
       "Do 提供中文 tooltip/语义标签、selected 状态、文字缩放及可达操作。",
       "Do 让加载、空状态、失败、草稿与账号归属如实可见。"
     ],
@@ -223,7 +345,8 @@
       "Don't 给内容列表、表单与账号面板扩散液态玻璃。",
       "Don't 以无意义眉题、重复圆角外框或装饰渐变替代真实内容。",
       "Don't 把 fixture、歌曲封面、未记录月份或失败写入描述为生产素材、艺人肖像、历史统计或成功。",
-      "Don't 让浅色表单填充覆盖沉浸播放器的固定控件对比。"
+      "Don't 给共享播放 transport 恢复大圆面，或把两个滑块合成无名且不可调的语义节点。",
+      "Don't 以软件截图宣称真机 TalkBack、硬件音量、GPU Apple 效果或线上服务已验收。"
     ]
   }
 }

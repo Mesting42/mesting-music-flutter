@@ -83,7 +83,6 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell> {
     final selected = musicBottomNavigationIndexForLocation(widget.location);
     final hasTrack = ref.watch(currentMediaItemProvider).value != null;
     final inset = MediaQuery.viewInsetsOf(context).bottom;
-    final safe = MediaQuery.viewPaddingOf(context).bottom;
     return PopScope(
       canPop: !_searching,
       onPopInvokedWithResult: (didPop, _) {
@@ -106,7 +105,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell> {
                   child: _searching
                       ? Padding(
                           padding: EdgeInsets.only(
-                            bottom: inset + 100 + safe,
+                            bottom: inset,
                             top: MediaQuery.paddingOf(context).top,
                           ),
                           child: MusicSearchResultsBody(onSearch: _submit),

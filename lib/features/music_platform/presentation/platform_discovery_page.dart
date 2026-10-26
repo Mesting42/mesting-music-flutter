@@ -12,6 +12,7 @@ import '../../search/search_providers.dart';
 import '../../playlists/presentation/add_to_playlist_sheet.dart';
 import '../../library/library_providers.dart';
 import 'platform_feedback.dart';
+import 'platform_recommendations_page.dart';
 import '../music_platform_providers.dart';
 import '../platform_catalog_providers.dart';
 import '../../auth/account_capabilities.dart';
@@ -28,6 +29,7 @@ class PlatformDiscoveryPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (dailyOnly) return const PlatformRecommendationDetail(title: '每日推荐');
     final signedIn = ref.watch(platformAccountProvider).value != null;
     final daily = ref.watch(platformDailyProvider);
     return PlatformStyle(

@@ -27,12 +27,12 @@ void main() {
     await tester.pump(const Duration(milliseconds: 220));
 
     expect(find.text('随机播放'), findsOneWidget);
-    expect(find.text('播放模式已切换'), findsOneWidget);
+    expect(find.text('播放模式已切换'), findsNothing);
     expect(find.byIcon(Icons.shuffle_rounded), findsOneWidget);
     expect(find.byType(SnackBar), findsNothing);
     expect(find.byType(AlertDialog), findsNothing);
 
-    await tester.pump(const Duration(milliseconds: 1250));
+    await tester.pump(const Duration(milliseconds: 1950));
     await tester.pump(const Duration(milliseconds: 200));
 
     expect(find.text('随机播放'), findsNothing);
@@ -65,7 +65,7 @@ void main() {
     expect(find.textContaining('当前 v'), findsNothing);
   });
 
-  testWidgets('已添加沿用原项目的底部紧凑胶囊样式', (tester) async {
+  testWidgets('已添加使用顶部 Apple 毛玻璃提示并避开底部控件', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: MediaQuery(
@@ -102,13 +102,9 @@ void main() {
     final positioned = tester.widget<Positioned>(
       find.ancestor(of: find.text('已添加'), matching: find.byType(Positioned)),
     );
-    expect(positioned.top, isNull);
-    expect(positioned.bottom, 24 + musicNoticeBottomClearance);
-    expect(
-      positioned.bottom,
-      greaterThanOrEqualTo(24 + 64 + 64 + 16),
-      reason: '提示下缘应位于底部导航和胶囊播放器上方，并保留视觉间距',
-    );
-    expect(tester.widget<Icon>(find.byIcon(Icons.check_rounded)).size, 16);
+    expect(positioned.top, 12);
+    expect(positioned.bottom, isNull);
+    expect(tester.widget<Icon>(find.byIcon(Icons.check_rounded)).size, 22);
+    expect(find.byType(BackdropFilter), findsOneWidget);
   });
 }

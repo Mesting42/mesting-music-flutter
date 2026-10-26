@@ -6,7 +6,6 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../../core/audio/playback_providers.dart';
 import '../../../shared/widgets/track_artwork.dart';
-import '../../queue/presentation/queue_page.dart';
 import '../../music_platform/presentation/platform_feedback.dart';
 import '../../player/presentation/persistent_mini_player.dart'
     show MiniPlayerSwipeRegion;
@@ -109,18 +108,11 @@ class FloatingPlaybackPill extends ConsumerWidget {
                         : CupertinoIcons.play_fill,
                     onTap: () => action(playing ? handler.pause : handler.play),
                   ),
-                  if (constraints.maxWidth >= 240)
-                    control(
-                      label: '下一首',
-                      icon: CupertinoIcons.forward_end_fill,
-                      onTap: () => action(handler.skipToNext),
-                    ),
-                  if (!compact)
-                    control(
-                      label: '播放队列',
-                      icon: CupertinoIcons.music_note_list,
-                      onTap: () => showPlaybackQueueSheet(context),
-                    ),
+                  control(
+                    label: '下一首',
+                    icon: CupertinoIcons.forward_end_fill,
+                    onTap: () => action(handler.skipToNext),
+                  ),
                 ],
               ),
             ),

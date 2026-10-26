@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../shared/widgets/liquid_glass_sheet.dart';
+import '../../../shared/widgets/music_notice.dart';
 import '../../themes/music_theme_tokens.dart';
 import '../auth_providers.dart';
 import '../../../core/platform/distribution_channel.dart';
@@ -16,8 +17,11 @@ Future<bool> ensureAuthenticated(
 }) async {
   if (DistributionChannel.isBeta &&
       ref.read(platformAccountProvider).value != null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('此功能属于 Mesting 账号，退出当前酷狗账号后可选择其他登录方式')),
+    showMusicNotice(
+      context,
+      icon: Icons.info_outline_rounded,
+      title: '此功能属于 Mesting 账号',
+      message: '退出当前酷狗账号后可选择其他登录方式',
     );
     return false;
   }

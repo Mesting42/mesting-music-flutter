@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/platform/sensitive_screen.dart';
+import '../../core/platform/distribution_channel.dart';
 import '../../features/auth/presentation/auth_page.dart';
 import '../../features/auth/presentation/account_deletion_page.dart';
 import '../../features/auth/presentation/auth_protected_page.dart';
@@ -61,12 +62,15 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/music/library',
-          pageBuilder: (context, state) => _musicSlidePage(state: state,
-            child: MusicLibraryPage(view: state.uri.queryParameters['view'])),
+          pageBuilder: (context, state) => _musicSlidePage(
+            state: state,
+            child: MusicLibraryPage(view: state.uri.queryParameters['view']),
+          ),
         ),
         GoRoute(
           path: '/music/replay',
-          pageBuilder: (context, state) => _musicSlidePage(state: state, child: const ListeningReplayPage()),
+          pageBuilder: (context, state) =>
+              _musicSlidePage(state: state, child: const ListeningReplayPage()),
         ),
         GoRoute(
           path: '/music/queue',
@@ -80,11 +84,15 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/music/discover',
+          redirect: (context, state) =>
+              DistributionChannel.isBeta ? '/music' : null,
           pageBuilder: (context, state) =>
               _collectionRevealPage(state: state, child: const DiscoverPage()),
         ),
         GoRoute(
           path: '/music/discover/:playlistId',
+          redirect: (context, state) =>
+              DistributionChannel.isBeta ? '/music' : null,
           pageBuilder: (context, state) => _musicSlidePage(
             state: state,
             child: CuratedPlaylistPage(

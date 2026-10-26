@@ -1,18 +1,27 @@
 import 'package:flutter/material.dart';
 
+import '../../core/platform/distribution_channel.dart';
+import 'beta_appearance.dart';
 import 'mesting_palette.dart';
 import 'music_theme_preset.dart';
 import 'music_theme_tokens.dart';
 
 ThemeData buildMestingTheme(MusicThemePreset preset) {
-  final seed = preset.accent;
-  final scheme = ColorScheme.fromSeed(
+  final seed = DistributionChannel.isBeta ? BetaAppearance.red : preset.accent;
+  final generated = ColorScheme.fromSeed(
     seedColor: seed,
     brightness: preset.dark ? Brightness.dark : Brightness.light,
     surface: preset.dark
         ? MestingPalette.darkSurface
         : MestingPalette.lightSurface,
   );
+  final scheme = DistributionChannel.isBeta
+      ? generated.copyWith(
+          primary: BetaAppearance.accent(generated.brightness),
+          primaryContainer: BetaAppearance.panel(generated.brightness),
+          surfaceContainerLow: BetaAppearance.panel(generated.brightness),
+        )
+      : generated;
   final tokens = MusicThemeTokens.forBrightness(scheme.brightness);
 
   return ThemeData(

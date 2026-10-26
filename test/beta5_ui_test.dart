@@ -3,7 +3,15 @@ import 'package:go_router/go_router.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:mesting_music/features/experience/presentation/music_landing_page.dart';
 import 'package:mesting_music/features/experience/presentation/music_library_page.dart';
-import 'package:mesting_music/features/experience/presentation/cover_player_page.dart';
+import 'package:mesting_music/features/experience/presentation/beta_now_playing_page.dart';
+import 'package:mesting_music/features/experience/presentation/apple_player_controls.dart';
+import 'package:mesting_music/core/audio/media_volume_controller.dart';
+import 'package:mesting_music/features/music_platform/platform_recommendation_providers.dart';
+import 'package:mesting_music/features/music_platform/data/platform_recommendations.dart';
+import 'package:mesting_music/features/music_platform/presentation/platform_search_landing.dart';
+import 'package:mesting_music/features/music_platform/data/platform_explore.dart';
+import 'package:mesting_music/features/search/presentation/music_search_page.dart';
+import 'package:mesting_music/shared/widgets/music_notice.dart';
 import 'package:mesting_music/features/experience/presentation/listening_replay_page.dart';
 import 'package:mesting_music/features/player/presentation/music_shell.dart';
 import 'package:mesting_music/features/player/player_visual_style.dart';
@@ -76,6 +84,16 @@ const _track = Track(
   lyricsAsset: '',
 );
 
+class _Volume extends MediaVolumeController {
+  @override
+  MediaVolumeState build() =>
+      const MediaVolumeState(value: .55, available: true);
+  @override
+  Future<void> setVolume(double value) async {
+    state = MediaVolumeState(value: value, available: true);
+  }
+}
+
 class _Handler extends MestingAudioHandler {
   _Handler() : super(tracks: []);
 }
@@ -113,6 +131,7 @@ void main() {
         // Cupertino widgets choose the iOS font family inside GlassScaffold.
         // Supply its CJK test substitute as well; device builds use system fonts.
         for (final family in [
+          'Roboto', // Material chip labels select this family directly.
           'CupertinoSystemText',
           'CupertinoSystemDisplay',
         ]) {
@@ -259,8 +278,25 @@ void main() {
           (ref) => Stream.value(_track.toMediaItem()),
         ),
         currentTrackProvider.overrideWithValue(_track),
+        mediaVolumeProvider.overrideWith(_Volume.new),
         // These are parsed UI fixtures, not wire payloads. Real platform cover
         // parsing rejects asset filenames and is covered in beta6_platform_test.
+        platformFmProvider.overrideWith((ref) async => [_track]),
+        platformHotSearchProvider.overrideWith(
+          (ref) async => const [
+            PlatformHotSearchBoard('热搜榜', ['认真的雪', '平凡之路', '音乐让我们相遇']),
+          ],
+        ),
+        platformExploreProvider.overrideWith(
+          (ref, kind) async => [
+            PlatformExploreItem(
+              id: '1',
+              title: kind.label,
+              cover: _track.coverAsset,
+              kind: kind,
+            ),
+          ],
+        ),
         platformDailyProvider.overrideWith((ref) async => [_track]),
         platformNewSongsProvider.overrideWith((ref) async => [_track]),
         platformDiscoveryProvider.overrideWith((ref) async => [_track]),
@@ -377,6 +413,17 @@ void main() {
               theme: fontsLoaded
                   ? theme.copyWith(
                       textTheme: theme.textTheme.apply(fontFamily: 'BetaQACJK'),
+                      chipTheme: theme.chipTheme.copyWith(
+                        labelStyle:
+                            (theme.chipTheme.labelStyle ?? const TextStyle())
+                                .copyWith(fontFamily: 'BetaQACJK'),
+                      ),
+                      listTileTheme: theme.listTileTheme.copyWith(
+                        subtitleTextStyle:
+                            (theme.listTileTheme.subtitleTextStyle ??
+                                    const TextStyle())
+                                .copyWith(fontFamily: 'BetaQACJK'),
+                      ),
                     )
                   : theme,
               routerConfig: router,
@@ -459,13 +506,13 @@ void main() {
         );
         await pump(
           tester,
-          const CoverPlayerPage(key: ValueKey('qa-cover')),
+          const BetaNowPlayingPage(key: ValueKey('qa-cover')),
           dark: dark,
           capture: 'player-$suffix',
         );
         await pump(
           tester,
-          const CoverPlayerPage(
+          const BetaNowPlayingPage(
             lyricsInitially: true,
             key: ValueKey('qa-lyrics'),
           ),
@@ -518,7 +565,7 @@ void main() {
       );
       await pump(
         tester,
-        const CoverPlayerPage(lyricsInitially: true),
+        const BetaNowPlayingPage(lyricsInitially: true),
         capture: 'lyrics-wide',
       );
       await disposeFixture(tester);
@@ -533,7 +580,7 @@ void main() {
       await prepare(guest: true);
       await pump(
         tester,
-        const CoverPlayerPage(key: ValueKey('qa-cover')),
+        const BetaNowPlayingPage(key: ValueKey('qa-cover')),
         scale: 1.6,
         capture: 'player-accessibility',
       );
@@ -607,7 +654,7 @@ void main() {
   );
 
   testWidgets(
-    'beta6 official bottom morph, embedded search and quality dialog',
+    'beta7 official bottom morph, embedded search and quality dialog',
     (tester) async {
       viewport(tester);
       await prepare();
@@ -615,7 +662,7 @@ void main() {
         tester,
         const MusicLandingPage(),
         shell: true,
-        capture: 'beta6-home-expanded',
+        capture: 'beta7-home-expanded',
       );
       expect(
         tester
@@ -637,7 +684,7 @@ void main() {
             .inline,
         true,
       );
-      await captureScreenshot(tester, 'beta6-home-collapsed');
+      await captureScreenshot(tester, 'beta7-home-collapsed');
       await tester.tap(find.byIcon(CupertinoIcons.search).hitTestable().last);
       for (var frame = 0; frame < 12; frame++) {
         await tester.pump(const Duration(milliseconds: 100));
@@ -648,7 +695,7 @@ void main() {
             .inline,
         false,
       );
-      await captureScreenshot(tester, 'beta6-search-expanded');
+      await captureScreenshot(tester, 'beta7-search-expanded');
       await tester.enterText(find.byType(CupertinoTextField).last, '薛之谦');
       tester.view.viewInsets = const FakeViewPadding(bottom: 280);
       await tester.pump(const Duration(milliseconds: 700));
@@ -657,7 +704,7 @@ void main() {
       final keyboardTop = tester.view.physicalSize.height - 280;
       expect(searchField.bottom, lessThanOrEqualTo(keyboardTop));
       expect(searchField.bottom, greaterThan(keyboardTop - 120));
-      await captureScreenshot(tester, 'beta6-search-keyboard');
+      await captureScreenshot(tester, 'beta7-search-keyboard');
       tester.view.resetViewInsets();
       await disposeFixture(tester);
     },
@@ -665,44 +712,82 @@ void main() {
   );
 
   testWidgets(
-    'beta6 quality dialog and every player appearance share the entry',
+    'beta7 quality dialog and every player appearance share the entry',
     (tester) async {
-      viewport(tester);
-      await prepare();
-      await pump(tester, const CoverPlayerPage());
-      await tester.tap(find.byKey(const ValueKey('player-quality-button')));
-      await tester.pump(const Duration(milliseconds: 400));
-      for (final label in ['标准', '高品质', '无损', 'Hi-Res']) {
-        expect(find.text(label), findsOneWidget);
-      }
-      await captureScreenshot(tester, 'beta6-quality-dialog');
-      for (final style in PlayerVisualStyle.values) {
-        await container.read(playerVisualStyleProvider.notifier).select(style);
-        await pump(tester, NowPlayingPage(key: ValueKey(style.id)));
-        expect(
-          find.byKey(const ValueKey('player-quality-button')),
-          findsOneWidget,
-          reason: style.displayName,
-        );
-        if (style == PlayerVisualStyle.classic) {
-          await captureScreenshot(tester, 'beta6-vinyl-quality');
+      final semantics = tester.ensureSemantics();
+      try {
+        viewport(tester);
+        await prepare();
+        await pump(tester, const BetaNowPlayingPage());
+        await tester.tap(find.byKey(const ValueKey('player-quality-button')));
+        await tester.pump(const Duration(milliseconds: 400));
+        for (final label in ['标准', '高品质', '无损', 'Hi-Res']) {
+          expect(find.text(label), findsOneWidget);
         }
+        await captureScreenshot(tester, 'beta7-quality-dialog');
+        for (final style in PlayerVisualStyle.values) {
+          await container
+              .read(playerVisualStyleProvider.notifier)
+              .select(style);
+          await pump(tester, NowPlayingPage(key: ValueKey(style.id)));
+          expect(
+            find.byKey(const ValueKey('player-quality-button')),
+            findsOneWidget,
+            reason: style.displayName,
+          );
+          expect(find.byType(ApplePlayerControls), findsOneWidget);
+          final seek = tester.widget<Slider>(
+            find.byKey(const ValueKey('playback-seek-slider')),
+          );
+          final volume = tester.widget<Slider>(
+            find.byKey(const ValueKey('system-media-volume')),
+          );
+          expect(seek.semanticFormatterCallback!(37000), '0分37秒，共4分19秒');
+          expect(volume.semanticFormatterCallback!(.55), '55%');
+          final seekNode = tester
+              .getSemantics(
+                find.byKey(const ValueKey('playback-seek-semantics')),
+              )
+              .getSemanticsData();
+          final volumeNode = tester
+              .getSemantics(
+                find.byKey(const ValueKey('media-volume-semantics')),
+              )
+              .getSemanticsData();
+          expect(seekNode.label, '播放进度');
+          expect(seekNode.value, '0分37秒，共4分19秒');
+          expect(seekNode.hasAction(ui.SemanticsAction.increase), true);
+          expect(volumeNode.label, '系统媒体音量');
+          expect(volumeNode.value, '55%');
+          expect(volumeNode.hasAction(ui.SemanticsAction.decrease), true);
+          expect(
+            find.byKey(const ValueKey('system-media-volume')),
+            findsOneWidget,
+          );
+          expect(find.byTooltip('歌曲评论'), findsOneWidget);
+          expect(find.byTooltip('播放队列'), findsOneWidget);
+          await captureScreenshot(tester, 'beta7-player-${style.name}');
+        }
+        await disposeFixture(tester);
+      } finally {
+        semantics.dispose();
       }
-      await disposeFixture(tester);
     },
     skip: !DistributionChannel.isBeta,
   );
 
   testWidgets(
-    'beta6 dress-up keeps progress characters and removes retired controls',
+    'beta7 dress-up keeps progress characters and removes retired controls',
     (tester) async {
       viewport(tester);
       await prepare();
       await pump(
         tester,
         const ThemeGalleryPage(),
-        capture: 'beta6-dress-up-top',
+        capture: 'beta7-dress-up-top',
       );
+      expect(find.text('品牌套装'), findsNothing);
+      expect(find.text('经典皮肤'), findsNothing);
       expect(find.text('蜡笔小新'), findsNothing);
       expect(find.text('春日部晴空'), findsNothing);
       await tester.drag(find.byType(CustomScrollView), const Offset(0, -1000));
@@ -710,10 +795,64 @@ void main() {
       expect(find.text('背景显示强度'), findsNothing);
       expect(find.text('动态效果性能'), findsNothing);
       expect(find.text('IP 角色装饰'), findsOneWidget);
+      expect(find.text('跟随皮肤'), findsNothing);
       expect(find.text('Hello Kitty'), findsWidgets);
       expect(find.text('库洛米'), findsWidgets);
-      await captureScreenshot(tester, 'beta6-dress-up-progress');
+      await captureScreenshot(tester, 'beta7-dress-up-progress');
       expect(tester.takeException(), null);
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+  testWidgets(
+    'beta7 shared status HUD replaces stale actions at the top',
+    (tester) async {
+      viewport(tester);
+      await prepare();
+      await pump(
+        tester,
+        Builder(
+          builder: (context) => Center(
+            child: TextButton(
+              onPressed: () => showMusicNotice(
+                context,
+                icon: Icons.check_rounded,
+                title: '单曲循环',
+                message: '播放模式已切换',
+              ),
+              child: const Text('显示提示'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('显示提示'));
+      await tester.pump(const Duration(milliseconds: 300));
+      await captureScreenshot(tester, 'beta7-status-hud-light');
+      final context = tester.element(find.text('显示提示'));
+      showMusicNotice(
+        context,
+        icon: Icons.favorite_rounded,
+        title: '已添加到喜欢',
+        message: '',
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('单曲循环'), findsNothing);
+      expect(find.text('已添加到喜欢'), findsOneWidget);
+      await captureScreenshot(tester, 'beta7-status-hud-replaced');
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+  testWidgets(
+    'beta7 standalone search also excludes local recommendation scoring',
+    (tester) async {
+      viewport(tester);
+      await prepare();
+      await pump(tester, const MusicSearchPage());
+      expect(find.byType(PlatformSearchLanding), findsOneWidget);
+      expect(find.text('猜你喜欢'), findsNothing);
+      expect(find.text('我的热榜'), findsNothing);
+      expect(find.text('热门搜索'), findsOneWidget);
       await disposeFixture(tester);
     },
     skip: !DistributionChannel.isBeta,

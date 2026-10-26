@@ -64,9 +64,9 @@ class _ImmersiveLyricsState extends ConsumerState<ImmersiveLyrics> {
               builder: (context, constraints) {
                 final style = Theme.of(context).textTheme.headlineLarge!
                     .copyWith(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w800,
-                      height: 1.45,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      height: 1.4,
                       letterSpacing: -.5,
                     );
                 final textWidth = (constraints.maxWidth - 48).clamp(
@@ -93,7 +93,7 @@ class _ImmersiveLyricsState extends ConsumerState<ImmersiveLyrics> {
                       textDirection: TextDirection.ltr,
                       textScaler: scaler,
                     )..layout(maxWidth: textWidth);
-                    _heights.add(painter.height + 24);
+                    _heights.add(painter.height + 28);
                     painter.dispose();
                   }
                 }
@@ -113,34 +113,48 @@ class _ImmersiveLyricsState extends ConsumerState<ImmersiveLyrics> {
                     );
                   });
                 }
-                return ListView.builder(
-                  key: ValueKey(track.id),
-                  controller: _scroll,
-                  padding: EdgeInsets.fromLTRB(
-                    24,
-                    constraints.maxHeight * .2,
-                    24,
-                    constraints.maxHeight * .7,
-                  ),
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: document.lines.length,
-                  itemBuilder: (context, index) => GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: document.isSynced
-                        ? () => ref
-                              .read(audioHandlerProvider)
-                              .seek(document.lines[index].time)
-                        : null,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: AnimatedDefaultTextStyle(
-                        duration: const Duration(milliseconds: 260),
-                        style: style.copyWith(
-                          color: index == active
-                              ? Colors.white
-                              : const Color(0xA6FFFFFF),
+                return ShaderMask(
+                  shaderCallback: (rect) => const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.white,
+                      Colors.white,
+                      Colors.transparent,
+                    ],
+                    stops: [0, .10, .83, 1],
+                  ).createShader(rect),
+                  blendMode: BlendMode.dstIn,
+                  child: ListView.builder(
+                    key: ValueKey(track.id),
+                    controller: _scroll,
+                    padding: EdgeInsets.fromLTRB(
+                      24,
+                      constraints.maxHeight * .2,
+                      24,
+                      constraints.maxHeight * .7,
+                    ),
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: document.lines.length,
+                    itemBuilder: (context, index) => GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: document.isSynced
+                          ? () => ref
+                                .read(audioHandlerProvider)
+                                .seek(document.lines[index].time)
+                          : null,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        child: AnimatedDefaultTextStyle(
+                          duration: const Duration(milliseconds: 260),
+                          style: style.copyWith(
+                            color: index == active
+                                ? Colors.white
+                                : const Color(0xA6FFFFFF),
+                          ),
+                          child: Text(document.lines[index].text),
                         ),
-                        child: Text(document.lines[index].text),
                       ),
                     ),
                   ),

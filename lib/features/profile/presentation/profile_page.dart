@@ -27,6 +27,7 @@ import '../../social/domain/social_models.dart';
 import '../../social/presentation/social_widgets.dart';
 import '../../themes/theme_gallery_page.dart';
 import '../../themes/mesting_palette.dart';
+import '../../themes/beta_appearance.dart';
 import '../../themes/music_theme_tokens.dart';
 import '../../../shared/widgets/artwork_image.dart';
 import '../../../shared/widgets/music_notice.dart';
@@ -107,7 +108,9 @@ class ProfilePage extends ConsumerWidget {
         id: 'playlists',
         eyebrow: 'COLLECTION',
         icon: Icons.library_music_rounded,
-        color: const Color(0xFF9A7AF1),
+        color: DistributionChannel.isBeta
+            ? BetaAppearance.red
+            : const Color(0xFF9A7AF1),
         title: '我的歌单',
         subtitle: '$playlists 个歌单 · 收藏你的声音',
         onTap: () => openMyPlaylistsFromProfile(context),
@@ -116,7 +119,9 @@ class ProfilePage extends ConsumerWidget {
         id: 'history',
         eyebrow: 'FOOTPRINT',
         icon: Icons.equalizer_rounded,
-        color: MestingPalette.amber,
+        color: DistributionChannel.isBeta
+            ? BetaAppearance.red
+            : MestingPalette.amber,
         title: '听歌排行',
         subtitle: listeningHistory.isEmpty
             ? '从第一首完整播放开始记录'
@@ -130,7 +135,9 @@ class ProfilePage extends ConsumerWidget {
         id: 'friends',
         eyebrow: 'CONNECTION',
         icon: Icons.people_alt_rounded,
-        color: const Color(0xFF67A9F5),
+        color: DistributionChannel.isBeta
+            ? BetaAppearance.red
+            : const Color(0xFF67A9F5),
         title: '关注与粉丝',
         subtitle: socialSummary == null
             ? '找到与你同频的人'
@@ -155,8 +162,10 @@ class ProfilePage extends ConsumerWidget {
       _ProfileDashboardItem(
         id: 'dress-up',
         eyebrow: 'IDENTITY',
-        color: MestingPalette.teal,
-        iconWidget: const _DressUpGlyph(
+        color: DistributionChannel.isBeta
+            ? BetaAppearance.red
+            : MestingPalette.teal,
+        iconWidget: _DressUpGlyph(
           key: ValueKey('profile-dress-up-glyph'),
           color: MestingPalette.teal,
         ),

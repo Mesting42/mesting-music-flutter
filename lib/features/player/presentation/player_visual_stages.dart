@@ -12,6 +12,102 @@ import 'vinyl_disc.dart';
 const double alternativePlayerStageDefaultTopInset = 90;
 const double alternativePlayerStageHeaderClearance = 68;
 
+/// Artwork-only stage for Beta's shared transport shell. Reuses the production
+/// motion surfaces continuously, without the preview's one-cycle animation.
+class PlayerArtworkStage extends StatelessWidget {
+  const PlayerArtworkStage({
+    required this.style,
+    required this.track,
+    required this.playing,
+    super.key,
+  });
+  final PlayerVisualStyle style;
+  final Track track;
+  final bool playing;
+  @override
+  Widget build(BuildContext context) {
+    final motion = playing && !MediaQuery.disableAnimationsOf(context);
+    final stage = switch (style) {
+      PlayerVisualStyle.cover => ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: ArtworkImage(
+          uri: track.coverAsset,
+          width: 640,
+          height: 640,
+          fit: BoxFit.cover,
+        ),
+      ),
+      PlayerVisualStyle.classic => LayoutBuilder(
+        builder: (context, bounds) => Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 28),
+                child: VinylDisc(coverAsset: track.coverAsset, playing: motion),
+              ),
+            ),
+            Positioned(
+              top: -bounds.maxWidth * .035,
+              left: bounds.maxWidth * .48,
+              width: bounds.maxWidth * .34,
+              height: bounds.maxWidth * .46,
+              child: IgnorePointer(
+                child: AnimatedRotation(
+                  turns: playing ? 0 : -22.5 / 360,
+                  alignment: const Alignment(-.78, -.86),
+                  duration: MediaQuery.disableAnimationsOf(context)
+                      ? Duration.zero
+                      : const Duration(milliseconds: 500),
+                  child: Image.asset(
+                    'assets/images/player/netease-style-tonearm.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      PlayerVisualStyle.aurora => _AuroraRhythmOrbit(
+        playing: motion,
+        child: VinylDisc(
+          coverAsset: track.coverAsset,
+          playing: motion,
+          labelSizeFactor: .64,
+        ),
+      ),
+      PlayerVisualStyle.cassette => _ReactiveStageMotion(
+        duration: const Duration(milliseconds: 1800),
+        playing: motion,
+        builder: (context, phase, energy, repaint, reduceMotion) =>
+            _CosmicPulseSurface(
+              track: track,
+              phase: phase,
+              energy: energy,
+              repaint: repaint,
+              reduceMotion: reduceMotion,
+            ),
+      ),
+      PlayerVisualStyle.lyricStage => _ReactiveStageMotion(
+        duration: const Duration(milliseconds: 1700),
+        playing: motion,
+        builder: (context, phase, energy, repaint, reduceMotion) =>
+            _LiquidSpectrumSurface(
+              track: track,
+              phase: phase,
+              energy: energy,
+              repaint: repaint,
+              reduceMotion: reduceMotion,
+            ),
+      ),
+    };
+    return Center(
+      child: AspectRatio(aspectRatio: 1, child: RepaintBoundary(child: stage)),
+    );
+  }
+}
+
 double alternativePlayerStageTopInset(double safeTop) {
   return math.max(
     alternativePlayerStageDefaultTopInset,
@@ -70,7 +166,8 @@ class PlayerStyleAtmosphere extends StatelessWidget {
                       PlayerVisualStyle.aurora => const Color(0x183E9BFF),
                       PlayerVisualStyle.cassette => const Color(0x1F8B5CF6),
                       PlayerVisualStyle.lyricStage => const Color(0x1F2DD4BF),
-                      PlayerVisualStyle.cover || PlayerVisualStyle.classic => Colors.transparent,
+                      PlayerVisualStyle.cover ||
+                      PlayerVisualStyle.classic => Colors.transparent,
                     },
                     boxShadow: [
                       BoxShadow(
@@ -80,7 +177,8 @@ class PlayerStyleAtmosphere extends StatelessWidget {
                           PlayerVisualStyle.lyricStage => const Color(
                             0x2E2DD4BF,
                           ),
-                          PlayerVisualStyle.cover || PlayerVisualStyle.classic => Colors.transparent,
+                          PlayerVisualStyle.cover ||
+                          PlayerVisualStyle.classic => Colors.transparent,
                         },
                         blurRadius: 100,
                         spreadRadius: 30,
@@ -147,7 +245,8 @@ class AlternativePlayerStage extends StatelessWidget {
         onShowLyrics: onShowLyrics,
         topInset: topInset,
       ),
-      PlayerVisualStyle.cover || PlayerVisualStyle.classic => const SizedBox.shrink(),
+      PlayerVisualStyle.cover ||
+      PlayerVisualStyle.classic => const SizedBox.shrink(),
     };
     return FadeTransition(
       opacity: entrance,
@@ -238,7 +337,8 @@ class PlayerVisualStagePreview extends StatelessWidget {
       ),
     };
     final background = switch (style) {
-      PlayerVisualStyle.cover || PlayerVisualStyle.classic => const [Color(0xFFD8D2D4), Color(0xFFA8A1A4)],
+      PlayerVisualStyle.cover ||
+      PlayerVisualStyle.classic => const [Color(0xFFD8D2D4), Color(0xFFA8A1A4)],
       PlayerVisualStyle.aurora => const [Color(0xFF111D42), Color(0xFF090C1D)],
       PlayerVisualStyle.cassette => const [
         Color(0xFF151133),

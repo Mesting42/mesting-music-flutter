@@ -41,7 +41,7 @@ void main() {
     );
   });
 
-  test('rose colors are limited to brand and heart semantics', () {
+  test('rose colors are limited to declared brand and heart roles', () {
     final files = <File>[
       ...Directory('lib')
           .listSync(recursive: true)
@@ -102,7 +102,15 @@ void main() {
                     normalizedPath.endsWith(
                       'android/app/src/main/kotlin/com/mesting/mesting_music/MainActivity.kt',
                     )));
-        if (isRoseFamily && !isAllowedCoralBrandColor && !isAllowedHeartColor) {
+        final isPinnedBetaRed =
+            normalizedPath.endsWith(
+              'lib/features/themes/beta_appearance.dart',
+            ) &&
+            const {'DE3A3D', 'FF777A', '291D20', 'FCF0F0'}.contains(rgb);
+        if (isRoseFamily &&
+            !isAllowedCoralBrandColor &&
+            !isAllowedHeartColor &&
+            !isPinnedBetaRed) {
           violations.add(
             '${file.path}: #$rgb '
             '(h=${hsl.hue.toStringAsFixed(1)}, '

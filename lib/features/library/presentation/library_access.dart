@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/music_notice.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/platform/distribution_channel.dart';
@@ -25,9 +26,12 @@ Future<bool> ensureLibraryAccess(
       return true;
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
+        showMusicNotice(
           context,
-        ).showSnackBar(const SnackBar(content: Text('当前账号曲库尚未就绪，请重试')));
+          icon: Icons.error_outline_rounded,
+          title: '当前账号曲库尚未就绪，请重试',
+          message: '',
+        );
       }
       return false;
     }

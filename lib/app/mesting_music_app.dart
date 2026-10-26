@@ -15,6 +15,7 @@ import '../features/music_platform/data/embedded_kugou_music_source.dart';
 import '../features/music_platform/data/music_platform_api.dart';
 import '../features/music_platform/music_platform_providers.dart';
 import '../features/music_platform/platform_quality_providers.dart';
+import '../features/music_platform/platform_recommendation_providers.dart';
 import '../shared/models/track.dart';
 import '../core/persistence/playback_persistence_controller.dart';
 import '../features/library/library_providers.dart';
@@ -60,29 +61,42 @@ class MestingMusicApp extends ConsumerWidget {
         return resolved;
       });
     }
-    final radioController = ref.watch(endlessRadioControllerProvider);
+    if (DistributionChannel.isBeta) {
+      ref.watch(platformRecommendationBindingProvider);
+    }
+    final radioController = DistributionChannel.isBeta
+        ? null
+        : ref.watch(endlessRadioControllerProvider);
     final playbackPersistence = ref.read(playbackPersistenceControllerProvider);
     playbackPersistence.configureLibrarySynchronizer((ownerId) {
       final repository = ref.read(libraryRepositoryProvider);
       if (repository.ownerId != ownerId) return Future.value(false);
       return repository.synchronize();
     });
-    audioHandler.configureRadioTrackLoader(radioController.loadMore);
+    if (radioController != null) {
+      audioHandler.configureRadioTrackLoader(radioController.loadMore);
+    }
     // Start secure local account restoration with the app rather than waiting
     // until the user opens the profile tab or side panel.
     ref.watch(playbackOwnerBindingProvider);
-    ref.listen(hotMusicControllerProvider, (previous, next) {
-      next.whenData((snapshot) {
-        audioHandler.updateOnlineFallbackTracks(snapshot.recommendationTracks);
-        unawaited(audioHandler.prefetchRadioTracks());
+    if (!DistributionChannel.isBeta) {
+      ref.listen(hotMusicControllerProvider, (previous, next) {
+        next.whenData((snapshot) {
+          audioHandler.updateOnlineFallbackTracks(
+            snapshot.recommendationTracks,
+          );
+          unawaited(audioHandler.prefetchRadioTracks());
+        });
       });
-    });
-    ref.listen(favoriteTracksProvider, (previous, next) {
-      if (next.hasValue && previous?.value != next.value) {
-        audioHandler.invalidateRadioRecommendations();
-        unawaited(audioHandler.prefetchRadioTracks());
-      }
-    });
+    }
+    if (!DistributionChannel.isBeta) {
+      ref.listen(favoriteTracksProvider, (previous, next) {
+        if (next.hasValue && previous?.value != next.value) {
+          audioHandler.invalidateRadioRecommendations();
+          unawaited(audioHandler.prefetchRadioTracks());
+        }
+      });
+    }
     final application = MaterialApp.router(
       title: 'Mesting 音乐',
       debugShowCheckedModeBanner: false,

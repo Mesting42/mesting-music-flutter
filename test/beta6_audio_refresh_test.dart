@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:mesting_music/core/audio/mesting_audio_handler.dart';
@@ -110,6 +112,54 @@ void main() {
     addTearDown(handler.debugDispose);
     return (player, handler);
   }
+
+  test(
+    'upstream continuation preserves file order and ignores local fallback pool',
+    () async {
+      final cache = await Directory.systemTemp.createTemp(
+        'mesting_beta7_audio_',
+      );
+      const channel = MethodChannel('plugins.flutter.io/path_provider');
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (_) async => cache.path);
+      addTearDown(() async {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, null);
+        if (cache.absolute.path.startsWith(
+          Directory.systemTemp.absolute.path,
+        )) {
+          await cache.delete(recursive: true);
+        }
+      });
+      final (_, handler) = await prepare();
+      Track song(String hash) => Track(
+        id: 'kugou_$hash',
+        title: '同名歌曲',
+        artist: '同一歌手',
+        album: '',
+        duration: const Duration(minutes: 3),
+        audioAsset: 'https://example.test/$hash.mp3',
+        coverAsset: '',
+        lyricsAsset: '',
+        source: TrackSource.kugou,
+      );
+      final a = song('A'), b = song('B');
+      await handler.replaceQueue([first], autoplay: false);
+      handler.configureRadioTrackLoader(
+        (excluded) async => [a, b],
+        preserveServerOrder: true,
+      );
+      await handler.prefetchRadioTracks(force: true);
+      expect(handler.upcomingQueue.map((item) => item.id), [
+        'kugou_A',
+        'kugou_B',
+      ]);
+      await handler.skipToNext();
+      expect(handler.mediaItem.value?.id, 'kugou_A');
+      await handler.skipToNext();
+      expect(handler.mediaItem.value?.id, 'kugou_B');
+    },
+  );
 
   test(
     'quality refresh preserves position, pause state, mode and upcoming queue',
