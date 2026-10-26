@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -28,6 +31,14 @@ import 'package:mesting_music/features/app_update/app_update_providers.dart';
 import 'package:mesting_music/features/app_update/domain/app_update_models.dart';
 import 'package:mesting_music/features/search/search_providers.dart';
 import 'package:mesting_music/features/search/data/hot_music_repository.dart';
+import 'package:mesting_music/features/auth/account_capabilities.dart';
+import 'package:mesting_music/features/auth/presentation/auth_protected_page.dart';
+import 'package:mesting_music/features/music_platform/platform_profile_provider.dart';
+import 'package:mesting_music/features/music_platform/presentation/platform_account_page.dart';
+import 'package:mesting_music/features/music_platform/presentation/platform_avatar.dart';
+import 'package:mesting_music/features/player/presentation/music_hub_top_bar.dart';
+import 'package:mesting_music/features/music_platform/data/platform_comments_repository.dart';
+import 'package:mesting_music/features/music_platform/presentation/platform_comments_page.dart';
 
 class _Store implements PlatformSessionStore {
   PlatformSession? value;
@@ -288,6 +299,225 @@ void main() {
       expect(find.text('已进入首页'), findsOneWidget);
       expect(preferences.getBool(firstLaunchAuthCompletedPreferenceKey), true);
       expect(container.read(currentUserProvider), null);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  test(
+    'avatar refresh reads current platform profile and logout clears its owner',
+    () async {
+      store.value = const PlatformSession(
+        userId: '7',
+        token: 'test',
+        nickname: '旧昵称',
+      );
+      api = MusicPlatformApi(
+        server: _Server(),
+        client: MockClient((request) async {
+          expect(request.url.path, '/user/detail');
+          expect(request.headers['Authorization'], 'token=test;userid=7');
+          return http.Response(
+            jsonEncode({
+              'status': 1,
+              'data': {
+                'nickname': '平台昵称',
+                'pic': 'https://img.example/{size}/avatar.jpg',
+              },
+            }),
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
+        }),
+      );
+      final container = ProviderContainer(overrides: overrides());
+      addTearDown(container.dispose);
+      final profile = await container.read(platformProfileProvider.future);
+      expect(profile?.nickname, '平台昵称');
+      expect(profile?.avatarUrl, 'https://img.example/400/avatar.jpg');
+      await container.read(platformAccountProvider.notifier).signOut();
+      expect(await container.read(platformProfileProvider.future), null);
+      expect(container.read(showMestingFeaturesProvider), false);
+      expect(container.read(showPlatformFeaturesProvider), false);
+      expect(container.read(canUseCurrentLibraryProvider), true);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'account route is opaque in transparent Mesting themes for light and dark',
+    (tester) async {
+      store.value = const PlatformSession(
+        userId: '7',
+        token: 'test',
+        nickname: '酷狗昵称',
+      );
+      final container = ProviderContainer(overrides: overrides());
+      addTearDown(container.dispose);
+      await container.read(platformAccountProvider.future);
+      for (final brightness in Brightness.values) {
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              theme: ThemeData(
+                brightness: brightness,
+                scaffoldBackgroundColor: Colors.transparent,
+              ),
+              home: const RepaintBoundary(
+                key: ValueKey('account-visual-check'),
+                child: Scaffold(body: PlatformAccountPage()),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        final scaffold = tester.widget<Scaffold>(
+          find.byKey(const ValueKey('platform-account-opaque-page')),
+        );
+        expect(scaffold.backgroundColor?.a, 1.0);
+        expect(find.byType(PlatformAvatar), findsOneWidget);
+        expect(tester.takeException(), null);
+        if (const bool.fromEnvironment('EXPORT_BETA_SCREENSHOTS')) {
+          await tester.pump(const Duration(milliseconds: 400));
+          final boundary = tester.renderObject<RenderRepaintBoundary>(
+            find.byKey(const ValueKey('account-visual-check')),
+          );
+          await tester.runAsync(() async {
+            final screenshot = await boundary.toImage();
+            final bytes = await screenshot.toByteData(
+              format: ui.ImageByteFormat.png,
+            );
+            final directory = Directory(
+              const String.fromEnvironment('BETA_SCREENSHOT_DIR'),
+            );
+            await directory.create(recursive: true);
+            await File(
+              '${directory.path}/beta3-account-${brightness.name}.png',
+            ).writeAsBytes(bytes!.buffer.asUint8List());
+            screenshot.dispose();
+          });
+        }
+      }
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'Kugou sidebar omits Mesting messages and protected pages reject direct access',
+    (tester) async {
+      store.value = const PlatformSession(
+        userId: '7',
+        token: 'test',
+        nickname: '酷狗昵称',
+      );
+      final container = ProviderContainer(overrides: overrides());
+      addTearDown(container.dispose);
+      await container.read(platformAccountProvider.future);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: MusicHubTopBar(title: '我的', subtitle: '酷狗概念版'),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.menu_rounded));
+      await tester.pumpAndSettle();
+      expect(find.text('我的消息'), findsNothing);
+      expect(find.text('好友与消息'), findsNothing);
+      expect(find.text('酷狗昵称'), findsOneWidget);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: AuthProtectedPage(
+                reason: 'Mesting 消息',
+                redirect: '/social/messages',
+                child: Text('不应出现的 Mesting 消息内容'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('不应出现的 Mesting 消息内容'), findsNothing);
+      expect(find.text('此功能属于 Mesting 账号，返回我的'), findsOneWidget);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'comment UI posts only on explicit send and exposes delete for its owner only',
+    (tester) async {
+      store.value = const PlatformSession(userId: '7', token: 'test');
+      final writes = <http.Request>[];
+      api = MusicPlatformApi(
+        server: _Server(),
+        client: MockClient((request) async {
+          if (request.method == 'POST') writes.add(request);
+          return http.Response(
+            jsonEncode({
+              'status': 1,
+              'error_code': 0,
+              'data': {
+                'list': [
+                  {
+                    'id': 'own',
+                    'user_id': 7,
+                    'content': '我的平台评论',
+                    'special_child_id': 'child',
+                  },
+                  {
+                    'id': 'other',
+                    'user_id': 8,
+                    'content': '其他人的平台评论',
+                    'special_child_id': 'child',
+                  },
+                ],
+              },
+            }),
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
+        }),
+      );
+      final container = ProviderContainer(overrides: overrides());
+      addTearDown(container.dispose);
+      final session = await container.read(platformAccountProvider.future);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: PlatformCommentsPage(
+              resource: const PlatformCommentResource(
+                kind: PlatformCommentKind.song,
+                id: '12345',
+                name: '歌曲',
+              ),
+              repository: PlatformCommentsRepository(api, session!),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('我的平台评论'), findsOneWidget);
+      expect(find.byTooltip('删除自己的评论'), findsOneWidget);
+      expect(writes, isEmpty);
+      await tester.enterText(find.byType(TextField), '仅测试提交');
+      await tester.tap(find.text('发送'));
+      await tester.pump();
+      await tester.pump();
+      expect(writes.length, 1);
+      expect(writes.single.url.queryParameters['content'], '仅测试提交');
+      await container.read(platformAccountProvider.notifier).signOut();
+      await tester.pump();
+      expect(find.text('我的平台评论'), findsNothing);
+      expect(find.byType(TextField), findsNothing);
     },
     skip: !DistributionChannel.isBeta,
   );

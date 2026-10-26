@@ -38,6 +38,11 @@ class PlatformLibraryRepository extends LibraryRepository {
   bool canManage(String id) =>
       _snapshot.any((row) => _id(row) == id && _owned(row) && !_likes(row));
 
+  Future<String> commentId(String id) async {
+    final row = await _row(id);
+    return '${row['global_collection_id'] ?? row['list_create_gid'] ?? ''}';
+  }
+
   Future<Map<String, dynamic>> _get(
     String path, [
     Map<String, String> query = const {},

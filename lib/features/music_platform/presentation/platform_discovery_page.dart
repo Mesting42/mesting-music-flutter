@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/audio/playback_providers.dart';
 import '../../../shared/models/track.dart';
 import '../../../shared/widgets/artwork_image.dart';
-import '../../../shared/widgets/music_notice.dart';
 import '../../library/presentation/favorite_toggle_button.dart';
 import '../../player/presentation/music_hub_top_bar.dart';
 import '../../search/search_providers.dart';
@@ -14,6 +13,8 @@ import '../../library/library_providers.dart';
 import 'platform_feedback.dart';
 import '../music_platform_providers.dart';
 import '../platform_catalog_providers.dart';
+import '../../auth/account_capabilities.dart';
+import 'platform_comments_page.dart';
 
 /// The incumbent Mesting shell with live upstream content. Each section owns
 /// its loading/error state; a failed playlist request cannot hide valid songs.
@@ -172,16 +173,31 @@ class _TrackList extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               FavoriteToggleButton(track: track, compact: true),
-              IconButton(
-                tooltip: '加入歌单',
-                icon: const Icon(Icons.playlist_add),
-                onPressed: () => showAddToPlaylistSheet(context, ref, track),
-              ),
-              if (playlistId != null)
-                IconButton(
-                  tooltip: '从云端歌单移除',
-                  icon: const Icon(Icons.remove_circle_outline),
-                  onPressed: () async {
+              PopupMenuButton<String>(
+                tooltip: '歌曲操作',
+                icon: const Icon(Icons.more_horiz),
+                itemBuilder: (_) => [
+                  const PopupMenuItem(value: 'add', child: Text('加入歌单')),
+                  if (ref.read(showPlatformFeaturesProvider))
+                    const PopupMenuItem(
+                      value: 'comments',
+                      child: Text('酷狗歌曲评论'),
+                    ),
+                  if (playlistId != null)
+                    const PopupMenuItem(
+                      value: 'remove',
+                      child: Text('从云端歌单移除'),
+                    ),
+                ],
+                onSelected: (action) async {
+                  if (!context.mounted) return;
+                  if (action == 'add') {
+                    await showAddToPlaylistSheet(context, ref, track);
+                  }
+                  if (action == 'comments' && context.mounted) {
+                    await openPlatformSongComments(context, ref, track);
+                  }
+                  if (action == 'remove' && playlistId != null) {
                     try {
                       await ref
                           .read(libraryRepositoryProvider)
@@ -189,8 +205,9 @@ class _TrackList extends ConsumerWidget {
                     } catch (error) {
                       if (context.mounted) showPlatformFailure(context, error);
                     }
-                  },
-                ),
+                  }
+                },
+              ),
             ],
           ),
           onTap: () async {
@@ -198,14 +215,9 @@ class _TrackList extends ConsumerWidget {
               await ref
                   .read(audioHandlerProvider)
                   .playSingleTrack(track, playbackContext: tracks);
-            } catch (_) {
+            } catch (error) {
               if (context.mounted) {
-                showMusicNotice(
-                  context,
-                  icon: Icons.error_outline,
-                  title: '暂时无法播放',
-                  message: '请检查网络或选择其他歌曲',
-                );
+                showPlatformFailure(context, error);
               }
             }
           },
@@ -282,7 +294,19 @@ class PlatformPublicPlaylistPage extends ConsumerWidget {
   final String name;
   @override
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
-    appBar: AppBar(title: Text(name)),
+    backgroundColor: Theme.of(context).colorScheme.surface,
+    appBar: AppBar(
+      title: Text(name),
+      actions: [
+        if (ref.watch(showPlatformFeaturesProvider))
+          IconButton(
+            tooltip: '酷狗歌单评论',
+            icon: const Icon(Icons.comment_outlined),
+            onPressed: () =>
+                openPlatformPlaylistComments(context, ref, id: id, name: name),
+          ),
+      ],
+    ),
     body: ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
       children: [

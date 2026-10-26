@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/platform/distribution_channel.dart';
 import '../../music_platform/music_platform_providers.dart';
+import '../../music_platform/platform_profile_provider.dart';
+import '../../auth/account_capabilities.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -354,7 +356,13 @@ class _MusicHubPanelState extends ConsumerState<_MusicHubPanel> {
                             ? user.bio
                             : '欢迎回到你的音乐空间',
                     },
-                    avatarUrl: user?.avatarUrl,
+                    avatarUrl: platform != null
+                        ? (ref
+                                  .watch(platformProfileProvider)
+                                  .value
+                                  ?.avatarUrl ??
+                              platform.avatarUrl)
+                        : user?.avatarUrl,
                     fallbackIcon: switch (accountState) {
                       _PanelAccountState.restoring =>
                         Icons.person_search_rounded,
@@ -372,20 +380,22 @@ class _MusicHubPanelState extends ConsumerState<_MusicHubPanel> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _PanelLabel('好友与消息'),
-                        _PanelSection(
-                          children: [
-                            _PanelTile(
-                              key: const ValueKey('music-hub-my-messages'),
-                              icon: Icons.mail_outline_rounded,
-                              title: '我的消息',
-                              subtitle: '互相关注好友的私信与会话',
-                              unreadCount: unreadCount,
-                              onTap: () => _openMessages(context),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
+                        if (ref.watch(showMestingFeaturesProvider)) ...[
+                          const _PanelLabel('好友与消息'),
+                          _PanelSection(
+                            children: [
+                              _PanelTile(
+                                key: const ValueKey('music-hub-my-messages'),
+                                icon: Icons.mail_outline_rounded,
+                                title: '我的消息',
+                                subtitle: '互相关注好友的私信与会话',
+                                unreadCount: unreadCount,
+                                onTap: () => _openMessages(context),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                        ],
                         const _PanelLabel('应用设置'),
                         _PanelSection(
                           children: [
@@ -421,7 +431,9 @@ class _MusicHubPanelState extends ConsumerState<_MusicHubPanel> {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           child: Text(
-                            '主题、账号绑定与登录安全已统一放在“设置”，收藏和歌单仍在“我的”页面。',
+                            platform != null
+                                ? '当前使用酷狗账号，收藏和歌单与酷狗云端同步。'
+                                : '主题、账号绑定与登录安全已统一放在“设置”，收藏和歌单仍在“我的”页面。',
                             style: TextStyle(
                               color: tokens.textMuted,
                               fontSize: 10,

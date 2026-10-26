@@ -7,7 +7,10 @@ import '../../../app/router/app_router.dart';
 import '../../../core/audio/mesting_audio_handler.dart';
 import '../../../core/audio/playback_providers.dart';
 import '../../../core/platform/lyrics_overlay_bridge.dart';
-import '../../auth/auth_providers.dart';
+import '../../auth/account_capabilities.dart';
+import '../../music_platform/presentation/platform_feedback.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../library/presentation/library_access.dart';
 import '../../library/library_providers.dart';
 import '../lyrics_providers.dart';
 
@@ -62,15 +65,31 @@ class _LyricsOverlayCoordinatorState
 
     switch (action) {
       case MestingAudioHandler.notificationToggleFavoriteAction:
-        if (!ref.read(isAuthenticatedProvider)) {
+        if (!ref.read(canUseCurrentLibraryProvider)) {
           final redirect = Uri.encodeComponent('/music?view=favorites');
           appRouter.go('/auth?mode=register&redirect=$redirect');
           await ref.read(lyricsOverlayBridgeProvider).bringAppToFront();
           return;
         }
+        if (DistributionChannel.isBeta &&
+            !await ensureLibraryAccess(
+              context,
+              ref,
+              reason: '收藏音乐',
+              redirect: '/music?view=favorites',
+            )) {
+          return;
+        }
+        if (!mounted) return;
         final track = ref.read(currentTrackProvider);
         final repository = ref.read(libraryRepositoryProvider);
-        final nextFavorite = await repository.toggleFavorite(track);
+        bool nextFavorite;
+        try {
+          nextFavorite = await repository.toggleFavorite(track);
+        } catch (error) {
+          if (mounted) showPlatformFailure(context, error);
+          return;
+        }
         await ref
             .read(audioHandlerProvider)
             .updateNotificationExtras(
@@ -121,7 +140,7 @@ class _LyricsOverlayCoordinatorState
     final position = ref.read(positionProvider).value ?? Duration.zero;
     final playing = ref.read(playbackStateProvider).value?.playing ?? false;
     final favorite =
-        ref.read(isAuthenticatedProvider) &&
+        ref.read(canUseCurrentLibraryProvider) &&
         ref.read(favoriteTrackIdsProvider).contains(track.id);
     var current = track.title;
     var next = track.artist;
@@ -180,7 +199,7 @@ class _LyricsOverlayCoordinatorState
   Widget build(BuildContext context) {
     final overlay = ref.watch(lyricsOverlayProvider);
     final track = ref.watch(currentTrackProvider);
-    final authenticated = ref.watch(isAuthenticatedProvider);
+    final authenticated = ref.watch(canUseCurrentLibraryProvider);
     final favorite =
         authenticated && ref.watch(favoriteTrackIdsProvider).contains(track.id);
 

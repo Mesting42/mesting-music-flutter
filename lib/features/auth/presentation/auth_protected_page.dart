@@ -6,6 +6,7 @@ import '../../../shared/widgets/mesting_loading_indicator.dart';
 import '../../../core/platform/distribution_channel.dart';
 import '../auth_providers.dart';
 import 'auth_gate.dart';
+import '../../music_platform/music_platform_providers.dart';
 
 class AuthProtectedPage extends ConsumerStatefulWidget {
   const AuthProtectedPage({
@@ -34,6 +35,15 @@ class _AuthProtectedPageState extends ConsumerState<AuthProtectedPage> {
   Widget build(BuildContext context) {
     if (widget.allowBetaLocalLibrary && DistributionChannel.isBeta) {
       return widget.child;
+    }
+    if (DistributionChannel.isBeta &&
+        ref.watch(platformAccountProvider).value != null) {
+      return Center(
+        child: TextButton(
+          onPressed: () => context.go(widget.fallback),
+          child: const Text('此功能属于 Mesting 账号，返回我的'),
+        ),
+      );
     }
     final auth = ref.watch(authControllerProvider);
     if (auth.value?.user != null) return widget.child;

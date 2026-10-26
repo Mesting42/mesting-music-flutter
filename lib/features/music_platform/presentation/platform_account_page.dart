@@ -8,6 +8,8 @@ import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../data/music_platform_api.dart';
 import '../music_platform_providers.dart';
 import '../../auth/auth_providers.dart';
+import '../platform_profile_provider.dart';
+import 'platform_avatar.dart';
 
 /// Uses Mesting's inherited theme, with account state owned entirely outside
 /// CloudBase. Closing this route cancels scans without affecting either login.
@@ -218,6 +220,7 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
   Widget build(BuildContext context) {
     if (ref.watch(currentUserProvider) != null) {
       return Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(title: const Text('当前账号')),
         body: const Center(
           child: Text(
@@ -229,8 +232,16 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
     }
     final account = ref.watch(platformAccountProvider);
     final session = account.value;
+    final profile = session == null
+        ? null
+        : ref.watch(platformProfileProvider).value;
     return Scaffold(
-      appBar: AppBar(title: const Text('音乐平台账号')),
+      key: const ValueKey('platform-account-opaque-page'),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(
+        title: const Text('音乐平台账号'),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -252,9 +263,13 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
                 else if (session != null) ...[
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.account_circle_outlined),
+                    leading: PlatformAvatar(
+                      url: profile?.avatarUrl ?? session.avatarUrl,
+                    ),
                     title: Text(
-                      session.nickname.isEmpty ? '酷狗账号' : session.nickname,
+                      (profile?.nickname ?? session.nickname).isEmpty
+                          ? '酷狗账号'
+                          : (profile?.nickname ?? session.nickname),
                     ),
                     subtitle: Text('ID：${session.userId}'),
                   ),

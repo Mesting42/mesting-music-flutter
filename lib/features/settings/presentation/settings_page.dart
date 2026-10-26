@@ -6,6 +6,7 @@ import '../../auth/auth_providers.dart';
 import '../../../core/platform/distribution_channel.dart';
 import '../../music_platform/music_platform_providers.dart';
 import '../../music_platform/presentation/platform_profile.dart';
+import '../../auth/account_capabilities.dart';
 import '../../auth/domain/auth_models.dart';
 import '../../app_update/app_update_providers.dart';
 import '../../app_update/domain/app_update_models.dart';
@@ -112,14 +113,15 @@ class SettingsPage extends ConsumerWidget {
                           : () => _checkForUpdates(context, ref),
                     ),
                     const _SettingsDivider(),
-                    _SettingsTile(
-                      key: const ValueKey('settings-java-mysql-test-channel'),
-                      icon: Icons.science_outlined,
-                      iconColor: const Color(0xFFBD7B3F),
-                      title: 'Java + MySQL 测试版',
-                      subtitle: '独立安装 · 不影响稳定版 · 仅限自愿测试',
-                      onTap: () => showJavaMysqlTestChannelSheet(context),
-                    ),
+                    if (ref.watch(showMestingFeaturesProvider))
+                      _SettingsTile(
+                        key: const ValueKey('settings-java-mysql-test-channel'),
+                        icon: Icons.science_outlined,
+                        iconColor: const Color(0xFFBD7B3F),
+                        title: 'Java + MySQL 测试版',
+                        subtitle: '独立安装 · 不影响稳定版 · 仅限自愿测试',
+                        onTap: () => showJavaMysqlTestChannelSheet(context),
+                      ),
                   ],
                 ),
               ),

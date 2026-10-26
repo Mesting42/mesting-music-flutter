@@ -1,9 +1,10 @@
-# md3Music integration Beta.2 handoff
+# md3Music integration Beta.3 handoff
 
-Beta.2 replaces the fixed discovery/recommendation content with live upstream
-catalogs and connects the current Kugou account's cloud playlists and favorites.
-It keeps Mesting's theme, application shell and audio handler. It is not yet a
-complete migration of every md3Music feature.
+Beta.3 adds bounded guest playback/preview resolution, account-specific feature
+boundaries, current-account avatars and Kugou song/playlist comments. It retains
+Beta.2's live concept-platform discovery and cloud library, with Mesting's theme,
+application shell and single audio handler. It is not a complete migration of
+every md3Music feature.
 
 ## Source baseline and provenance
 
@@ -33,12 +34,17 @@ complete migration of every md3Music feature.
 | `features/auth/beta_account_choice.dart` | Persistent mutually exclusive account selection; guest after logout |
 | `features/music_platform/data/platform_catalog.dart` | Public discovery, daily recommendations and public playlists |
 | `features/music_platform/data/platform_library_repository.dart` | Existing library contract backed by the current Kugou cloud identity |
+| `features/music_platform/data/platform_playback_resolver.dart` | Bounded media lookup, device registration retry and permitted preview fallback |
+| `features/music_platform/data/platform_comments_repository.dart` | Resource IDs, paging and explicit comment writes pinned to one Kugou identity |
+| `features/music_platform/platform_profile_provider.dart` | Profile/avatar refresh independent of credential restoration |
+| `features/auth/account_capabilities.dart` | Shared menu, player and route capability boundaries |
 | `features/music_platform/data/embedded_kugou_music_source.dart` | Adapts search, rankings and fresh playback URLs to Mesting tracks |
 | `features/music_platform/presentation/platform_account_page.dart` | Phone and QR login, account choice and independent logout |
+| `features/music_platform/presentation/platform_comments_page.dart` | Opaque comment/thread routes, compose, reply and delete-own actions |
 | `core/audio/mesting_audio_handler.dart` | Existing playback queue with optional URL resolver callback |
 | `features/lyrics/data/lyrics_repository.dart` | Injectable JSON transport with existing lyric fallbacks |
 | `features/library/presentation/library_access.dart` | Beta local-library access without legacy cloud authentication |
-| `android/app/src/beta` | Beta name, loopback network policy and native libraries only |
+| `android/app/src/beta` | Beta name, scoped cleartext network policy and native libraries only |
 
 Keep platform credentials out of the Mesting account repository. Do not add a
 second audio service. Do not call the server during global application startup:
@@ -53,6 +59,18 @@ choices. Do not fabricate a Mesting user from a Kugou identity. Delayed CloudBas
 restoration must not override a platform selection. On upgrade from Beta.1,
 an existing platform credential wins if there is no saved selection. A saved
 guest choice prevents old credentials from reactivating after logout.
+
+Kugou mode hides Mesting messages, friends/user search, sharing/listen-together
+and the Java/MySQL test app entry. A direct legacy route is blocked as well.
+Mesting mode keeps its own features and hides Kugou comments. Guest mode uses
+the local library. Player, list, lyrics-overlay and notification favorite actions
+all use the active library repository; they must not require an unrelated login.
+Profile, drawer and account management share the current account's avatar. Only
+reading/display is implemented; an avatar failure must not invalidate login.
+
+Account and comment routes explicitly use an opaque surface, because the shell
+deliberately has a transparent scaffold background for themed artwork. A new
+full-screen route must not inherit that transparency accidentally.
 
 Beta guest favorites and playlists live in the Beta sandbox. They are not
 silently migrated or synchronized to either cloud account. Mesting keeps its
@@ -74,6 +92,26 @@ marker. The audio handler resolves each selected song before creating its audio
 source, so loading a large favorite list does not request thousands of URLs.
 The marker is never passed to the audio decoder as a media URL.
 
+Guest playback first requests a normal URL, registers the device once if the
+platform returns 20028, and retries that request once. If a non-VIP request has
+no URL, it asks for the platform's `free_part=1` preview and labels it as a trial.
+The entire lookup has a 40-second cancellation deadline. A VIP credential keeps
+the full-quality endpoint priority and does not silently fall back to an
+anonymous preview. If the platform supplies no permitted URL, show a precise
+message rather than promising playback. Search metadata does not become locked
+just because an early URL request failed. Beta Android policy permits HTTP only
+for loopback and upstream media domains (`kugou.com` and
+`stream.tencentmusic.com`, including subdomains), matching the inspected APK;
+the default policy remains HTTPS-only.
+
+Comments use a song's real `mixsongid` resolved through `/audio` and a playlist's
+global collection ID. Reply/delete use the upstream comment children ID and root
+thread ID, never a local track/playlist UUID. Writes use POST with the upstream
+flat query contract. Send, reply and delete-own occur only after explicit user
+actions and are never retried automatically. Identity is checked before and after
+HTTP; stale pages stop showing another account's comment controls. The server's
+permissions, moderation and security challenges remain authoritative.
+
 ## Build and checks
 
 Put Flutter on PATH and run from the extracted project root:
@@ -82,11 +120,11 @@ Put Flutter on PATH and run from the extracted project root:
 flutter pub get
 flutter analyze
 flutter test
-flutter test --flavor beta test/music_platform_test.dart test/beta_login_entry_test.dart test/beta_update_isolation_test.dart test/remote_lyrics_repository_test.dart test/platform_cloud_library_test.dart test/beta_account_exclusivity_test.dart
+flutter test --flavor beta test/music_platform_test.dart test/beta_login_entry_test.dart test/beta_update_isolation_test.dart test/remote_lyrics_repository_test.dart test/platform_cloud_library_test.dart test/beta_account_exclusivity_test.dart test/platform_guest_playback_test.dart test/platform_comments_test.dart test/beta_player_library_actions_test.dart
 .\tool\build_android_md3_beta_apk.ps1
 ```
 
-The build script selects `beta`, version `1.0.37-beta.2` / `2`, ARMv7 + ARM64,
+The build script selects `beta`, version `1.0.37-beta.3` / `3`, ARMv7 + ARM64,
 CloudBase authentication retained, and automatic update checks disabled. It does
 not publish an update manifest or deploy a backend. The package is
 `com.mesting.music.beta`, separate from formal and Java/MySQL packages.
@@ -108,12 +146,14 @@ device validation and is not mocked into a success claim.
 
 ## Remaining migration work
 
-The user confirmed real Kugou login worked in Beta.1. Beta.2 still needs phone
-acceptance of actual recommendations, cloud library data, playback and writes;
-mock protocol/UI tests cannot certify a third-party service's live behavior.
-Music disk, MV, comments, recognition, membership check-in, cover upload and track
-reordering remain separate migration work. Endpoint availability in the Rust
-source alone does not mean a feature is connected to Mesting's user interface.
+The user confirmed real Kugou login and logged-in playback work, and clarified
+that the playback failure occurs in guest mode. Beta.3 still needs phone
+acceptance of guest full/preview audio, real comment read/write, avatar images
+and account transitions. Mock protocol/UI tests cannot certify a third-party
+service's live behavior. No user's real cloud comments were posted or deleted
+during development. Music disk, MV, recognition, membership check-in, cover upload
+and track reordering remain separate migration work. Endpoint availability in the
+Rust source alone does not mean a feature is connected to Mesting's interface.
 
 Before public distribution, reproduce native builds, establish a release signing
 process, and resolve the upstream license/disclaimer wording recorded in NOTICE.

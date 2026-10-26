@@ -25,6 +25,36 @@ class MusicPlatformApi {
     bool allowBusinessError = false,
     Future<void>? abortTrigger,
     PlatformSession? expectedSession,
+  }) => _request(
+    'GET',
+    path,
+    query: query,
+    allowBusinessError: allowBusinessError,
+    abortTrigger: abortTrigger,
+    expectedSession: expectedSession,
+  );
+
+  /// Comment writes follow the upstream POST contract with flat query fields.
+  /// Never retry here: a timed-out write may already have reached the platform.
+  Future<Map<String, dynamic>> post(
+    String path, {
+    Map<String, String> query = const {},
+    required PlatformSession expectedSession,
+  }) => _request(
+    'POST',
+    path,
+    query: query,
+    allowBusinessError: true,
+    expectedSession: expectedSession,
+  );
+
+  Future<Map<String, dynamic>> _request(
+    String method,
+    String path, {
+    required Map<String, String> query,
+    required bool allowBusinessError,
+    Future<void>? abortTrigger,
+    PlatformSession? expectedSession,
   }) async {
     // Enforce the boundary even if a future caller passes a malformed path.
     if (!path.startsWith('/') || path.startsWith('//') || path.contains('?')) {
@@ -41,7 +71,7 @@ class MusicPlatformApi {
       throw const MusicPlatformException('账号已变化，请返回后重新操作');
     }
     final request = http.AbortableRequest(
-      'GET',
+      method,
       base.replace(
         path: path,
         queryParameters: {

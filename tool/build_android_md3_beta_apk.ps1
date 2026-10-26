@@ -1,6 +1,6 @@
 param(
-    [string]$VersionName = '1.0.37-beta.2',
-    [ValidateRange(1, 2147483647)][int]$VersionCode = 2,
+    [string]$VersionName = '1.0.37-beta.3',
+    [ValidateRange(1, 2147483647)][int]$VersionCode = 3,
     [ValidateSet('debug', 'release')][string]$Mode = 'release',
     [string]$TargetPlatform = 'android-arm,android-arm64'
 )

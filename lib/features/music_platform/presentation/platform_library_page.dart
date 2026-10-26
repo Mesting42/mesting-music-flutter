@@ -8,6 +8,7 @@ import '../../player/presentation/music_hub_top_bar.dart';
 import '../data/platform_library_repository.dart';
 import 'platform_discovery_page.dart';
 import 'platform_feedback.dart';
+import 'platform_comments_page.dart';
 
 Future<String?> _name(BuildContext context, {String initial = ''}) async {
   final controller = TextEditingController(text: initial);
@@ -148,9 +149,29 @@ class PlatformCloudPlaylistPage extends ConsumerWidget {
     }
     final playlist = ref.watch(playlistProvider(id));
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: Text(playlist.value?.name ?? '酷狗云端歌单'),
         actions: [
+          IconButton(
+            tooltip: '酷狗歌单评论',
+            icon: const Icon(Icons.comment_outlined),
+            onPressed: () async {
+              try {
+                final commentId = await repository.commentId(id);
+                if (context.mounted) {
+                  openPlatformPlaylistComments(
+                    context,
+                    ref,
+                    id: commentId,
+                    name: playlist.value?.name ?? '歌单',
+                  );
+                }
+              } catch (error) {
+                if (context.mounted) showPlatformFailure(context, error);
+              }
+            },
+          ),
           if (playlist.value != null && repository.canManage(id))
             PopupMenuButton<String>(
               onSelected: (action) =>

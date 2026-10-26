@@ -12,6 +12,7 @@ import '../features/app_update/presentation/app_update_coordinator.dart';
 import '../core/audio/playback_providers.dart';
 import '../core/platform/distribution_channel.dart';
 import '../features/music_platform/data/embedded_kugou_music_source.dart';
+import '../features/music_platform/data/music_platform_api.dart';
 import '../features/music_platform/music_platform_providers.dart';
 import '../shared/models/track.dart';
 import '../core/persistence/playback_persistence_controller.dart';
@@ -38,7 +39,9 @@ class MestingMusicApp extends ConsumerWidget {
         // Playback restored from disk must use the current platform account,
         // rather than a signed URL left over from a previous login/session.
         await ref.read(platformAccountProvider.future);
-        return source.resolveTrack(track);
+        final resolved = await source.resolveTrack(track);
+        if (!resolved.isPlayable) throw MusicPlatformException(resolved.availabilityMessage);
+        return resolved;
       });
     }
     final radioController = ref.watch(endlessRadioControllerProvider);

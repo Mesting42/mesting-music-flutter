@@ -8,6 +8,8 @@ import '../../themes/theme_gallery_page.dart';
 import '../music_platform_providers.dart';
 import 'platform_account_page.dart';
 import 'platform_library_page.dart';
+import '../platform_profile_provider.dart';
+import 'platform_avatar.dart';
 
 /// Shared current-account entry for profile and settings. It never offers a
 /// second login while the platform credential is active.
@@ -16,10 +18,15 @@ class PlatformAccountTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(platformAccountProvider).value;
+    final profile = ref.watch(platformProfileProvider).value;
     return ListTile(
-      leading: const Icon(Icons.account_circle_outlined),
+      leading: PlatformAvatar(
+        url: profile?.avatarUrl ?? session?.avatarUrl ?? '',
+      ),
       title: Text(
-        session?.nickname.isNotEmpty == true ? session!.nickname : '酷狗账号',
+        (profile?.nickname ?? session?.nickname ?? '').isNotEmpty
+            ? (profile?.nickname ?? session!.nickname)
+            : '酷狗账号',
       ),
       subtitle: const Text('已登录酷狗 · 账号管理与退出'),
       trailing: const Icon(Icons.chevron_right),

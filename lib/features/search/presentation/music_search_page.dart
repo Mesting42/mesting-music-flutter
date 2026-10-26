@@ -20,6 +20,10 @@ import '../../themes/mesting_palette.dart';
 import '../../themes/music_theme_tokens.dart';
 import '../domain/music_rankings.dart';
 import '../search_providers.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../auth/account_capabilities.dart';
+import '../../music_platform/presentation/platform_feedback.dart';
+import '../../music_platform/presentation/platform_comments_page.dart';
 
 List<Track> selectedSearchPlaybackQueue(Track selectedTrack) =>
     List<Track>.unmodifiable([selectedTrack]);
@@ -909,7 +913,9 @@ class _SearchInputPreview extends ConsumerWidget {
     if (state.isLoading && !state.hasResults) {
       return _SearchLoading(query: state.query);
     }
-    final users = ref.watch(socialUserSearchProvider(state.query));
+    final users = ref.watch(showMestingFeaturesProvider)
+        ? ref.watch(socialUserSearchProvider(state.query))
+        : const AsyncData<List<SocialUser>>([]);
 
     return SingleChildScrollView(
       key: const ValueKey('search-input-preview-scroll'),
@@ -950,8 +956,10 @@ class _SearchResultsState extends ConsumerState<_SearchResults> {
   @override
   Widget build(BuildContext context) {
     final state = widget.state;
-    final showUsers = _category == _SearchResultCategory.users;
-    final showTracks = _category == _SearchResultCategory.tracks;
+    final showUsers =
+        _category == _SearchResultCategory.users &&
+        ref.watch(showMestingFeaturesProvider);
+    final showTracks = !showUsers;
     final userResults = showUsers
         ? ref.watch(socialUserSearchProvider(state.query))
         : const AsyncData<List<SocialUser>>(<SocialUser>[]);
@@ -959,10 +967,11 @@ class _SearchResultsState extends ConsumerState<_SearchResults> {
     final allUsers = userResults.value ?? const <SocialUser>[];
     return Column(
       children: [
-        _SearchResultTabs(
-          selected: _category,
-          onSelected: (category) => setState(() => _category = category),
-        ),
+        if (ref.watch(showMestingFeaturesProvider))
+          _SearchResultTabs(
+            selected: _category,
+            onSelected: (category) => setState(() => _category = category),
+          ),
         Expanded(
           child: ListView(
             key: const ValueKey('search-results-scroll'),
@@ -1004,7 +1013,11 @@ class _SearchResultsState extends ConsumerState<_SearchResults> {
                 _SectionTitle(
                   title: '在线音乐',
                   count: state.onlineTracks.length,
-                  suffix: state.fromCache ? '已从缓存加载' : '酷狗优先 · 网易云补充',
+                  suffix: state.fromCache
+                      ? '已从缓存加载'
+                      : DistributionChannel.isBeta
+                      ? '酷狗概念版'
+                      : '酷狗优先 · 网易云补充',
                 ),
                 const SizedBox(height: 8),
                 _TrackResults(tracks: state.onlineTracks),
@@ -1180,9 +1193,15 @@ class _NeteaseTrackResult extends ConsumerWidget {
     return InkWell(
       key: ValueKey('netease-search-track-${track.id}'),
       onTap: track.isPlayable
-          ? () => ref
-                .read(audioHandlerProvider)
-                .playSingleTrack(track, playbackContext: [track])
+          ? () async {
+              try {
+                await ref
+                    .read(audioHandlerProvider)
+                    .playSingleTrack(track, playbackContext: [track]);
+              } catch (error) {
+                if (context.mounted) showPlatformFailure(context, error);
+              }
+            }
           : null,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(13, 8, 8, 8),
@@ -1235,6 +1254,13 @@ class _NeteaseTrackResult extends ConsumerWidget {
                 ],
               ),
             ),
+            if (ref.watch(showPlatformFeaturesProvider) &&
+                track.source == TrackSource.kugou)
+              IconButton(
+                tooltip: '酷狗歌曲评论',
+                icon: const Icon(Icons.comment_outlined),
+                onPressed: () => openPlatformSongComments(context, ref, track),
+              ),
             if (!track.isPlayable)
               Icon(Icons.lock_outline_rounded, color: tokens.textMuted)
             else
