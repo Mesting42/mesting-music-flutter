@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/models/track.dart';
 import '../../../shared/widgets/music_notice.dart';
+import '../../../shared/widgets/beta_glass_controls.dart';
+import '../../../shared/widgets/beta_content_reveal.dart';
 import '../../../shared/widgets/keyboard_visibility_builder.dart';
 import '../data/platform_comments_repository.dart';
 import '../data/music_platform_api.dart';
@@ -72,19 +74,21 @@ class _PlatformSongCommentsPageState extends State<PlatformSongCommentsPage> {
             child: Center(
               child: Padding(
                 padding: const EdgeInsets.all(20),
-                child: PlatformFeedbackState(
-                  loading: !snapshot.hasError,
-                  message: snapshot.error is MusicPlatformException
-                      ? (snapshot.error as MusicPlatformException).message
-                      : '评论暂时无法加载',
-                  retry: snapshot.hasError
-                      ? () => setState(() {
-                          _resource = widget.repository.songResource(
-                            widget.track,
-                          );
-                        })
-                      : null,
-                ),
+                child: snapshot.hasError
+                    ? PlatformFeedbackState(
+                        loading: !snapshot.hasError,
+                        message: snapshot.error is MusicPlatformException
+                            ? (snapshot.error as MusicPlatformException).message
+                            : '评论暂时无法加载',
+                        retry: snapshot.hasError
+                            ? () => setState(() {
+                                _resource = widget.repository.songResource(
+                                  widget.track,
+                                );
+                              })
+                            : null,
+                      )
+                    : const BetaActivityIndicator(),
               ),
             ),
           ),
@@ -454,7 +458,11 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
                               if (_loading &&
                                   !_silentLoading &&
                                   _comments.isEmpty)
-                                const PlatformFeedbackState(loading: true),
+                                const Padding(
+                                  key: ValueKey('comments-initial-loading'),
+                                  padding: EdgeInsets.symmetric(vertical: 36),
+                                  child: Center(child: BetaActivityIndicator()),
+                                ),
                               if (_error != null)
                                 PlatformFeedbackState(
                                   message: _error!,
@@ -469,29 +477,37 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
                                       : '已加载评论中暂无此类内容',
                                 ),
                               for (final comment in entries)
-                                PlatformCommentCard(
-                                  comment: comment,
-                                  onReply: _writing
-                                      ? null
-                                      : () => setState(() => _reply = comment),
-                                  onDelete:
-                                      !_writing &&
-                                          comment.userId ==
-                                              widget.repository.identity.userId
-                                      ? () => _delete(comment)
-                                      : null,
-                                  onThread: widget.thread == null
-                                      ? () => Navigator.of(context).push(
-                                          MaterialPageRoute<void>(
-                                            builder: (_) =>
-                                                PlatformCommentsPage(
-                                                  resource: widget.resource,
-                                                  repository: widget.repository,
-                                                  thread: comment,
-                                                ),
-                                          ),
-                                        )
-                                      : null,
+                                BetaContentReveal(
+                                  key: ValueKey('comment-reveal-${comment.id}'),
+                                  child: PlatformCommentCard(
+                                    comment: comment,
+                                    onReply: _writing
+                                        ? null
+                                        : () =>
+                                              setState(() => _reply = comment),
+                                    onDelete:
+                                        !_writing &&
+                                            comment.userId ==
+                                                widget
+                                                    .repository
+                                                    .identity
+                                                    .userId
+                                        ? () => _delete(comment)
+                                        : null,
+                                    onThread: widget.thread == null
+                                        ? () => Navigator.of(context).push(
+                                            MaterialPageRoute<void>(
+                                              builder: (_) =>
+                                                  PlatformCommentsPage(
+                                                    resource: widget.resource,
+                                                    repository:
+                                                        widget.repository,
+                                                    thread: comment,
+                                                  ),
+                                            ),
+                                          )
+                                        : null,
+                                  ),
                                 ),
                               if (_loading &&
                                   !_silentLoading &&

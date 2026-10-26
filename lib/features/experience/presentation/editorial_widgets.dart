@@ -68,6 +68,17 @@ class EditorialHeader extends ConsumerWidget {
         ? null
         : ref.watch(platformProfileProvider).value;
     final user = ref.watch(currentUserProvider);
+    final homeGreeting = !back && title == '首页';
+    final titleLabel = Text(
+      title,
+      style: TextStyle(
+        color: context.musicThemeTokens.textPrimary,
+        fontSize: 34,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -.9,
+        height: 1.2,
+      ),
+    );
     return Padding(
       padding: const EdgeInsets.fromLTRB(22, 8, 18, 24),
       child: Row(
@@ -82,20 +93,10 @@ class EditorialHeader extends ConsumerWidget {
           Expanded(
             child: Row(
               children: [
-                Flexible(
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      color: context.musicThemeTokens.textPrimary,
-                      fontSize: 34,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -.9,
-                      height: 1.2,
-                    ),
-                  ),
-                ),
-                if (!back && title == '首页')
-                  const Flexible(child: ColdStartGreeting()),
+                // Keep 首页 on one line at large text sizes; the ephemeral
+                // greeting takes only the remaining width and truncates its name.
+                if (homeGreeting) titleLabel else Flexible(child: titleLabel),
+                if (homeGreeting) const Flexible(child: ColdStartGreeting()),
               ],
             ),
           ),

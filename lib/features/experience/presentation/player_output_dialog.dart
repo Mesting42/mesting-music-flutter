@@ -7,6 +7,9 @@ import '../../../core/audio/media_volume_controller.dart';
 import '../../../core/audio/playback_providers.dart';
 import '../../../shared/widgets/artwork_image.dart';
 import '../../../shared/widgets/beta_glass_popover.dart';
+import '../../../shared/widgets/beta_icon_button.dart';
+import 'apple_audio_glyphs.dart';
+import 'apple_output_volume_slider.dart';
 import '../../music_platform/presentation/platform_feedback.dart';
 
 /// The app owns this presentation; Android owns the real device transfer.
@@ -76,7 +79,8 @@ class _PlayerOutputDialogState extends ConsumerState<PlayerOutputDialog> {
                               ),
                             ),
                           ),
-                          IconButton(
+                          BetaIconButton(
+                            key: const ValueKey('output-close'),
                             tooltip: '关闭',
                             onPressed: () => Navigator.of(context).pop(false),
                             icon: Icon(
@@ -130,11 +134,11 @@ class _PlayerOutputDialogState extends ConsumerState<PlayerOutputDialog> {
                       const SizedBox(height: 26),
                       Row(
                         children: [
-                          Icon(
+                          AppleAudioGlyph(
                             output.headphones
-                                ? Icons.earbuds_rounded
-                                : CupertinoIcons.speaker_2,
-                            size: 32,
+                                ? AppleAudioGlyphKind.earphones
+                                : AppleAudioGlyphKind.speakerLoud,
+                            size: 40,
                             color: blue,
                           ),
                           const SizedBox(width: 14),
@@ -163,10 +167,10 @@ class _PlayerOutputDialogState extends ConsumerState<PlayerOutputDialog> {
                             ),
                           ),
                           if (output.available)
-                            Icon(
-                              CupertinoIcons.check_mark,
+                            AppleAudioGlyph(
+                              AppleAudioGlyphKind.check,
                               color: blue,
-                              size: 21,
+                              size: 28,
                             ),
                         ],
                       ),
@@ -194,18 +198,18 @@ class _PlayerOutputDialogState extends ConsumerState<PlayerOutputDialog> {
                       ),
                       Row(
                         children: [
-                          Icon(
-                            CupertinoIcons.volume_down,
+                          AppleAudioGlyph(
+                            AppleAudioGlyphKind.speakerQuiet,
                             color: ink.withValues(alpha: .65),
                             size: 20,
                           ),
                           Expanded(
                             child: Semantics(
                               label: '系统媒体音量',
-                              child: CupertinoSlider(
+                              child: AppleOutputVolumeSlider(
                                 key: const ValueKey('output-volume-slider'),
                                 value: _drag ?? volume.value,
-                                activeColor: blue,
+                                ink: ink,
                                 onChanged: !volume.available
                                     ? null
                                     : (value) {
@@ -227,8 +231,8 @@ class _PlayerOutputDialogState extends ConsumerState<PlayerOutputDialog> {
                               ),
                             ),
                           ),
-                          Icon(
-                            CupertinoIcons.volume_up,
+                          AppleAudioGlyph(
+                            AppleAudioGlyphKind.speakerLoud,
                             color: ink.withValues(alpha: .65),
                             size: 20,
                           ),

@@ -557,7 +557,7 @@ void main() {
   );
 
   testWidgets(
-    'beta13 success covers the already-mounted guide, plays one sound and keeps its page state',
+    'beta18 success reveals interactive guide immediately and preserves early Next state',
     (tester) async {
       var sounds = 0;
       const channel = MethodChannel('com.mesting.music/ui_sound');
@@ -585,26 +585,31 @@ void main() {
         TickerMode.valuesOf(
           tester.element(find.byType(BetaOnboardingPage)),
         ).enabled,
-        false,
+        true,
       );
-      expect(find.bySemanticsLabel('下一步'), findsNothing);
-      expect(find.bySemanticsLabel('跳过'), findsNothing);
-      expect(
-        find.byKey(const ValueKey('beta13-success-cover')),
-        findsOneWidget,
-      );
+      expect(find.bySemanticsLabel('下一步'), findsOneWidget);
+      expect(find.bySemanticsLabel('跳过'), findsOneWidget);
+      expect(find.byKey(const ValueKey('beta13-success-cover')), findsNothing);
       await tester.pump(const Duration(milliseconds: 350));
       final card = tester.getRect(
         find.byKey(const ValueKey('beta10-login-success')),
       );
-      expect(card.width, 214);
+      expect(card.width, 104);
+      expect(card.height, 104);
+      expect(card.top, 76);
       expect(card.center.dy, lessThan(844 / 2));
-      await capture(tester, 'beta13-success-over-guide');
+      await capture(tester, 'beta18-success-over-visible-guide');
+      // Click while the HUD is visible. Its completion must not reset the
+      // active guide page or replay a second sound.
+      await tester.tap(find.byKey(const ValueKey('guide-next')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('播放与歌词'), findsOneWidget);
+      expect(find.byType(BetaLoginSuccess), findsOneWidget);
+      await capture(tester, 'beta18-success-early-next');
       c.read(betaEntryFlowProvider.notifier).authenticated();
-      await tester.pump(const Duration(milliseconds: 1500));
-      await tester.pump(const Duration(milliseconds: 110));
-      await capture(tester, 'beta13-success-fading-to-guide');
-      await tester.pump(const Duration(milliseconds: 250));
+      await tester.pump(const Duration(milliseconds: 1100));
+      await tester.pump(const Duration(milliseconds: 260));
       expect(sounds, 1);
       expect(
         TickerMode.valuesOf(
@@ -614,6 +619,7 @@ void main() {
       );
       expect(find.byType(BetaLoginSuccess), findsNothing);
       expect(tester.state(find.byType(BetaOnboardingPage)), same(guideState));
+      expect(find.text('播放与歌词'), findsOneWidget);
       expect(find.bySemanticsLabel('下一步'), findsOneWidget);
       await tester.tap(find.text('跳过'));
       await tester.pump();

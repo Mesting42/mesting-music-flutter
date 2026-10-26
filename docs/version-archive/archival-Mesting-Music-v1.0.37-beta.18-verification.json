@@ -1,0 +1,32 @@
+{
+  "versionName": "1.0.37-beta.18",
+  "versionCode": 18,
+  "archivedOn": "2026-10-27",
+  "sourceOrigin": "Frozen working-tree delivery archive; archive commit created now, not original development history.",
+  "originalArchiveName": "Mesting-Music-v1.0.37-beta.18-source.zip",
+  "originalArchiveBytes": 42339285,
+  "originalArchiveSha256": "90F6A392DE3B8ECD52BC5D04AFBB4A5B12CADF8D99C8F0189C432908D268BF36",
+  "archiveRootPrefixRemoved": "",
+  "fileCount": 1004,
+  "excludedFiles": [],
+  "allArchiveEntriesReadAndHashed": true,
+  "originalDeliveryMetadataHashMatches": {
+    "apk": true,
+    "source": true
+  },
+  "apkName": "Mesting-Music-v1.0.37-beta.18.apk",
+  "apkBytes": 91156182,
+  "apkSha256": "A1334B9084B9738F3A52B8F810A27E895756DAA641AE4F85A6DAFF55ABF83CF2",
+  "packageName": "com.mesting.music.beta",
+  "architectures": [
+    "arm64-v8a",
+    "armeabi-v7a"
+  ],
+  "debuggable": false,
+  "signatureVerifiedNow": true,
+  "signatureScheme": "v2",
+  "signerCertificateSha256": "8CE2203AD821AD8D38576F9AE86350D98254AC05F2CB974E773C1973B22E0333",
+  "historicalApkNotRebuiltOrResigned": true,
+  "physicalDeviceRetestedDuringArchive": false,
+  "dependencyLockSha256": "3F2DC18A71A59324ADF202E8EFE43E2F712B23A16E743B772AF0EC10748B4957"
+}

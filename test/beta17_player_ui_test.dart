@@ -12,6 +12,7 @@ import 'package:mesting_music/core/audio/media_volume_controller.dart';
 import 'package:mesting_music/core/audio/mesting_audio_handler.dart';
 import 'package:mesting_music/core/audio/playback_providers.dart';
 import 'package:mesting_music/features/experience/presentation/player_output_dialog.dart';
+import 'package:mesting_music/features/experience/presentation/apple_output_volume_slider.dart';
 import 'package:mesting_music/features/experience/presentation/player_queue_panel.dart';
 import 'package:mesting_music/shared/models/track.dart';
 import 'support/deterministic_audio_player.dart';
@@ -184,7 +185,7 @@ void main() {
       });
       await tester.pumpAndSettle();
       expect(find.text('通勤耳机'), findsOneWidget);
-      final slider = tester.widget<CupertinoSlider>(
+      final slider = tester.widget<AppleOutputVolumeSlider>(
         find.byKey(const ValueKey('output-volume-slider')),
       );
       slider.onChanged!(.8);

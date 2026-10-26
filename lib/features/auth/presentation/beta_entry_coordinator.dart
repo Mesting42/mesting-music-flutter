@@ -33,7 +33,6 @@ class _BetaEntryCoordinatorState extends ConsumerState<BetaEntryCoordinator> {
   final _navigator = GlobalKey<NavigatorState>();
   final _guide = GlobalKey<BetaOnboardingPageState>();
   ChildBackButtonDispatcher? _back;
-  bool _guideRevealed = false;
 
   @override
   void initState() {
@@ -54,8 +53,7 @@ class _BetaEntryCoordinatorState extends ConsumerState<BetaEntryCoordinator> {
 
   Future<bool> _handleBack() async {
     final stage = ref.read(betaEntryFlowProvider);
-    if (stage == BetaEntryStage.success) return true;
-    if (stage == BetaEntryStage.guide) {
+    if (stage == BetaEntryStage.success || stage == BetaEntryStage.guide) {
       _guide.currentState?.goBack();
       return true;
     }
@@ -75,7 +73,6 @@ class _BetaEntryCoordinatorState extends ConsumerState<BetaEntryCoordinator> {
   Widget build(BuildContext context) {
     ref.listen(betaEntryFlowProvider, (previous, next) {
       if (next == BetaEntryStage.success && previous != next) {
-        _guideRevealed = false;
         // An explicit authentication event owns the one-shot UI sound.
         // Restoration/refresh never enters this stage.
         LoginSuccessSound.play();
@@ -123,32 +120,18 @@ class _BetaEntryCoordinatorState extends ConsumerState<BetaEntryCoordinator> {
       overlay = Stack(
         fit: StackFit.expand,
         children: [
-          ExcludeFocus(
-            excluding: stage == BetaEntryStage.success,
-            child: ExcludeSemantics(
-              excluding: stage == BetaEntryStage.success,
-              child: IgnorePointer(
-                ignoring: stage == BetaEntryStage.success,
-                // Pause the decorative guide behind the opaque success cover.
-                child: TickerMode(
-                  enabled: stage == BetaEntryStage.guide || _guideRevealed,
-                  child: BetaOnboardingPage(
-                    key: _guide,
-                    onFinish: () =>
-                        ref.read(betaEntryFlowProvider.notifier).finish(),
-                  ),
-                ),
-              ),
-            ),
+          // The guide is visible and interactive from the success event's
+          // first frame. Keep this exact state across the HUD's dismissal so
+          // early Next/Skip actions cannot be reset by a delayed callback.
+          BetaOnboardingPage(
+            key: _guide,
+            onFinish: () => ref.read(betaEntryFlowProvider.notifier).finish(),
           ),
           if (stage == BetaEntryStage.success)
             Positioned.fill(
-              child: AbsorbPointer(
+              child: IgnorePointer(
                 child: BetaLoginSuccess(
                   key: const ValueKey('entry-success'),
-                  onReveal: () {
-                    if (mounted) setState(() => _guideRevealed = true);
-                  },
                   onComplete: () =>
                       ref.read(betaEntryFlowProvider.notifier).showGuide(),
                 ),

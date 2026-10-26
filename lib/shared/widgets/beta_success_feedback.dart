@@ -56,9 +56,8 @@ class _MarkPainter extends CustomPainter {
 }
 
 class BetaLoginSuccess extends StatefulWidget {
-  const BetaLoginSuccess({required this.onComplete, this.onReveal, super.key});
+  const BetaLoginSuccess({required this.onComplete, super.key});
   final VoidCallback onComplete;
-  final VoidCallback? onReveal;
   @override
   State<BetaLoginSuccess> createState() => _BetaLoginSuccessState();
 }
@@ -71,18 +70,25 @@ class _BetaLoginSuccessState extends State<BetaLoginSuccess>
     reverseDuration: const Duration(milliseconds: 220),
   );
   Timer? _timer;
-  bool _leaving = false;
   @override
   void initState() {
     super.initState();
     _motion.forward();
     _timer = Timer(const Duration(milliseconds: 1800), () async {
       if (!mounted) return;
-      widget.onReveal?.call();
-      setState(() => _leaving = true);
       await _motion.reverse();
       if (mounted) widget.onComplete();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduced = MediaQuery.disableAnimationsOf(context);
+    _motion.reverseDuration = reduced
+        ? Duration.zero
+        : const Duration(milliseconds: 220);
+    if (reduced) _motion.value = 1;
   }
 
   @override
@@ -96,20 +102,16 @@ class _BetaLoginSuccessState extends State<BetaLoginSuccess>
   Widget build(BuildContext context) => Semantics(
     liveRegion: true,
     label: '登录成功',
-    child: Stack(
-      fit: StackFit.expand,
-      children: [
-        // Opaque from the first frame. During dismissal this veil fades to the
-        // already-mounted guide, together with the smaller success card.
-        FadeTransition(
-          opacity: _leaving ? _motion : kAlwaysCompleteAnimation,
-          child: ColoredBox(
-            key: const ValueKey('beta13-success-cover'),
-            color: Theme.of(context).colorScheme.surface,
-          ),
-        ),
-        Align(
-          alignment: const Alignment(0, -.28),
+    excludeSemantics: true,
+    child: SafeArea(
+      // Only the compact HUD paints here. The coordinator supplies the
+      // already-mounted guide and lets pointers reach its Next/Skip actions.
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: Padding(
+          // The confirmed reference places a 104dp square below the guide
+          // header's 64dp row, in the upper central breathing space.
+          padding: const EdgeInsets.only(top: 76),
           child: FadeTransition(
             opacity: _motion,
             child: ScaleTransition(
@@ -123,28 +125,31 @@ class _BetaLoginSuccessState extends State<BetaLoginSuccess>
               child: RepaintBoundary(
                 child: Container(
                   key: const ValueKey('beta10-login-success'),
-                  width: 214,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 26,
-                  ),
+                  width: 104,
+                  height: 104,
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: const Color(0xF20D1012),
-                    borderRadius: BorderRadius.circular(34),
+                    borderRadius: BorderRadius.circular(22),
                     border: Border.all(color: Colors.white12),
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const RepaintBoundary(child: BetaSuccessMark(size: 82)),
-                      const SizedBox(height: 23),
-                      Text(
-                        '登录成功',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          decoration: TextDecoration.none,
+                      const RepaintBoundary(child: BetaSuccessMark(size: 42)),
+                      const SizedBox(height: 8),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          '登录成功',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                decoration: TextDecoration.none,
+                              ),
                         ),
                       ),
                     ],
@@ -154,7 +159,7 @@ class _BetaLoginSuccessState extends State<BetaLoginSuccess>
             ),
           ),
         ),
-      ],
+      ),
     ),
   );
 }

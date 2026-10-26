@@ -1,4 +1,5 @@
 import '../../../shared/widgets/beta_glass_popover.dart';
+import '../../../shared/widgets/beta_content_reveal.dart';
 import 'package:flutter/cupertino.dart';
 import '../../../core/haptics/app_haptics.dart';
 import 'package:flutter/material.dart';
@@ -100,66 +101,81 @@ class _QualityDialog extends ConsumerWidget {
                 ),
                 const SizedBox(height: 18),
                 if (qualities != null)
-                  qualities.when(
-                    loading: () => const Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Center(child: CupertinoActivityIndicator()),
-                    ),
-                    error: (_, _) => Column(
-                      children: [
-                        Text('暂未获取到歌曲音质信息', style: TextStyle(color: ink)),
-                        TextButton(
-                          onPressed: () => ref.invalidate(
-                            platformSongQualitiesProvider(track.id),
+                  AnimatedSize(
+                    duration: MediaQuery.disableAnimationsOf(context)
+                        ? Duration.zero
+                        : const Duration(milliseconds: 280),
+                    alignment: Alignment.topCenter,
+                    child: qualities.when(
+                      loading: () => const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(child: CupertinoActivityIndicator()),
+                      ),
+                      error: (_, _) => Column(
+                        children: [
+                          Text('暂未获取到歌曲音质信息', style: TextStyle(color: ink)),
+                          TextButton(
+                            onPressed: () => ref.invalidate(
+                              platformSongQualitiesProvider(track.id),
+                            ),
+                            child: const Text('重新加载'),
                           ),
-                          child: const Text('重新加载'),
-                        ),
-                      ],
-                    ),
-                    data: (available) => Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        for (final quality in PlatformAudioQuality.values.where(
-                          available.contains,
-                        ))
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 5),
-                            child: Material(
-                              color: actual == quality
-                                  ? accent.withValues(alpha: .18)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(17),
-                              clipBehavior: Clip.antiAlias,
-                              child: ListTile(
-                                key: ValueKey('quality-option-${quality.code}'),
-                                minVerticalPadding: 10,
-                                title: Text(
-                                  quality.label,
-                                  style: TextStyle(
-                                    color: actual == quality ? accent : ink,
-                                    fontSize: 17,
-                                    fontWeight: actual == quality
-                                        ? FontWeight.w600
-                                        : FontWeight.w400,
+                        ],
+                      ),
+                      data: (available) => BetaContentReveal(
+                        key: ValueKey('quality-catalog-${track.id}'),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            for (final quality
+                                in PlatformAudioQuality.values.where(
+                                  available.contains,
+                                ))
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 5),
+                                child: Material(
+                                  color: actual == quality
+                                      ? accent.withValues(alpha: .18)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(17),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: ListTile(
+                                    key: ValueKey(
+                                      'quality-option-${quality.code}',
+                                    ),
+                                    minVerticalPadding: 10,
+                                    title: Text(
+                                      quality.label,
+                                      style: TextStyle(
+                                        color: actual == quality ? accent : ink,
+                                        fontSize: 17,
+                                        fontWeight: actual == quality
+                                            ? FontWeight.w600
+                                            : FontWeight.w400,
+                                      ),
+                                    ),
+                                    trailing: actual == quality
+                                        ? Icon(
+                                            CupertinoIcons.check_mark,
+                                            color: accent,
+                                            size: 20,
+                                          )
+                                        : null,
+                                    onTap: switching
+                                        ? null
+                                        : () => Navigator.pop(
+                                            context,
+                                            _QualitySelection(
+                                              track.id,
+                                              quality,
+                                            ),
+                                          ),
                                   ),
                                 ),
-                                trailing: actual == quality
-                                    ? Icon(
-                                        CupertinoIcons.check_mark,
-                                        color: accent,
-                                        size: 20,
-                                      )
-                                    : null,
-                                onTap: switching
-                                    ? null
-                                    : () => Navigator.pop(
-                                        context,
-                                        _QualitySelection(track.id, quality),
-                                      ),
                               ),
-                            ),
-                          ),
-                      ],
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 if (!supported) ...[

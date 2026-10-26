@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import '../../../shared/widgets/beta_icon_button.dart';
 import 'package:flutter/material.dart';
 import '../../../shared/widgets/beta_glass_popover.dart';
 import '../../themes/beta_appearance.dart';
@@ -139,8 +140,13 @@ class _PlayerMoreMenuState extends State<PlayerMoreMenu> {
             ),
           ),
         )
-      : IconButton(
+      : BetaIconButton(
           key: _anchor,
+          // The classic light turntable still needs its intentional dark
+          // contrast surface; only Material's transient press circle is removed.
+          backgroundColor:
+              IconButtonTheme.of(context).style?.backgroundColor?.resolve({}) ??
+              Colors.transparent,
           tooltip: widget.tooltip,
           onPressed: _open,
           icon: const Icon(CupertinoIcons.ellipsis, color: Colors.white),

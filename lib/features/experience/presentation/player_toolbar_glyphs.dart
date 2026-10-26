@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/audio/playback_mode.dart';
+import 'apple_audio_glyphs.dart';
 
 enum PlayerToolbarTool { lyrics, output, queue }
 
@@ -80,65 +81,14 @@ class _ToolbarPainter extends CustomPainter {
           );
         }
       case PlayerToolbarTool.output:
-        if (headphones) {
-          // Two earpieces, short stems and dark acoustic ports retain their
-          // recognizable silhouette at 24 physical display pixels as well.
-          for (final left in [true, false]) {
-            canvas.save();
-            if (!left) {
-              canvas.translate(40, 0);
-              canvas.scale(-1, 1);
-            }
-            paint.color = ink;
-            final bud = Path()
-              ..moveTo(8.2, 13.5)
-              ..cubicTo(7, 10.2, 10.5, 8.5, 14.5, 10)
-              ..cubicTo(17.9, 11.3, 19.2, 14.2, 17.2, 17.2)
-              ..lineTo(15.3, 19)
-              ..lineTo(15.3, 28.5)
-              ..quadraticBezierTo(12.2, 31, 11.5, 27.8)
-              ..lineTo(11.4, 18.8)
-              ..quadraticBezierTo(8.5, 17.8, 8.2, 13.5)
-              ..close();
-            canvas.drawPath(bud, paint);
-            paint.color = const Color(0xFF263E51);
-            canvas.drawOval(const Rect.fromLTWH(10, 11.1, 3.7, 2.4), paint);
-            canvas.drawOval(const Rect.fromLTWH(15.4, 13.2, 2.2, 4.2), paint);
-            paint.color = const Color(0xFF6F879A);
-            canvas.drawRRect(
-              RRect.fromRectAndRadius(
-                const Rect.fromLTWH(12, 26.5, 2.6, 2),
-                const Radius.circular(1),
-              ),
-              paint,
-            );
-            canvas.restore();
-          }
-        } else {
-          paint
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.8
-            ..strokeCap = StrokeCap.round;
-          final screen = Path()
-            ..moveTo(13, 25)
-            ..lineTo(9, 25)
-            ..lineTo(9, 12)
-            ..quadraticBezierTo(9, 10, 11, 10)
-            ..lineTo(29, 10)
-            ..quadraticBezierTo(31, 10, 31, 12)
-            ..lineTo(31, 25)
-            ..lineTo(27, 25);
-          canvas.drawPath(screen, paint);
-          paint.style = PaintingStyle.fill;
-          canvas.drawPath(
-            Path()
-              ..moveTo(20, 21)
-              ..lineTo(12.5, 30)
-              ..lineTo(27.5, 30)
-              ..close(),
-            paint,
-          );
-        }
+        paintAppleAudioGlyph(
+          canvas,
+          const Size.square(40),
+          headphones
+              ? AppleAudioGlyphKind.earphones
+              : AppleAudioGlyphKind.route,
+          ink,
+        );
       case PlayerToolbarTool.queue:
         paint
           ..color = ink

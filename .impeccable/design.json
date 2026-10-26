@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-25T20:40:48.257Z",
-  "title": "Design System: Mesting Music Android Beta.13",
+  "generatedAt": "2026-10-26T14:30:54.069Z",
+  "title": "Design System: Mesting Music Android Beta.18",
   "extensions": {
     "colorMeta": {
       "primary-seed": {
@@ -417,7 +417,7 @@
       {
         "name": "login-success-paired",
         "value": "300ms in / 220ms out",
-        "purpose": "214dp 卡位于 Alignment(0,-.28)；初始遮挡不透明，1800ms 后与卡片淡出至同一已挂载指南，反馈期间指南焦点/语义/指针排除。仅交互成功触发一次原创 0.48s SoundPool 提示音，不认证真机可听效果。"
+        "purpose": "login-success 为104×104dp圆角方形，位于SafeArea内顶部76dp、指南页头下方上部中央，只绘制自身并忽略指针；1800ms后反向退出。指南同帧可见可操作，Next/Skip/Back保持同一状态，延迟回调不重置或重开。减少动画直接终态与零时长退出；原创0.48s SoundPool仅新交互成功一次。"
       },
       {
         "name": "beta-content-route-paired",
@@ -456,13 +456,28 @@
       },
       {
         "name": "cold-home-greeting",
-        "value": "5s; 260ms fade / 320ms size",
-        "purpose": "冷进程首次可用首页问候，进程级标记防止后台切回或路由重挂重播。"
+        "value": "5s visible; 320ms fade / slide / size",
+        "purpose": "冷进程首次可用首页的轻量问候/真实昵称，无胶囊或音符badge；余宽内单行省略，首页标题保持单行。进程标记防后台切回/路由重挂重播，减少动画归零。"
       },
       {
         "name": "startup-row-press",
         "value": "200ms scale / 180ms tint",
         "purpose": "选择行局部圆角按压缩放至 .977，选择持久化与按压状态分别由调用者和控件持有。"
+      },
+      {
+        "name": "beta-icon-feedback",
+        "value": "140ms",
+        "purpose": "BetaIconButton仅glyph缩放至.9、透明度.66；抬起/取消恢复，减少动画归零。保留48dp目标、框架键盘语义、焦点和小圆X；经典唱机对比底由调用者保留。"
+      },
+      {
+        "name": "beta-content-arrival",
+        "value": "320ms; 7dp translate",
+        "purpose": "easeOutCubic前景淡入/上移；稳定key保留已完成评论行，追加只让新内容到达。不得包裹整块玻璃；减少动画直接终态。"
+      },
+      {
+        "name": "quality-content-size",
+        "value": "280ms",
+        "purpose": "音质等待与结果的局部内容高度平滑变化，结果前景使用beta-content-arrival，玻璃层保持自身合成；减少动画归零。"
       }
     ],
     "breakpoints": [
@@ -1149,6 +1164,67 @@
         "third_party/liquid_glass_widgets/MESTING_PATCHES.md",
         "third_party/liquid_glass_widgets/package/shaders/lightweight_glass.frag"
       ]
+    },
+    "beta18Behavior": {
+      "status": "Confirmed narrow Beta.18 merge into the incumbent Mesting/Apple Music-informed system; other surface contracts retain their scope.",
+      "provenance": "docs/fixes-2026-10-26-beta18.md; eight confirmed refinements and latest compact-HUD correction. No replacement visual world.",
+      "greeting": "Quiet greeting/name text without capsule or note badge; one cold-process presentation for five visible seconds; long nickname truncation, single-line Home title and system TextScaler retained.",
+      "playbackDestination": {
+        "toolbar": "Authored audio-broadcast contour for local output; paired earphones for headphone routes",
+        "dialog": "Authored speakers/earphones/check family; new volume presentation only in output dialog",
+        "volume": "7dp quiet track; white20x16dp thumb activating to23x18dp; 48dp response; framework Slider percent/keyboard/focus/cancellation and native media-volume owner retained",
+        "identity": "Native metadata owns actual name/type; generic headphone routes do not infer AirPods branding. Vectors are application-authored, not exported SF Symbols."
+      },
+      "iconFeedback": "Current BetaIconButton calls retain48dp targets, small circled X, framework input/tooltips and traditional-keyboard focus. Scale/opacity replaces the additional large pressed circle. Classic turntable contrast base remains.",
+      "qualityCache": {
+        "successOnly": true,
+        "maximumRecordings": 64,
+        "lifetime": "Process memory; watched account future invalidates on account/token replacement",
+        "release": "FIFO eviction/disposal releases retained provider states",
+        "failures": "Not retained; reopen or explicit retry may request again",
+        "presentation": "Smooth local content size and foreground arrival within existing glass; supported resources remain separate from entitlement"
+      },
+      "comments": "Initial resource/comment waiting uses a bare activity indicator. Real comment-ID keys retain completed row arrival during append. Existing order/filter/account/request/write-result owners remain authoritative.",
+      "blueGlass": {
+        "scope": "Current blue BetaGlassButton calls; existing business owners and shared material retained",
+        "persistPressOnDrag": false,
+        "ambientBaseLight": 0.06,
+        "glowColor": "#6CA7FF",
+        "glowOpacity": 0.12,
+        "purpose": "Scrolling gesture cancellation releases the press sheen, preserving readable white labels and the incumbent premium independent layer, clear blue body and refraction."
+      },
+      "loginSuccess": {
+        "component": "DESIGN.md frontmatter components.login-success",
+        "placement": "SafeArea topCenter with76dp top padding, below guide header",
+        "guide": "Mounted visibly and interactively in the success event frame; Next/Skip/Back use the same guide state",
+        "layer": "Only the HUD paints its own square and ignores pointers; guide keeps focus/semantics/input, routed app remains excluded",
+        "races": "Delayed HUD completion only advances an active success stage; cannot reset/reopen a finished guide. Duplicate auth events stay silent.",
+        "sound": "Original one-shot UI chime remains separate from the music owner",
+        "reducedMotion": "HUD/mark complete immediately, reverse duration zero; intentional feedback dwell remains"
+      },
+      "evidence": {
+        "captureAuthority": "External Beta.18 captures-final/ only; beta18-success-over-visible-guide.png and beta18-success-early-next.png supersede earlier large-card previews",
+        "review": "External Beta.18 review-first.md: bounded ship, no new material findings; three confirmed pre-existing normal-suite failures remain disclosed",
+        "limits": "Software captures/source review do not certify native Android GPU optics, actual output transfer/hardware volume, TalkBack, physical haptics/sound or live account/service behavior"
+      },
+      "sourceEntries": [
+        "lib/features/experience/presentation/cold_start_greeting.dart",
+        "lib/features/experience/presentation/editorial_widgets.dart",
+        "lib/features/experience/presentation/apple_audio_glyphs.dart",
+        "lib/features/experience/presentation/apple_output_volume_slider.dart",
+        "lib/features/experience/presentation/player_toolbar_glyphs.dart",
+        "lib/features/experience/presentation/player_output_dialog.dart",
+        "lib/features/experience/presentation/player_more_menu.dart",
+        "lib/features/music_platform/platform_quality_providers.dart",
+        "lib/features/music_platform/presentation/platform_quality_button.dart",
+        "lib/features/music_platform/presentation/platform_comments_page.dart",
+        "lib/shared/widgets/beta_content_reveal.dart",
+        "lib/shared/widgets/beta_icon_button.dart",
+        "lib/shared/widgets/beta_glass_controls.dart",
+        "lib/shared/widgets/beta_success_feedback.dart",
+        "lib/features/auth/presentation/beta_entry_coordinator.dart",
+        "lib/features/auth/beta_entry_flow.dart"
+      ]
     }
   },
   "components": [
@@ -1220,7 +1296,7 @@
       "name": "Beta 玻璃按钮与圆形返回",
       "kind": "button",
       "refersTo": "glass-button",
-      "description": "指定Beta账号操作与返回共用premium/独立层。主按钮默认52dp、返回48dp；静态HTML仅结构色彩示意，不包含Flutter真实折射。 Beta.13 手机号登录改用共享clear-body蓝色白字，验证码/登录只在各自请求时显示spinner；预览关闭为48dp圆形玻璃。",
+      "description": "指定Beta账号操作与返回共用premium/独立层。主按钮默认52dp、返回48dp；静态HTML仅结构色彩示意，不包含Flutter真实折射。 Beta.13 手机号登录改用共享clear-body蓝色白字，验证码/登录只在各自请求时显示spinner；预览关闭为48dp圆形玻璃。 Beta.18 蓝色按钮在滚动取消时释放按压，使用有界蓝色高光保持白字与premium独立层。",
       "html": "<div class=\"ds-glass-actions\"><button class=\"ds-glass-button ds-glass-back\" aria-label=\"返回\"><svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m14 5-7 7 7 7\"/></svg></button><button class=\"ds-glass-button ds-glass-primary\">手机号登录</button></div>",
       "css": ".ds-glass-actions{display:flex;gap:12px;align-items:center;font-family:sans-serif}.ds-glass-button{height:52px;padding:0 18px;border:0;border-radius:999px;background:rgba(242,242,247,.501961);backdrop-filter:blur(2px);color:#20232B;font:700 15px sans-serif;cursor:pointer;transition:transform .16s,opacity .16s}.ds-glass-primary{color:#DE3A3D}.ds-glass-back{width:48px;height:48px;padding:0;display:grid;place-items:center;flex:none}.ds-glass-button:hover{filter:brightness(1.025)}.ds-glass-button:active{transform:scale(.96)}.ds-glass-button:focus-visible{outline:2px solid #DE3A3D;outline-offset:3px}.ds-glass-button:disabled{opacity:.38;cursor:default}"
     },
@@ -1243,7 +1319,7 @@
   ],
   "narrative": {
     "northStar": "封面主导的私人听歌空间",
-    "overview": "封面承担视觉重心，中文大标题与留白组织阅读顺序。横向内容组露出下一项，歌曲列表保持紧凑；播放与导航悬浮于内容之上。Beta 使用用户参考图采样的红色强调，经典浅色、深色和跟随系统共用布局，进度条样式与角色独立选择。\n\n本文按当前 Beta.13 源码合并已确认的设计规则，沿用 Mesting/Apple Music 视觉依据与同一 North Star。可见名称为 Mesting Music。经典浅色使用中性白灰面板与既有红色强调，深色和封面播放器配色保留；入口与指南继续使用珊瑚红原创音乐双角色和局部暖色背景。居中同意组、Raycast 参考适配的按方式登录、统一账号模块、真实五类搜索、独立启动选择和真实队列时长继续使用。Beta.13 修正欢迎返回、覆盖已挂载指南的成功反馈、仅当前页到末页的跳过动效、播放器进入与退场显露，统一进度角色的实际锚点、文本编辑菜单及播放胶囊长按菜单；这些是用户于 2026-10-26 确认的十五项既有世界内的修正。局部蓝色确认与编辑色不建立新全局配色。Beta 门限为 DistributionChannel.isBeta（Android appFlavor == beta）；正式 flavor 的页面、导航、迷你播放器、完整主题、定制推荐与默认黑胶契约保留，共享工具按调用点生效。\n\nBeta.13 的 work/beta13/review-final.md 给出有界 disposition: ship，R1–R4 resolved、remaining clear；review-fixes-functional-final.log 为 23 项通过（9 session、14 entry），此前 12 项软件 UI 证据及未变的九张进度角色、两张成功反馈复核捕获继续适用。最终常规回归为 657 通过/78 条件跳过/0 失败，Beta196 通过/0 失败，当前软件 UI53 通过，analyze 为 No issues found；各组重叠不相加。assembleBetaRelease 成功，1.0.37-beta.13 / 13、同一 Beta 证书、16KiB ZIP/五个 ARM64 LOAD 对齐、原生链/FFI、视频/shader 与优化后的原创提示音字节一致性已检查；精确包身份见 PRODUCT.md 和该版 artifact-verification.json，源码 ZIP 留文档冻结后的外部清单。源码、软件测试与捕获不证明实际 Android GPU/FPS、IME/自动填充、TalkBack、预测返回、提示音响度/焦点、短信或云写入；设备冷启动丢失登录态的原触发原因也未由日志证明。没有新增 ImageGen 批准 comp、approval sidecar、QUALITY BAR card 或 FORM seed。\n\n以下 Beta.12 证据为历史冻结快照：ui-final.log 47 项通过及 captures-final/existing 的生产控件捕获，包含纯色/内容、浅/深、收拢/展开/形变、手机/宽屏和小屏大字配对；蓝色滚动前/变化中/稳定后浅色三帧均为 [13,107,218]，深色为 [1,95,206] / [13,107,218] / [1,95,206]。test-summary.json 记录最终常规 651 通过/63 条件跳过/0 失败、Beta175 通过/0 跳过/0 失败；analyze-approved.log 为 No issues found，组间有重叠不可相加。媒体核验确认用户原文件未改，兼容副本保留原 AAC 流；assembleBetaRelease 成功，1.0.37-beta.12 / 12 的身份、同一 Beta 证书、16KiB ZIP/ARM64 LOAD 对齐、打包原生库对应链、修正 shader 与两段兼容视频均已核验。精确包字节/哈希见 PRODUCT.md 与该版外部 release-verification/artifact-verification.json；源码 ZIP 身份留该版文档冻结后的外部清单。软件捕获使用合成 fixture、软件渲染与 Windows QA 中文字体，不能认证 Android GPU 光学、FPS、系统边缘/预测返回、原声解码/媒体焦点/硬件音量或 TalkBack；也不构成 Beta.13 发布身份或测试结果。历史待确认文件名不改变用户随后对 Beta.12 文字方案的明确确认。\n\n历史 Beta.11 发布 APK 已验证为 Mesting Music / com.mesting.music.beta / 1.0.37-beta.11 / 11，assembleBetaRelease 成功；该版最终常规 644 通过/58 条件跳过/0 失败、Beta163 通过/0 跳过/0 失败、approved 软件 UI43 通过，后补设置捕获1通过，analyze-approved 无问题，组间重叠不可相加。_InlineCodeField 的外部标签/两行右侧操作在 320dp/1.6 浅深色通过两项六位数字/标签/键盘操作验证，reviewer 已看该版 approved 原图并确认 R1、R2 resolved；该版 review-final.md 的独立有界结论为 disposition: ship，R1/R2 resolved、许可迁移 match，无剩余 material fix；它不扩大到 Beta.12 或设备/线上证据。登录页许可按钮已移入设置应用分组，settings-final.png 是该版正确设置截图。历史 APK 身份、同一证书、16KiB ZIP、ARM64 ELF16KiB 与原始→merged→stripped→APK 的两种 ARM 库对应链已核验，精确字节/哈希见 docs/MD3MUSIC_BETA.md；源码归档身份留该版冻结后的外部 manifest，不嵌入自引用 ZIP 哈希。Beta.10 的 ship、计数及哈希同样仅属于历史构建。Beta.11 motion-export 4/4 通过，外部 fixture 复用该版实际欢迎/样式组件导出浅深四个 GIF，各36帧/80ms，无生产源码变更；不是沿用旧版图。软件捕获和 GIF 使用合成数据、Flutter 软件渲染及 Windows QA 中文字体；adb-devices 为空，不能证明原生 GPU 折射、帧率、硬件音量、TalkBack、真实 IME 或线上服务，八类 genuine host 只读响应也不等于真实收码或 CDN 验收。历史入口方向来自既有 Mesting 世界、用户参考构图、珊瑚红矢量双角色选择及确认后的 Beta.10/Beta.11 文字方案，没有独立 ImageGen 批准图、approval sidecar、QUALITY BAR card 或随机 FORM seed。",
+    "overview": "封面承担视觉重心，中文大标题与留白组织阅读顺序。横向内容组露出下一项，歌曲列表保持紧凑；播放与导航悬浮于内容之上。Beta 使用用户参考图采样的红色强调，经典浅色、深色和跟随系统共用布局，进度条样式与角色独立选择。\n\n本文合并用户于 2026-10-26 确认的 Beta.18 局部修正，沿用 Mesting/Apple Music 视觉依据与同一 North Star。可见名称为 Mesting Music。经典浅色使用中性白灰面板与既有红色强调，深色和封面播放器配色保留；入口与指南继续使用珊瑚红原创音乐双角色和局部暖色背景。居中同意组、Raycast 参考适配的按方式登录、统一账号模块、真实五类搜索、独立启动选择和真实队列时长继续使用。Beta.13 已确立的欢迎返回、指南跳过、播放器进退、进度角色锚点、文本编辑和播放胶囊菜单继续按各自契约运行；登录成功的尺寸与指南可用性由本轮确认覆盖。局部蓝色确认与编辑色不建立新全局配色。Beta 门限为 DistributionChannel.isBeta（Android appFlavor == beta）；正式 flavor 的页面、导航、迷你播放器、完整主题、定制推荐与默认黑胶契约保留，共享工具按调用点生效。\n\nBeta.18 的范围以 docs/fixes-2026-10-26-beta18.md 为准：轻量首页问候、原创输出 glyph 与对话框音量、更多/关闭的局部按压、成功音质目录的进程内有界保留、评论等待与内容到达、滚动取消后的蓝色玻璃可读性，以及可立即操作指南上方的小型登录成功 HUD。最新确认的登录 HUD 为圆角方形（104×104dp），位于 SafeArea 内顶部留白（76dp）、指南页头下方的上部中央；不再采用历史大卡片与阻断指南的遮挡。前景到达动效不包裹整块玻璃，premium/full 材质继续拥有独立层。具体音乐表面和入口构图分别见已有 surface brief；没有建立新视觉世界。\n\n以下 Beta.13 证据仅属于该版冻结构建：work/beta13/review-final.md 给出有界 disposition: ship，R1–R4 resolved、remaining clear；review-fixes-functional-final.log 为 23 项通过（9 session、14 entry），此前 12 项软件 UI 证据及未变的九张进度角色、两张成功反馈复核捕获用于该版。最终常规回归为 657 通过/78 条件跳过/0 失败，Beta196 通过/0 失败，软件 UI53 通过，analyze 为 No issues found；各组重叠不相加。assembleBetaRelease 成功，1.0.37-beta.13 / 13、同一 Beta 证书、16KiB ZIP/五个 ARM64 LOAD 对齐、原生链/FFI、视频/shader 与优化后的原创提示音字节一致性已检查；精确包身份见 PRODUCT.md 和该版 artifact-verification.json，源码 ZIP 留文档冻结后的外部清单。这些结果不替代 Beta.18 的验证。源码、软件测试与捕获不证明实际 Android GPU/FPS、IME/自动填充、TalkBack、预测返回、提示音响度/焦点、短信或云写入；设备冷启动丢失登录态的原触发原因也未由日志证明。没有新增 ImageGen 批准 comp、approval sidecar、QUALITY BAR card 或 FORM seed。\n\n以下 Beta.12 证据为历史冻结快照：ui-final.log 47 项通过及 captures-final/existing 的生产控件捕获，包含纯色/内容、浅/深、收拢/展开/形变、手机/宽屏和小屏大字配对；蓝色滚动前/变化中/稳定后浅色三帧均为 [13,107,218]，深色为 [1,95,206] / [13,107,218] / [1,95,206]。test-summary.json 记录最终常规 651 通过/63 条件跳过/0 失败、Beta175 通过/0 跳过/0 失败；analyze-approved.log 为 No issues found，组间有重叠不可相加。媒体核验确认用户原文件未改，兼容副本保留原 AAC 流；assembleBetaRelease 成功，1.0.37-beta.12 / 12 的身份、同一 Beta 证书、16KiB ZIP/ARM64 LOAD 对齐、打包原生库对应链、修正 shader 与两段兼容视频均已核验。精确包字节/哈希见 PRODUCT.md 与该版外部 release-verification/artifact-verification.json；源码 ZIP 身份留该版文档冻结后的外部清单。软件捕获使用合成 fixture、软件渲染与 Windows QA 中文字体，不能认证 Android GPU 光学、FPS、系统边缘/预测返回、原声解码/媒体焦点/硬件音量或 TalkBack；也不构成 Beta.13 发布身份或测试结果。历史待确认文件名不改变用户随后对 Beta.12 文字方案的明确确认。\n\n历史 Beta.11 发布 APK 已验证为 Mesting Music / com.mesting.music.beta / 1.0.37-beta.11 / 11，assembleBetaRelease 成功；该版最终常规 644 通过/58 条件跳过/0 失败、Beta163 通过/0 跳过/0 失败、approved 软件 UI43 通过，后补设置捕获1通过，analyze-approved 无问题，组间重叠不可相加。_InlineCodeField 的外部标签/两行右侧操作在 320dp/1.6 浅深色通过两项六位数字/标签/键盘操作验证，reviewer 已看该版 approved 原图并确认 R1、R2 resolved；该版 review-final.md 的独立有界结论为 disposition: ship，R1/R2 resolved、许可迁移 match，无剩余 material fix；它不扩大到 Beta.12 或设备/线上证据。登录页许可按钮已移入设置应用分组，settings-final.png 是该版正确设置截图。历史 APK 身份、同一证书、16KiB ZIP、ARM64 ELF16KiB 与原始→merged→stripped→APK 的两种 ARM 库对应链已核验，精确字节/哈希见 docs/MD3MUSIC_BETA.md；源码归档身份留该版冻结后的外部 manifest，不嵌入自引用 ZIP 哈希。Beta.10 的 ship、计数及哈希同样仅属于历史构建。Beta.11 motion-export 4/4 通过，外部 fixture 复用该版实际欢迎/样式组件导出浅深四个 GIF，各36帧/80ms，无生产源码变更；不是沿用旧版图。软件捕获和 GIF 使用合成数据、Flutter 软件渲染及 Windows QA 中文字体；adb-devices 为空，不能证明原生 GPU 折射、帧率、硬件音量、TalkBack、真实 IME 或线上服务，八类 genuine host 只读响应也不等于真实收码或 CDN 验收。历史入口方向来自既有 Mesting 世界、用户参考构图、珊瑚红矢量双角色选择及确认后的 Beta.10/Beta.11 文字方案，没有独立 ImageGen 批准图、approval sidecar、QUALITY BAR card 或随机 FORM seed。",
     "keyCharacteristics": [
       "封面主导，正文使用清楚稳定的主题表面。",
       "大标题、粗体分区、紧凑曲目元数据形成层级。",
@@ -1298,6 +1374,7 @@
       "Don't 以无意义眉题、重复圆角外框或装饰渐变替代真实内容。",
       "Don't 把 fixture、歌曲封面、未记录月份或失败写入描述为生产素材、艺人肖像、历史统计或成功。",
       "Don't 给共享播放 transport 恢复大圆面，或把两个滑块合成无名且不可调的语义节点。",
+      "Don't 为本轮接入 BetaIconButton 的更多/关闭叠加大圆按压底，或让登录成功 HUD 阻断指南的 Next/Skip/Back。",
       "Don't 以软件截图宣称真机 TalkBack、硬件音量、GPU Apple 效果或线上服务已验收。",
       "Don't 用连续装饰描边、滚动时降级或不透明平面盖层替代光学修正，或把未知队列时长编成真实数据。"
     ]

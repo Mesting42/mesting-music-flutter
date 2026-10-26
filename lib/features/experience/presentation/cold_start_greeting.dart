@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/persistence/app_preferences.dart';
@@ -75,45 +74,62 @@ class _ColdStartGreetingState extends ConsumerState<ColdStartGreeting> {
         account.value?.nickname ??
         ref.watch(currentUserProvider)?.nickname ??
         '';
-    final blue = Theme.of(context).brightness == Brightness.dark
-        ? const Color(0xFF9EC8FF)
-        : const Color(0xFF264F81);
+    final ink = Theme.of(context).colorScheme.onSurface;
+    final reduced = MediaQuery.disableAnimationsOf(context);
     return AnimatedSize(
-      duration: const Duration(milliseconds: 320),
+      duration: reduced ? Duration.zero : const Duration(milliseconds: 320),
       alignment: Alignment.centerLeft,
       child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 260),
+        duration: reduced ? Duration.zero : const Duration(milliseconds: 320),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween(
+              begin: const Offset(.06, 0),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
+          ),
+        ),
         child: !_visible
             ? const SizedBox.shrink()
             : Padding(
                 key: const ValueKey('beta13-cold-greeting'),
-                padding: const EdgeInsets.only(left: 10),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: blue.withValues(alpha: .13),
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: Row(
+                padding: const EdgeInsets.only(left: 14, right: 8),
+                child: Semantics(
+                  label: name.isEmpty ? greeting : '$greeting，$name',
+                  excludeSemantics: true,
+                  child: Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(CupertinoIcons.music_note, size: 14, color: blue),
-                      const SizedBox(width: 5),
-                      Flexible(
-                        child: Text(
-                          name.isEmpty ? greeting : '$greeting，$name',
+                      Text(
+                        greeting,
+                        maxLines: 1,
+                        overflow: TextOverflow.fade,
+                        style: TextStyle(
+                          color: ink.withValues(alpha: .65),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          height: 1.25,
+                        ),
+                      ),
+                      if (name.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 12,
-                            color: blue,
+                            fontSize: 13,
+                            color: ink,
                             fontWeight: FontWeight.w600,
+                            height: 1.25,
                           ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),

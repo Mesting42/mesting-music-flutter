@@ -7,6 +7,38 @@ import 'data/platform_quality_catalog.dart';
 import 'music_platform_providers.dart';
 import 'data/music_platform_api.dart';
 
+/// Only successful provider states are retained. Each state still watches the
+/// account future, so logout/login/token replacement invalidates its catalog.
+/// A small FIFO bounds memory without persisting stale server capabilities.
+final _qualityRetentionsProvider = Provider((ref) {
+  final retentions = _QualityRetentions();
+  ref.onDispose(retentions.clear);
+  return retentions;
+});
+
+class _QualityRetentions {
+  final _releases = <String, void Function()>{};
+  void retain(String id, void Function() release) {
+    _releases.remove(id)?.call();
+    _releases[id] = release;
+    while (_releases.length > 64) {
+      _releases.remove(_releases.keys.first)?.call();
+    }
+  }
+
+  void forget(String id, void Function() release) {
+    if (identical(_releases[id], release)) _releases.remove(id);
+  }
+
+  void clear() {
+    final releases = _releases.values.toList();
+    _releases.clear();
+    for (final release in releases) {
+      release();
+    }
+  }
+}
+
 final platformSongQualitiesProvider = FutureProvider.autoDispose
     .family<Set<PlatformAudioQuality>, String>((ref, id) async {
       final session = await ref.watch(platformAccountProvider.future);
@@ -17,7 +49,14 @@ final platformSongQualitiesProvider = FutureProvider.autoDispose
             query: {'hash': id.substring('kugou_'.length)},
             expectedSession: session,
           );
-      return PlatformQualityCatalog.parse(payload);
+      final result = PlatformQualityCatalog.parse(payload);
+      if (ref.mounted) {
+        final retained = ref.read(_qualityRetentionsProvider);
+        final release = ref.keepAlive().close;
+        retained.retain(id, release);
+        ref.onDispose(() => retained.forget(id, release));
+      }
+      return result;
     }, retry: (_, _) => null);
 
 class PlatformQualityState {
