@@ -1,4 +1,5 @@
 import 'dart:ui';
+import '../../shared/widgets/beta_edge_back.dart';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -352,7 +353,8 @@ class _NowPlayingTransitionPage extends Page<void> {
       opaque: false,
       transitionDuration: nowPlayingTransitionDuration,
       reverseTransitionDuration: nowPlayingReverseTransitionDuration,
-      pageBuilder: (context, animation, secondaryAnimation) => child,
+      pageBuilder: (context, animation, secondaryAnimation) =>
+          DistributionChannel.isBeta ? BetaEdgeBack(child: child) : child,
       // The player animates its vinyl and chrome from the route animation.
       transitionsBuilder: (context, animation, secondaryAnimation, child) =>
           child,
@@ -410,6 +412,7 @@ Page<void> _musicSlidePage({
   required GoRouterState state,
   required Widget child,
 }) {
+  if (DistributionChannel.isBeta) child = BetaEdgeBack(child: child);
   final intent = state.extra is MusicPageTransitionIntent
       ? state.extra! as MusicPageTransitionIntent
       : const MusicPageTransitionIntent.forward();
@@ -432,6 +435,7 @@ Page<void> _profileEditTransitionPage({
   required GoRouterState state,
   required Widget child,
 }) {
+  if (DistributionChannel.isBeta) child = BetaEdgeBack(child: child);
   final intent = state.extra is MusicPageTransitionIntent
       ? state.extra! as MusicPageTransitionIntent
       : const MusicPageTransitionIntent.forward();
@@ -458,6 +462,7 @@ Page<void> _messagesTransitionPage({
   required GoRouterState state,
   required Widget child,
 }) {
+  if (DistributionChannel.isBeta) child = BetaEdgeBack(child: child);
   final intent = state.extra is MusicPageTransitionIntent
       ? state.extra! as MusicPageTransitionIntent
       : const MusicPageTransitionIntent.forward();

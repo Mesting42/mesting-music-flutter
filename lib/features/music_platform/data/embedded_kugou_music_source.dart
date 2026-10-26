@@ -20,6 +20,7 @@ class EmbeddedKugouMusicSource extends KugouMusicSource {
     Track track, {
     Future<void>? abortTrigger,
     PlatformAudioQuality quality = PlatformAudioQuality.standard,
+    bool requireRequestedQuality = false,
   }) async {
     if (track.source != TrackSource.kugou || !track.id.startsWith('kugou_')) {
       return track;
@@ -28,6 +29,7 @@ class EmbeddedKugouMusicSource extends KugouMusicSource {
       track,
       abortTrigger: abortTrigger,
       quality: quality,
+      requireRequestedQuality: requireRequestedQuality,
     );
   }
 

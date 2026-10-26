@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/beta_edge_back.dart';
 import '../../../shared/widgets/mesting_loading_indicator.dart';
 import '../../themes/music_theme_tokens.dart';
 
@@ -127,61 +128,63 @@ class PlatformPageFrame extends StatelessWidget {
   final Key? pageKey;
   @override
   Widget build(BuildContext context) => PlatformStyle(
-    child: Scaffold(
-      key: pageKey,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Row(
-                children: [
-                  IconButton(
-                    tooltip: '返回',
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    icon: const Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      size: 22,
+    child: BetaEdgeBack(
+      child: Scaffold(
+        key: pageKey,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        body: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: Row(
+                  children: [
+                    IconButton(
+                      tooltip: '返回',
+                      onPressed: () => Navigator.of(context).maybePop(),
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 22,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 25,
-                            fontWeight: FontWeight.w800,
-                            height: 1.2,
-                            color: context.musicThemeTokens.textPrimary,
-                            letterSpacing: -.5,
-                          ),
-                        ),
-                        if (subtitle.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 5),
-                            child: Text(
-                              subtitle,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: context.musicThemeTokens.textSecondary,
-                              ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 25,
+                              fontWeight: FontWeight.w800,
+                              height: 1.2,
+                              color: context.musicThemeTokens.textPrimary,
+                              letterSpacing: -.5,
                             ),
                           ),
-                      ],
+                          if (subtitle.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 5),
+                              child: Text(
+                                subtitle,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: context.musicThemeTokens.textSecondary,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                  ...actions,
-                ],
+                    ...actions,
+                  ],
+                ),
               ),
-            ),
-            Expanded(child: child),
-          ],
+              Expanded(child: child),
+            ],
+          ),
         ),
       ),
     ),

@@ -29,8 +29,8 @@ const betaMusicRoutes = [
 const betaMusicTabs = [
   GlassTab(
     label: '首页',
-    icon: Icon(CupertinoIcons.house),
-    activeIcon: Icon(CupertinoIcons.house_fill),
+    icon: Icon(Icons.home_rounded),
+    activeIcon: Icon(Icons.home_rounded),
   ),
   GlassTab(
     label: '发现',

@@ -14,14 +14,37 @@ bool musicShellUsesImmersiveProfileMediaOverlay(String location) {
   return path == '/profile/avatar' || path == '/profile/background';
 }
 
-class MusicShell extends ConsumerWidget {
+class MusicShell extends ConsumerStatefulWidget {
   const MusicShell({required this.child, required this.location, super.key});
 
   final Widget child;
   final String location;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MusicShell> createState() => _MusicShellState();
+}
+
+class _MusicShellState extends ConsumerState<MusicShell> {
+  late int _owner = musicBottomNavigationIndexForLocation(widget.location);
+
+  @override
+  void didUpdateWidget(covariant MusicShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // This parent survives player/settings/search layouts which unmount the
+    // visible glass bar. Content routes must retain their original tab owner.
+    _owner = switch (widget.location) {
+      '/music/recommend' => 0,
+      '/music' => 1,
+      '/music/library' => 2,
+      '/profile' => 3,
+      _ => _owner,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final location = widget.location;
+    final child = widget.child;
     ref.watch(listenTogetherControllerProvider);
     final searchOverlay = location.startsWith('/music/search');
     final settingsOverlay = location.startsWith('/music/settings');
@@ -41,7 +64,11 @@ class MusicShell extends ConsumerWidget {
         !conversationOverlay &&
         !profileMediaOverlay;
     if (DistributionChannel.isBeta && showNavigation) {
-      return BetaMusicShell(location: location, child: child);
+      return BetaMusicShell(
+        location: location,
+        navigationOwner: _owner,
+        child: child,
+      );
     }
     final useNavigationRail =
         showNavigation && mestingUsesNavigationRailForWidth(pageWidth);

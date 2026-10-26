@@ -259,10 +259,14 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
                     ).colorScheme.primary.withValues(alpha: .10),
                     borderRadius: BorderRadius.circular(24),
                   ),
-                  child: Icon(
-                    Icons.album_rounded,
-                    size: 40,
-                    color: Theme.of(context).colorScheme.primary,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.asset(
+                      'assets/branding/mesting-app-icon.png',
+                      fit: BoxFit.cover,
+                      cacheWidth: 216,
+                      semanticLabel: 'Mesting',
+                    ),
                   ),
                 ),
               ),

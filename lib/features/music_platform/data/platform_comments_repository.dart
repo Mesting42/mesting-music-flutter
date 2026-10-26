@@ -14,12 +14,14 @@ class PlatformCommentResource {
     required this.kind,
     required this.id,
     required this.name,
+    this.hash = '',
   });
   final PlatformCommentKind kind;
 
   /// A song mixsongid or playlist global_collection_id, never a local UUID.
   final String id;
   final String name;
+  final String hash;
   String get code => kind == PlatformCommentKind.song
       ? 'fc4be23b4e972707f36b8a828a93ba8a'
       : 'ca53b96fe5a1d9c22d71c8f522ef7c4f';
@@ -122,6 +124,7 @@ class PlatformCommentsRepository {
   PlatformCommentsRepository(this.api, this.identity);
   final MusicPlatformApi api;
   final PlatformSession identity;
+  final _repairedSongIds = <String, String>{};
 
   Future<PlatformCommentResource> songResource(Track track) async {
     if (track.source != TrackSource.kugou || !track.id.startsWith('kugou_')) {
@@ -156,6 +159,7 @@ class PlatformCommentsRepository {
       kind: PlatformCommentKind.song,
       id: id,
       name: track.title,
+      hash: track.id.substring(6),
     );
   }
 
@@ -169,31 +173,60 @@ class PlatformCommentsRepository {
     if (reply && thread.specialId.isEmpty) {
       throw const MusicPlatformException('此评论缺少回复标识，请刷新评论区');
     }
-    final payload = await api.get(
-      hottestChildrenId != null
-          ? '/comment/music/topliked'
-          : reply
-          ? '/comment/floor'
-          : resource.kind == PlatformCommentKind.song
-          ? '/comment/music'
-          : '/comment/playlist',
-      query: {
-        'page': '$page',
-        'pagesize': '30',
-        if (hottestChildrenId != null)
-          'childrenid': hottestChildrenId
-        else if (reply) ...{
-          'special_id': thread.specialId,
-          'tid': thread.id,
-          'resource_type': resource.kind.name,
-          'code': resource.code,
-        } else if (resource.kind == PlatformCommentKind.song)
-          'mixsongid': resource.id
-        else
-          'id': resource.id,
-      },
-      expectedSession: identity,
-    );
+    final path = hottestChildrenId != null
+        ? '/comment/music/topliked'
+        : reply
+        ? '/comment/floor'
+        : resource.kind == PlatformCommentKind.song
+        ? '/comment/music'
+        : '/comment/playlist';
+    final query = <String, String>{
+      'page': '$page',
+      'pagesize': '30',
+      if (hottestChildrenId != null)
+        'childrenid': hottestChildrenId
+      else if (reply) ...{
+        'special_id': thread.specialId,
+        'tid': thread.id,
+        'resource_type': resource.kind.name,
+        'code': resource.code,
+      } else if (resource.kind == PlatformCommentKind.song)
+        'mixsongid': _repairedSongIds[resource.hash] ?? resource.id
+      else
+        'id': resource.id,
+    };
+    Future<Map<String, dynamic>> request() =>
+        api.get(path, query: query, expectedSession: identity);
+    Map<String, dynamic> payload;
+    try {
+      payload = await request();
+    } on MusicPlatformException catch (error) {
+      if (error.code == '20028') {
+        // Same documented device-registration recovery used for playback.
+        // This is a bounded read retry; comment writes are never retried.
+        await api.registerDevice();
+        payload = await request();
+      } else if (!reply &&
+          hottestChildrenId == null &&
+          resource.kind == PlatformCommentKind.song &&
+          resource.hash.isNotEmpty &&
+          error.code != '20017' &&
+          error.code != '20018' &&
+          error.code != '60045') {
+        final metadata = await api.get(
+          '/audio',
+          query: {'hash': resource.hash},
+          expectedSession: identity,
+        );
+        final repaired = PlatformSongIdentity.fromPayload(metadata);
+        if (repaired.isEmpty || repaired == resource.id) rethrow;
+        query['mixsongid'] = repaired;
+        payload = await request();
+        _repairedSongIds[resource.hash] = repaired;
+      } else {
+        rethrow;
+      }
+    }
     final data = MusicPlatformApi.objectMap(payload['data'] ?? payload);
     final raw = data['list'] ?? data['comments'] ?? const [];
     if (raw is! List) throw const MusicPlatformException('评论数据格式异常，请重试');

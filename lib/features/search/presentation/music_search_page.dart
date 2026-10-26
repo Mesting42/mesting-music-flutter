@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'apple_search_results.dart';
 
 import '../../../core/audio/playback_providers.dart';
 import '../../../core/errors/user_facing_error.dart';
@@ -74,6 +75,16 @@ class _MusicSearchPageState extends ConsumerState<MusicSearchPage> {
   }
 
   void _closeSearch() {
+    if (DistributionChannel.isBeta && !_inputIsEmpty) {
+      _textController.clear();
+      _focusNode.unfocus();
+      ref.read(musicSearchControllerProvider.notifier).setQuery('');
+      setState(() {
+        _inputIsEmpty = true;
+        _hasSubmitted = false;
+      });
+      return;
+    }
     if (context.canPop()) {
       context.pop();
     } else {
@@ -90,124 +101,133 @@ class _MusicSearchPageState extends ConsumerState<MusicSearchPage> {
     final top = MediaQuery.paddingOf(context).top;
     final tokens = context.musicThemeTokens;
     final accent = Theme.of(context).colorScheme.primary;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            tokens.glassStrong.withValues(alpha: .93),
-            tokens.glass.withValues(alpha: .89),
-          ],
+    return PopScope(
+      canPop: !DistributionChannel.isBeta || _inputIsEmpty,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _closeSearch();
+      },
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              tokens.glassStrong.withValues(alpha: .93),
+              tokens.glass.withValues(alpha: .89),
+            ],
+          ),
         ),
-      ),
-      child: Column(
-        children: [
-          SizedBox(height: top + 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Row(
-              children: [
-                _CircleBack(onTap: _closeSearch),
-                const SizedBox(width: 9),
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: Container(
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: tokens.glass,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: accent.withValues(alpha: .42),
+        child: Column(
+          children: [
+            SizedBox(height: top + 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Row(
+                children: [
+                  _CircleBack(onTap: _closeSearch),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: Container(
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: tokens.glass,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: accent.withValues(alpha: .42),
+                          ),
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          const SizedBox(width: 13),
-                          const Icon(Icons.search_rounded, size: 20),
-                          const SizedBox(width: 7),
-                          Expanded(
-                            child: TextField(
-                              controller: _textController,
-                              focusNode: _focusNode,
-                              textInputAction: TextInputAction.search,
-                              onChanged: _handleQueryChanged,
-                              onSubmitted: _submit,
-                              style: const TextStyle(fontSize: 13),
-                              decoration: const InputDecoration(
-                                hintText: '搜索本地音乐，也可以在线找试听',
-                                hintStyle: TextStyle(fontSize: 12),
-                                border: InputBorder.none,
-                                enabledBorder: InputBorder.none,
-                                focusedBorder: InputBorder.none,
-                                disabledBorder: InputBorder.none,
-                                errorBorder: InputBorder.none,
-                                focusedErrorBorder: InputBorder.none,
-                                isCollapsed: true,
-                                filled: false,
+                        child: Row(
+                          children: [
+                            const SizedBox(width: 13),
+                            const Icon(Icons.search_rounded, size: 20),
+                            const SizedBox(width: 7),
+                            Expanded(
+                              child: TextField(
+                                controller: _textController,
+                                focusNode: _focusNode,
+                                textInputAction: TextInputAction.search,
+                                onChanged: _handleQueryChanged,
+                                onSubmitted: _submit,
+                                style: const TextStyle(fontSize: 13),
+                                decoration: const InputDecoration(
+                                  hintText: '搜索本地音乐，也可以在线找试听',
+                                  hintStyle: TextStyle(fontSize: 12),
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  disabledBorder: InputBorder.none,
+                                  errorBorder: InputBorder.none,
+                                  focusedErrorBorder: InputBorder.none,
+                                  isCollapsed: true,
+                                  filled: false,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 4),
-                TextButton(
-                  key: const ValueKey('search-submit-action'),
-                  onPressed: () => _submit(_textController.text),
-                  style: TextButton.styleFrom(
-                    foregroundColor: tokens.textSecondary,
-                    minimumSize: const Size(0, 52),
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                  const SizedBox(width: 4),
+                  TextButton(
+                    key: const ValueKey('search-submit-action'),
+                    onPressed: () => _submit(_textController.text),
+                    style: TextButton.styleFrom(
+                      foregroundColor: tokens.textSecondary,
+                      minimumSize: const Size(0, 52),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                    ),
+                    child: const Text(
+                      '搜索',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
-                  child: const Text(
-                    '搜索',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Expanded(
-            child: _inputIsEmpty
-                ? _SearchLanding(onSearch: _submit)
-                : (_hasSubmitted
-                      ? AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 220),
-                          switchInCurve: Curves.easeOutCubic,
-                          switchOutCurve: Curves.easeInCubic,
-                          child: search.isLoading
-                              ? _SearchLoading(
-                                  key: ValueKey(
-                                    'search-loading-${search.query}',
+            Expanded(
+              child: _inputIsEmpty
+                  ? _SearchLanding(onSearch: _submit)
+                  : (_hasSubmitted
+                        ? AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 220),
+                            switchInCurve: Curves.easeOutCubic,
+                            switchOutCurve: Curves.easeInCubic,
+                            child: search.isLoading
+                                ? _SearchLoading(
+                                    key: ValueKey(
+                                      'search-loading-${search.query}',
+                                    ),
+                                    query: search.query,
+                                  )
+                                : _SearchResults(
+                                    key: ValueKey(
+                                      'search-results-${search.query}',
+                                    ),
+                                    state: search,
+                                    onSearch: _submit,
                                   ),
-                                  query: search.query,
-                                )
-                              : _SearchResults(
-                                  key: ValueKey(
-                                    'search-results-${search.query}',
-                                  ),
-                                  state: search,
-                                  onSearch: _submit,
-                                ),
-                        )
-                      : AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 220),
-                          switchInCurve: Curves.easeOutCubic,
-                          switchOutCurve: Curves.easeInCubic,
-                          child: _SearchInputPreview(
-                            key: ValueKey(
-                              'search-input-preview-${search.query}',
+                          )
+                        : AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 220),
+                            switchInCurve: Curves.easeOutCubic,
+                            switchOutCurve: Curves.easeInCubic,
+                            child: _SearchInputPreview(
+                              key: ValueKey(
+                                'search-input-preview-${search.query}',
+                              ),
+                              state: search,
+                              onSearch: _submit,
                             ),
-                            state: search,
-                            onSearch: _submit,
-                          ),
-                        )),
-          ),
-        ],
+                          )),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1009,6 +1029,20 @@ class _SearchResultsState extends ConsumerState<_SearchResults> {
         : const AsyncData<List<SocialUser>>(<SocialUser>[]);
     final hasUserResults = userResults.value?.isNotEmpty == true;
     final allUsers = userResults.value ?? const <SocialUser>[];
+    if (DistributionChannel.isBeta && showTracks) {
+      return Column(
+        children: [
+          if (ref.watch(showMestingFeaturesProvider))
+            _SearchResultTabs(
+              selected: _category,
+              onSelected: (category) => setState(() => _category = category),
+            ),
+          Expanded(
+            child: AppleSearchResults(state: state, controller: _scroll),
+          ),
+        ],
+      );
+    }
     return Column(
       children: [
         if (ref.watch(showMestingFeaturesProvider))

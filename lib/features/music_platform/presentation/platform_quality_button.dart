@@ -10,23 +10,70 @@ import '../domain/platform_audio_quality.dart';
 import '../platform_quality_providers.dart';
 import 'platform_feedback.dart';
 
-/// All player styles share this picker and the same quality controller. The
-/// preferred tier is independent of the actual tier returned by the platform.
+class _QualitySelection {
+  const _QualitySelection(this.trackId, this.tier);
+  final String trackId;
+  final PlatformAudioQuality tier;
+}
+
+/// The live dialog follows song changes. A returned selection is bound to its
+/// recording, so closing it cannot accidentally change a newly playing song.
 Future<void> showPlatformQualityPicker(
   BuildContext context,
   WidgetRef ref,
 ) async {
-  final track = ref.read(currentTrackProvider);
-  final state = ref.read(platformQualityProvider);
-  final supported = track.source == TrackSource.kugou;
-  final actual = PlatformAudioQuality.fromCode(track.playbackQuality);
-  final dark = Theme.of(context).brightness == Brightness.dark;
-  final ink = dark ? Colors.white : const Color(0xFF202024);
-  final accent = BetaAppearance.accent(Theme.of(context).brightness);
-  final selected = await showDialog<PlatformAudioQuality>(
+  final selected = await showDialog<_QualitySelection>(
     context: context,
     barrierColor: Colors.black54,
-    builder: (dialogContext) => Dialog(
+    builder: (_) => const _QualityDialog(),
+  );
+  if (selected == null ||
+      !context.mounted ||
+      ref.read(currentTrackProvider).id != selected.trackId) {
+    return;
+  }
+  try {
+    final applied = await ref
+        .read(platformQualityProvider.notifier)
+        .select(selected.tier);
+    if (!context.mounted) return;
+    final updated = ref.read(currentTrackProvider);
+    final actual = PlatformAudioQuality.fromCode(updated.playbackQuality);
+    showMusicNotice(
+      context,
+      icon: CupertinoIcons.waveform,
+      title: !applied
+          ? '已保存音质偏好'
+          : updated.isPreview
+          ? '平台当前提供试听片段'
+          : actual == null
+          ? '已切换音源，音质待平台确认'
+          : '已切换为${actual.label}',
+      message: '',
+    );
+  } catch (error) {
+    if (context.mounted) showPlatformFailure(context, error);
+  }
+}
+
+class _QualityDialog extends ConsumerWidget {
+  const _QualityDialog();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final track = ref.watch(currentTrackProvider);
+    final switching = ref.watch(
+      platformQualityProvider.select((s) => s.switching),
+    );
+    final supported =
+        track.source == TrackSource.kugou && track.id.startsWith('kugou_');
+    final actual = PlatformAudioQuality.fromCode(track.playbackQuality);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final ink = dark ? Colors.white : const Color(0xFF202024);
+    final accent = BetaAppearance.accent(Theme.of(context).brightness);
+    final qualities = supported
+        ? ref.watch(platformSongQualitiesProvider(track.id))
+        : null;
+    return Dialog(
       key: const ValueKey('apple-quality-picker'),
       backgroundColor: Colors.transparent,
       elevation: 0,
@@ -46,7 +93,7 @@ Future<void> showPlatformQualityPicker(
               padding: const EdgeInsets.all(22),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
                     '音质选择',
@@ -57,48 +104,77 @@ Future<void> showPlatformQualityPicker(
                     ),
                   ),
                   const SizedBox(height: 18),
-                  for (final quality in PlatformAudioQuality.values)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 5),
-                      child: Material(
-                        color: state.preferred == quality
-                            ? accent.withValues(alpha: .18)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(17),
-                        child: ListTile(
-                          key: ValueKey('quality-option-${quality.code}'),
-                          minVerticalPadding: 10,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(17),
-                          ),
-                          title: Text(
-                            quality.label,
-                            style: TextStyle(
-                              color: state.preferred == quality ? accent : ink,
-                              fontSize: 17,
-                              fontWeight: state.preferred == quality
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
+                  if (qualities != null)
+                    qualities.when(
+                      loading: () => const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(child: CupertinoActivityIndicator()),
+                      ),
+                      error: (_, _) => Column(
+                        children: [
+                          Text('暂未获取到歌曲音质信息', style: TextStyle(color: ink)),
+                          TextButton(
+                            onPressed: () => ref.invalidate(
+                              platformSongQualitiesProvider(track.id),
                             ),
+                            child: const Text('重新加载'),
                           ),
-                          trailing: state.preferred == quality
-                              ? Icon(
-                                  CupertinoIcons.check_mark,
-                                  color: accent,
-                                  size: 20,
-                                )
-                              : null,
-                          onTap: supported && !state.switching
-                              ? () => Navigator.pop(dialogContext, quality)
-                              : null,
-                        ),
+                        ],
+                      ),
+                      data: (available) => Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (final quality
+                              in PlatformAudioQuality.values.where(
+                                available.contains,
+                              ))
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 5),
+                              child: Material(
+                                color: actual == quality
+                                    ? accent.withValues(alpha: .18)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(17),
+                                clipBehavior: Clip.antiAlias,
+                                child: ListTile(
+                                  key: ValueKey(
+                                    'quality-option-${quality.code}',
+                                  ),
+                                  minVerticalPadding: 10,
+                                  title: Text(
+                                    quality.label,
+                                    style: TextStyle(
+                                      color: actual == quality ? accent : ink,
+                                      fontSize: 17,
+                                      fontWeight: actual == quality
+                                          ? FontWeight.w600
+                                          : FontWeight.w400,
+                                    ),
+                                  ),
+                                  trailing: actual == quality
+                                      ? Icon(
+                                          CupertinoIcons.check_mark,
+                                          color: accent,
+                                          size: 20,
+                                        )
+                                      : null,
+                                  onTap: switching
+                                      ? null
+                                      : () => Navigator.pop(
+                                          context,
+                                          _QualitySelection(track.id, quality),
+                                        ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   const SizedBox(height: 12),
                   Text(
-                    !supported
-                        ? '当前音源不支持在线音质切换'
-                        : '当前：${track.isPreview ? "试听" : actual?.label ?? "待平台确认"}\n音质取决于歌曲资源与账号权限。',
+                    supported
+                        ? '当前：${track.isPreview ? "试听" : actual?.label ?? "待平台确认"}'
+                        : '当前音源不支持在线音质切换',
                     style: TextStyle(
                       color: ink.withValues(alpha: .65),
                       fontSize: 12,
@@ -111,33 +187,7 @@ Future<void> showPlatformQualityPicker(
           ),
         ),
       ),
-    ),
-  );
-  if (selected == null || !context.mounted) return;
-  try {
-    final applied = await ref
-        .read(platformQualityProvider.notifier)
-        .select(selected);
-    if (!context.mounted) return;
-    final updated = ref.read(currentTrackProvider);
-    final delivered = PlatformAudioQuality.fromCode(updated.playbackQuality);
-    final message = !applied
-        ? '已保存音质偏好'
-        : updated.isPreview
-        ? '平台当前提供试听片段'
-        : delivered == null
-        ? '已切换音源，音质待平台确认'
-        : delivered != selected
-        ? '已切换为${delivered.label}，所选档位暂不可用'
-        : '已切换为${delivered.label}';
-    showMusicNotice(
-      context,
-      icon: CupertinoIcons.waveform,
-      title: message,
-      message: '',
     );
-  } catch (error) {
-    if (context.mounted) showPlatformFailure(context, error);
   }
 }
 

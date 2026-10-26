@@ -222,4 +222,82 @@ void main() {
       expect(handler.upcomingQueue.single.id, second.id);
     },
   );
+
+  test(
+    'beta8 ordinary search context still advances with the global radio loader installed',
+    () async {
+      final (_, handler) = await prepare();
+      handler.configureRadioTrackLoader(
+        (_) async => [],
+        preserveServerOrder: true,
+      );
+      await handler.playSingleTrack(first, playbackContext: [first, second]);
+      // Explicit queue exhausted: this is the state of a search-selected song.
+      await handler.removeFromUpcomingQueue(second.id);
+      await handler.skipToNext();
+      expect(handler.mediaItem.value!.id, second.id);
+      await handler.skipToPrevious();
+      expect(handler.mediaItem.value!.id, first.id);
+      await handler.skipToNext();
+      expect(handler.mediaItem.value!.id, second.id);
+    },
+  );
+
+  test(
+    'beta8 cold Previous chooses the prior list item and Next returns to the original',
+    () async {
+      final (_, handler) = await prepare();
+      const third = Track(
+        id: 'three',
+        title: '第三首',
+        artist: '测试歌手',
+        album: '',
+        duration: Duration(minutes: 4),
+        audioAsset: 'assets/third.mp3',
+        coverAsset: '',
+        lyricsAsset: '',
+      );
+      handler.configureRadioTrackLoader(
+        (_) async => [],
+        preserveServerOrder: true,
+      );
+      await handler.replaceQueue(
+        [first, second, third],
+        initialIndex: 1,
+        autoplay: false,
+      );
+      expect(handler.mediaItem.value!.id, second.id);
+      await handler.skipToPrevious();
+      expect(handler.mediaItem.value!.id, first.id);
+      expect(handler.upcomingQueue.first.id, second.id);
+      await handler.skipToNext();
+      expect(handler.mediaItem.value!.id, second.id);
+      await handler.replaceQueue([first, second, third], autoplay: false);
+      await handler.skipToPrevious();
+      expect(handler.mediaItem.value!.id, third.id);
+      await handler.skipToNext();
+      expect(handler.mediaItem.value!.id, first.id);
+    },
+  );
+
+  test(
+    'beta8 FM Previous with no history leaves the next recommendation pending',
+    () async {
+      final (_, handler) = await prepare();
+      handler.configureRadioTrackLoader(
+        (_) async => [],
+        preserveServerOrder: true,
+      );
+      await handler.replaceQueue(
+        [first, second],
+        recommendationContext: true,
+        autoplay: false,
+      );
+      await handler.skipToPrevious();
+      expect(handler.mediaItem.value!.id, first.id);
+      expect(handler.upcomingQueue.single.id, second.id);
+      await handler.skipToNext();
+      expect(handler.mediaItem.value!.id, second.id);
+    },
+  );
 }

@@ -24,7 +24,7 @@ void main() {
   }
 
   testWidgets(
-    'unselected favorite button uses an outlined heart and glass base',
+    'unselected favorite is a bare outlined heart with a 48dp target',
     (tester) async {
       final track = testTracks.first;
       await tester.pumpWidget(app(favorite: false));
@@ -34,16 +34,25 @@ void main() {
       expect(find.bySemanticsLabel('收藏《${track.title}》'), findsOneWidget);
 
       final buttonFinder = find.byKey(ValueKey('favorite-button-${track.id}'));
-      final container = tester.widget<AnimatedContainer>(buttonFinder);
-      expect(tester.getSize(buttonFinder), const Size.square(38));
-      final decoration = container.decoration! as BoxDecoration;
-      expect(decoration.shape, BoxShape.circle);
-      expect(decoration.border, isNotNull);
-      expect(decoration.boxShadow, isNull);
+      expect(tester.getSize(buttonFinder), const Size.square(48));
+      final iconButton = tester.widget<IconButton>(
+        find.descendant(of: buttonFinder, matching: find.byType(IconButton)),
+      );
+      expect(
+        iconButton.style!.backgroundColor!.resolve({}),
+        Colors.transparent,
+      );
+      expect(
+        find.descendant(
+          of: buttonFinder,
+          matching: find.byType(AnimatedContainer),
+        ),
+        findsNothing,
+      );
     },
   );
 
-  testWidgets('selected favorite button uses a filled heart and accent glow', (
+  testWidgets('selected favorite uses a bare filled heart without a glow', (
     tester,
   ) async {
     final track = testTracks.first;
@@ -53,11 +62,11 @@ void main() {
     expect(find.byIcon(Icons.favorite_border_rounded), findsNothing);
     expect(find.bySemanticsLabel('已收藏《${track.title}》'), findsOneWidget);
 
-    final container = tester.widget<AnimatedContainer>(
-      find.byKey(ValueKey('favorite-button-${track.id}')),
+    final buttonFinder = find.byKey(ValueKey('favorite-button-${track.id}'));
+    expect(tester.getSize(buttonFinder), const Size.square(48));
+    final iconButton = tester.widget<IconButton>(
+      find.descendant(of: buttonFinder, matching: find.byType(IconButton)),
     );
-    final decoration = container.decoration! as BoxDecoration;
-    expect(decoration.gradient, isNotNull);
-    expect(decoration.boxShadow, isNotEmpty);
+    expect(iconButton.style!.backgroundColor!.resolve({}), Colors.transparent);
   });
 }

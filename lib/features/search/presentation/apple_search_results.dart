@@ -1,0 +1,291 @@
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/audio/playback_providers.dart';
+import '../../../shared/models/track.dart';
+import '../../../shared/widgets/track_artwork.dart';
+import '../../../shared/widgets/music_notice.dart';
+import '../../auth/account_capabilities.dart';
+import '../../library/presentation/favorite_toggle_button.dart';
+import '../../music_platform/presentation/platform_comments_page.dart';
+import '../../music_platform/presentation/platform_feedback.dart';
+import '../search_providers.dart';
+
+/// A single lazy scroll view owns pagination and row construction. Avoid a
+/// shrink-wrapped list inside another list: later search pages can contain
+/// hundreds of rows and must not rebuild/decode all their covers at once.
+class AppleSearchResults extends ConsumerWidget {
+  const AppleSearchResults({
+    required this.state,
+    required this.controller,
+    super.key,
+  });
+  final MusicSearchState state;
+  final ScrollController controller;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    Widget section(String name, int count) => Padding(
+      padding: const EdgeInsets.fromLTRB(22, 22, 22, 12),
+      child: Row(
+        children: [
+          Text(
+            name,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontSize: 23,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            '$count 首${state.total == null ? '' : ' · 共 ${state.total} 首'}',
+            style: theme.textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+    return CustomScrollView(
+      key: const ValueKey('search-results-scroll'),
+      controller: controller,
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(22, 22, 22, 2),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '搜索结果',
+                  style: theme.textTheme.headlineLarge?.copyWith(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -.6,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '“${state.query}”',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (state.errorMessage != null)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                children: [
+                  Text(state.errorMessage!),
+                  TextButton(
+                    onPressed: ref
+                        .read(musicSearchControllerProvider.notifier)
+                        .retry,
+                    child: const Text('重新搜索'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        for (final group in [
+          (name: '本地音乐', tracks: state.localTracks),
+          (name: '歌曲', tracks: state.onlineTracks),
+        ])
+          if (group.tracks.isNotEmpty) ...[
+            SliverToBoxAdapter(child: section(group.name, group.tracks.length)),
+            SliverList.builder(
+              itemCount: group.tracks.length,
+              itemBuilder: (_, index) => _SearchSongRow(
+                track: group.tracks[index],
+                contextTracks: group.tracks,
+              ),
+            ),
+          ],
+        if (!state.hasResults && state.errorMessage == null)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(32),
+              child: Text('没有找到相关歌曲，试试其他关键词。'),
+            ),
+          ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(22, 16, 22, 190),
+            child: state.isLoadingMore
+                ? const Center(child: CupertinoActivityIndicator())
+                : state.moreError != null || state.hasMore
+                ? TextButton(
+                    onPressed: ref
+                        .read(musicSearchControllerProvider.notifier)
+                        .loadMore,
+                    child: Text(state.moreError ?? '继续加载歌曲'),
+                  )
+                : state.onlineTracks.isEmpty
+                ? const SizedBox.shrink()
+                : const Center(
+                    child: Text('已显示全部搜索结果', style: TextStyle(fontSize: 12)),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SearchSongRow extends ConsumerWidget {
+  const _SearchSongRow({required this.track, required this.contextTracks});
+  final Track track;
+  final List<Track> contextTracks;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final active = ref.watch(
+      currentTrackProvider.select((current) => current.id == track.id),
+    );
+    final theme = Theme.of(context);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () async {
+          try {
+            await ref
+                .read(audioHandlerProvider)
+                .playSingleTrack(track, playbackContext: contextTracks);
+          } catch (error) {
+            if (context.mounted) showPlatformFailure(context, error);
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.only(left: 22, right: 10),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(9),
+                child: TrackArtwork(track: track, width: 52, height: 52),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 76),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: theme.dividerColor.withValues(alpha: .16),
+                        width: .5,
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                track.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: active
+                                      ? theme.colorScheme.primary
+                                      : theme.colorScheme.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                [
+                                  track.artist,
+                                  track.album,
+                                ].where((s) => s.isNotEmpty).join(' · '),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      FavoriteToggleButton(track: track, compact: true),
+                      PopupMenuButton<String>(
+                        tooltip: '歌曲操作',
+                        icon: Icon(
+                          CupertinoIcons.ellipsis,
+                          size: 21,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        onSelected: (action) async {
+                          if (action == 'comments') {
+                            await openPlatformSongComments(context, ref, track);
+                            return;
+                          }
+                          try {
+                            final added = await ref
+                                .read(audioHandlerProvider)
+                                .appendToUpcomingQueue(track);
+                            if (context.mounted) {
+                              showMusicNotice(
+                                context,
+                                icon: CupertinoIcons.text_badge_plus,
+                                title: added ? '已加入播放队列' : '已在播放队列',
+                                message: '',
+                              );
+                            }
+                          } catch (error) {
+                            if (context.mounted) {
+                              showPlatformFailure(context, error);
+                            }
+                          }
+                        },
+                        itemBuilder: (_) => [
+                          if (ref.read(showPlatformFeaturesProvider) &&
+                              track.source == TrackSource.kugou)
+                            const PopupMenuItem(
+                              value: 'comments',
+                              child: Row(
+                                children: [
+                                  Icon(CupertinoIcons.text_bubble, size: 20),
+                                  SizedBox(width: 12),
+                                  Text('歌曲评论'),
+                                ],
+                              ),
+                            ),
+                          const PopupMenuItem(
+                            value: 'queue',
+                            child: Row(
+                              children: [
+                                Icon(CupertinoIcons.text_badge_plus, size: 20),
+                                SizedBox(width: 12),
+                                Text('加入播放队列'),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

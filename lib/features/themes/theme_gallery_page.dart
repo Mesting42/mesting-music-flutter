@@ -350,7 +350,7 @@ class _ThemeSettingsPanelState extends ConsumerState<_ThemeSettingsPanel> {
                             .setProgressCharacter(value),
                       ),
                       const SizedBox(height: 22),
-                      _VisualControls(
+                      if (!DistributionChannel.isBeta) _VisualControls(
                         visual: visual,
                         onStrengthChanged: (value) => ref
                             .read(themeVisualSettingsProvider.notifier)

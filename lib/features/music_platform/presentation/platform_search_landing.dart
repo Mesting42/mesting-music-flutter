@@ -8,6 +8,7 @@ import '../data/platform_explore.dart';
 import '../music_platform_providers.dart';
 import '../platform_recommendation_providers.dart';
 import 'platform_design.dart';
+import 'apple_hot_search.dart';
 
 final platformExploreRepositoryProvider = Provider<PlatformExploreRepository>(
   (ref) => PlatformExploreRepository(ref.watch(musicPlatformApiProvider)),
@@ -32,7 +33,6 @@ class PlatformSearchLanding extends ConsumerStatefulWidget {
 }
 
 class _PlatformSearchLandingState extends ConsumerState<PlatformSearchLanding> {
-  int _board = 0, _page = 0;
   @override
   Widget build(BuildContext context) {
     final history = ref.watch(musicSearchControllerProvider).recentSearches;
@@ -82,63 +82,12 @@ class _PlatformSearchLandingState extends ConsumerState<PlatformSearchLanding> {
             '热搜暂时无法加载',
             onRetry: () => ref.invalidate(platformHotSearchProvider),
           ),
-          data: (items) {
-            if (items.isEmpty) {
-              return EditorialEmpty(
-                '平台暂未返回热搜',
-                onRetry: () => ref.invalidate(platformHotSearchProvider),
-              );
-            }
-            final index = _board.clamp(0, items.length - 1);
-            final words = items[index].keywords;
-            final pages = (words.length / 10).ceil();
-            final page = _page.clamp(0, pages - 1);
-            return PlatformPanel(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                children: [
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      for (var i = 0; i < items.length; i++)
-                        ChoiceChip(
-                          label: Text(items[i].name),
-                          selected: i == index,
-                          onSelected: (_) => setState(() {
-                            _board = i;
-                            _page = 0;
-                          }),
-                        ),
-                    ],
-                  ),
-                  for (
-                    var i = page * 10;
-                    i < words.length && i < (page + 1) * 10;
-                    i++
-                  )
-                    ListTile(
-                      leading: SizedBox(
-                        width: 24,
-                        child: Text(
-                          '${i + 1}',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                      ),
-                      title: Text(words[i]),
-                      onTap: () => widget.onSearch(words[i]),
-                    ),
-                  if (pages > 1)
-                    TextButton(
-                      onPressed: () =>
-                          setState(() => _page = (page + 1) % pages),
-                      child: Text('换一页 · ${page + 1}/$pages'),
-                    ),
-                ],
-              ),
-            );
-          },
+          data: (items) => items.isEmpty
+              ? EditorialEmpty(
+                  '平台暂未返回热搜',
+                  onRetry: () => ref.invalidate(platformHotSearchProvider),
+                )
+              : AppleHotSearchBoards(boards: items, onSearch: widget.onSearch),
         ),
         const SizedBox(height: 28),
         for (final kind in PlatformExploreKind.values)

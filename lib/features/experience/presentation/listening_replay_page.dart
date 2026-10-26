@@ -58,7 +58,12 @@ class _ListeningReplayPageState extends ConsumerState<ListeningReplayPage> {
               back: true,
               trailing: PopupMenuButton<int>(
                 tooltip: '选择年份',
-                initialValue: _year,
+                clipBehavior: Clip.antiAlias,
+                borderRadius: BorderRadius.circular(20),
+                surfaceTintColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
                 onSelected: (value) => setState(() => _year = value),
                 itemBuilder: (_) => [
                   for (final year in years)

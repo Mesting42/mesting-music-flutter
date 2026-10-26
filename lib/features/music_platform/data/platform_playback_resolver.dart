@@ -51,6 +51,7 @@ class PlatformPlaybackResolver {
     Track track, {
     Future<void>? abortTrigger,
     PlatformAudioQuality quality = PlatformAudioQuality.standard,
+    bool requireRequestedQuality = false,
   }) async {
     final identity = api.session;
     final abort = Completer<void>();
@@ -111,6 +112,15 @@ class PlatformPlaybackResolver {
 
     Track resolved(Map<String, dynamic> data, {bool preview = false}) {
       final fail = data['fail_process'];
+      if (requireRequestedQuality) {
+        if (preview || (fail is List && fail.contains('buy'))) {
+          throw const MusicPlatformException('需要会员／相应权限');
+        }
+        final delivered = PlatformAudioQuality.fromCode(data['quality']);
+        if (delivered != null && delivered != quality) {
+          throw const MusicPlatformException('平台暂未提供所选音质，已保留原音源');
+        }
+      }
       final size =
           int.tryParse('${data['fileSize'] ?? data['file_size'] ?? 0}') ?? 0;
       return track.copyWith(
@@ -133,7 +143,8 @@ class PlatformPlaybackResolver {
 
     try {
       final vip = identity?.vipToken.isNotEmpty == true;
-      for (final tier in quality.fallbackChain) {
+      for (final tier
+          in requireRequestedQuality ? [quality] : quality.fallbackChain) {
         query['quality'] = tier.code;
         if (vip) {
           final data = await load('/song/url/new');
@@ -146,6 +157,16 @@ class PlatformPlaybackResolver {
         }
         final data = await load('/song/url');
         final fail = data['fail_process'];
+        if (requireRequestedQuality) {
+          if ((fail is List && fail.contains('buy')) ||
+              '${data['priv_status']}' == '0') {
+            throw const MusicPlatformException('需要会员／相应权限');
+          }
+          final delivered = PlatformAudioQuality.fromCode(data['quality']);
+          if (delivered != null && delivered != quality) {
+            throw const MusicPlatformException('平台暂未提供所选音质，已保留原音源');
+          }
+        }
         // The platform can return a trial URL for an unavailable paid tier.
         // First try the next permitted tier; do not silently label a trial as
         // the selected full-quality stream.
@@ -156,7 +177,7 @@ class PlatformPlaybackResolver {
           return resolved(data);
         }
       }
-      if (!vip) {
+      if (!vip && !requireRequestedQuality) {
         final preview = await load('/song/url', preview: true);
         if (mediaUrl(preview).isNotEmpty) {
           return resolved(preview, preview: true);

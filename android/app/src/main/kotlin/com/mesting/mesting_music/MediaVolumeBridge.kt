@@ -18,8 +18,18 @@ class MediaVolumeBridge(private val context: Context, messenger: BinaryMessenger
     private val events = EventChannel(messenger, "com.mesting.music/media_volume_events")
     private var sink: EventChannel.EventSink? = null
     private var observing = false
+    private var lastPublished: Double? = null
+    private fun publish() {
+        val current = read()
+        // Settings.System also changes for unrelated preferences. Only media
+        // volume changes cross the Flutter boundary and invalidate its UI.
+        if (lastPublished != current) {
+            lastPublished = current
+            sink?.success(current)
+        }
+    }
     private val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
-        override fun onChange(selfChange: Boolean) { sink?.success(read()) }
+        override fun onChange(selfChange: Boolean) { publish() }
     }
 
     private fun read(): Double {
@@ -36,7 +46,10 @@ class MediaVolumeBridge(private val context: Context, messenger: BinaryMessenger
                         val value = call.argument<Number>("value")?.toDouble()?.coerceIn(0.0, 1.0) ?: read()
                         val maximum = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
                         // No system volume popup: the visible slider already provides feedback.
-                        audio.setStreamVolume(AudioManager.STREAM_MUSIC, (value * maximum).roundToInt(), 0)
+                        val target = (value * maximum).roundToInt()
+                        if (audio.getStreamVolume(AudioManager.STREAM_MUSIC) != target) {
+                            audio.setStreamVolume(AudioManager.STREAM_MUSIC, target, 0)
+                        }
                         result.success(read())
                     }
                     else -> result.notImplemented()
@@ -50,7 +63,8 @@ class MediaVolumeBridge(private val context: Context, messenger: BinaryMessenger
                     context.contentResolver.registerContentObserver(Settings.System.CONTENT_URI, true, observer)
                     observing = true
                 }
-                sink?.success(read())
+                lastPublished = null
+                publish()
             }
             override fun onCancel(arguments: Any?) { stopObserving() }
         })

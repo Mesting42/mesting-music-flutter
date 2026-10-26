@@ -12,6 +12,61 @@ import 'vinyl_disc.dart';
 const double alternativePlayerStageDefaultTopInset = 90;
 const double alternativePlayerStageHeaderClearance = 68;
 
+/// Geometric replacement for the outlined bitmap. Coordinates follow the
+/// record width: the stylus stays on the outer grooves, outside its cover.
+class _BetaTonearmPainter extends CustomPainter {
+  const _BetaTonearmPainter(this.angle);
+  final double angle;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final pivot = Offset(w * .54, w * .005);
+    canvas.save();
+    canvas.translate(pivot.dx, pivot.dy);
+    canvas.rotate(angle);
+    canvas.translate(-pivot.dx, -pivot.dy);
+    final path = Path()
+      ..moveTo(pivot.dx, pivot.dy)
+      ..quadraticBezierTo(w * .56, w * .14, w * .61, w * .24)
+      ..quadraticBezierTo(w * .64, w * .28, w * .84, w * .37);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = const Color(0xFFF8F8F9)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w * .014
+        ..strokeCap = StrokeCap.round,
+    );
+    canvas.drawCircle(pivot, w * .024, Paint()..color = Colors.white);
+    canvas.drawCircle(
+      pivot,
+      w * .009,
+      Paint()..color = const Color(0xFFD5D7D9),
+    );
+    canvas.translate(w * .84, w * .37);
+    canvas.rotate(.42);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(-w * .006, -w * .018, w * .064, w * .036),
+        Radius.circular(w * .009),
+      ),
+      Paint()..color = Colors.white,
+    );
+    canvas.drawLine(
+      Offset(w * .008, -w * .008),
+      Offset(w * .04, -w * .008),
+      Paint()
+        ..color = const Color(0xFFC3C6C9)
+        ..strokeWidth = w * .005,
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_BetaTonearmPainter oldDelegate) =>
+      oldDelegate.angle != angle;
+}
+
 /// Artwork-only stage for Beta's shared transport shell. Reuses the production
 /// motion surfaces continuously, without the preview's one-cycle animation.
 class PlayerArtworkStage extends StatelessWidget {
@@ -47,22 +102,15 @@ class PlayerArtworkStage extends StatelessWidget {
                 child: VinylDisc(coverAsset: track.coverAsset, playing: motion),
               ),
             ),
-            Positioned(
-              top: -bounds.maxWidth * .035,
-              left: bounds.maxWidth * .48,
-              width: bounds.maxWidth * .34,
-              height: bounds.maxWidth * .46,
+            Positioned.fill(
               child: IgnorePointer(
-                child: AnimatedRotation(
-                  turns: playing ? 0 : -22.5 / 360,
-                  alignment: const Alignment(-.78, -.86),
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(end: playing ? 0 : -.38),
                   duration: MediaQuery.disableAnimationsOf(context)
                       ? Duration.zero
                       : const Duration(milliseconds: 500),
-                  child: Image.asset(
-                    'assets/images/player/netease-style-tonearm.png',
-                    fit: BoxFit.contain,
-                  ),
+                  builder: (context, angle, _) =>
+                      CustomPaint(painter: _BetaTonearmPainter(angle)),
                 ),
               ),
             ),

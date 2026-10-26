@@ -1,12 +1,153 @@
-# md3Music integration Beta.7 handoff
+# md3Music integration Beta.8 handoff
 
-## Beta.7 accepted implementation and delivery boundary
+## Beta.8 accepted implementation and delivery boundary
 
-This section is the current built truth for **1.0.37-beta.7 / 7**, merged after
+This is the current implementation record for **1.0.37-beta.8 / 8**, reviewed on
+2026-10-25. Disposition: **SHIP WITH STATED VALIDATION LIMITS**; R1/R2/R3 closed.
+The established Apple Music authority and North Star continue. Preserve formal
+channel contracts, account ownership, recommendation provenance and the single
+MestingAudioHandler. General Android compatibility is in scope; effects,
+animation and functions remain, with no device-model-specific optimization.
+
+Delivery target:
+C:/Users/Mest/Documents/Codex/2026-10-25/mesting-beta7-handoff-20261025/outputs/beta-1.0.37-beta.8.
+The final manifest owns exact artifact bytes/hashes and source-archive identity.
+Beta.6/Beta.7 hashes/counts below identify historical builds only. No clean
+checkout, commit, push, installation, cloud mutation or publication is implied.
+
+### Navigation, search and compact interactions
+
+- MusicShell persists the originating tab and passes navigationOwner to
+  BetaMusicShell. Detail routes retain it; explicit roots update it. Player/
+  settings can unmount visible glass chrome without losing the owner. R1
+  regression covers Profile and Library through Favorites, Settings and Player.
+- BetaEdgeBack handles inward drags in both 20dp edge strips on secondary routes
+  and embedded/standalone search steps, leaving interior shelves/sliders alone.
+  Home uses a filled glyph.
+- AppleSearchResults uses one lazy CustomScrollView/SliverList, retaining genuine
+  server paging/order, total versus loaded counts, compact identity, 52dp covers,
+  bare hearts and more actions. AppleHotSearchBoards retains real board selection,
+  ranks and ten-word pages, two columns or three at 650dp available width.
+  Keywords remain search actions.
+- Replay year press feedback/menu share explicit clipped 20dp rounding.
+- PlayerMoreMenu anchors to the top button, with icons, grouped separators and
+  the current-style checkmark. Its 22dp rounded popover caps at 280dp width,
+  keeps at least 16dp horizontal clearance, wraps text and scrolls as needed.
+
+### One audio owner, gestures and truthful controls
+
+Five styles (cover/classic/aurora/cassette/lyricStage), in cover/lyrics state,
+retain their effects and common controls. Only the top grey PlayerDismissHandle
+starts PlayerPullToDismiss: the 112×36dp region supports tap/downward drag,
+smooth dismissal commit/rebound and reduced-motion completion. Covers, lyric
+scrolling and sliders do not start dismissal.
+
+Global Previous/Next distinguishes explicit list context from FM history/server
+order. Previous resolves history/context before forward Up Next; returnToUpcoming
+restores the original recording. B → A → B and first A → wrapped C → A are
+reversible. Cold FM Previous restarts the current song without consuming the next
+recommendation. This resolves R2 through the existing audio owner and retains
+recommendation continuation.
+
+System media volume retains a fine rail and **48dp high** responsive region,
+with immediate local drag feedback. MediaVolumeController permits one native
+write in flight and keeps only the latest pending value; duplicate Dart state,
+native events and identical STREAM_MUSIC steps are suppressed. Foreground
+refresh, lifecycle disposal, support probing and unsupported-host disabling
+continue.
+
+FavoriteToggleButton is bare wherever reused, with a transparent **48×48dp**
+target; compact changes glyph size only. Idle color is actual local
+onSurfaceVariant; selected uses the brightness-aware Beta accent. Immediate
+pointer feedback scales to .88 over 120ms. Existing keyboard activation,
+ownership and real write result remain. R3 is closed. Classic preserves its
+contrast correction and white geometric tonearm without black outline, the
+cartridge on black outer grooves beyond the label, and playing/paused rotation.
+
+### Per-song quality and platform identity
+
+PlatformQualityCatalog parses positive resource hashes/explicit tiers and shows
+only confirmed per-song choices. A standard-only song shows standard only;
+membership flags do not create resources. Unknown/failed metadata has manual
+reload and no automatic retry loop. The 30dp light/dark translucent dialog follows
+song changes and binds selections to recording IDs. Membership guidance appears
+only after an attempted selection and platform response. Preferred/delivered
+tiers, trial, downgrade and unknown delivery remain distinct. Existing source
+refresh retains position, playback state, queue/mode; failure preserves the old
+stream and saved preference.
+
+PlatformSongIdentity searches structured recording-specific aliases before
+generic Audioid/audio_id. Comment reads allow bounded stale-ID metadata repair
+or a single device-registration recovery retry. Send/reply/delete retain
+explicit actions, real thread IDs, account guards and no automatic write retry.
+Reaction writes remain deferred. PlatformCatalog accepts special_list/plist
+for featured playlists and songlist for rank songs. Platform account entry uses
+the actual coral Mesting application-icon asset.
+
+Beta.8 removes the IP-decoration switch while retaining explicit progress
+palettes/characters, superseding historical Beta.6/Beta.7 switch descriptions.
+Theme retirement, followTheme/coral migration, .58 background strength and
+automatic performance behavior continue. No data-schema migration or local
+data clearing is introduced.
+
+### Beta.8 evidence and limits
+
+Evidence root:
+C:/Users/Mest/Documents/Codex/2026-10-25/mesting-beta7-handoff-20261025/work/beta8.
+
+| Evidence | Confirmed scope |
+| --- | --- |
+| beta8-finish-verdict.md | SHIP WITH STATED VALIDATION LIMITS; R1/R2/R3 closed |
+| ui-verdict.jsonl | Combined **33 passed / 0 failed**: **14 UI** plus **19 transport/gesture/API/volume** checks |
+| regression-shipped.jsonl | Normal **602 passed / 47 conditional skips / 0 failed**, terminal success |
+| targeted-shipped.jsonl | Beta targeted **110 passed / 0 skipped / 0 failed**, terminal success |
+| analyze-shipped.log | No issues found |
+| build-shipped.log; work/release-verification/artifact-verification.json | Release successful; com.mesting.music.beta / 1.0.37-beta.8 / 8; same test certificate, 16KiB ZIP alignment, both ARM server binaries byte-identical to Beta.7 |
+| volume-before.log / ui-verdict.jsonl | Same 100 rapid samples: 100 native writes before, 2 after, final 1.0 |
+| ui-verdict.jsonl search fixture | 480 loaded songs / 10 artwork widgets instantiated at a phone viewport |
+| screenshots-verdict | Software captures with synthetic local data and QA CJK fonts |
+| design-detection.json | Empty findings array; only that detector's scope |
+
+Groups overlap: **never add them into a total**. Write/coalescing and lazy-widget
+measurements establish bounded work, not FPS, frame time or Android hardware
+smoothness. The finish verdict preceded the subsequently completed owner
+regression/analyzer/build; this table records those later confirmed results.
+
+adb devices is empty. Hardware volume, TalkBack speech/gestures, Android
+predictive Back/physical gesture arbitration, real IME, GPU glass/motion/frame
+rate, cold/upgrade migration, live CDN playback/quality/entitlement and live
+account/comment/cloud writes remain unverified. No installation or live cloud
+write occurred. Exact hashes and archive checks belong in the final manifest.
+
+### Beta.8 implementation entry points
+
+All paths are relative to the project root.
+
+| Entry | Responsibility |
+| --- | --- |
+| lib/features/player/presentation/music_shell.dart; lib/features/experience/presentation/beta_music_shell.dart | Persistent tab owner and visible glass shell |
+| lib/shared/widgets/beta_edge_back.dart | Two-edge secondary/search-step return |
+| lib/features/search/presentation/apple_search_results.dart; lib/features/music_platform/presentation/apple_hot_search.dart | Lazy results / compact ranked keywords |
+| lib/features/experience/presentation/player_pull_to_dismiss.dart; player_more_menu.dart | Handle-only commit/rebound / anchored popover |
+| lib/features/experience/presentation/apple_player_controls.dart; lib/core/audio/media_volume_controller.dart; android/app/src/main/kotlin/com/mesting/mesting_music/MediaVolumeBridge.kt | Responsive rail / serialized native writes and suppression |
+| lib/core/audio/mesting_audio_handler.dart | Single audio owner / explicit context, FM history and reversible Previous |
+| lib/features/library/presentation/favorite_toggle_button.dart; lib/features/player/presentation/player_visual_stages.dart | Bare hearts / outer-groove geometric tonearm |
+| lib/features/music_platform/data/platform_quality_catalog.dart; lib/features/music_platform/platform_quality_providers.dart; lib/features/music_platform/data/platform_playback_resolver.dart; lib/features/music_platform/presentation/platform_quality_button.dart | Resource catalog / preference / permitted source / chooser |
+| lib/features/music_platform/data/platform_catalog.dart; lib/features/music_platform/data/platform_comments_repository.dart; lib/features/music_platform/data/platform_song_identity.dart | Parsing envelopes / bounded comment identity reads |
+| lib/features/experience/presentation/listening_replay_page.dart; lib/features/music_platform/presentation/platform_account_page.dart; lib/features/themes/theme_gallery_page.dart | Rounded year / exact icon / Beta appearance scope |
+
+Build with Flutter 3.41.9 / Dart 3.11.5. The script defaults to 1.0.37-beta.8 / 8,
+ARMv7 + ARM64, retaining formal pubspec version and the existing private Beta
+identity/update isolation. The build command below remains applicable; it does
+not publish an update manifest or deploy a backend.
+
+## Historical Beta.7 accepted implementation and delivery boundary
+
+This section records the historical built truth for **1.0.37-beta.7 / 7**, merged after
 final finish review on 2026-10-25. The disposition is **SHIP WITH STATED
 VALIDATION LIMITS**: R1–R3 are resolved in the reviewed source/widget/capture
 scope. Earlier Beta.6/Beta.5/Beta.4 records below remain historical context;
-where behavior differs, this section takes precedence. No commit or clean
+where behavior differs, the Beta.8 section above takes precedence. No commit or clean
 working tree is implied. Preserve formal-channel decisions, existing account
 ownership, comments, paged song search, cloud library and the one audio service.
 
@@ -175,7 +316,7 @@ All paths below are relative to the project root.
 | `lib/core/audio/mesting_audio_handler.dart` | Existing audio service, visible ordered continuation and state-preserving source refresh |
 | `lib/features/search/presentation/music_search_page.dart`, `lib/app/router/app_router.dart` | Standalone Beta landing and legacy-route redirection boundaries |
 
-Build with **Flutter 3.41.9 / Dart 3.11.5**. The script defaults to Beta.7 name/code
+Build with **Flutter 3.41.9 / Dart 3.11.5**. At the Beta.7 build, the script defaulted to Beta.7 name/code
 and ARMv7 + ARM64 while retaining the formal pubspec baseline, CloudBase auth,
 Beta package identity and disabled update checks. It does not deploy a backend
 or publish an update manifest. See the retained build command below.
@@ -274,7 +415,7 @@ and its SDK are unchanged. Run:
 .\tool\build_android_md3_beta_apk.ps1 -FlutterSdkRoot D:\flutter\mesting-beta5\flutter
 ```
 
-The current script selects version `1.0.37-beta.7` / `7`, ARMv7 + ARM64. `pubspec.yaml`
+The current script selects version `1.0.37-beta.8` / `8`, ARMv7 + ARM64. `pubspec.yaml`
 retains the formal baseline version; the distribution script supplies the Beta
 version. The source ZIP contains no signing private key or local SDK settings.
 
@@ -484,7 +625,7 @@ flutter test --flavor beta test/music_platform_test.dart test/beta_login_entry_t
 .\tool\build_android_md3_beta_apk.ps1
 ```
 
-The build script selects `beta`, version `1.0.37-beta.7` / `7`, ARMv7 + ARM64,
+The build script selects `beta`, version `1.0.37-beta.8` / `8`, ARMv7 + ARM64,
 CloudBase authentication retained, and automatic update checks disabled. It does
 not publish an update manifest or deploy a backend. The package is
 `com.mesting.music.beta`, separate from formal and Java/MySQL packages.

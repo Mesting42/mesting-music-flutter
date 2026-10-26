@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import '../../../shared/widgets/beta_edge_back.dart';
 
 import '../../../core/audio/playback_providers.dart';
 import '../../../shared/layout/adaptive_layout.dart';
@@ -19,10 +20,12 @@ class BetaMusicShell extends ConsumerStatefulWidget {
   const BetaMusicShell({
     required this.child,
     required this.location,
+    this.navigationOwner,
     super.key,
   });
   final Widget child;
   final String location;
+  final int? navigationOwner;
   @override
   ConsumerState<BetaMusicShell> createState() => _BetaMusicShellState();
 }
@@ -32,6 +35,26 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell> {
   final _focus = FocusNode();
   final _positions = <String, ScrollPosition>{};
   bool _mini = false, _searching = false, _focused = false;
+  late int _selected = musicBottomNavigationIndexForLocation(widget.location);
+
+  static int? _rootTab(String location) => switch (location) {
+    '/music/recommend' => 0,
+    '/music' => 1,
+    '/music/library' => 2,
+    '/profile' => 3,
+    _ => null,
+  };
+
+  void _backSearch() {
+    final search = ref.read(musicSearchControllerProvider);
+    if (search.query.isNotEmpty) {
+      _searchText.clear();
+      _focus.unfocus();
+      ref.read(musicSearchControllerProvider.notifier).setQuery('');
+    } else {
+      _search(false);
+    }
+  }
 
   @override
   void dispose() {
@@ -44,6 +67,9 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell> {
   void didUpdateWidget(covariant BetaMusicShell oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.location != oldWidget.location) {
+      // Detail paths describe content, not the tab that opened it. Only an
+      // explicit root destination changes ownership of the persistent bar.
+      _selected = _rootTab(widget.location) ?? _selected;
       _searching = false;
       _mini = false;
       _focus.unfocus();
@@ -80,13 +106,13 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell> {
 
   @override
   Widget build(BuildContext context) {
-    final selected = musicBottomNavigationIndexForLocation(widget.location);
+    final selected = widget.navigationOwner ?? _selected;
     final hasTrack = ref.watch(currentMediaItemProvider).value != null;
     final inset = MediaQuery.viewInsetsOf(context).bottom;
     return PopScope(
       canPop: !_searching,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && _searching) _search(false);
+        if (!didPop && _searching) _backSearch();
       },
       child: GlassScaffold(
         key: const ValueKey('beta6-official-glass-shell'),
@@ -108,7 +134,10 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell> {
                             bottom: inset,
                             top: MediaQuery.paddingOf(context).top,
                           ),
-                          child: MusicSearchResultsBody(onSearch: _submit),
+                          child: BetaEdgeBack(
+                            onBack: _backSearch,
+                            child: MusicSearchResultsBody(onSearch: _submit),
+                          ),
                         )
                       : MestingAdaptiveContentFrame(child: widget.child),
                 ),
@@ -130,7 +159,10 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell> {
             accessory: hasTrack ? const FloatingPlaybackPill() : null,
             accessoryEnabled: !_focused,
             onTabSelected: (index) {
-              if (index == selected && _mini && !_searching) {
+              if (index == selected &&
+                  _mini &&
+                  !_searching &&
+                  _rootTab(widget.location) != null) {
                 final position = _positions[widget.location];
                 if (position?.hasPixels == true) {
                   position!.animateTo(
@@ -143,6 +175,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell> {
                 return;
               }
               _search(false);
+              setState(() => _selected = index);
               context.go(betaMusicRoutes[index]);
             },
             searchConfig: GlassSearchBarConfig(

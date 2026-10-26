@@ -11,7 +11,10 @@ import 'package:mesting_music/features/music_platform/data/platform_recommendati
 import 'package:mesting_music/features/music_platform/presentation/platform_search_landing.dart';
 import 'package:mesting_music/features/music_platform/data/platform_explore.dart';
 import 'package:mesting_music/features/search/presentation/music_search_page.dart';
+import 'package:mesting_music/features/search/presentation/apple_search_results.dart';
+import 'package:mesting_music/features/search/search_providers.dart';
 import 'package:mesting_music/shared/widgets/music_notice.dart';
+import 'package:mesting_music/shared/widgets/track_artwork.dart';
 import 'package:mesting_music/features/experience/presentation/listening_replay_page.dart';
 import 'package:mesting_music/features/player/presentation/music_shell.dart';
 import 'package:mesting_music/features/player/player_visual_style.dart';
@@ -165,7 +168,12 @@ void main() {
   var qaPreset = musicThemePresetById('classic');
   late bool metadataReady;
   late List<String> paths;
-  Future<void> prepare({bool guest = false}) async {
+  Future<void> prepare({
+    bool guest = false,
+    bool standardOnly = false,
+    bool qualityUnknown = false,
+    bool playing = false,
+  }) async {
     metadataReady = false;
     paths = [];
     SharedPreferences.setMockInitialValues({});
@@ -178,10 +186,18 @@ void main() {
         final Object data = switch (request.url.path) {
           '/user/detail' => {'nickname': '音乐旅行者'},
           '/audio' =>
-            metadataReady
+            (!qualityUnknown &&
+                    (metadataReady ||
+                        request.url.queryParameters['hash'] == 'HASH'))
                 ? {
                     'audio_info': [
-                      {'Audioid': 12345},
+                      {
+                        'Audioid': 12345,
+                        'hash': 'sd',
+                        if (!standardOnly) 'hash_320': 'hq',
+                        if (!standardOnly) 'hash_flac': 'sq',
+                        if (!standardOnly) 'hash_high': 'hires',
+                      },
                     ],
                   }
                 : {},
@@ -315,7 +331,12 @@ void main() {
           ),
         ),
         playbackStateProvider.overrideWith(
-          (ref) => Stream.value(PlaybackState()),
+          (ref) => Stream.value(
+            PlaybackState(
+              playing: playing,
+              processingState: AudioProcessingState.ready,
+            ),
+          ),
         ),
       ],
     );
@@ -355,7 +376,7 @@ void main() {
         );
         await directory.create(recursive: true);
         await File(
-          '${directory.path}/$capture.png',
+          '${directory.path}/${capture.replaceFirst('beta7-', 'beta8-')}.png',
         ).writeAsBytes(png!.buffer.asUint8List());
         picture.dispose();
       });
@@ -721,6 +742,9 @@ void main() {
         await pump(tester, const BetaNowPlayingPage());
         await tester.tap(find.byKey(const ValueKey('player-quality-button')));
         await tester.pump(const Duration(milliseconds: 400));
+        for (var frame = 0; frame < 5; frame++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
         for (final label in ['标准', '高品质', '无损', 'Hi-Res']) {
           expect(find.text(label), findsOneWidget);
         }
@@ -794,12 +818,55 @@ void main() {
       await tester.pump(const Duration(milliseconds: 700));
       expect(find.text('背景显示强度'), findsNothing);
       expect(find.text('动态效果性能'), findsNothing);
-      expect(find.text('IP 角色装饰'), findsOneWidget);
+      expect(find.text('IP 角色装饰'), findsNothing);
       expect(find.text('跟随皮肤'), findsNothing);
       expect(find.text('Hello Kitty'), findsWidgets);
       expect(find.text('库洛米'), findsWidgets);
       await captureScreenshot(tester, 'beta7-dress-up-progress');
       expect(tester.takeException(), null);
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta8 standard-only song hides unsupported tiers and permission hints',
+    (tester) async {
+      viewport(tester);
+      await prepare(standardOnly: true);
+      await pump(tester, const BetaNowPlayingPage());
+      await tester.tap(find.byKey(const ValueKey('player-quality-button')));
+      for (var i = 0; i < 7; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.text('标准'), findsOneWidget);
+      for (final label in ['高品质', '无损', 'Hi-Res', '需要会员／相应权限']) {
+        expect(find.text(label), findsNothing);
+      }
+      await captureScreenshot(tester, 'beta8-quality-standard-only');
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta8 unknown quality metadata exposes retry instead of fabricated options',
+    (tester) async {
+      viewport(tester);
+      await prepare(qualityUnknown: true);
+      await pump(tester, const BetaNowPlayingPage());
+      await tester.tap(find.byKey(const ValueKey('player-quality-button')));
+      for (var i = 0; i < 7; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.text('暂未获取到歌曲音质信息'), findsOneWidget);
+      expect(find.byKey(const ValueKey('quality-option-128')), findsNothing);
+      final before = paths.where((p) => p == '/audio').length;
+      await tester.tap(find.text('重新加载'));
+      for (var i = 0; i < 7; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(paths.where((p) => p == '/audio').length, before + 1);
       await disposeFixture(tester);
     },
     skip: !DistributionChannel.isBeta,
@@ -853,6 +920,186 @@ void main() {
       expect(find.text('猜你喜欢'), findsNothing);
       expect(find.text('我的热榜'), findsNothing);
       expect(find.text('热门搜索'), findsOneWidget);
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta8 search builds a viewport of 480 rows and retains actions',
+    (tester) async {
+      viewport(tester);
+      await prepare();
+      final scroll = ScrollController();
+      addTearDown(scroll.dispose);
+      final songs = [
+        for (var i = 0; i < 480; i++)
+          Track(
+            id: 'kugou_HASH$i',
+            title: ['演员', '天外来物', '认真的雪'][i % 3],
+            artist: '薛之谦',
+            album: '音乐作品',
+            duration: _track.duration,
+            audioAsset: _track.audioAsset,
+            coverAsset: _track.coverAsset,
+            lyricsAsset: '',
+            source: TrackSource.kugou,
+          ),
+      ];
+      final state = MusicSearchState(
+        query: '薛之谦',
+        onlineTracks: songs,
+        total: 480,
+      );
+      for (final dark in [false, true]) {
+        await pump(
+          tester,
+          AppleSearchResults(state: state, controller: scroll),
+          dark: dark,
+          capture: 'beta8-search-results-${dark ? 'dark' : 'light'}',
+        );
+        final built = find.byType(TrackArtwork).evaluate().length;
+        expect(built, lessThan(25));
+        // ignore: avoid_print
+        print('BETA8_SEARCH_BENCH catalogue=480 visibleArtworkWidgets=$built');
+        expect(find.byTooltip('歌曲操作'), findsWidgets);
+      }
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta8 anchored more menu stays grouped at phone and large-text widths',
+    (tester) async {
+      viewport(tester);
+      await prepare();
+      await container
+          .read(playerVisualStyleProvider.notifier)
+          .select(PlayerVisualStyle.classic);
+      for (final narrow in [false, true]) {
+        tester.view.physicalSize = narrow
+            ? const Size(320, 640)
+            : const Size(390, 844);
+        await pump(tester, const BetaNowPlayingPage(), scale: narrow ? 1.6 : 1);
+        await tester.tap(find.byTooltip('更多操作'));
+        for (var frame = 0; frame < 5; frame++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+        expect(find.text('查看歌词'), findsOneWidget);
+        expect(find.text('黑胶唱片'), findsOneWidget);
+        expect(tester.takeException(), null);
+        await captureScreenshot(
+          tester,
+          narrow ? 'beta8-more-narrow' : 'beta8-more-phone',
+        );
+        await tester.tapAt(const Offset(20, 160));
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta8 detail navigation keeps the tab that opened it',
+    (tester) async {
+      viewport(tester);
+      await prepare();
+      final router = GoRouter(
+        initialLocation: '/profile',
+        routes: [
+          ShellRoute(
+            builder: (context, state, child) =>
+                MusicShell(location: state.uri.toString(), child: child),
+            routes: [
+              for (final path in [
+                '/profile',
+                '/music/library',
+                '/music',
+                '/music/settings',
+                '/player',
+              ])
+                GoRoute(path: path, builder: (_, _) => const SizedBox.expand()),
+            ],
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: LiquidGlassWidgets.wrap(
+            brightnessResolver: Theme.maybeBrightnessOf,
+            child: MaterialApp.router(
+              theme: buildMestingTheme(musicThemePresetById('classic')),
+              routerConfig: router,
+            ),
+          ),
+        ),
+      );
+      Future<void> settle() async {
+        for (var i = 0; i < 5; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+      }
+
+      int selected() => tester
+          .widget<BetaMusicBottomBar>(find.byType(BetaMusicBottomBar))
+          .selectedIndex;
+      await settle();
+      expect(selected(), 3);
+      router.push('/music?view=favorites');
+      await settle();
+      expect(selected(), 3);
+      for (final overlay in ['/music/settings', '/player']) {
+        router.push(overlay);
+        await settle();
+        expect(find.byType(BetaMusicBottomBar), findsNothing);
+        router.pop();
+        await settle();
+        expect(selected(), 3);
+      }
+      router.pop();
+      await settle();
+      expect(selected(), 3);
+      router.go('/music/library');
+      await settle();
+      expect(selected(), 2);
+      router.push('/music?view=favorites');
+      await settle();
+      expect(selected(), 2);
+      router.push('/music/settings');
+      await settle();
+      expect(find.byType(BetaMusicBottomBar), findsNothing);
+      router.pop();
+      await settle();
+      expect(selected(), 2);
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta8 playing vinyl stays on grooves and year menu is rounded',
+    (tester) async {
+      viewport(tester);
+      await prepare(playing: true);
+      await container
+          .read(playerVisualStyleProvider.notifier)
+          .select(PlayerVisualStyle.classic);
+      await pump(
+        tester,
+        const BetaNowPlayingPage(),
+        capture: 'beta8-vinyl-playing',
+      );
+      await pump(tester, const ListeningReplayPage());
+      await tester.tap(find.byTooltip('选择年份'));
+      for (var i = 0; i < 4; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.text('${DateTime.now().year} 年'), findsOneWidget);
+      await captureScreenshot(tester, 'beta8-replay-year-menu');
       await disposeFixture(tester);
     },
     skip: !DistributionChannel.isBeta,

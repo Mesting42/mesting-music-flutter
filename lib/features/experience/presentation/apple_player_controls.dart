@@ -227,42 +227,50 @@ class _ApplePlayerControlsState extends ConsumerState<ApplePlayerControls> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    trackHeight: 4,
-                    activeTrackColor: Colors.white60,
-                    inactiveTrackColor: Colors.white24,
-                    disabledActiveTrackColor: Colors.white24,
-                    disabledInactiveTrackColor: Colors.white12,
-                    thumbShape: SliderComponentShape.noThumb,
-                    overlayShape: SliderComponentShape.noOverlay,
-                  ),
-                  child: MergeSemantics(
-                    key: const ValueKey('media-volume-semantics'),
-                    child: Semantics(
-                      label: '系统媒体音量',
-                      child: Slider(
-                        semanticFormatterCallback: (value) =>
-                            '${(value * 100).round()}%',
-                        key: const ValueKey('system-media-volume'),
-                        padding: EdgeInsets.zero,
-                        value: _volumeDrag ?? volume.value,
-                        onChanged: volume.available
-                            ? (v) {
-                                setState(() => _volumeDrag = v);
-                                ref
-                                    .read(mediaVolumeProvider.notifier)
-                                    .setVolume(v);
-                              }
-                            : null,
-                        onChangeEnd: volume.available
-                            ? (v) async {
-                                await ref
-                                    .read(mediaVolumeProvider.notifier)
-                                    .setVolume(v);
-                                if (mounted) setState(() => _volumeDrag = null);
-                              }
-                            : null,
+                child: SizedBox(
+                  height: 48,
+                  child: SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      trackHeight: 4,
+                      activeTrackColor: Colors.white60,
+                      inactiveTrackColor: Colors.white24,
+                      disabledActiveTrackColor: Colors.white24,
+                      disabledInactiveTrackColor: Colors.white12,
+                      thumbShape: SliderComponentShape.noThumb,
+                      overlayShape: SliderComponentShape.noOverlay,
+                    ),
+                    child: MergeSemantics(
+                      key: const ValueKey('media-volume-semantics'),
+                      child: Semantics(
+                        label: '系统媒体音量',
+                        child: Slider(
+                          semanticFormatterCallback: (value) =>
+                              '${(value * 100).round()}%',
+                          key: const ValueKey('system-media-volume'),
+                          padding: EdgeInsets.zero,
+                          value: _volumeDrag ?? volume.value,
+                          onChangeStart: volume.available
+                              ? (v) => setState(() => _volumeDrag = v)
+                              : null,
+                          onChanged: volume.available
+                              ? (v) {
+                                  setState(() => _volumeDrag = v);
+                                  ref
+                                      .read(mediaVolumeProvider.notifier)
+                                      .setVolume(v);
+                                }
+                              : null,
+                          onChangeEnd: volume.available
+                              ? (v) async {
+                                  await ref
+                                      .read(mediaVolumeProvider.notifier)
+                                      .setVolume(v);
+                                  if (mounted) {
+                                    setState(() => _volumeDrag = null);
+                                  }
+                                }
+                              : null,
+                        ),
                       ),
                     ),
                   ),

@@ -18,6 +18,10 @@ class PlatformCatalog {
         'info',
         'songs',
         'song_list',
+        // Upstream rank/audio and top/playlist use these distinct envelopes.
+        'songlist',
+        'special_list',
+        'plist',
         'list',
         'lists',
         'tracks',

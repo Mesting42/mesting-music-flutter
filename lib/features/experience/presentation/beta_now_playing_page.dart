@@ -15,6 +15,8 @@ import '../../themes/beta_appearance.dart';
 import '../../music_platform/platform_recommendation_providers.dart';
 import 'apple_player_controls.dart';
 import 'immersive_lyrics.dart';
+import 'player_pull_to_dismiss.dart';
+import 'player_more_menu.dart';
 
 /// THESIS: Artwork and lyrics lead; shared Apple transport recedes below them.
 /// PALETTE: Cover-derived blur, a dark readability veil, white transport, red
@@ -31,6 +33,8 @@ class BetaNowPlayingPage extends ConsumerStatefulWidget {
 
 class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
   late bool _lyrics = widget.lyricsInitially;
+  void _dismissPlayer() =>
+      context.canPop() ? context.pop() : context.go('/music/recommend');
   void _close() {
     if (_lyrics) {
       setState(() => _lyrics = false);
@@ -65,219 +69,209 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
     return Theme(
       data: darkTheme,
       child: Builder(
-        builder: (context) => PopScope(
-          canPop: !_lyrics,
-          onPopInvokedWithResult: (didPop, _) {
-            if (!didPop && _lyrics) setState(() => _lyrics = false);
-          },
-          child: Scaffold(
-            backgroundColor: const Color(0xFF17191F),
-            body: Stack(
-              children: [
-                Positioned.fill(
-                  child: classic
-                      ? const ColoredBox(color: Color(0xFFAAA9AA))
-                      : RepaintBoundary(
-                          child: ImageFiltered(
-                            imageFilter: ImageFilter.blur(
-                              sigmaX: 65,
-                              sigmaY: 65,
-                            ),
-                            child: Transform.scale(
-                              scale: 1.4,
-                              child: TrackArtwork(
-                                track: track,
-                                width: 1000,
-                                height: 1400,
-                                fit: BoxFit.cover,
+        builder: (context) => PlayerPullToDismiss(
+          onDismiss: _dismissPlayer,
+          child: PopScope(
+            canPop: !_lyrics,
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop && _lyrics) setState(() => _lyrics = false);
+            },
+            child: Scaffold(
+              backgroundColor: const Color(0xFF17191F),
+              body: Stack(
+                children: [
+                  Positioned.fill(
+                    child: classic
+                        ? const ColoredBox(color: Color(0xFFAAA9AA))
+                        : RepaintBoundary(
+                            child: ImageFiltered(
+                              imageFilter: ImageFilter.blur(
+                                sigmaX: 65,
+                                sigmaY: 65,
+                              ),
+                              child: Transform.scale(
+                                scale: 1.4,
+                                child: TrackArtwork(
+                                  track: track,
+                                  width: 1000,
+                                  height: 1400,
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
                           ),
+                  ),
+                  if (style != PlayerVisualStyle.cover && !classic && !_lyrics)
+                    Positioned.fill(child: PlayerStyleAtmosphere(style: style)),
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: classic
+                              ? const [
+                                  Color(0x08000000),
+                                  Color(0x66000000),
+                                  Color(0xE817191D),
+                                ]
+                              : const [
+                                  Color(0x6616191B),
+                                  Color(0x8816191B),
+                                  Color(0xF216191D),
+                                ],
+                          stops: const [0, .58, 1],
                         ),
-                ),
-                if (style != PlayerVisualStyle.cover && !classic && !_lyrics)
-                  Positioned.fill(child: PlayerStyleAtmosphere(style: style)),
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: classic
-                            ? const [
-                                Color(0x08000000),
-                                Color(0x66000000),
-                                Color(0xE817191D),
-                              ]
-                            : const [
-                                Color(0x6616191B),
-                                Color(0x8816191B),
-                                Color(0xF216191D),
-                              ],
-                        stops: const [0, .58, 1],
                       ),
                     ),
                   ),
-                ),
-                SafeArea(
-                  child: LayoutBuilder(
-                    builder: (context, bounds) {
-                      final scaled =
-                          (MediaQuery.textScalerOf(context).scale(24) - 24)
-                              .clamp(0.0, 96.0);
-                      final minimum = 700.0 + scaled * 2;
-                      final content = Center(
-                        child: SizedBox(
-                          width: 560,
-                          child: Column(
-                            children: [
-                              const SizedBox(height: 8),
-                              Semantics(
-                                label: '收起播放器',
-                                button: true,
-                                child: GestureDetector(
-                                  onTap: _close,
-                                  child: Container(
-                                    width: 48,
-                                    height: 5,
-                                    margin: const EdgeInsets.only(bottom: 10),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white38,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                ),
-                                child: Row(
-                                  children: [
-                                    IconButton(
-                                      tooltip: _lyrics ? '返回封面' : '收起播放器',
-                                      onPressed: _close,
-                                      icon: const Icon(
-                                        CupertinoIcons.chevron_down,
-                                        size: 23,
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    _more(context),
-                                  ],
-                                ),
-                              ),
-                              if (_lyrics)
+                  SafeArea(
+                    child: LayoutBuilder(
+                      builder: (context, bounds) {
+                        final scaled =
+                            (MediaQuery.textScalerOf(context).scale(24) - 24)
+                                .clamp(0.0, 96.0);
+                        final minimum = 700.0 + scaled * 2;
+                        final content = Center(
+                          child: SizedBox(
+                            width: 560,
+                            child: Column(
+                              children: [
+                                const SizedBox(height: 8),
+                                PlayerDismissHandle(onTap: _dismissPlayer),
                                 Padding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    26,
-                                    7,
-                                    26,
-                                    4,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
                                   ),
                                   child: Row(
                                     children: [
-                                      Semantics(
-                                        button: true,
-                                        label: '返回封面',
-                                        child: GestureDetector(
-                                          onTap: () =>
-                                              setState(() => _lyrics = false),
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              10,
-                                            ),
-                                            child: TrackArtwork(
-                                              track: track,
-                                              width: 58,
-                                              height: 58,
-                                            ),
-                                          ),
+                                      IconButton(
+                                        tooltip: _lyrics ? '返回封面' : '收起播放器',
+                                        onPressed: _close,
+                                        icon: const Icon(
+                                          CupertinoIcons.chevron_down,
+                                          size: 23,
                                         ),
                                       ),
-                                      const SizedBox(width: 14),
-                                      Expanded(
-                                        child: _Identity(
-                                          title: track.title,
-                                          artist: track.artist,
-                                          small: true,
-                                        ),
-                                      ),
+                                      const Spacer(),
+                                      _more(context),
                                     ],
                                   ),
                                 ),
-                              Expanded(
-                                child: AnimatedSwitcher(
-                                  duration:
-                                      MediaQuery.disableAnimationsOf(context)
-                                      ? Duration.zero
-                                      : const Duration(milliseconds: 300),
-                                  child: _lyrics
-                                      ? const ImmersiveLyrics(
-                                          key: ValueKey('immersive-lyrics'),
-                                        )
-                                      : Padding(
-                                          key: const ValueKey(
-                                            'immersive-cover',
-                                          ),
-                                          padding: const EdgeInsets.fromLTRB(
-                                            26,
-                                            12,
-                                            26,
-                                            20,
-                                          ),
-                                          child: Semantics(
-                                            button: true,
-                                            label: '查看歌词',
-                                            child: GestureDetector(
-                                              onTap: () => setState(
-                                                () => _lyrics = true,
-                                              ),
-                                              child: PlayerArtworkStage(
-                                                style: style,
+                                if (_lyrics)
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      26,
+                                      7,
+                                      26,
+                                      4,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Semantics(
+                                          button: true,
+                                          label: '返回封面',
+                                          child: GestureDetector(
+                                            onTap: () =>
+                                                setState(() => _lyrics = false),
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              child: TrackArtwork(
                                                 track: track,
-                                                playing: playing,
+                                                width: 58,
+                                                height: 58,
                                               ),
                                             ),
                                           ),
                                         ),
-                                ),
-                              ),
-                              if (!_lyrics)
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    26,
-                                    0,
-                                    26,
-                                    5,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: _Identity(
-                                          title: track.title,
-                                          artist: track.artist,
+                                        const SizedBox(width: 14),
+                                        Expanded(
+                                          child: _Identity(
+                                            title: track.title,
+                                            artist: track.artist,
+                                            small: true,
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      FavoriteToggleButton(track: track),
-                                    ],
+                                      ],
+                                    ),
+                                  ),
+                                Expanded(
+                                  child: AnimatedSwitcher(
+                                    duration:
+                                        MediaQuery.disableAnimationsOf(context)
+                                        ? Duration.zero
+                                        : const Duration(milliseconds: 300),
+                                    child: _lyrics
+                                        ? const ImmersiveLyrics(
+                                            key: ValueKey('immersive-lyrics'),
+                                          )
+                                        : Padding(
+                                            key: const ValueKey(
+                                              'immersive-cover',
+                                            ),
+                                            padding: const EdgeInsets.fromLTRB(
+                                              26,
+                                              12,
+                                              26,
+                                              20,
+                                            ),
+                                            child: Semantics(
+                                              button: true,
+                                              label: '查看歌词',
+                                              child: GestureDetector(
+                                                onTap: () => setState(
+                                                  () => _lyrics = true,
+                                                ),
+                                                child: PlayerArtworkStage(
+                                                  style: style,
+                                                  track: track,
+                                                  playing: playing,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
                                   ),
                                 ),
-                              const ApplePlayerControls(),
-                            ],
+                                if (!_lyrics)
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      26,
+                                      0,
+                                      26,
+                                      5,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: _Identity(
+                                            title: track.title,
+                                            artist: track.artist,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        FavoriteToggleButton(track: track),
+                                      ],
+                                    ),
+                                  ),
+                                const ApplePlayerControls(),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                      return bounds.maxHeight < minimum
-                          ? SingleChildScrollView(
-                              child: SizedBox(height: minimum, child: content),
-                            )
-                          : content;
-                    },
+                        );
+                        return bounds.maxHeight < minimum
+                            ? SingleChildScrollView(
+                                child: SizedBox(
+                                  height: minimum,
+                                  child: content,
+                                ),
+                              )
+                            : content;
+                      },
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -291,11 +285,7 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
     final current = ref.watch(playerVisualStyleProvider);
     final recommendation = ref.read(platformRecommendationSessionProvider);
     final track = ref.read(currentTrackProvider);
-    return PopupMenuButton<String>(
-      tooltip: '更多操作',
-      color: const Color(0xFF2B2B30),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      icon: const Icon(CupertinoIcons.ellipsis, color: Colors.white),
+    return PlayerMoreMenu(
       onSelected: (value) async {
         if (value == 'fm-dislike') {
           await recommendation.dislike(track);
@@ -338,40 +328,44 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
           );
         }
       },
-      itemBuilder: (_) => [
-        PopupMenuItem(
-          value: 'lyrics',
-          child: Text(
+      groups: [
+        [
+          PlayerMenuAction(
+            'lyrics',
             _lyrics ? '查看封面' : '查看歌词',
-            style: const TextStyle(color: Colors.white),
+            CupertinoIcons.text_alignleft,
           ),
-        ),
-        PopupMenuItem(
-          value: 'mode',
-          child: Text(
-            '播放模式：${mode.label}',
-            style: const TextStyle(color: Colors.white),
+          PlayerMenuAction(
+            'mode',
+            '播放模式 · ${mode.label}',
+            mode == PlaybackMode.random
+                ? CupertinoIcons.shuffle
+                : mode == PlaybackMode.single
+                ? CupertinoIcons.repeat_1
+                : CupertinoIcons.repeat,
           ),
-        ),
-        const PopupMenuItem(
-          value: 'playlist',
-          child: Text('添加到歌单', style: TextStyle(color: Colors.white)),
-        ),
-        if (recommendation.ownsFmTrack(track.id))
-          const PopupMenuItem(
-            value: 'fm-dislike',
-            child: Text('不喜欢这首', style: TextStyle(color: Colors.white)),
+          const PlayerMenuAction(
+            'playlist',
+            '添加到歌单',
+            CupertinoIcons.music_note_list,
           ),
-        const PopupMenuDivider(),
-        for (final style in PlayerVisualStyle.values)
-          CheckedPopupMenuItem(
-            value: style.name,
-            checked: current == style,
-            child: Text(
-              style.displayName,
-              style: const TextStyle(color: Colors.white),
+          if (recommendation.ownsFmTrack(track.id))
+            const PlayerMenuAction(
+              'fm-dislike',
+              '不喜欢这首',
+              CupertinoIcons.hand_thumbsdown,
             ),
-          ),
+        ],
+        [
+          for (final style in PlayerVisualStyle.values)
+            PlayerMenuAction(style.name, style.displayName, switch (style) {
+              PlayerVisualStyle.cover => CupertinoIcons.photo,
+              PlayerVisualStyle.classic => CupertinoIcons.circle,
+              PlayerVisualStyle.aurora => CupertinoIcons.sparkles,
+              PlayerVisualStyle.cassette => CupertinoIcons.circle_grid_hex,
+              PlayerVisualStyle.lyricStage => CupertinoIcons.waveform,
+            }, selected: current == style),
+        ],
       ],
     );
   }

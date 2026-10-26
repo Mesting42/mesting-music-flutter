@@ -54,6 +54,8 @@ class MestingMusicApp extends ConsumerWidget {
         final resolved = await source.resolveTrack(
           track,
           quality: ref.read(platformQualityProvider).preferred,
+          requireRequestedQuality: ref.read(platformQualityProvider).switching &&
+              ref.read(platformQualityProvider).switchingTrackId == track.id,
         );
         if (!resolved.isPlayable) {
           throw MusicPlatformException(resolved.availabilityMessage);
