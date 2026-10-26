@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:http/http.dart' as http;
 
 import 'data/embedded_music_server.dart';
@@ -8,6 +9,7 @@ import 'data/music_platform_api.dart';
 import 'data/platform_session_store.dart';
 import 'domain/platform_session.dart';
 import '../../core/platform/distribution_channel.dart';
+import '../../core/performance/startup_timing_probe.dart';
 import '../auth/beta_account_choice.dart';
 import '../auth/beta_entry_flow.dart';
 
@@ -64,10 +66,24 @@ class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
         return null;
       }
     }
-    final session = await ref
-        .watch(platformSessionStoreProvider)
-        .read()
-        .timeout(const Duration(seconds: 5));
+    final PlatformSession? session;
+    try {
+      session = await ref
+          .watch(platformSessionStoreProvider)
+          .read()
+          .timeout(const Duration(seconds: 5));
+    } on Object catch (error) {
+      // An opt-in diagnostic records categories only. Exception messages and
+      // encrypted/decrypted account values must never enter timing logs.
+      if (StartupTimingProbe.enabled) {
+        final code = error is PlatformException
+            ? '_${error.code.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '')}'
+            : '';
+        StartupTimingProbe.mark('account_error_${error.runtimeType}$code');
+      }
+      rethrow;
+    }
+    StartupTimingProbe.mark('account_storage_ready');
     if (session != null && DistributionChannel.isBeta) {
       // On upgrade, prefer the existing platform identity when no choice was
       // saved by Beta.1. No CloudBase request is needed to make that decision.

@@ -2,28 +2,66 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/persistence/app_preferences.dart';
+import '../../core/platform/distribution_channel.dart';
 
 /// Startup media is independent of launcher aliases, player style and theme.
-/// A new install (or an upgrade without this key) uses the first supplied film.
+/// Beta.19 adds static art without retiring either existing film.
 const startupStylePreferenceKey = 'beta12_startup_style';
+const beta19StartupMigrationKey = 'beta19_static_startup_migrated';
 
 enum StartupStyle {
+  staticOne(
+    'static-one',
+    '音乐伙伴 · 静态',
+    'assets/branding/startup/companions-static-1',
+    staticImage: true,
+  ),
+  staticTwo(
+    'static-two',
+    '声音伙伴 · 静态',
+    'assets/branding/startup/companions-static-2',
+    staticImage: true,
+  ),
   companionsOne('video-one', '音乐伙伴', 'assets/branding/startup/companions-1'),
   companionsTwo('video-two', '唱片派对', 'assets/branding/startup/companions-2'),
   classic('classic', '经典启动页', null);
 
-  const StartupStyle(this.id, this.label, this.assetBase);
+  const StartupStyle(
+    this.id,
+    this.label,
+    this.assetBase, {
+    this.staticImage = false,
+  });
   final String id;
   final String label;
   final String? assetBase;
-  String? get videoAsset => assetBase == null ? null : '$assetBase.mp4';
-  String? get posterAsset => assetBase == null ? null : '$assetBase.webp';
+  final bool staticImage;
+  bool get isVideo => assetBase != null && !staticImage;
+  String? get videoAsset => isVideo ? '$assetBase.mp4' : null;
+  String? get posterAsset =>
+      assetBase == null ? null : '$assetBase.${staticImage ? 'png' : 'webp'}';
+}
+
+/// Explicitly confirmed upgrade rule: switch once, then respect later choices.
+/// Never use a per-launch default write, which would overwrite user selections.
+Future<void> migrateBeta19StartupStyle(SharedPreferences preferences) async {
+  if (!DistributionChannel.isBeta ||
+      preferences.getBool(beta19StartupMigrationKey) == true) {
+    return;
+  }
+  final saved = await preferences.setString(
+    startupStylePreferenceKey,
+    StartupStyle.staticOne.id,
+  );
+  if (saved) await preferences.setBool(beta19StartupMigrationKey, true);
 }
 
 StartupStyle savedStartupStyle(SharedPreferences preferences) =>
     StartupStyle.values.firstWhere(
       (style) => style.id == preferences.getString(startupStylePreferenceKey),
-      orElse: () => StartupStyle.companionsOne,
+      orElse: () => DistributionChannel.isBeta
+          ? StartupStyle.staticOne
+          : StartupStyle.companionsOne,
     );
 
 class StartupStyleController extends Notifier<StartupStyle> {

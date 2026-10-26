@@ -157,7 +157,14 @@ class PlatformRewardCalendar extends ConsumerWidget {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(22, 20, 22, 40),
                 children: [
-                  Center(
+                  // Material 3 stretch composites the scroll contents into an
+                  // isolated ImageFilter pass. Paint the real page surface in
+                  // that pass before the glass buttons sample their backdrop;
+                  // the Scaffold's surface lives outside it and is unavailable
+                  // during overscroll. This retains the same optical material.
+                  Container(
+                    color: scheme.surface,
+                    alignment: Alignment.center,
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 520),
                       child: Column(

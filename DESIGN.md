@@ -1,5 +1,5 @@
 ---
-name: Mesting Music Android Beta.18
+name: Mesting Music Android Beta.19
 description: 封面主导、红色强调与共享播放控件的中文私人听歌空间
 colors:
   beta-accent: "#DE3A3D"
@@ -168,7 +168,7 @@ components:
     padding: "12px"
 ---
 
-# Design System: Mesting Music Android Beta.18
+# Design System: Mesting Music Android Beta.19
 
 ## Overview
 
@@ -195,6 +195,39 @@ Beta.18 的范围以 docs/fixes-2026-10-26-beta18.md 为准：轻量首页问候
 - 真实玻璃服务持续挂载的悬浮 chrome、独立评论输入/发送、指定 Beta 账号控件和共享编辑/播放菜单；正文背景清楚稳定。
 - 原创音符/唱片双角色以可控矢量、关节动作和浅深色可辨轮廓承载入口识别；等待与成功采用共享分段 spinner 和绘制标记。
 - 两段给定启动短片与经典标识页保留各自原貌，选择与显式预览分离；中性关闭和局部蓝色确认共享清楚的操作语义。
+
+## Beta.19 performance, retained glass and startup
+
+2026-10-27: preserve the existing premium/full optical world, blur, refraction,
+press deformation and capsule transitions. Identical layouts reuse their geometry
+matte; genuine size/style changes still invalidate it. Retained glass now also
+tracks active ImageFilterLayer pass bounds, including Android overscroll stretch
+whose offscreen pass can change without a render-transform change. The stretch
+and the glass remain active; foreground coloring is not replaced by a flat fill.
+
+Beta removes the unavailable Mesting account login/register item and redirects
+legacy password recovery to the platform account entry. Formal account features
+and existing local sessions/data remain. Formal-only gallery, theme and brand
+artwork is excluded from Beta assets, with generated-staging cleanup and an APK
+content check. Active progress sprites and currently used preview/cover resources
+remain available.
+
+Shinchan has seven manually saved weather choices: sun, breeze, sunset, night,
+drizzle, storm and parade. The shared painter and walking sprites remain; only
+the selected settings preview animates, and cached offscreen/reduced-motion
+previews stop tickers. Formal themes retain their legacy mapping when no explicit
+weather choice is stored.
+
+Two user-supplied static startup PNGs retain their original bytes, lettering and
+composition. Render the entire image with contain and a matching coral surround;
+never crop the characters or stretch the artwork. Beta.19 migrates the default
+once to the first image, including upgrades, then respects later explicit choices.
+Both films and the classic screen remain selectable. Static startup has no timer
+or video decoder; dependencies and full-quality optics gate the real app, while
+optics and native audio initialize concurrently. Beta's former 720ms minimum is
+removed; the formal channel retains its prior minimum.
+
+See docs/fixes-2026-10-27-beta19.md for physical-device evidence and limitations.
 
 ## Colors
 
@@ -293,7 +326,7 @@ BetaGlassMenuSurface 将同一 betaMusicPillGlass 用于编辑横条、展开菜
 - **评论等待与到达**：初次资源/评论读取只显示裸 BetaActivityIndicator，不添加等待卡片。评论行以真实 comment ID 保持稳定 key，320ms 淡入/上移只作用于新到达的前景；分页追加时已完成的行保留其到达状态。排序、范围、账号/请求守卫与真实写入结果继续由原业务持有，失败仍提供可操作原因与重试。
 - **评论菜单与 glyph**：BetaAnchoredMenu 打开时测量各自触发器的真实 RenderBox 宽度并约束菜单，最小触发器 90×44dp 不能当作固定弹层宽度；勾选/间隔/Expanded 标签在相同宽内布局。22dp 圆角菜单使用主题表面。PlayerCommentGlyph 以同一绘制函数提供圆形引号气泡并在教程复用；音质为 Cupertino 中间音箱，原操作语义和目标保留。
 - **音乐伙伴与预览**：欢迎/指南复用原创音符和唱片双角色，身体、四肢、面部与耳机由矢量分层绘制，深色外部轮廓提高对比而非全体发光。五种样式小预览共用一个局部绘制时钟与真实样式偏好，每张卡有独立可辨舞台、文字/勾选与 selected 语义，邻页通过 TickerMode 暂停；演示不新建音频服务。入口/指南的具体顺序与构图见对应 surface brief，不作为其他页面模板。
-- **装扮与启动**：保留浅/深/系统、自定义图片/视频、五种播放器与显式进度配色/角色；品牌选择器、重复皮肤说明/经典卡片、DRESS UP、followTheme 及 IP 装饰开关继续移除。图标固定 coral，启动页独立提供“音乐伙伴”（第一段默认）、“唱片派对”及经典 M 标识页。选择行以 BetaPressSurface 局部圆角染色/缩放（.977）反馈，持久化成功才勾选；静态海报与显式预览分开，列表不自动播放。预览关闭是 48dp 圆形独立 premium 玻璃按钮。短片主体完整保持原比例，空余区域使用同一控制器的实时视频纹理模糊延展（sigma 24），请求透明状态/导航栏，保留原声。每个冷进程一次，依赖就绪和视频完成共同放行业务/恢复；未完成后台暂停后接续，完成后不重播，解码/停滞有界回退经典。预览单独持有控制器，退出释放，不重置进程门控。旧品牌迁移、显式 IP 保留、完整 IP 主题退役、背景强度 .58 与背景性能 automatic 延续；后者不降低指定 premium/full 玻璃。平台账号继续实际 coral 应用图标，正式主题契约保留。
+- **装扮与启动**：保留浅/深/系统、自定义图片/视频、五种播放器与显式进度配色/角色；品牌选择器、重复皮肤说明/经典卡片、DRESS UP、followTheme 及 IP 装饰开关继续移除。图标固定 coral，启动页独立提供两张给定静态图（图一默认）、“音乐伙伴”“唱片派对”两段视频及经典 M 标识页；Beta.19 首次升级迁移到图一一次，之后保存用户选择。静态图完整 contain、同色留白、无音频及固定停留。选择行以 BetaPressSurface 局部圆角染色/缩放（.977）反馈，持久化成功才勾选；静态海报与显式预览分开，列表不自动播放。预览关闭是 48dp 圆形独立 premium 玻璃按钮。短片主体完整保持原比例，空余区域使用同一控制器的实时视频纹理模糊延展（sigma 24），请求透明状态/导航栏，保留原声。每个冷进程一次，依赖就绪和视频完成共同放行业务/恢复；未完成后台暂停后接续，完成后不重播，解码/停滞有界回退经典。预览单独持有控制器，退出释放，不重置进程门控。旧品牌迁移、显式 IP 保留、完整 IP 主题退役、背景强度 .58 与背景性能 automatic 延续；后者不降低指定 premium/full 玻璃。平台账号继续实际 coral 应用图标，正式主题契约保留。
 - **首页问候**：冷进程首次可用的首页标题旁显示按时段与实际昵称生成的轻量文字，可见五秒后局部收起；无胶囊或音符 badge，长昵称单行省略且不挤成两行首页标题。淡入/微移与尺寸变化统一 320ms，减少动画归零；进程级非 autoDispose 标记防止后台切回和路由重挂重播，不作为其他页头的固定模板。
 - **状态反馈**：showMusicNotice 以顶部安全区下的单个半透明 HUD 替换前一个通知；短标题加图标，支持浅深色、淡入/顶部滑入/缩放与减少动画。普通提示省略旧说明，错误/警告保留可行动原因；Semantics liveRegion 读出可见信息。Beta 真实成功的 check 图标改用共享 900ms 绘制标记，2600ms 后反向退出，普通提示仍为 1900ms；评论“已发送”和验证码成功共用这一规则。不建立第二套业务成功状态，也不将软件回调等同于真实收码/云写入。
 - **等待与登录成功**：BetaActivityIndicator 统一分段 Cupertino spinner 的尺寸/语义，在所属请求区域呈现并禁用重复提交。BetaSuccessMark 圆环/对勾绘制为 900ms。登录成功使用 login-success 的 104×104dp 圆角方形，位于 SafeArea 内顶部 76dp、指南页头下方的上部中央，仅绘制自身方形；进入/退出为 300/220ms，1800ms 后反向退出。指南与成功事件同帧挂载、可见且可操作，只有 HUD 忽略指针；Next/Skip/Back 始终继续同一个指南状态，延迟完成回调不能重置页码或在完成后重开指南。减少动画时 HUD/标记直接终态且退出时长归零，反馈停留计时保留。原创 0.48 秒 SoundPool 提示音只随新交互成功事件调用一次，恢复/刷新及重复认证不触发，不请求音乐焦点或新建播放 owner；未认证真机响度。指南跳过以 340ms 当前页/第八页淡变微移，仍需“开始使用”；普通翻页仍为 380ms。欢迎 Navigator 的 child dispatcher 取得返回优先级，法规页先返回所属 Navigator。其余减少动画按实际组件分支记录；退出失败保留原会话和可恢复错误。
@@ -323,3 +356,9 @@ BetaGlassMenuSurface 将同一 betaMusicPillGlass 用于编辑横条、展开菜
 - **Don't** 用连续装饰描边、滚动时降级或不透明平面盖层替代光学修正，或把未知队列时长编成真实数据。
 
 未固化为规则：软件渲染中的平面玻璃外观不是原生 GPU 光学保证；浅色纯白/内容背景的光学、fallback/premium GPU 一致性、真实系统/预测返回、IME/自动填充、TalkBack、媒体焦点/提示音响度与启动原声解码仍待设备验收。局部减少动画仍不完整，部分时钟与固定计时继续；收起 handle 的 112×36dp 手势区和指南跳过等紧凑目标按实际尺寸披露，不能推广为触控尺寸规范；测试人像和教程字体 glyph 不是生产素材/图标规范。Beta.13 reviewer 的 R1–R4 resolved 只覆盖其所读源码、软件检查与提供捕获；没有证明此前设备账号丢失的触发原因。历史 Beta.10/11/12 测试、捕获、发布身份及评审结论各属于对应冻结构建。范围为通用 Android 兼容，没有机型专属优化；软件捕获、历史36帧/80ms GIF、120帧重建工作量、历史主机只读查询及 Beta.12 时长元数据响应均不替代真机 GPU/FPS、真实短信/账号或线上播放验收。
+
+### Beta.19 native material verification
+
+签到页三个操作保留白底黑字及原 premium 玻璃。页面回弹的 ImageFiltered 会隔离 Scaffold 底层，因此签到正文在滚动内容内绘制同色 surface，供玻璃实际采样；禁止用禁用回弹、平面白底按钮或降低折射质量掩盖问题。所有 BetaGlassButton 在滚动赢得手势时取消按压高光，普通点击与键盘反馈保留。账号恢复覆盖层拥有独立 Material/安全区，不继承 WidgetsApp 诊断文字样式。新入口、启动和天气契约见 [Beta.19 验证记录](docs/fixes-2026-10-27-beta19.md)。
+
+原生验证采用独立 `.beta.benchmark` 身份、内存偏好和静止封面夹具。只将通过可见入口门控与胶囊展开/收起断言的场景计入性能对比；它不认证所有业务场景稳定 120fps，也不构成进程 CPU 占用下降百分比。日常 Beta 的安装与冷启动单独检查。

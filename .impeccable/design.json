@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-26T14:30:54.069Z",
-  "title": "Design System: Mesting Music Android Beta.18",
+  "generatedAt": "2026-10-26T16:26:45.766238+00:00",
+  "title": "Design System: Mesting Music Android Beta.19",
   "extensions": {
     "colorMeta": {
       "primary-seed": {
@@ -1225,6 +1225,25 @@
         "lib/features/auth/presentation/beta_entry_coordinator.dart",
         "lib/features/auth/beta_entry_flow.dart"
       ]
+    },
+    "beta19Behavior": {
+      "preserve": "premium/full blur, refraction, deformation and capsule transitions",
+      "retainedGlass": "reuse identical geometry and track ImageFilterLayer pass changes even at an unchanged transform",
+      "accountEntry": "remove unavailable Beta Mesting auth item; formal and stored data retained",
+      "assets": "formal-only assets excluded from Beta; stale generated assets cleared and APK checked",
+      "shinchanWeather": [
+        "sun",
+        "breeze",
+        "sunset",
+        "night",
+        "drizzle",
+        "storm",
+        "parade"
+      ],
+      "startup": "two original static images; one-time upgrade default to image one; later selection retained; no Beta artificial minimum",
+      "evidence": "docs/fixes-2026-10-27-beta19.md",
+      "neutralCalendarMaterial": "White/dark premium glass; same surface painted inside overscroll ImageFilter; press sheen cancels with scrolling.",
+      "nativeEvidence": "Isolated .beta.benchmark package and keep-app-running; guarded visible home/capsule measurements, color samples and delivery limitations in docs/fixes-2026-10-27-beta19.md."
     }
   },
   "components": [
@@ -1377,6 +1396,7 @@
       "Don't 为本轮接入 BetaIconButton 的更多/关闭叠加大圆按压底，或让登录成功 HUD 阻断指南的 Next/Skip/Back。",
       "Don't 以软件截图宣称真机 TalkBack、硬件音量、GPU Apple 效果或线上服务已验收。",
       "Don't 用连续装饰描边、滚动时降级或不透明平面盖层替代光学修正，或把未知队列时长编成真实数据。"
-    ]
+    ],
+    "Beta.19 performance, retained glass and startup": "2026-10-27: preserve the existing premium/full optical world, blur, refraction,\npress deformation and capsule transitions. Identical layouts reuse their geometry\nmatte; genuine size/style changes still invalidate it. Retained glass now also\ntracks active ImageFilterLayer pass bounds, including Android overscroll stretch\nwhose offscreen pass can change without a render-transform change. The stretch\nand the glass remain active; foreground coloring is not replaced by a flat fill.\n\nBeta removes the unavailable Mesting account login/register item and redirects\nlegacy password recovery to the platform account entry. Formal account features\nand existing local sessions/data remain. Formal-only gallery, theme and brand\nartwork is excluded from Beta assets, with generated-staging cleanup and an APK\ncontent check. Active progress sprites and currently used preview/cover resources\nremain available.\n\nShinchan has seven manually saved weather choices: sun, breeze, sunset, night,\ndrizzle, storm and parade. The shared painter and walking sprites remain; only\nthe selected settings preview animates, and cached offscreen/reduced-motion\npreviews stop tickers. Formal themes retain their legacy mapping when no explicit\nweather choice is stored.\n\nTwo user-supplied static startup PNGs retain their original bytes, lettering and\ncomposition. Render the entire image with contain and a matching coral surround;\nnever crop the characters or stretch the artwork. Beta.19 migrates the default\nonce to the first image, including upgrades, then respects later explicit choices.\nBoth films and the classic screen remain selectable. Static startup has no timer\nor video decoder; dependencies and full-quality optics gate the real app, while\noptics and native audio initialize concurrently. Beta's former 720ms minimum is\nremoved; the formal channel retains its prior minimum.\n\nSee docs/fixes-2026-10-27-beta19.md for physical-device evidence and limitations."
   }
 }

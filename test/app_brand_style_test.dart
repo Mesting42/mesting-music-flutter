@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mesting_music/core/persistence/app_preferences.dart';
+import 'package:mesting_music/core/platform/distribution_channel.dart';
 import 'package:mesting_music/features/themes/app_brand_style.dart';
 import 'package:mesting_music/features/themes/theme_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -205,8 +206,9 @@ void main() {
     expect(container.read(appBrandStyleProvider), AppBrandStyle.coral);
   });
 
-  test('every alternate brand bundles its preview and launch artwork', () {
-    final pubspec = File('pubspec.yaml').readAsStringSync();
+  test('formal brand artwork is declared only for its distribution', () async {
+    final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+    final assets = manifest.listAssets().toSet();
 
     for (final style in <AppBrandStyle>[
       AppBrandStyle.morningMist,
@@ -215,7 +217,11 @@ void main() {
       for (final asset in <String?>[style.iconAsset, style.launchAsset]) {
         expect(asset, isNotNull, reason: style.id);
         expect(File(asset!).existsSync(), isTrue, reason: asset);
-        expect(pubspec, contains('    - $asset'), reason: asset);
+        expect(
+          assets.contains(asset),
+          !DistributionChannel.isBeta,
+          reason: asset,
+        );
       }
     }
   });

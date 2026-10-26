@@ -2,15 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-enum ShinchanProgressWeather {
-  sun,
-  breeze,
-  sunset,
-  night,
-  drizzle,
-  storm,
-  parade,
-}
+import '../domain/shinchan_progress_weather.dart';
+export '../domain/shinchan_progress_weather.dart';
 
 ShinchanProgressWeather shinchanWeatherForPreset(String presetId) =>
     switch (presetId) {
@@ -28,12 +21,16 @@ class ShinchanProgressWalker extends StatefulWidget {
   const ShinchanProgressWalker({
     required this.presetId,
     required this.playing,
+    this.weather,
     this.width = 104,
     super.key,
   });
 
   final String presetId;
   final bool playing;
+
+  /// Null preserves the formal channel's original theme-to-weather mapping.
+  final ShinchanProgressWeather? weather;
   final double width;
 
   static Size sizeForWidth(double width) => Size(width, 84 * width / 104);
@@ -65,6 +62,14 @@ class _ShinchanProgressWalkerState extends State<ShinchanProgressWalker>
   late final AnimationController _cloudController;
   late final AnimationController _rainController;
   bool _assetsPrecached = false;
+  bool _motionAllowed = false;
+  ScrollableState? _scrollable;
+  ScrollPosition? _scrollPosition;
+  bool _viewportVisible = true;
+  bool _visibilityCheckScheduled = false;
+
+  ShinchanProgressWeather get _weather =>
+      widget.weather ?? shinchanWeatherForPreset(widget.presetId);
 
   @override
   void initState() {
@@ -91,6 +96,18 @@ class _ShinchanProgressWalkerState extends State<ShinchanProgressWalker>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _motionAllowed =
+        TickerMode.valuesOf(context).enabled &&
+        !MediaQuery.disableAnimationsOf(context);
+    _scrollable = Scrollable.maybeOf(context);
+    final position = _scrollable?.position;
+    if (!identical(position, _scrollPosition)) {
+      _scrollPosition?.removeListener(_scheduleVisibilityCheck);
+      _scrollPosition = position;
+      _scrollPosition?.addListener(_scheduleVisibilityCheck);
+    }
+    _scheduleVisibilityCheck();
+    _syncMotion();
     if (_assetsPrecached) return;
     _assetsPrecached = true;
     for (final asset in [..._shinchanFrames, ..._shiroFrames]) {
@@ -102,17 +119,17 @@ class _ShinchanProgressWalkerState extends State<ShinchanProgressWalker>
   void didUpdateWidget(covariant ShinchanProgressWalker oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.playing != widget.playing ||
-        oldWidget.presetId != widget.presetId) {
+        oldWidget.presetId != widget.presetId ||
+        oldWidget.weather != widget.weather) {
       _syncMotion();
     }
   }
 
   void _syncMotion() {
-    if (widget.playing) {
+    if (widget.playing && _motionAllowed && _viewportVisible) {
       _walkController.repeat();
       _weatherController.repeat();
-      if (shinchanWeatherForPreset(widget.presetId) ==
-          ShinchanProgressWeather.storm) {
+      if (_weather == ShinchanProgressWeather.storm) {
         _cloudController.repeat();
         _rainController.repeat();
       } else {
@@ -139,8 +156,37 @@ class _ShinchanProgressWalkerState extends State<ShinchanProgressWalker>
     }
   }
 
+  /// Slivers may keep an offscreen preview alive inside their cache extent.
+  /// TickerMode alone cannot see that. Coalesce scroll notifications and test
+  /// the real painted bounds after layout; no settings-page rebuild is needed.
+  void _scheduleVisibilityCheck() {
+    if (_visibilityCheckScheduled) return;
+    _visibilityCheckScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _visibilityCheckScheduled = false;
+      if (!mounted) return;
+      final box = context.findRenderObject();
+      final viewport = _scrollable?.context.findRenderObject();
+      var visible = true;
+      if (box is RenderBox &&
+          box.hasSize &&
+          viewport is RenderBox &&
+          viewport.hasSize) {
+        final bounds = box.localToGlobal(Offset.zero) & box.size;
+        final viewportBounds =
+            viewport.localToGlobal(Offset.zero) & viewport.size;
+        visible = bounds.overlaps(viewportBounds);
+      }
+      if (visible != _viewportVisible) {
+        _viewportVisible = visible;
+        _syncMotion();
+      }
+    });
+  }
+
   @override
   void dispose() {
+    _scrollPosition?.removeListener(_scheduleVisibilityCheck);
     _walkController.dispose();
     _weatherController.dispose();
     _cloudController.dispose();
@@ -168,7 +214,7 @@ class _ShinchanProgressWalkerState extends State<ShinchanProgressWalker>
           final cadence = widget.playing
               ? -1.3 * math.sin(_walkController.value * math.pi * 2).abs()
               : 0.0;
-          final weather = shinchanWeatherForPreset(widget.presetId);
+          final weather = _weather;
           final storm = weather == ShinchanProgressWeather.storm;
           return Stack(
             clipBehavior: Clip.none,

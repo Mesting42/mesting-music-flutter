@@ -707,6 +707,7 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
   /// The transform the shader filter's screen-space uniforms were last
   /// written for, by [paintLiquidGlass] or [_updateAtComposite].
   Matrix4? _uniformsTransform;
+  Rect? _uniformsBackdropPass;
 
   /// Moves the last paint's screen-space uniforms to where an ancestor moved
   /// this layer without repainting it (a reused repaint boundary: layout or a
@@ -723,8 +724,9 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
       return false;
     }
     final transform = getTransformTo(null);
+    final pass = enclosingBackdropPassRect();
     // Painted this frame where it is now: the layers are already current.
-    if (transform == _uniformsTransform) return true;
+    if (transform == _uniformsTransform && pass == _uniformsBackdropPass) return true;
     _uniformsTransform = null;
     final prevFrostRows = frostRowsPath;
     _updateScaleState(transform, super.captureOriginInScreenSpace);
@@ -744,6 +746,7 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     // The filter holds the uniforms it was created with.
     shaderLayer.filter = ImageFilter.shader(renderShader!);
     _uniformsTransform = transform;
+    _uniformsBackdropPass = pass;
     return true;
   }
 
@@ -766,6 +769,7 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     if (!attached) return;
     _paintOffset = offset;
     _uniformsTransform = getTransformTo(null);
+    _uniformsBackdropPass = enclosingBackdropPassRect();
     final shared = _resolveSharing();
 
     // ── Pass 0: SDF Shadows ──────────────────────────────────────────────────

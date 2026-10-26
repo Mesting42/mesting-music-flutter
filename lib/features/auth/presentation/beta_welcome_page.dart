@@ -87,15 +87,9 @@ class _BetaWelcomePageState extends ConsumerState<BetaWelcomePage> {
                 style: TextStyle(fontSize: 23, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 20),
-              for (final item in [
-                ('kugou', '酷狗扫码登录'),
-                ('qq', 'QQ 扫码登录'),
-                ('mesting', 'Mesting 账号登录 / 注册 · 暂不可用'),
-              ]) ...[
+              for (final item in [('kugou', '酷狗扫码登录'), ('qq', 'QQ 扫码登录')]) ...[
                 BetaGlassButton(
-                  onPressed: item.$1 == 'mesting'
-                      ? null
-                      : () => Navigator.pop(sheet, item.$1),
+                  onPressed: () => Navigator.pop(sheet, item.$1),
                   child: Text(item.$2),
                 ),
                 const SizedBox(height: 12),

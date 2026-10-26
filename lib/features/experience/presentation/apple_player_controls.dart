@@ -176,6 +176,7 @@ class _ApplePlayerControlsState extends ConsumerState<ApplePlayerControls> {
                         child: IgnorePointer(
                           child: ShinchanProgressWalker(
                             presetId: preset.id,
+                            weather: visual.shinchanWeather,
                             width: 56,
                             playing: playing,
                           ),

@@ -1,5 +1,24 @@
 # Mesting Beta.12 optical correction, Beta.13 hooks and Beta.15 geometry isolation
 
+## Beta.19 geometry and Android offscreen-pass correction
+
+`LiquidGlassRenderObject.performLayout` invalidates the matte when its actual
+size changes, rather than on every parent layout request. Shape/style/relative
+geometry invalidation stays independent. No optical parameters are reduced.
+
+`enclosingBackdropPassRect` also recognizes enabled `ImageFilterLayer` render
+boundaries used by Material 3 stretch. Stationary composites still call the
+transform tracker because a filter can change the enclosing pass without a
+render transform change. The layer caches both transform and pass rect before
+updating shader uniforms. Premium blur, refraction, frost, gesture deformation
+and stretch remain enabled. Application pages must paint the intended backdrop
+inside isolated filters; a Scaffold behind the filter is not automatically
+available to nested backdrop readers.
+
+The physical Android benchmark and color samples are documented in
+`docs/fixes-2026-10-27-beta19.md`. Software raster tests alone do not certify
+Impeller output, and no constant 120fps or process CPU percentage is claimed.
+
 ## Beta.15 navigation morph work isolation
 
 `package/lib/src/widgets/surfaces/tab_bar_searchable_layout.dart` retains the

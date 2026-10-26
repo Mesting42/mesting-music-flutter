@@ -142,26 +142,10 @@ class _BetaEntryCoordinatorState extends ConsumerState<BetaEntryCoordinator> {
     } else if (platform.isLoading || platform.hasError) {
       // An unreadable credential is not a guest account. Keep the music app
       // mounted, but expose an honest, retryable restoration state.
-      overlay = Center(
-        child: platform.isLoading
-            ? const BetaActivityIndicator(label: '正在恢复账号')
-            : Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('账号暂未恢复，登录信息已保留'),
-                  const SizedBox(height: 16),
-                  BetaGlassButton(
-                    onPressed: () => ref.invalidate(platformAccountProvider),
-                    child: const Text('重试恢复'),
-                  ),
-                  const SizedBox(height: 12),
-                  BetaGlassButton(
-                    onPressed: () =>
-                        ref.read(betaEntryFlowProvider.notifier).welcome(),
-                    child: const Text('重新登录'),
-                  ),
-                ],
-              ),
+      overlay = _AccountRestoreSurface(
+        loading: platform.isLoading,
+        onRetry: () => ref.invalidate(platformAccountProvider),
+        onLogin: () => ref.read(betaEntryFlowProvider.notifier).welcome(),
       );
     }
     final active =
@@ -206,4 +190,48 @@ class _BetaEntryCoordinatorState extends ConsumerState<BetaEntryCoordinator> {
       ],
     );
   }
+}
+
+/// This overlay sits above the Router's Material/Scaffold. Own its text and
+/// safe-area context so a failed cold restore never inherits WidgetsApp's large
+/// red diagnostic text style. Storage recovery remains controller-owned.
+class _AccountRestoreSurface extends StatelessWidget {
+  const _AccountRestoreSurface({
+    required this.loading,
+    required this.onRetry,
+    required this.onLogin,
+  });
+
+  final bool loading;
+  final VoidCallback onRetry, onLogin;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Theme.of(context).colorScheme.surface,
+    child: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Center(
+          child: loading
+              ? const BetaActivityIndicator(label: '正在恢复账号')
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('账号暂未恢复，登录信息已保留', textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    BetaGlassButton(
+                      onPressed: onRetry,
+                      child: const Text('重试恢复'),
+                    ),
+                    const SizedBox(height: 12),
+                    BetaGlassButton(
+                      onPressed: onLogin,
+                      child: const Text('重新登录'),
+                    ),
+                  ],
+                ),
+        ),
+      ),
+    ),
+  );
 }

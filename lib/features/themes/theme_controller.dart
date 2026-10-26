@@ -6,6 +6,7 @@ import '../../core/persistence/app_preferences.dart';
 import '../../core/platform/distribution_channel.dart';
 import 'app_brand_style.dart';
 import 'music_theme_preset.dart';
+import '../player/domain/shinchan_progress_weather.dart';
 
 const musicThemePreferenceKey = 'music_theme_preset';
 
@@ -158,24 +159,28 @@ class ThemeVisualSettings {
     this.showIpDecoration = false,
     this.progressStyle = ProgressDecoration.classic,
     this.progressCharacter = ProgressDecoration.classic,
+    this.shinchanWeather,
   });
 
   final double backgroundStrength;
   final bool showIpDecoration;
   final ProgressDecoration progressStyle;
   final ProgressDecoration progressCharacter;
+  final ShinchanProgressWeather? shinchanWeather;
 
   ThemeVisualSettings copyWith({
     double? backgroundStrength,
     bool? showIpDecoration,
     ProgressDecoration? progressStyle,
     ProgressDecoration? progressCharacter,
+    ShinchanProgressWeather? shinchanWeather,
   }) {
     return ThemeVisualSettings(
       backgroundStrength: backgroundStrength ?? this.backgroundStrength,
       showIpDecoration: showIpDecoration ?? this.showIpDecoration,
       progressStyle: progressStyle ?? this.progressStyle,
       progressCharacter: progressCharacter ?? this.progressCharacter,
+      shinchanWeather: shinchanWeather ?? this.shinchanWeather,
     );
   }
 }
@@ -185,6 +190,7 @@ class ThemeVisualSettingsController extends Notifier<ThemeVisualSettings> {
   static const _decorationKey = 'music_ip_decoration';
   static const _progressStyleKey = 'music_progress_style';
   static const _progressCharacterKey = 'music_progress_character';
+  static const _weatherKey = 'music_shinchan_progress_weather';
 
   @override
   ThemeVisualSettings build() {
@@ -197,6 +203,9 @@ class ThemeVisualSettingsController extends Notifier<ThemeVisualSettings> {
       progressStyle: _readDecoration(preferences.getString(_progressStyleKey)),
       progressCharacter: _readDecoration(
         preferences.getString(_progressCharacterKey),
+      ),
+      shinchanWeather: ShinchanProgressWeather.fromName(
+        preferences.getString(_weatherKey),
       ),
     );
   }
@@ -233,6 +242,15 @@ class ThemeVisualSettingsController extends Notifier<ThemeVisualSettings> {
     await ref
         .read(sharedPreferencesProvider)
         .setString(_progressCharacterKey, value.name);
+  }
+
+  /// Publish only a saved choice; a storage error must not claim persistence.
+  Future<void> setShinchanWeather(ShinchanProgressWeather value) async {
+    final saved = await ref
+        .read(sharedPreferencesProvider)
+        .setString(_weatherKey, value.name);
+    if (!saved) throw StateError('暂时无法保存小新天气，请重试');
+    state = state.copyWith(shinchanWeather: value);
   }
 }
 

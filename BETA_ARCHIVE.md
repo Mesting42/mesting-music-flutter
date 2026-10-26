@@ -1,79 +1,94 @@
 # Mesting Music Beta 版本归档
 
-归档日期：2026-10-26（Asia/Shanghai）。当前快照：**1.0.37-beta.17**。
-本分支用于保存这台电脑交付的 Beta 版本；现有正式版 `main`、旧标签和旧 Release 保留。
+归档更新：2026-10-27（Asia/Shanghai）。当前开发版本：**1.0.37-beta.19**。
+日常开发分支：`beta`。另一台电脑从 [接续入口](docs/CONTINUE-BETA.md) 开始，
+源码和 APK 使用同名固定版本标签。正式分支 `main` 和已有标签/Release 保留原样。
 
-另一台电脑接续请先读 [Beta.17 接续指南](docs/SESSION-HANDOFF-2026-10-26-BETA17.md) 和 [本版更新说明](docs/fixes-2026-10-26-beta17.md)，使用 `beta` 分支或固定标签 `v1.0.37-beta.17`。
+## Beta.1–19 版本索引
 
-| 版本 | 源码标签 | 已交付安装包 |
+| 版本 | 固定源码标签 | 下载与核验 |
 | --- | --- | --- |
-| Beta.14 | [`v1.0.37-beta.14`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.14) | [APK / 校验值 / 安装说明](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.14) |
-| Beta.15 | [`v1.0.37-beta.15`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.15) | [APK / 校验值 / 安装说明](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.15) |
-| Beta.16 | [`v1.0.37-beta.16`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.16) | [APK / 校验值 / 安装说明](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.16) |
-| Beta.17 | [`v1.0.37-beta.17`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.17) | [APK / 校验值 / 安装说明](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.17) |
+| Beta.1 | [`v1.0.37-beta.1`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.1) | [APK、源码包与核验记录](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.1) |
+| Beta.2 | [`v1.0.37-beta.2`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.2) | [APK、源码包与核验记录](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.2) |
+| Beta.3 | [`v1.0.37-beta.3`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.3) | [APK、源码包与核验记录](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.3) |
+| Beta.4 | [`v1.0.37-beta.4`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.4) | [APK、源码包与核验记录](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.4) |
+| Beta.5 | [`v1.0.37-beta.5`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.5) | [APK、源码包与核验记录](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.5) |
+| Beta.6 | [`v1.0.37-beta.6`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.6) | [APK、源码包与核验记录](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.6) |
+| Beta.7 | [`v1.0.37-beta.7`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.7) | [APK、源码包与核验记录](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.7) |
+| Beta.8 | [`v1.0.37-beta.8`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.8) | [APK、源码包与核验记录](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.8) |
+| Beta.9 | [`v1.0.37-beta.9`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.9) | [APK、源码包与核验记录](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.9) |
+| Beta.10 | [`v1.0.37-beta.10`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.10) | [APK、源码包与核验记录](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.10) |
+| Beta.11 | [`v1.0.37-beta.11`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.11) | [APK、源码包与核验记录](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.11) |
+| Beta.12 | [`v1.0.37-beta.12`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.12) | [APK、源码包与核验记录](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.12) |
+| Beta.13 | [`v1.0.37-beta.13`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.13) | [APK、源码包与核验记录](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.13) |
+| Beta.14 | [`v1.0.37-beta.14`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.14) | [APK、源码包与核验记录](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.14) |
+| Beta.15 | [`v1.0.37-beta.15`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.15) | [APK、源码包与核验记录](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.15) |
+| Beta.16 | [`v1.0.37-beta.16`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.16) | [APK、源码包与核验记录](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.16) |
+| Beta.17 | [`v1.0.37-beta.17`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.17) | [APK、源码包与核验记录](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.17) |
+| Beta.18 | [`v1.0.37-beta.18`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.18) | [APK、源码包与核验记录](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.18) |
+| Beta.19 | [`v1.0.37-beta.19`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.19) | [APK、源码包与核验记录](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.19) |
 
-## 快照来源
+Beta.14–17 延续原有 Release 附件；本轮为 Beta.1–13、18、19 补齐原始源码 ZIP、
+原始 APK、SHA-256、安装说明和归档验证元数据。GitHub 标签的源码下载另外包含
+版本来源说明等归档文档。
 
-- Beta.14：根据实施 Beta.15 前的完整模块备份还原；本轮 17 个修改文件与当时打包记录的 SHA-256 一致。
-- Beta.15：根据实施 Beta.16 前的 640 文件备份还原；备份清单逐项核验，本轮 35 个修改文件与打包记录一致。
-- Beta.16：保存当时工作目录的源码；该轮 29 个新增或修改文件与打包记录一致。
-- Beta.17：在 Beta.16 上正常提交的源码变更，保存当前完整源码；25 个源码、测试、依赖及构建文件与本版交付记录一致，19 个运行文件再次核对了打包时哈希。
+## 快照来源与历史关系
 
-Beta.14–16 的初始提交创建于归档时，不是补造过去的开发提交日期。备份未覆盖的未改动文件沿用解压项目，
-因此对历史快照的证明范围是备份和已有哈希记录，不宣称有原始历史 Git 提交或可逐字节复现 APK。
-Beta.13 及更早版本的独立 Git 快照将在另一台电脑的原始版本补齐后再归档；当前源码自然包含继承的旧功能。
+- **Beta.1–13**：从这台电脑原有交付目录找回每一版完整源码 ZIP 和 APK；原始交付
+  清单的文件大小、SHA-256 全部匹配。逐条读取并核验全部源码条目，归档时没有删减
+  原 ZIP 的源文件。Beta.1/2 ZIP 的 `mesting-md3-beta/` 外层目录在 Git 树中展开到根。
+  这十三个版本按顺序组成补档提交链，起点为原 Beta.1 清单记载的正式基线。
+  提交创建于本次归档，不伪造原开发日期。
+- **Beta.14–17**：保留现有提交、标签和 Release，未把新补的 Beta.13 插入旧历史、
+  未移动旧标签。原归档来源与证据范围完整保存在
+  [2026-10-26 记录](docs/version-archive/BETA14-17-ARCHIVE-2026-10-26.md)。
+- **Beta.18**：原冻结源码 ZIP 恢复为 Beta.17 的后继提交，新增归档来源与验证记录。
+  原 APK 和原源码 ZIP 保持原字节，不重编译、不重签。
+- **Beta.19**：当前完整工作区提交在 Beta.18 之后。保留交付时运行代码，补充跨电脑
+  文档、版本索引、Gradle wrapper、原始源码清单及验证摘要。APK 是已交付的冻结
+  Release；本次归档没有重新构建。`beta` 指向这一最新提交。
 
-`docs/version-archive/` 保存各版本源码的路径、字节数和 SHA-256，以及当次修改文件的原始清单。
-完整清单不包含该目录本身，避免自引用。各版本分别使用自己的构建脚本默认版本号。
-Beta.14–16 的 `pubspec.lock` SHA-256 为 `D836F76F4FD5179AFE2BC49089B496D202934759737FB9ECB37943D2B5FA9D57`。
-Beta.17 仅新增固定版本 WebView 及其三个平台依赖，未升级既有包，锁文件 SHA-256 为 `3F2DC18A71A59324ADF202E8EFE43E2F712B23A16E743B772AF0EC10748B4957`。
+`docs/version-archive/beta.N-source-manifest.json` 记录新补版本的原始源文件路径、
+字节数、SHA-256、原 ZIP 与 APK 哈希及证书。它描述冻结交付时的原始字节，
+Git 的文本换行规范化和新增归档文档不冒充原 ZIP 内容。Beta.14–17 的原有清单保持。
+APK 和 ZIP 通过 Release 附件分发，APK、源码 ZIP、构建缓存及私钥不进入 Git 对象。
 
-## 查看或继续某个版本
+## 另一台电脑接续
 
 ```powershell
-git clone --branch beta https://github.com/Mesting42/mesting-music-flutter.git Mesting-Music-beta17
-cd Mesting-Music-beta17
-git fetch origin --tags
-# 在旁边目录查看旧版，保留当前目录的开发状态。
-git worktree add ..\AnLi-beta14 v1.0.37-beta.14
-# 如需从旧版继续修改，在该目录创建新分支。
-git -C ..\AnLi-beta14 switch -c codex/continue-beta14
+git clone --branch beta https://github.com/Mesting42/mesting-music-flutter.git Mesting-Music-beta
+cd Mesting-Music-beta
+git status --short --branch
+git describe --tags --exact-match HEAD
 ```
 
-Git 标签用于恢复源码。安装旧 APK 还受 Android 的 versionCode 降级限制，不等同于直接覆盖升级。
-
-## 构建环境与签名
-
-交付使用 Flutter 3.41.9 / Dart 3.11.5、JDK 17、Android SDK 和 NDK `28.2.13676358`。
-配置本机 Flutter 和 Android SDK 后执行：
+本轮同步完成时应显示 `v1.0.37-beta.19`。若以后分支已前进，固定查看本版：
 
 ```powershell
-flutter pub get
-.\tool\build_android_md3_beta_apk.ps1 -VersionName '1.0.37-beta.17' -VersionCode 17
+git switch -c continue-beta19 v1.0.37-beta.19
 ```
 
-脚本支持 `-FlutterSdkRoot`，具体过程见脚本注释。四个版本保持包名 `com.mesting.music.beta`，
-构建时关闭线上更新检查。原来已构建的 APK 作为 Release 附件保存，APK 不进入 Git 源码对象。
+已有克隆应先检查未提交修改，再 `git fetch origin --tags`；工作区干净且位于 `beta`
+时使用 `git pull --ff-only origin beta`。保留另一台电脑旧工作目录，不强制覆盖。
+构建环境、原签名密钥和已知限制见 [接续入口](docs/CONTINUE-BETA.md)。
 
-这台电脑交付的四个 APK 使用同一本机调试签名证书，证书 SHA-256：
-`8CE2203AD821AD8D38576F9AE86350D98254AC05F2CB974E773C1973B22E0333`。
-签名私钥和 `local.properties` 不在仓库；在新电脑生成另一把调试密钥，不能保证覆盖现有安装。
-需继续覆盖安装时，另行安全转移原签名密钥。原电脑 Beta.13 的签名未知。
+## 签名与安装
 
-已交付 APK 的 SHA-256：
+本次重新验证了全部新补 APK 的 v2 签名、版本、包名、Release 非调试属性和双 ARM
+架构；保留原安装包字节，不为统一证书重签历史版本。
 
-- Beta.14: `361255B0F52D13EA8CE86987F9B37B6F05EF56F72123FA1091551932A8E137DF`
-- Beta.15: `8AA701E21D204B3DBEAC45A2B4A5E3906E315AF09C4B775570AD70ED39ED36DF`
-- Beta.16: `5CCB834B65DB51C1EEF68A2A7C2B392209126FBF79C02D1EDEBA1502CE0E611C`
-- Beta.17: `31624C0BDD4C3B9E1F94DFB15C195FD8E4DE4B14957D5BB7E4D3F91EE87D3566`
+- Beta.1–13 证书：`08C3774545B89E3A30F5D20F162A30D1B48C13C19205A5073AA945CB8360AD4F`。
+- Beta.14–19 证书：`8CE2203AD821AD8D38576F9AE86350D98254AC05F2CB974E773C1973B22E0333`。
 
-## 验证边界与依赖
+因此旧版 APK 是历史留档，不能仅凭相同包名保证跨这两个签名组覆盖安装；Android
+也限制 versionCode 降级。为查看旧源码使用标签即可，无需在日常手机卸载应用。
+后续给 Beta.19 做覆盖升级时，需通过私有方式转移 Beta.14–19 的原签名密钥。
+源码仓库和 Release 均不含私钥或密码。
 
-安装包旁的 `*-verification.json` 保存打包时的签名、架构、对齐等核验结果。
-修复记录中的自动化回归属于各版本交付时的结果；此次归档重新核对了源码与安装包哈希，未重编译旧 APK，
-未连接手机执行安装、耳机切换、桌面模糊或触感验收，也没有改动线上更新清单。
+## 本次验证边界
 
-第三方源码、二进制及许可证说明保留在 `third_party/`。
-`tiny_http` 的 `examples/ssl-key.pem` 与证书是公开 crate 0.12.0 自带的演示材料，
-与公开上游内容一致（仅本地换行为 CRLF），不是应用签名密钥或账号凭据。
-构建缓存、临时备份、旧源码 ZIP、真实凭据与签名私钥由 `.gitignore` 排除。
+Beta.19 的 287 项 Beta 主机回归通过，正式渠道 734 项通过、91 项跳过、3 项既有
+失败；静态分析无问题。本次 Git 归档未修改运行代码、未重跑历史测试或操作手机。
+已有真机性能/颜色证据、默认测试卸载事件和剩余限制见
+[Beta.19 修复记录](docs/fixes-2026-10-27-beta19.md)。用户后续自行测试，禁止据归档
+宣称稳定 120fps、CPU 问题完全解决、原数据完整保留或所有真实账号写入已验收。

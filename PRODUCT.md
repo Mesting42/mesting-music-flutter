@@ -24,11 +24,14 @@ Mesting 是一款 Flutter 音乐应用，帮助用户快速发现、播放和管
 
 ## Capabilities and Constraints
 
+- Beta.19 adds two original user-supplied static startup images, alongside both existing videos and the classic screen. One upgrade migration selects image one; subsequent user choices persist. The full image is fitted without cropping. Static startup has no artificial delay or decoder; optics/audio initialize concurrently before business pages mount. Formal startup behavior remains.
+- Beta.19 preserves all premium glass optics and capsule motion while reusing unchanged geometry and updating shader coordinates when an Android overscroll ImageFilter pass changes. Seven independent saved Shinchan weather choices are available beneath progress characters; offscreen and reduced-motion previews stop. Formal-only assets leave the Beta bundle and are checked in the actual APK.
+
 - 现有项目使用 Flutter。Android Beta 由 DistributionChannel.isBeta（appFlavor == beta）接入，包名 com.mesting.music.beta；正式 flavor 的页面、主题、定制推荐、导航和默认黑胶保持其原有契约。共享工具的改进按调用点生效，不构成全局渠道切换。
-- 装扮 → 启动页延续 Beta.12 的用户给定短片“音乐伙伴”“唱片派对”及珊瑚红/白色 M 经典页；新装及缺少偏好的升级默认第一段。选择写入成功才更新勾选，静态海报与独立预览操作分开，浏览/选择不自动播放。Beta.13 的选择行有局部圆角按压反馈，预览以 48dp 圆形独立 premium 玻璃按钮关闭。偏好与图标别名、主题、自定义背景视频、播放器样式及加密账号存储独立。短片主体按原比例完整显示，空余区域用同一个视频控制器的实时模糊纹理延展，状态栏与导航栏请求透明；这不证明设备上的系统栏或解码器表现。短片保留原声，每个冷进程只播放一次；依赖就绪且视频结束后才挂载业务应用与账号/播放恢复。后台暂停、回前台接续未完成片段，已完成不重播；有界初始化/停滞失败回退经典页，重试依赖不会重播短片。预览单独持有并释放控制器，不改变冷启动门控。
+- 装扮 → 启动页延续 Beta.12 的用户给定短片“音乐伙伴”“唱片派对”及珊瑚红/白色 M 经典页；Beta.19 首次升级默认静态图一，之后保留用户选择。选择写入成功才更新勾选，静态海报与独立预览操作分开，浏览/选择不自动播放。Beta.13 的选择行有局部圆角按压反馈，预览以 48dp 圆形独立 premium 玻璃按钮关闭。偏好与图标别名、主题、自定义背景视频、播放器样式及加密账号存储独立。短片主体按原比例完整显示，空余区域用同一个视频控制器的实时模糊纹理延展，状态栏与导航栏请求透明；这不证明设备上的系统栏或解码器表现。短片保留原声，每个冷进程只播放一次；依赖就绪且视频结束后才挂载业务应用与账号/播放恢复。后台暂停、回前台接续未完成片段，已完成不重播；有界初始化/停滞失败回退经典页，重试依赖不会重播短片。预览单独持有并释放控制器，不改变冷启动门控。
 - Beta.13 的 retainedSecureStorage 为 Mesting 与酷狗两个账号存储关闭 Android flutter_secure_storage 的 resetOnError；安装的 10.3.1 插件原本会在存储异常时调用 deleteAll。保留现有 namespace/cipher，避免原生读取异常触发插件级清库。SecurePlatformSessionStore 对暂态平台异常和空读最多读取三次（间隔 100/200ms），格式错误直接暴露且不删除该凭证；写入经原值回读后才发布登录成功。platformAccountProvider 关闭 Riverpod 自动 build 重试，使永久恢复错误能够结束为可见错误，用户可“重试恢复”或“重新登录”；后者保留旧加密内容，直到真实平台认证结果经串行 accept 保存并回读成功后替换。Mesting SessionStore 原有 JSON 无效时清理自身键的规则不在这项修正中改写。此处确认的是源码与软件回归边界，尚未由设备日志证明此前冷启动丢失登录态的具体触发原因。
 - 首次未完成进入且无恢复会话时显示欢迎页；Beta.13 为位于 Router 上方的欢迎 Navigator 注入 ChildBackButtonDispatcher 并取得优先级，登录/法规页面返回实际所属 Navigator，正文与不透明 surface 成对进退。Beta.18 确认每次新的交互式登录成功时，同帧显示并开放同一棵八页指南；登录成功 HUD 为 104×104dp 圆角方形，位于 SafeArea 内顶部 76dp、指南页头下方的上部中央，900ms 绘制标记、1800ms 后反向退出，仅自身绘制并忽略指针。反馈期间 Next/Skip/Back 继续操作同一个指南状态，延迟结束回调不能重置进度或完成后重开指南。原创 0.48 秒提示音仅随该交互成功事件调用一次，Android SoundPool 使用媒体音量、遵循静音/振动且不请求音乐焦点，不新建播放队列或音频服务 owner。恢复凭证、刷新 token 与重复扫码回调不触发成功流程。游客直接进入应用；指南“跳过”仅将当前页与第八页做局部淡变/微移，不经过中间页，仍需明确“开始使用”，设置可重看。退出仅真实成功后由上层协调器先覆盖欢迎页，再归位旧路由栈，返回不能重新进入退出前页面；等待时禁用重复操作，失败保留会话并允许重试。两类账号控制器和数据归属继续独立。
-- 欢迎页优先手机号和微信扫码，其他方式提供酷狗/QQ 扫码；Mesting 账号登录/注册明确标为“暂不可用”并禁用 Beta 新入口，已有会话与数据保留。手机号页只承载手机号验证码，所选扫码通过 initialMethod 进入独立方式页；我的与设置使用同一个 BetaAccountCard，游客及受保护操作通过 openBetaLogin 进入欢迎页。协议小圆形状态与文字/链接整组居中、同基线，链接可独立访问，小屏和大字允许换行。
+- 欢迎页优先手机号和微信扫码，其他方式提供酷狗/QQ 扫码；Beta.19 移除 Mesting 账号登录/注册入口，旧密码恢复路径转回平台账号入口；已有会话与数据保留，正式版功能保留。手机号页只承载手机号验证码，所选扫码通过 initialMethod 进入独立方式页；我的与设置使用同一个 BetaAccountCard，游客及受保护操作通过 openBetaLogin 进入欢迎页。协议小圆形状态与文字/链接整组居中、同基线，链接可独立访问，小屏和大字允许换行。
 - 手机号表单沿用 Beta.11 经确认的 Raycast 简洁布局和窄屏大字六位验证码布局；_InlineCodeField 仅负责测量，框内右侧操作与字段为独立兄弟 premium 层，TextScaler 与业务状态仍由原框架/页面持有。Beta.13 常驻 +86 前缀，手机号方式显示手机图标；验证码按钮只在发码请求时显示 spinner，蓝色玻璃登录按钮只在登录请求时显示 spinner，共享 busy 仍禁止重复请求。发码平台成功后才显示“验证码已发送”成功 HUD 并进入 60 秒倒计时，失败如实保留原因。历史 Beta.11 的 responsive-code-tests.log 2/2、approved 原图与 R1 resolved 仅属于该版冻结实现。发送先注册设备，单次操作仅发送一次；原生 captcha_options 保留 KUGOU_API_MID/dfid 签名上下文、删除账号凭证，平台 status=1 才倒计时，20015 仍是业务拒绝；这些客户端/原生行为不证明真实短信送达。
 - 用户确认所有登录类页面移除“开源许可与致谢”；共享 showLicensePage 入口位于 Beta 设置的应用分组（settings-open-source），协议/隐私同意入口继续按其真实用途呈现。原先源码没有独立设置许可入口，本轮将其移入设置；settings-capture-final.log 1 通过，fixture 改为真实 /music/settings，正确截图为 settings-final.png。
 - 八页指南根据实际发现/搜索、歌词、灰条收起与底部操作、账号适用的推荐/收藏、手动队列优先与续播/历史、外观、五种播放器、开始使用组织；不承诺桌面歌词、Zen 或 AI 等未实现能力。五张动态预览共用真实 playerVisualStyleProvider，选择会保存到装扮/播放器相同偏好；外观模式也读取真实主题偏好。演示不发起播放、云写入或第二个音频 owner。
@@ -46,7 +49,7 @@ Mesting 是一款 Flutter 音乐应用，帮助用户快速发现、播放和管
 - 五类按需加载并分别保留页码、数据、错误/重试与滚动位置，不同时预取所有分类；查询或账号变化使旧代次失效。底部目的地导航结束搜索，清空输入、结果、类别及本次 PageStorageBucket，下次相同词也从顶部和歌曲类别开始，真实搜索历史保留；播放器/详情等临时页面仅暂存，返回恢复原词、类别与位置。结果组件本地 bucket 随搜索首页替换结果而销毁；类别切换和临时路由仍在同次会话中。
 - cover、classic、aurora、cassette、lyricStage 五种样式保留各自上半区形象和动态，共用同一播放进度、裸白色 transport、Android 系统媒体音量及评论/音质/当前队列。封面与歌词模式都保留这些控件；播放器不建立另一套队列或音频服务。
 - 系统音量通过 Android STREAM_MUSIC 原生桥读写/事件同步，无宿主禁用。Beta.8 提供 48dp 高响应区和即时拖动反馈，原生写入串行保留最新值，抑制重复状态、事件和相同步进。进度与音量各自提供中文名称、时长/百分比和可调节语义；硬件键和 TalkBack 仍待真机。
-- Beta 装扮移除品牌选择器、重复皮肤说明/经典卡片、DRESS UP 和 followTheme 选项，图标继续固定 coral；启动页从 Beta.12 起独立选择两段给定短片或经典页。保留浅/深/系统、自定义图片/视频、显式 IP 进度配色/角色。Beta.8 再移除 IP 装饰开关，替代 Beta.6/Beta.7 的开关保留说明。Beta.7 残留 followTheme 转 classic，已转换显式 IP 保留；背景强度 .58、性能 automatic、完整 IP 主题退役继续适用，这些背景偏好不降低指定玻璃的 premium/full 光学质量。
+- Beta 装扮移除品牌选择器、重复皮肤说明/经典卡片、DRESS UP 和 followTheme 选项，图标继续固定 coral；启动页在 Beta.19 独立选择两张给定静态图、两段给定短片或经典页，首次升级默认静态图一一次。保留浅/深/系统、自定义图片/视频、显式 IP 进度配色/角色。Beta.8 再移除 IP 装饰开关，替代 Beta.6/Beta.7 的开关保留说明。Beta.7 残留 followTheme 转 classic，已转换显式 IP 保留；背景强度 .58、性能 automatic、完整 IP 主题退役继续适用，这些背景偏好不降低指定玻璃的 premium/full 光学质量。
 - 轻量反馈使用一个可替换的顶部安全区半透明 HUD。普通提示仅保留短标题和图标，错误/警告保留可行动信息；通知不可覆盖真实业务结果。
 - 不把 Material 3 默认色阶、默认按钮外观或默认卡片外观作为最终品牌表达。
 - Beta.9 建立的单一惰性 Apple 歌曲结果列表继续用于当前歌曲类别，歌曲计数只显示“共 N 首”；歌曲列表按滚动指标自动分页，失败才显示重试，保留服务端顺序、收藏与更多。紧凑热搜保留分榜/排名/换页。Beta.12 的内嵌搜索以真实嵌套 LocalHistoryEntry 向所属 Navigator 暴露“搜索结果→搜索首页→来源页”，与左右 32dp BetaEdgeBack、PopScope、BackButtonListener 共同遵循先清查询再关闭搜索的顺序。临时详情返回仍恢复原词/类别/位置，目的地切换结束会话。MusicShell 持有来源 tab 与滚动位置，BetaMusicShell 在播放器/设置后方保持挂载；真实 Android 系统边缘/预测返回仍待设备验证。
@@ -124,3 +127,9 @@ Mesting 是一款 Flutter 音乐应用，帮助用户快速发现、播放和管
 - 浅色和深色模式都保持正文、次级文字、分隔线和焦点状态的可读对比度。
 - 图标不能成为唯一信息来源，重要操作需要清晰文字或语义标签。
 - 播放进度与系统媒体音量必须有各自的名称、可理解值和可调节动作；widget 测试通过不等于 TalkBack 设备验收。
+
+### Beta.19 device validation and delivery
+
+- 签到页三个玻璃操作保持白底黑字，滚动回弹仍保留；在离屏合成内补齐真实同色页面底层。蓝色手机登录/触感按钮继续保持蓝底白字。
+- 真机性能采用隔离身份的受控首页/胶囊场景；普通 Beta 安装与启动另验。不得把主机软件图、后台被入口覆盖的页面或未完成开合的测量作为设备优化结论。
+- 本次早期 Flutter drive 使用默认结束清理，发生了日常 Beta 卸载，原登录态/本机数据保留未通过认证；已向用户说明。后续改为隔离包并强制 keep-app-running，工具校验包名后才运行。当前交付、数字及限制见 docs/fixes-2026-10-27-beta19.md。

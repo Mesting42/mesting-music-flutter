@@ -4,4 +4,6 @@
 
 编码时写好必要注释，尽可能解耦设计，便于其他人员接手代码时快速上手。
 
-接续 Beta.17 开发前，先阅读 [接续指南](docs/SESSION-HANDOFF-2026-10-26-BETA17.md)、[本版修改记录](docs/fixes-2026-10-26-beta17.md) 和 [版本归档](BETA_ARCHIVE.md)，并核对当前 Git 状态。
+接续当前 Beta 开发前，先阅读 [接续入口](docs/CONTINUE-BETA.md)、[Beta.19 修改记录](docs/fixes-2026-10-27-beta19.md) 和 [版本归档](BETA_ARCHIVE.md)，并核对当前 Git 分支、标签与工作区。旧版本记录各自对应冻结构建，不把旧方案当成新的待办。
+
+用户已要求后续自行真机测试并断开手机；没有新的明确授权时，不访问或操作其手机。原生性能测试只使用隔离的 `.beta.benchmark` 包，并强制 `--keep-app-running`，不得对日常安装执行默认 `flutter drive`。

@@ -135,6 +135,14 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
       if (node is RenderBackdropFilter) {
         // Flutter's BackdropFilter opens a pass scoped to its own logical size.
         local = Offset.zero & node.size;
+      } else if (node is RenderBox && node.isRepaintBoundary &&
+          node.layer is ImageFilterLayer) {
+        // Android's Material 3 overscroll uses ImageFiltered, whose private
+        // render object is not a RenderBackdropFilter. While active it creates
+        // a viewport-sized offscreen pass, so nested glass must use that pass's
+        // origin/size too. Inspect the public layer type rather than relying on
+        // a private framework class name. Disabled filters are not boundaries.
+        local = node.paintBounds;
       } else if (node is RenderLiquidGlass) {
         passedThroughGlassShape = true;
       } else if (node is LiquidGlassRenderObject) {
@@ -337,9 +345,15 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
   }
 
   @override
-  void layout(Constraints constraints, {bool parentUsesSize = false}) {
-    needsGeometryUpdate = true;
-    super.layout(constraints, parentUsesSize: parentUsesSize);
+  void performLayout() {
+    final previousSize = hasSize ? size : null;
+    super.performLayout();
+    // A parent can call layout with identical constraints on every spring or
+    // scroll tick. RenderObject.layout then takes its normal cached fast path;
+    // invalidating before that call needlessly rasterized/uploaded a new matte.
+    // Shape/style/relative-transform changes still invalidate through the link
+    // and _sameTransformsAsMatte, independently of this layer's own box size.
+    if (previousSize != size) needsGeometryUpdate = true;
   }
 
   ui.Rect _paintBounds = ui.Rect.zero;

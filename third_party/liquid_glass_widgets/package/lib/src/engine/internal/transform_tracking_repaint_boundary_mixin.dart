@@ -114,13 +114,18 @@ class GeometryTransformTrackingLayer extends OffsetLayer {
     } catch (_) {
       return;
     }
+    // An ancestor ImageFiltered can enter/leave an offscreen pass (Android
+    // overscroll) without changing the render transform at all. Give retained
+    // glass a chance to update that pass's uniforms on every composition. The
+    // callback's own transform/pass cache makes unchanged frames a no-op.
+    final compositeUpdated = updateAtComposite?.call() ?? false;
     if (!MatrixUtils.matrixEquals(currentTransform, _lastTransform)) {
       // Don't trigger onTransformChanged on the very first frame (when _lastTransform is null).
       // The render object just painted itself, so it is already up to date. Triggering it
       // here would needlessly dirty the render tree and force a second frame to render.
       // After that, a moved render object first tries to update its last paint for this
       // frame (updateAtComposite); only when it can't is a repaint scheduled.
-      if (_lastTransform != null && !(updateAtComposite?.call() ?? false)) {
+      if (_lastTransform != null && !compositeUpdated) {
         _notifyTransformChanged();
       }
       _lastTransform = currentTransform;

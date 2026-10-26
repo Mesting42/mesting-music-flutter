@@ -9,6 +9,7 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'app/branded_launch_screen.dart';
 import 'app/mesting_music_app.dart';
 import 'app/startup_video_surface.dart';
+import 'app/startup_image_surface.dart';
 import 'core/audio/mesting_audio_handler.dart';
 import 'core/audio/playback_providers.dart';
 import 'core/platform/distribution_channel.dart';
@@ -17,6 +18,7 @@ import 'core/database/app_database.dart';
 import 'core/persistence/app_preferences.dart';
 import 'core/persistence/playback_persistence_controller.dart';
 import 'core/performance/frame_timing_probe.dart';
+import 'core/performance/startup_timing_probe.dart';
 import 'features/library/library_providers.dart';
 import 'features/themes/app_brand_style.dart';
 import 'features/themes/theme_controller.dart';
@@ -25,11 +27,12 @@ import 'shared/models/track.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  if (DistributionChannel.isBeta) await LiquidGlassWidgets.initialize();
+  StartupTimingProbe.start();
   if (DistributionChannel.isBeta) PlatformCredits.register();
   final preferences = await SharedPreferences.getInstance();
   await migrateBeta7Appearance(preferences);
   await migrateBeta6Appearance(preferences);
+  await migrateBeta19StartupStyle(preferences);
   final currentBrand = await AppBrandStyleBridge.current();
   if (DistributionChannel.isBeta && currentBrand != AppBrandStyle.coral) {
     await AppBrandStyleBridge.select(AppBrandStyle.coral);
@@ -79,20 +82,32 @@ class _MestingBootstrapState extends State<_MestingBootstrap> {
   void initState() {
     super.initState();
     _startupStyle = savedStartupStyle(widget.preferences);
-    _startupFinished =
-        !DistributionChannel.isBeta || _startupStyle == StartupStyle.classic;
+    _startupFinished = !DistributionChannel.isBeta || !_startupStyle.isVideo;
     _dependencies = _initializeDependencies();
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => StartupTimingProbe.mark('startup_frame'),
+    );
   }
 
   Future<_MestingDependencies> _initializeDependencies() async {
     final stopwatch = Stopwatch()..start();
     final database = AppDatabase();
     try {
-      await widget.preferences.setString(
-        appBrandStylePreferenceKey,
-        widget.brandStyle.id,
-      );
-      final audioHandler = await AudioService.init<MestingAudioHandler>(
+      // Show the inexpensive startup surface first. Optics and native audio
+      // initialize concurrently, and both must finish before the real app mounts.
+      final visualReady = DistributionChannel.isBeta
+          ? LiquidGlassWidgets.initialize()
+          : Future<void>.value();
+      final brandReady =
+          !DistributionChannel.isBeta ||
+              widget.preferences.getString(appBrandStylePreferenceKey) !=
+                  widget.brandStyle.id
+          ? widget.preferences.setString(
+              appBrandStylePreferenceKey,
+              widget.brandStyle.id,
+            )
+          : Future<bool>.value(true);
+      final audioReady = AudioService.init<MestingAudioHandler>(
         builder: () => MestingAudioHandler(tracks: const <Track>[]),
         config: AudioServiceConfig(
           androidNotificationChannelId: 'com.mesting.music.playback',
@@ -103,11 +118,19 @@ class _MestingBootstrapState extends State<_MestingBootstrap> {
           androidStopForegroundOnPause: false,
         ),
       );
+      final initialized = await Future.wait<dynamic>([
+        audioReady,
+        visualReady,
+        brandReady,
+      ]);
+      final audioHandler = initialized.first as MestingAudioHandler;
       final playbackPersistence = PlaybackPersistenceController(
         database: database,
         audioHandler: audioHandler,
       );
-      const minimumLaunchDuration = Duration(milliseconds: 720);
+      final minimumLaunchDuration = DistributionChannel.isBeta
+          ? Duration.zero
+          : Duration(milliseconds: 720);
       final remaining = minimumLaunchDuration - stopwatch.elapsed;
       if (remaining > Duration.zero) {
         await Future<void>.delayed(remaining);
@@ -118,6 +141,7 @@ class _MestingBootstrapState extends State<_MestingBootstrap> {
         audioHandler: audioHandler,
         playbackPersistence: playbackPersistence,
       );
+      StartupTimingProbe.mark('dependencies_ready');
 
       // Start persistence after the real app has rendered its first frame.
       // Account restoration in MestingMusicApp selects the isolated snapshot.
@@ -150,9 +174,17 @@ class _MestingBootstrapState extends State<_MestingBootstrap> {
         if (dependencies == null || !_startupFinished) {
           child =
               DistributionChannel.isBeta &&
-                  _startupStyle != StartupStyle.classic &&
-                  !_videoAborted &&
+                  _startupStyle.staticImage &&
                   !snapshot.hasError
+              ? MaterialApp(
+                  key: const ValueKey('startup-image-app'),
+                  debugShowCheckedModeBanner: false,
+                  home: StartupImageSurface(style: _startupStyle),
+                )
+              : DistributionChannel.isBeta &&
+                    _startupStyle.isVideo &&
+                    !_videoAborted &&
+                    !snapshot.hasError
               ? MaterialApp(
                   key: const ValueKey('startup-video-app'),
                   debugShowCheckedModeBanner: false,
@@ -179,6 +211,7 @@ class _MestingBootstrapState extends State<_MestingBootstrap> {
             // Only the real app's first frame starts persistence/restoration.
             // In particular the startup film cannot race a restored track.
             WidgetsBinding.instance.addPostFrameCallback((_) {
+              StartupTimingProbe.mark('bootstrap_app_frame');
               dependencies.playbackPersistence.start();
             });
           }

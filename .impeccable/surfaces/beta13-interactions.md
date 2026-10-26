@@ -89,3 +89,7 @@ shader/原创音频内容核验见 PRODUCT.md 与该版 release-verification/art
 混音/焦点、真实短信/账号/评论服务验收。源码确认的存储防护、系统栏请求和 SoundPool
 行为各有其边界，不能据此宣称设备冷启动根因、GPU 光学、声音或线上结果已验证。
 减少动画按各组件分支处理；部分固定计时和局部时钟仍存在，不宣称全应用时钟停用。
+
+## Beta.19 refinement and native evidence
+
+Preserve the existing glass/brand world. Neutral calendar actions remain white with dark text through drag/release/overscroll; their real page surface is painted inside the scroll filter. All shared action press states cancel when scroll wins. Blue controls keep their material. Startup adds the exact two provided PNGs, contains the complete artwork, defaults/migrates to image one once, and has no fixed static delay. Seven saved Shinchan weather variants are independent role options. Native QA uses an isolated benchmark identity with keep-app-running; see docs/fixes-2026-10-27-beta19.md for measurements, the early cleanup incident and verification limits.

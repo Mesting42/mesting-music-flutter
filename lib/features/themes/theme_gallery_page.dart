@@ -11,6 +11,7 @@ import '../../shared/widgets/liquid_glass_sheet.dart';
 import '../../core/platform/distribution_channel.dart';
 import '../player/presentation/player_visual_stages.dart';
 import '../player/presentation/vinyl_disc.dart';
+import '../player/presentation/shinchan_progress_walker.dart';
 import '../player/player_visual_style.dart';
 import 'app_brand_style.dart';
 import 'beta_appearance.dart';
@@ -33,19 +34,22 @@ Future<void> _warmUpDressUpAssets(BuildContext context) async {
       AssetImage('assets/branding/mesting-mark-master.png'),
       width: 256,
     ),
-    const ResizeImage(
-      AssetImage('assets/branding/dress-morning-icon-v2.png'),
-      width: 320,
-    ),
-    const ResizeImage(
-      AssetImage('assets/branding/dress-midnight-icon-v2.png'),
-      width: 320,
-    ),
+    if (!DistributionChannel.isBeta)
+      const ResizeImage(
+        AssetImage('assets/branding/dress-morning-icon-v2.png'),
+        width: 320,
+      ),
+    if (!DistributionChannel.isBeta)
+      const ResizeImage(
+        AssetImage('assets/branding/dress-midnight-icon-v2.png'),
+        width: 320,
+      ),
     const ResizeImage(
       AssetImage('assets/images/player/netease-style-tonearm.png'),
       width: 192,
     ),
-    const AssetImage('assets/images/theme_playlists/shinchan/cover-01.jpg'),
+    if (!DistributionChannel.isBeta)
+      const AssetImage('assets/images/theme_playlists/shinchan/cover-01.jpg'),
   ];
   await Future.wait(
     images.map((image) async {
@@ -360,6 +364,16 @@ class _ThemeSettingsPanelState extends ConsumerState<_ThemeSettingsPanel> {
                             .read(themeVisualSettingsProvider.notifier)
                             .setProgressCharacter(value),
                       ),
+                      if (DistributionChannel.isBeta &&
+                          visual.progressCharacter ==
+                              ProgressDecoration.shinchan) ...[
+                        const SizedBox(height: 18),
+                        _ShinchanWeatherPicker(
+                          selected:
+                              visual.shinchanWeather ??
+                              shinchanWeatherForPreset(effectiveTheme.id),
+                        ),
+                      ],
                       const SizedBox(height: 22),
                       if (!DistributionChannel.isBeta)
                         _VisualControls(
@@ -1670,6 +1684,73 @@ class _DecorationPicker extends StatelessWidget {
       },
     );
   }
+}
+
+/// Only the selected weather animates. Choices are static, so opening settings
+/// does not start seven independent character/weather tickers.
+class _ShinchanWeatherPicker extends ConsumerWidget {
+  const _ShinchanWeatherPicker({required this.selected});
+  final ShinchanProgressWeather selected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        '小新天气',
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+      ),
+      const SizedBox(height: 5),
+      Text(
+        '手动选择，重启后保留。',
+        style: TextStyle(
+          fontSize: 13,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+      const SizedBox(height: 10),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final weather in ShinchanProgressWeather.values)
+            ChoiceChip(
+              key: ValueKey('shinchan-weather-${weather.name}'),
+              label: Text(weather.label),
+              selected: weather == selected,
+              onSelected: (_) async {
+                try {
+                  await ref
+                      .read(themeVisualSettingsProvider.notifier)
+                      .setShinchanWeather(weather);
+                } on Object {
+                  if (context.mounted) {
+                    showMusicNotice(
+                      context,
+                      icon: Icons.error_outline_rounded,
+                      title: '天气未保存',
+                      message: '请稍后重试',
+                    );
+                  }
+                }
+              },
+            ),
+        ],
+      ),
+      const SizedBox(height: 12),
+      Center(
+        child: RepaintBoundary(
+          child: ShinchanProgressWalker(
+            key: const ValueKey('shinchan-weather-preview'),
+            presetId: 'classic',
+            weather: selected,
+            playing: true,
+            width: 104,
+          ),
+        ),
+      ),
+    ],
+  );
 }
 
 class _DecorationChoice extends StatelessWidget {

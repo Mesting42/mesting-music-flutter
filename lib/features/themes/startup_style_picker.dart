@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/branded_launch_screen.dart';
 import '../../app/startup_video_surface.dart';
+import '../../app/startup_image_surface.dart';
 import '../../shared/widgets/beta_glass_controls.dart';
 import '../../shared/widgets/music_notice.dart';
 import '../../shared/widgets/beta_press_surface.dart';
@@ -77,6 +78,8 @@ class _StartupStylePickerState extends ConsumerState<StartupStylePicker> {
                   Positioned.fill(
                     child: style == StartupStyle.classic
                         ? const MestingBrandedLaunchScreen(forceCoral: true)
+                        : style.staticImage
+                        ? StartupImageSurface(style: style)
                         : StartupVideoSurface(style: style, onFinished: () {}),
                   ),
                   Positioned(
@@ -143,7 +146,7 @@ class _StartupStylePickerState extends ConsumerState<StartupStylePicker> {
                             const SizedBox(width: 14),
                             Expanded(
                               child: Text(
-                                style == StartupStyle.companionsOne
+                                style == StartupStyle.staticOne
                                     ? '${style.label}（默认）'
                                     : style.label,
                                 style: const TextStyle(

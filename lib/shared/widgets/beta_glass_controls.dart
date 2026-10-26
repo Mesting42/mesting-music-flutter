@@ -62,10 +62,11 @@ class BetaGlassButton extends StatelessWidget {
             useOwnLayer: true,
             quality: GlassQuality.premium,
             stretch: .12,
-            // A scrolling ListView must cancel a blue button's press sheen.
-            // The library's default raw-pointer mode keeps its white ambient
-            // lift for the whole drag, washing white labels out while scrolling.
-            persistPressOnDrag: !blue,
+            // A ListView winning the gesture must cancel every button's press
+            // sheen. Raw-pointer tracking would leave neutral glass darkened
+            // (and blue glass washed out) for the remainder of a page drag.
+            // Tap/keyboard inflation, refraction and highlight remain intact.
+            persistPressOnDrag: false,
             ambientBaseLight: blue ? .06 : null,
             glowColor: blue ? const Color(0xFF6CA7FF) : null,
             glowOpacity: blue ? .12 : null,

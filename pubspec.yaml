@@ -114,16 +114,99 @@ flutter:
     - assets/branding/mesting-launch-lockup-master.png
     - assets/branding/startup/
     - assets/web/verify_captcha.html
-    - assets/branding/dress-morning-icon-v2.png
-    - assets/branding/dress-morning-launch.webp
-    - assets/branding/dress-midnight-icon-v2.png
-    - assets/branding/dress-midnight-launch-v2.webp
+    # Retired Beta skin/brand images remain available to formal distributions.
+    # Explicit progress assets below prevent an entire gallery entering Beta.
+    - path: assets/branding/dress-morning-icon-v2.png
+      flavors: [stable, javaMysqlTest]
+    - path: assets/branding/dress-morning-launch.webp
+      flavors: [stable, javaMysqlTest]
+    - path: assets/branding/dress-midnight-icon-v2.png
+      flavors: [stable, javaMysqlTest]
+    - path: assets/branding/dress-midnight-launch-v2.webp
+      flavors: [stable, javaMysqlTest]
     - assets/images/playlists/
     - assets/images/player/netease-style-tonearm.png
-    - assets/images/theme_gallery/
-    - assets/images/theme_playlists/shinchan/
-    - assets/images/theme_playlists/hello_kitty/
-    - assets/images/theme_playlists/kuromi/
+    - path: assets/images/theme_gallery/hello-kitty-angel.png
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_gallery/hello-kitty-friends.png
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_gallery/hello-kitty-main.png
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_gallery/kitty-carousel-mobile.webp
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_gallery/kitty-carousel-sunrise.webp
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_gallery/kitty-ribbon-cinema.webp
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_gallery/kitty-sakura-letter.webp
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_gallery/kitty-strawberry-patisserie.webp
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_gallery/kuromi-arcade-noir.webp
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_gallery/kuromi-main.png
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_gallery/kuromi-melody.png
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_gallery/kuromi-midnight-stage.webp
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_gallery/kuromi-sticker-storm.webp
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_gallery/kuromi-vinyl-night.webp
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_gallery/kuromi-violet-library.webp
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_gallery/motion-parade-shinchan-scene.webp
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_gallery/motion-rain-shinchan-scene.webp
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_gallery/motion-walk-shinchan-scene.webp
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_playlists/shinchan/cover-02.jpg
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_playlists/shinchan/cover-03.jpg
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_playlists/shinchan/cover-04.jpg
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_playlists/shinchan/cover-05.jpg
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_playlists/shinchan/cover-06.jpg
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_playlists/shinchan/cover-07.jpg
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_playlists/shinchan/cover-08.jpg
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_playlists/shinchan/cover-09.jpg
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_playlists/shinchan/cover-10.jpg
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_playlists/shinchan/cover-11.jpg
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_playlists/shinchan/cover-12.jpg
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_playlists/shinchan/cover-13.jpg
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_playlists/shinchan/cover-14.jpg
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_playlists/shinchan/cover-15.jpg
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_playlists/shinchan/cover-16.jpg
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_playlists/hello_kitty/
+      flavors: [stable, javaMysqlTest]
+    - path: assets/images/theme_playlists/kuromi/
+      flavors: [stable, javaMysqlTest]
+    - assets/images/theme_gallery/shinchan-avatar-v2.png
+    - assets/images/theme_gallery/progress-shinchan-walk-stride.png
+    - assets/images/theme_gallery/progress-shinchan-walk-mid.png
+    - assets/images/theme_gallery/progress-shinchan-walk-pass.png
+    - assets/images/theme_gallery/progress-shiro-walk-stride.png
+    - assets/images/theme_gallery/progress-shiro-walk-mid.png
+    - assets/images/theme_gallery/progress-shiro-walk-pass.png
+    - assets/images/theme_gallery/hello-kitty-progress-head.png
+    - assets/images/theme_gallery/kuromi-progress-head.png
+    # The existing classic-turntable preview still uses this single cover.
+    - assets/images/theme_playlists/shinchan/cover-01.jpg
 
   # To add assets to your application, add an assets section, like this:
   # assets:

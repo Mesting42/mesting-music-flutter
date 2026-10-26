@@ -351,6 +351,17 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/auth/recover',
+      // Retired Beta account recovery links return to the available platform
+      // login flow. The formal channel keeps its original recovery route.
+      redirect: (context, state) => DistributionChannel.isBeta
+          ? Uri(
+              path: '/auth',
+              queryParameters: {
+                'mode': 'login',
+                'redirect': state.uri.queryParameters['redirect'] ?? '/profile',
+              },
+            ).toString()
+          : null,
       builder: (context, state) => SensitiveScreen(
         child: ForgotPasswordPage(
           redirect: state.uri.queryParameters['redirect'] ?? '/music/recommend',

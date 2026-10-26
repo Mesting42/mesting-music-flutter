@@ -1,7 +1,7 @@
 param(
-    [string]$VersionName = '1.0.37-beta.18',
-    [ValidateRange(1, 2147483647)][int]$VersionCode = 18,
-    [ValidateSet('debug', 'release')][string]$Mode = 'release',
+    [string]$VersionName = '1.0.37-beta.19',
+    [ValidateRange(1, 2147483647)][int]$VersionCode = 19,
+    [ValidateSet('debug', 'profile', 'release')][string]$Mode = 'release',
     [string]$TargetPlatform = 'android-arm,android-arm64',
     [string]$FlutterSdkRoot = $env:MESTING_BETA_FLUTTER_ROOT
 )
@@ -29,6 +29,8 @@ try {
     # Release registrant even though Gradle excludes that development plugin.
     # Let Flutter generate the correct registrant, but reject dependency drift.
     $lockBefore = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $appRoot 'pubspec.lock')).Hash
+    . (Join-Path $PSScriptRoot 'beta_asset_bundle.ps1')
+    Clear-BetaAssetStaging -AppRoot $appRoot -Mode $Mode
     & $flutterCommand build apk "--$Mode" --flavor beta `
         "--target-platform=$TargetPlatform" `
         "--build-name=$VersionName" "--build-number=$VersionCode" `
@@ -40,6 +42,7 @@ try {
     if ($lockAfter -ne $lockBefore) { throw 'Dependency lock changed during the build; review it before packaging.' }
     $source = Join-Path $appRoot "build\app\outputs\flutter-apk\app-beta-$Mode.apk"
     if (!(Test-Path -LiteralPath $source -PathType Leaf)) { throw "Missing APK: $source" }
+    Assert-BetaAssetExclusions -AppRoot $appRoot -Apk $source
     Write-Output "Beta APK: $source"
     Get-FileHash -Algorithm SHA256 -LiteralPath $source | Format-List
 } finally {

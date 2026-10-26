@@ -8,6 +8,7 @@ import 'package:video_player_platform_interface/video_player_platform_interface.
 import 'package:mesting_music/app/startup_video_surface.dart';
 import 'package:mesting_music/core/persistence/app_preferences.dart';
 import 'package:mesting_music/features/themes/startup_style.dart';
+import 'package:mesting_music/core/platform/distribution_channel.dart';
 
 class _Video extends VideoPlayerPlatform {
   final events = StreamController<VideoEvent>.broadcast();
@@ -77,13 +78,18 @@ class _Video extends VideoPlayerPlatform {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   test(
-    'selection defaults to first film, persists independently and survives a new container',
+    'channel default persists independently and survives a new container',
     () async {
       SharedPreferences.setMockInitialValues({
         'music_app_brand_style': 'coral',
       });
       final prefs = await SharedPreferences.getInstance();
-      expect(savedStartupStyle(prefs), StartupStyle.companionsOne);
+      expect(
+        savedStartupStyle(prefs),
+        DistributionChannel.isBeta
+            ? StartupStyle.staticOne
+            : StartupStyle.companionsOne,
+      );
       final container = ProviderContainer(
         overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
       );

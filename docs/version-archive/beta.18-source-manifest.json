@@ -5050,6 +5050,5 @@
       "bytes": 828,
       "sha256": "89203A7968D83CD8DF4B0FF45524E5DF0C5BBE1186FAF2676A36D4D60DF8F674"
     }
-  ],
-  "gitTextNormalization": "Git may normalize CRLF for text; file hashes above and the original ZIP hash describe original delivery bytes. Runtime source content is retained."
+  ]
 }

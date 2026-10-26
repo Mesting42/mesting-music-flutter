@@ -183,7 +183,7 @@ void main() {
         await tester.tap(find.text('其他登录方式'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 400));
-        expect(find.text('Mesting 账号登录 / 注册 · 暂不可用'), findsOneWidget);
+        expect(find.textContaining('Mesting 账号登录'), findsNothing);
         expect(find.text('酷狗扫码登录'), findsOneWidget);
         expect(find.text('QQ 扫码登录'), findsOneWidget);
         await capture(tester, 'other-logins-${dark ? 'dark' : 'light'}');
