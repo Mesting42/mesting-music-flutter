@@ -66,6 +66,9 @@ dependencies:
   # Beta.5 chrome uses the upstream shader renderer; keep the version pinned
   # so an unrelated dependency resolution cannot change the visual material.
   liquid_glass_widgets: 1.15.0
+  # md3Music's security verification uses the official Tencent challenge page.
+  # Pin its Flutter-team WebView adapter; do not emulate a successful challenge.
+  webview_flutter: 4.10.0
 
 dev_dependencies:
   flutter_test:
@@ -110,6 +113,7 @@ flutter:
     - assets/branding/mesting-app-icon.png
     - assets/branding/mesting-launch-lockup-master.png
     - assets/branding/startup/
+    - assets/web/verify_captcha.html
     - assets/branding/dress-morning-icon-v2.png
     - assets/branding/dress-morning-launch.webp
     - assets/branding/dress-midnight-icon-v2.png

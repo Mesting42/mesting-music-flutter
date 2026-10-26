@@ -21,19 +21,17 @@ class BetaGlassMenuSurface extends StatelessWidget {
   final double radius;
   final double visibility;
   @override
-  Widget build(BuildContext context) => RepaintBoundary(
-    child: GlassContainer(
-      key: const ValueKey('beta13-glass-menu-surface'),
-      quality: GlassQuality.premium,
-      useOwnLayer: true,
-      settings: betaMusicPillGlass(context).copyWith(
-        blur: betaMusicPillGlass(context).blur + 2,
-        visibility: visibility,
-      ),
-      shape: LiquidRoundedRectangle(borderRadius: radius),
-      clipBehavior: Clip.hardEdge,
-      child: Material(type: MaterialType.transparency, child: child),
+  Widget build(BuildContext context) => GlassContainer(
+    key: const ValueKey('beta13-glass-menu-surface'),
+    quality: GlassQuality.premium,
+    useOwnLayer: true,
+    settings: betaMusicPillGlass(context).copyWith(
+      blur: betaMusicPillGlass(context).blur + 2,
+      visibility: visibility,
     ),
+    shape: LiquidRoundedRectangle(borderRadius: radius),
+    clipBehavior: Clip.hardEdge,
+    child: Material(type: MaterialType.transparency, child: child),
   );
 }
 
@@ -100,29 +98,30 @@ class _BetaGlassMenuTransitionState extends State<BetaGlassMenuTransition> {
   @override
   Widget build(BuildContext context) {
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    // A screen-sampling shader cannot share an ancestor's nonuniform scale
-    // with its text: on Android its retained filter can sample a different
-    // rectangle during composition. Animate the surface's REAL layout bounds
-    // instead. The unscaled content is laid out once and clipped inside those
-    // bounds, so every frame has matching optics, clipping and hit testing.
-    return FadeTransition(
-      opacity: reduceMotion ? kAlwaysCompleteAnimation : _reveal,
-      child: BetaGlassMenuSurface(
-        child: AnimatedBuilder(
-          animation: widget.animation,
+    // Premium glass reads the scene BEHIND the menu. An ancestor opacity layer
+    // instead gives Impeller a transparent offscreen texture whose origin is
+    // the menu's bounds, while the shader still uses the scene's coordinates.
+    // The resulting double offset is the displaced black rectangle reported on
+    // Android. Keep optics in the scene pass; fade only the foreground content.
+    // GlassContainer already owns its renderer's scale-safe repaint boundary.
+    return BetaGlassMenuSurface(
+      child: AnimatedBuilder(
+        animation: widget.animation,
+        child: FadeTransition(
+          opacity: reduceMotion ? kAlwaysCompleteAnimation : _reveal,
           child: widget.child,
-          builder: (context, child) {
-            final stretch = reduceMotion ? 1.0 : _stretch.value;
-            return ClipRect(
-              child: Align(
-                alignment: widget.origin,
-                widthFactor: .82 + .18 * stretch,
-                heightFactor: .16 + .84 * stretch,
-                child: child,
-              ),
-            );
-          },
         ),
+        builder: (context, child) {
+          final stretch = reduceMotion ? 1.0 : _stretch.value;
+          return ClipRect(
+            child: Align(
+              alignment: widget.origin,
+              widthFactor: .82 + .18 * stretch,
+              heightFactor: .16 + .84 * stretch,
+              child: child,
+            ),
+          );
+        },
       ),
     );
   }
@@ -135,6 +134,46 @@ class _MenuSpringCurve extends Curve {
   @override
   double transformInternal(double t) =>
       1 - math.exp(-9 * t) * (math.cos(11 * t) + 9 / 11 * math.sin(11 * t));
+}
+
+/// Dialogs containing live glass must not inherit Material's default fade:
+/// that fade creates the same offscreen sampling problem as an opacity-wrapped
+/// menu. A short translation keeps the real scene visible to the shader.
+Future<T?> showBetaGlassDialog<T>({
+  required BuildContext context,
+  required WidgetBuilder builder,
+  bool barrierDismissible = true,
+  String label = '关闭',
+}) async {
+  final reduced = MediaQuery.disableAnimationsOf(context);
+  final route = RawDialogRoute<T>(
+    barrierDismissible: barrierDismissible,
+    barrierLabel: label,
+    barrierColor: Colors.black.withValues(alpha: .36),
+    transitionDuration: reduced
+        ? Duration.zero
+        : const Duration(milliseconds: 220),
+    pageBuilder: (dialog, _, _) =>
+        Theme(data: Theme.of(context), child: builder(dialog)),
+    transitionBuilder: (_, animation, _, child) => reduced
+        ? child
+        : SlideTransition(
+            position:
+                Tween<Offset>(
+                  begin: const Offset(0, .025),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                  ),
+                ),
+            child: child,
+          ),
+  );
+  final result = await Navigator.of(context, rootNavigator: true).push(route);
+  await route.completed;
+  return result;
 }
 
 /// Positions from the measured trigger, then animates only the bounded menu.

@@ -13,6 +13,7 @@ import 'platform_library_page.dart';
 import '../platform_profile_provider.dart';
 import 'platform_avatar.dart';
 import 'platform_design.dart';
+import 'platform_reward_calendar.dart';
 import '../../themes/music_theme_tokens.dart';
 
 /// Shared current-account entry for profile and settings. It never offers a
@@ -63,6 +64,11 @@ class PlatformProfile extends ConsumerWidget {
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 22),
           child: PlatformAccountTile(),
+        ),
+        const SizedBox(height: 18),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 22),
+          child: PlatformRewardEntry(),
         ),
         const SizedBox(height: 28),
         const EditorialSection('我的音乐'),

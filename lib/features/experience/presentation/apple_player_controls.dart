@@ -1,4 +1,5 @@
 import 'player_toolbar_glyphs.dart';
+import 'player_output_dialog.dart';
 import '../../music_platform/presentation/platform_quality_button.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/cupertino.dart';
@@ -361,11 +362,11 @@ class _ApplePlayerControlsState extends ConsumerState<ApplePlayerControls> {
                       ? Icons.headphones_rounded
                       : Icons.airplay_rounded,
                   size: 25,
-                  onPressed: () =>
-                      _act(ref.read(audioOutputProvider.notifier).choose),
+                  onPressed: () => showPlayerOutputDialog(context, ref),
                 ),
               _Transport(
                 label: '播放队列',
+                value: order.label,
                 glyph: widget.onToggleQueue != null
                     ? PlayerToolbarGlyph(
                         tool: PlayerToolbarTool.queue,
@@ -410,16 +411,19 @@ class _Transport extends StatelessWidget {
     required this.size,
     required this.onPressed,
     this.glyph,
+    this.value,
   });
   final String label;
   final IconData icon;
   final double size;
   final VoidCallback onPressed;
   final Widget? glyph;
+  final String? value;
   @override
   Widget build(BuildContext context) => Semantics(
     button: true,
     label: label,
+    value: value,
     child: Tooltip(
       message: label,
       child: CupertinoButton(

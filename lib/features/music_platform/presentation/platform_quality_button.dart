@@ -23,9 +23,8 @@ Future<void> showPlatformQualityPicker(
   BuildContext context,
   WidgetRef ref,
 ) async {
-  final selected = await showDialog<_QualitySelection>(
+  final selected = await showBetaGlassDialog<_QualitySelection>(
     context: context,
-    barrierColor: Colors.black54,
     builder: (_) => const _QualityDialog(),
   );
   if (selected == null ||

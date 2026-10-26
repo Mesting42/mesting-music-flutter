@@ -16,6 +16,12 @@
 - Mesting's `lib/features/music_platform/` is an integration adapter for the
   upstream C ABI and API contracts. It preserves Mesting's UI, Riverpod state,
   database and audio handler rather than importing upstream UI dependencies.
+- Beta.17 ports the same pinned commit's `kugou_provider.dart` daily-membership
+  flows, `sign_in_calendar_page.dart`/`vip_status.dart` data contracts, and
+  `verify_captcha_dialog.dart` challenge handling into isolated Riverpod
+  controllers, repositories and Mesting/Cupertino views. The original
+  `assets/web/verify_captcha.html` is retained, with WebView supplied by the
+  Flutter team. Account ownership and confirmed-success checks remain explicit.
 - The integrated derivative is distributed under AGPL-3.0; original third-party
   dependency licenses and copyright notices remain applicable.
 - UPSTREAM_DISCLAIMER.md is kept verbatim for review. Its GPLv3/noncommercial

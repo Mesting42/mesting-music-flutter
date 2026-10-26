@@ -17,6 +17,7 @@ import 'beta_bottom_bar.dart';
 import 'floating_playback_pill.dart';
 import 'player_chrome_reveal.dart';
 import 'beta_search_back_history.dart';
+import '../../music_platform/platform_rewards_provider.dart';
 
 /// The official Apple Music GlassScaffold/searchable-tab/accessory composition
 /// is the shell, not an overlay of independently positioned imitation pills.
@@ -235,6 +236,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(platformRewardAutomationProvider);
     final playerRoute = Uri.parse(widget.location).path == '/player';
     ref.listen(
       musicSearchControllerProvider.select((state) => state.query.isNotEmpty),

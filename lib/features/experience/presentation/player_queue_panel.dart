@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/audio/playback_mode.dart';
 import '../../../core/audio/playback_providers.dart';
 import '../../../shared/widgets/artwork_image.dart';
+import '../../../shared/widgets/music_notice.dart';
 import '../../music_platform/presentation/platform_feedback.dart';
 
 /// The player owns presentation, the existing audio handler owns all edits.
@@ -18,9 +19,22 @@ class PlayerQueuePanel extends ConsumerWidget {
         ref.watch(upcomingQueueProvider).value ?? handler.upcomingQueue;
     final order =
         ref.watch(playbackOrderProvider).value ?? handler.playbackOrder;
-    Future<void> act(Future<void> Function() operation) async {
+    Future<void> act(
+      Future<void> Function() operation, {
+      String Function()? feedback,
+    }) async {
       try {
         await operation();
+        // Read the handler after completion. A rapid second tap must never
+        // announce the stale state captured by an earlier build.
+        if (context.mounted && feedback != null) {
+          showMusicNotice(
+            context,
+            icon: Icons.check_rounded,
+            title: feedback(),
+            message: '',
+          );
+        }
       } catch (error) {
         if (context.mounted) showPlatformFailure(context, error);
       }
@@ -45,26 +59,38 @@ class PlayerQueuePanel extends ConsumerWidget {
               ),
               _OrderButton(
                 key: const ValueKey('player-shuffle'),
-                label: '随机播放',
+                label: order.shuffle ? '随机播放已开启，点击关闭' : '顺序播放，点击开启随机播放',
                 active: order.shuffle,
-                icon: CupertinoIcons.shuffle,
+                icon: order.shuffle
+                    ? CupertinoIcons.shuffle
+                    : CupertinoIcons.list_bullet,
                 onTap: () => unawaited(
-                  act(() => handler.setShuffleEnabled(!order.shuffle)),
+                  act(
+                    () => handler.setShuffleEnabled(
+                      !handler.playbackOrder.shuffle,
+                    ),
+                    feedback: () => handler.playbackOrder.shuffle
+                        ? '已开启随机播放'
+                        : '已关闭随机播放，恢复顺序播放',
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
               _OrderButton(
                 key: const ValueKey('player-repeat'),
-                label: switch (order.repeat) {
-                  PlaybackRepeat.off => '循环已关闭',
-                  PlaybackRepeat.all => '列表循环',
-                  PlaybackRepeat.one => '单曲循环',
-                },
+                label: '${order.repeat.label}，点击切换循环方式',
                 active: order.repeat != PlaybackRepeat.off,
-                icon: order.repeat == PlaybackRepeat.one
-                    ? CupertinoIcons.repeat_1
-                    : CupertinoIcons.repeat,
-                onTap: () => unawaited(act(handler.cycleRepeat)),
+                icon: switch (order.repeat) {
+                  PlaybackRepeat.off => CupertinoIcons.arrow_right,
+                  PlaybackRepeat.all => CupertinoIcons.repeat,
+                  PlaybackRepeat.one => CupertinoIcons.repeat_1,
+                },
+                onTap: () => unawaited(
+                  act(
+                    handler.cycleRepeat,
+                    feedback: () => '已切换为${handler.playbackOrder.repeat.label}',
+                  ),
+                ),
               ),
             ],
           ),

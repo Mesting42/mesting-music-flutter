@@ -134,7 +134,8 @@ void main() {
         find.byKey(const ValueKey('listen-together-player-entry')),
         findsNothing,
       );
-      expect(find.byTooltip('歌曲评论'), findsOneWidget);
+      // Beta.16 moved comments into More; the footer now toggles lyrics.
+      expect(find.byTooltip('显示或隐藏歌词'), findsOneWidget);
       await tester.tap(find.byKey(ValueKey('favorite-button-${_track.id}')));
       await tester.pump();
       expect(library.toggles, 1);

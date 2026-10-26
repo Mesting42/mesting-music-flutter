@@ -1,6 +1,16 @@
 # Mesting Music
 
-> **Beta 归档分支：当前为 1.0.37-beta.16。** 源码标签、APK 下载、快照来源和回滚方式见 [BETA_ARCHIVE.md](BETA_ARCHIVE.md)。以下正式版介绍保留为原项目说明。
+> **Beta 开发分支：当前为 1.0.37-beta.17。** 另一台电脑接续请先读 [Beta.17 接续指南](docs/SESSION-HANDOFF-2026-10-26-BETA17.md)。源码标签、APK 和回滚方式见 [BETA_ARCHIVE.md](BETA_ARCHIVE.md)，正式版及旧通道说明保留在下方。
+
+## Beta.17 本次更新
+
+- 调整菜单玻璃的透明度合成路径，保留展开、收回与快速反向动画。
+- 待播列表增加随机 / 循环操作的结果提示、独立状态图标及对应角标。
+- 新增“我的 → 签到与会员”：自动签到开关、签到、听歌领取、广告领取、安全验证、日历与会员到期时间。
+- 新增玻璃设备卡片，显示真实设备名称和系统音量，实际切换仍由系统面板完成。
+- 修正测试后 Release 插件注册文件残留测试插件的问题，并校验构建时的依赖锁一致性。
+
+[完整更新说明](docs/fixes-2026-10-26-beta17.md) · [Beta.17 下载](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.17) · [另一台电脑接续](docs/SESSION-HANDOFF-2026-10-26-BETA17.md)。菜单黑块与真实领取等真机结果仍待原机验收。
 
 一款面向 Android 的 Flutter 音乐应用，提供本地与在线音乐浏览、播放控制、歌词、主题换肤，以及好友音乐互动体验。
 

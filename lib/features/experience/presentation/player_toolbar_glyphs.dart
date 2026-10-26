@@ -158,7 +158,9 @@ class _ToolbarPainter extends CustomPainter {
             ..color = ink
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1.3;
-          if (order.shuffle) {
+          // Single-repeat owns the next-track behavior even while shuffle is
+          // enabled. Do not hide its "1" behind the shuffle badge.
+          if (order.shuffle && order.repeat != PlaybackRepeat.one) {
             canvas.drawPath(
               Path()
                 ..moveTo(26, 7.3)

@@ -15,12 +15,27 @@ enum PlaybackMode {
 
 /// Repeat and shuffle are orthogonal. The legacy three-state projection stays
 /// available to older menus and persisted Beta.15 sessions.
-enum PlaybackRepeat { off, all, one }
+enum PlaybackRepeat {
+  off,
+  all,
+  one;
+
+  String get label => switch (this) {
+    off => '顺序播放，不循环',
+    all => '列表循环',
+    one => '单曲循环',
+  };
+}
 
 class PlaybackOrder {
   const PlaybackOrder({this.repeat = PlaybackRepeat.all, this.shuffle = false});
   final PlaybackRepeat repeat;
   final bool shuffle;
+
+  /// Shared wording for the queue controls, their HUD and the toolbar badge.
+  String get label => shuffle
+      ? '随机播放，${repeat == PlaybackRepeat.off ? '不循环' : repeat.label}'
+      : repeat.label;
   PlaybackMode get legacy => repeat == PlaybackRepeat.one
       ? PlaybackMode.single
       : shuffle

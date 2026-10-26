@@ -8,6 +8,53 @@ import 'package:mesting_music/shared/widgets/beta_text_editing.dart';
 void main() {
   setUpAll(LiquidGlassWidgets.initialize);
 
+  testWidgets(
+    'live menu optics stay outside partially transparent compositing layers',
+    (tester) async {
+      final animation = AnimationController(
+        vsync: tester,
+        duration: betaMenuOpenDuration,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Center(
+            child: BetaGlassMenuTransition(
+              animation: animation,
+              origin: Alignment.topRight,
+              child: const SizedBox(
+                width: 260,
+                height: 400,
+                child: Text('菜单内容'),
+              ),
+            ),
+          ),
+        ),
+      );
+      animation.forward();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 45));
+      final menu = find.byKey(const ValueKey('beta13-glass-menu-surface'));
+      // An ancestor fade makes the glass sample a transparent, menu-local render
+      // pass on Impeller. The text can fade; the live backdrop must stay outside.
+      final ancestors = find.ancestor(
+        of: menu,
+        matching: find.byType(FadeTransition),
+      );
+      for (final element in ancestors.evaluate()) {
+        expect((element.widget as FadeTransition).opacity.value, 1);
+      }
+      final foreground = tester.widget<FadeTransition>(
+        find.descendant(of: menu, matching: find.byType(FadeTransition)),
+      );
+      expect(foreground.opacity.value, inExclusiveRange(0, 1));
+      animation.reverse();
+      await tester.pump(const Duration(milliseconds: 30));
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      animation.dispose();
+    },
+  );
+
   test('menu layout faces its real trigger above and below the field', () {
     const media = MediaQueryData(size: Size(390, 844));
     for (final anchor in [
