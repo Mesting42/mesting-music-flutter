@@ -11,6 +11,7 @@ import '../../../shared/layout/adaptive_layout.dart';
 import '../../../shared/models/track.dart';
 import '../../../shared/utils/duration_format.dart';
 import '../../../shared/widgets/artwork_image.dart';
+import '../../../shared/widgets/track_artwork.dart';
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../../shared/widgets/mesting_loading_indicator.dart';
 import '../../../shared/widgets/music_notice.dart';
@@ -81,7 +82,8 @@ class _MusicHomePageState extends ConsumerState<MusicHomePage>
   @override
   Widget build(BuildContext context) {
     final betaView = GoRouterState.of(context).uri.queryParameters['view'];
-    if (DistributionChannel.isBeta && (betaView == 'favorites' || betaView == 'playlists')) {
+    if (DistributionChannel.isBeta &&
+        (betaView == 'favorites' || betaView == 'playlists')) {
       return MusicLibraryPage(view: betaView);
     }
     if (DistributionChannel.isBeta &&
@@ -92,7 +94,9 @@ class _MusicHomePageState extends ConsumerState<MusicHomePage>
     if (DistributionChannel.isBeta &&
         betaView != 'favorites' &&
         betaView != 'playlists') {
-      return betaView == 'daily' ? const PlatformDiscoveryPage(dailyOnly: true) : const MusicLandingPage(discovery: true);
+      return betaView == 'daily'
+          ? const PlatformDiscoveryPage(dailyOnly: true)
+          : const MusicLandingPage(discovery: true);
     }
     final selectedTheme = ref.watch(effectiveMusicThemeProvider);
     final favorites =
@@ -610,11 +614,7 @@ class _SongRow extends StatelessWidget {
                 borderRadius: const BorderRadius.horizontal(
                   left: Radius.circular(18),
                 ),
-                child: ArtworkImage(
-                  uri: track.coverAsset,
-                  width: 62,
-                  height: 64,
-                ),
+                child: TrackArtwork(track: track, width: 62, height: 64),
               ),
               const SizedBox(width: 13),
               Expanded(
@@ -737,8 +737,8 @@ class FavoriteTrackRow extends StatelessWidget {
                 const SizedBox(width: 8),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(14),
-                  child: ArtworkImage(
-                    uri: track.coverAsset,
+                  child: TrackArtwork(
+                    track: track,
                     width: 52,
                     height: 52,
                     decodeWidth: favoriteArtworkDecodeWidth,
@@ -1172,8 +1172,8 @@ class _DailyHeroContent extends StatelessWidget {
               angle: .08,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(18),
-                child: ArtworkImage(
-                  uri: tracks.first.coverAsset,
+                child: TrackArtwork(
+                  track: tracks.first,
                   width: 126,
                   height: 150,
                 ),
@@ -1188,11 +1188,7 @@ class _DailyHeroContent extends StatelessWidget {
               angle: -.12,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(14),
-                child: ArtworkImage(
-                  uri: tracks[1].coverAsset,
-                  width: 85,
-                  height: 108,
-                ),
+                child: TrackArtwork(track: tracks[1], width: 85, height: 108),
               ),
             ),
           ),
@@ -1378,11 +1374,7 @@ class _DailyTrackRow extends StatelessWidget {
                 ),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: ArtworkImage(
-                    uri: track.coverAsset,
-                    width: 54,
-                    height: 54,
-                  ),
+                  child: TrackArtwork(track: track, width: 54, height: 54),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

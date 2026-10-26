@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-25T03:27:51.062Z",
-  "title": "Design System: Mesting Android Beta.5",
+  "generatedAt": "2026-10-25T04:24:52.000Z",
+  "title": "Design System: Mesting Android Beta.6",
   "extensions": {
     "colorMeta": {
       "primary-seed": {
@@ -90,11 +90,37 @@
         "value": "650px"
       }
     ],
+    "glassSurfaces": {
+      "betaChrome": {
+        "source": "third_party/liquid_glass_widgets/apple_music_demo.reference.dart.txt",
+        "runtimeDependency": "liquid_glass_widgets 1.15.0",
+        "components": ["GlassScaffold", "GlassTabBar.searchable", "GlassButton.custom"],
+        "quality": "premium",
+        "interactionBehavior": "full",
+        "settings": {"blur": 2, "thickness": 30, "lightIntensity": 0.2, "chromaticAberration": 0.01, "saturation": 1.2, "fresnelStrength": 0},
+        "barGlassColor": {"light": "#AAF2F2F7", "dark": "#AA1C1C1E"},
+        "playPillOverrides": {"lightIntensity": 0.18, "glassColorLight": "#CCF2F2F7", "glassColorDark": "#CC1C1C1E"},
+        "layout": {"barHeight": 64, "searchBarHeight": 50, "accessoryHeight": 50, "horizontalPadding": 20, "verticalPadding": 16, "spacing": 8, "maximumTextScaleHeightAddition": 28},
+        "behavior": "手机和宽屏共用一个底栏，无左轨及88dp占位；正文宽度仍约束。库处理安全区和搜索键盘抬升，透明Material提供正常文字默认值。滚动超过50dp收拢accessory，重复点击当前tab回顶部。"
+      },
+      "existingMestingGlass": {
+        "quality": "standard",
+        "settings": {"blur": 12, "thickness": 22, "lightIntensity": 0.22, "chromaticAberration": 0.005, "saturation": 1.12},
+        "highContrast": "不透明surface与outline，仅适用于此组件；不代表官方底栏的降级路径。"
+      }
+    },
+    "beta6Behavior": {
+      "quality": "五种播放器共用标准/高品质/无损/Hi-Res持久化偏好；保留进度、播放/暂停、队列与模式。实际音质取自平台返回，未知不标成所选值，试听和降档如实披露。",
+      "appearance": "移除三种角色完整主题并迁移为classic，旧followTheme进度样式/角色保留原角色外观；背景强度.58、性能automatic，保留IP装饰开关和独立进度条选择。正式flavor保持既有行为。",
+      "artwork": "统一有效URL解析与只读元数据回退；合并请求、3并发、256成功缓存，失败不永久缓存。"
+    },
     "previewNotes": [
       "以下 HTML/CSS 是 Flutter 视觉规则的独立预览，不包含业务行为或真实 shader。",
       "预览采用已复核的经典浅色强调色，生产读取当前 ColorScheme。",
       "色带为展示用合成 OKLCH，不是生产新增色阶。",
-      "图像占位不冒充真实专辑封面。"
+      "图像占位不冒充真实专辑封面。",
+      "Beta.6导航预览仅表示静态形态；实际按压、拖动、弹簧、搜索与accessory形变由官方Flutter组件提供。",
+      "批准截图为合成测试证据；测试字体覆盖边界不代表真机缺陷，也不验证GPU、CDN或真实音质切换。"
     ]
   },
   "components": [
@@ -150,14 +176,14 @@
       "name": "四目的地导航",
       "kind": "nav",
       "refersTo": "navigation",
-      "description": "四目的地胶囊与独立搜索，预览以文字保留意义。",
+      "description": "Beta.6官方可搜索四目的地底栏，手机与宽屏共用；64dp基础高度，premium/full，独立播放accessory。此HTML仅静态示意。",
       "html": "<nav class=\"ds-nav\" aria-label=\"主导航\"><div class=\"ds-tabs\"><button aria-current=\"page\">首页</button><button>发现</button><button>音乐库</button><button>我的</button></div><button class=\"ds-search\" aria-label=\"搜索歌曲\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><circle cx=\"10\" cy=\"10\" r=\"6\"/><path d=\"m15 15 6 6\"/></svg></button></nav>",
-      "css": ".ds-nav{display:flex;gap:10px;align-items:center;width:362px;max-width:100%;font-family:sans-serif}.ds-tabs{display:flex;flex:1;padding:4px;border:1px solid rgba(255,255,255,.75);border-radius:999px;background:rgba(252,252,253,.8);backdrop-filter:blur(12px)}.ds-nav button{height:54px;min-width:0;flex:1;border:0;border-radius:999px;background:transparent;color:#20232B;font-size:10px;cursor:pointer}.ds-nav button[aria-current]{color:#505B92;background:rgba(80,91,146,.13)}.ds-nav button:hover{background:rgba(80,91,146,.09)}.ds-nav button:active{background:rgba(80,91,146,.2)}.ds-nav .ds-search{width:58px;height:58px;flex:none;background:rgba(252,252,253,.8)}@media(prefers-contrast:more){.ds-tabs,.ds-nav .ds-search{background:#FCFCFD;border:1px solid #74777F;backdrop-filter:none}}.ds-button:focus-visible,.ds-chip:focus-visible,.ds-nav button:focus-visible{outline:2px solid #505B92;outline-offset:3px}"
+      "css": ".ds-nav{display:flex;gap:8px;align-items:center;width:362px;max-width:100%;font-family:sans-serif}.ds-tabs{display:flex;flex:1;height:64px;box-sizing:border-box;padding:4px;border:1px solid rgba(255,255,255,.75);border-radius:999px;background:rgba(242,242,247,.667);backdrop-filter:blur(2px)}.ds-nav button{height:54px;min-width:0;flex:1;border:0;border-radius:999px;background:transparent;color:#20232B;font-size:10px;cursor:pointer}.ds-nav button[aria-current]{color:#505B92;background:rgba(32,35,43,.2)}.ds-nav button:hover{background:rgba(80,91,146,.09)}.ds-nav button:active{background:rgba(80,91,146,.2)}.ds-nav .ds-search{width:50px;height:50px;flex:none;background:rgba(242,242,247,.667);backdrop-filter:blur(2px)}.ds-button:focus-visible,.ds-chip:focus-visible,.ds-nav button:focus-visible{outline:2px solid #505B92;outline-offset:3px}"
     }
   ],
   "narrative": {
     "northStar": "封面主导的私人听歌空间",
-    "overview": "封面承担视觉重心，中文大标题与留白组织阅读顺序。横向内容组露出下一项，歌曲列表保持紧凑；播放与导航悬浮于内容之上。既有装扮、浅深色和跟随系统继续共用新布局。",
+    "overview": "封面承担视觉重心，中文大标题与留白组织阅读顺序。横向内容组露出下一项，歌曲列表保持紧凑；播放与导航悬浮于内容之上。经典浅色、深色和跟随系统继续共用新布局，进度条样式与角色独立选择。",
     "keyCharacteristics": [
       "封面主导，正文使用清楚稳定的主题表面。",
       "大标题、粗体分区、紧凑曲目元数据形成层级。",
@@ -177,7 +203,7 @@
       },
       {
         "name": "The Reachable Content Rule",
-        "body": "编辑式正文保留 210dp 底部滚动余量；短屏播放器增加可滚动高度，文字缩放时增加空间，保留全部播放操作。导航包含手势安全区，搜索/设置/聊天/完整播放器/媒体预览分别控制悬浮层显示。",
+        "body": "编辑式正文保留 210dp 底部滚动余量；短屏播放器增加可滚动高度，文字缩放时增加空间，保留全部播放操作。官方底栏处理手势安全区和搜索键盘抬升，shell 仅为搜索正文避让键盘，不能重复移动底栏。设置/聊天/完整播放器/媒体预览分别控制悬浮层显示。",
         "section": "layout"
       },
       {

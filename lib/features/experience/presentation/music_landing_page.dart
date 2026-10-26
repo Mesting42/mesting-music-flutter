@@ -66,6 +66,7 @@ class MusicLandingPage extends ConsumerWidget {
                           children: [
                             EditorialCover(
                               cover: tracks.first.coverAsset,
+                              track: tracks.first,
                               title: signedIn ? '你的每日推荐' : '今日新声',
                               subtitle: signedIn ? '跟随你的音乐口味' : '从一首新歌开始',
                               width: width,
@@ -103,6 +104,7 @@ class MusicLandingPage extends ConsumerWidget {
                         for (final item in items.take(12))
                           EditorialCover(
                             cover: item.track.coverAsset,
+                            track: item.track,
                             title: item.track.title,
                             subtitle: item.track.artist,
                             onTap: () => playEditorialTrack(
@@ -167,6 +169,7 @@ class MusicLandingPage extends ConsumerWidget {
                                     const SizedBox(height: 12),
                                     EditorialCover(
                                       cover: track.coverAsset,
+                                      track: track,
                                       title: track.title,
                                       subtitle: '新歌推荐',
                                       width: width,

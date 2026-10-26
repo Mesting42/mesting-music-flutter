@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/audio/playback_providers.dart';
 import '../../../shared/models/track.dart';
 import '../../../shared/widgets/artwork_image.dart';
+import '../../../shared/widgets/track_artwork.dart';
 import '../../library/presentation/favorite_toggle_button.dart';
 import '../../player/presentation/music_hub_top_bar.dart';
 import '../../search/search_providers.dart';
@@ -162,7 +163,7 @@ class _TrackList extends ConsumerWidget {
             ),
             leading: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: ArtworkImage(uri: track.coverAsset, width: 48, height: 48),
+              child: TrackArtwork(track: track, width: 48, height: 48),
             ),
             title: Text(
               track.title,

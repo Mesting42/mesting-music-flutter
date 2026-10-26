@@ -26,6 +26,7 @@ Future<void> main() async {
   if (DistributionChannel.isBeta) await LiquidGlassWidgets.initialize();
   if (DistributionChannel.isBeta) PlatformCredits.register();
   final preferences = await SharedPreferences.getInstance();
+  await migrateBeta6Appearance(preferences);
   final brandStyle = await AppBrandStyleBridge.current();
   final launchThemeMode = savedMusicThemeMode(preferences);
   await AppBrandStyleBridge.syncLaunchTheme(

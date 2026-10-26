@@ -1,4 +1,73 @@
-# md3Music integration Beta.5 handoff
+# md3Music integration Beta.6 handoff
+
+## Beta.6 cover, official chrome, quality and appearance handoff
+
+Beta.6 repairs missing artwork across recommendations, search, playlists and
+players. `PlatformArtwork` selects valid HTTP/HTTPS URLs from upstream cover
+fields, preserves permitted HTTP, normalizes protocol-relative URLs and size
+placeholders, and skips bare filenames. `PlatformArtworkRepository` performs
+read-only `/audio` metadata recovery for visible/older Kugou tracks, coalesces
+requests for a hash, limits concurrency to 3, and retains 256 successful covers.
+Temporary network failures are not permanently cached; artwork failure does not
+fail audio or mutate cloud data.
+
+Beta chrome now directly uses the official liquid_glass_widgets Apple Music
+example's `GlassScaffold`, `GlassTabBar.searchable` and `GlassButton.custom`,
+preserving Chinese Mesting navigation/search, swipe, queue and audio actions.
+The dependency remains pinned to **1.15.0**; the MIT upstream example/source
+snapshot lives in `third_party/liquid_glass_widgets/`. The package owns press,
+drag, spring and accessory morphing. Phone and wide windows use one bottom bar;
+Beta no longer adds the expanded rail or its 88dp spacer. The adaptive body
+width constraints remain. The official bar handles safe areas and keyboard lift;
+the shell clears only search content for the keyboard. A transparent Material
+provides normal bar text defaults. These resolve the reviewed duplicate keyboard
+lift, text-inheritance and duplicate wide-navigation findings.
+
+Official chrome uses premium/full, blur 2, thickness 30, chromatic aberration
+.01, saturation 1.2 and fresnel 0, with light intensity .2 for navigation and .18
+for the playback pill. These are separate from the older `MestingGlass`
+standard/blur 12/thickness 22 surface and its opaque high-contrast fallback;
+do not apply that fallback claim to the official bar.
+
+All five player appearances expose **标准 / 高品质 / 无损 / Hi-Res** through
+`PlatformQualityButton` and the shared persisted preference. The existing audio
+handler's `refreshCurrentSource` replaces the current stream while preserving
+position, playing/paused state, logical queue and playback mode. Newer commands
+invalidate stale switches; decoder failure attempts to restore the old stream.
+`Track.playbackQuality` is optional and backward compatible. Preferred and
+delivered quality are distinct: unknown server metadata stays unknown, permitted
+downgrades and trials are disclosed, and account/resource availability remains
+authoritative. No live CDN/decoder quality-switch acceptance is implied by mocks.
+
+Beta removes the full Shin-chan, Hello Kitty and Kuromi themes while retaining
+classic light/dark/system and independent progress styles/characters. Old full
+themes migrate to `classic`; a saved `followTheme` progress style/character is
+converted to the original character so its actual appearance is retained.
+Background strength and performance controls are removed in Beta and fixed at
+.58 and `automatic`; the IP-character-decoration switch remains. The formal
+flavor retains its existing navigation and theme behavior.
+
+Build with **Flutter 3.41.9 / Dart 3.11.5** using the command below. The build
+script now defaults to **1.0.37-beta.6 / 6**; `pubspec.yaml` keeps its formal
+baseline version. The final Beta.6 APK was built and inspected: package
+`com.mesting.music.beta`, 88,954,358 bytes, SHA256
+`B1462439D022F4947CBFD2608901C2DB3D484C49CC161DE309C20421C0670B03`.
+APK Signature Scheme v2 verification and 16KiB ZIP alignment passed, and its
+certificate matches Beta.5. Final `flutter analyze` reported no issues.
+
+The normal full regression passed 576 tests with 38 conditional skips; the Beta
+specialized group passed 67 and final UI group passed 6. Groups overlap and must
+not be added together. Independent review disposition is **ship**, with the
+three Beta.6 presentation findings resolved. Approved UI screenshots use
+synthetic fixtures; occasional test-font coverage boundaries in search-chip
+secondary text do not establish a physical-device defect. No Android device
+was available, so real-device/GPU, live artwork CDN, live quality switching and
+real cloud writes remain unverified. Sources remain an uncommitted working-tree
+snapshot; Beta.6 packaging must not overwrite the earlier Beta.5 archive.
+
+The following Beta.5 presentation/library and Beta.4 integration details remain
+applicable except where superseded by this Beta.6 section. Track reordering is
+still unimplemented; comment like/unlike writes remain deferred as accepted.
 
 ## Beta.5 presentation and library changes
 
@@ -6,9 +75,12 @@ The approved composition now uses cover-led Home and separate Discovery, an
 owner-bound Library, four destinations plus independent search, a floating
 playback capsule, and a square-cover player with large synchronized lyrics.
 The existing black-vinyl and alternate player styles remain selectable.
-The Mesting dress-up themes and light/dark modes still own colors/backgrounds.
+The retained Mesting theme modes still own colors/backgrounds; Beta.6 theme
+availability and migration are described above.
 `liquid_glass_widgets` is pinned to 1.15.0; effects are confined to floating
-chrome, with a high-contrast fallback. Content/forms use opaque theme surfaces.
+chrome. The older `MestingGlass` surface has a high-contrast fallback; Beta.6
+official chrome has the separate behavior described above. Content/forms use
+opaque theme surfaces.
 
 Build this snapshot with **Flutter 3.41.9 / Dart 3.11.5**. The independent SDK
 used here is `D:\flutter\mesting-beta5\flutter`; the original formal checkout
@@ -18,7 +90,7 @@ and its SDK are unchanged. Run:
 .\tool\build_android_md3_beta_apk.ps1 -FlutterSdkRoot D:\flutter\mesting-beta5\flutter
 ```
 
-This selects version `1.0.37-beta.5` / `5`, ARMv7 + ARM64. `pubspec.yaml`
+This selects version `1.0.37-beta.6` / `6`, ARMv7 + ARM64. `pubspec.yaml`
 retains the formal baseline version; the distribution script supplies the Beta
 version. The source ZIP contains no signing private key or local SDK settings.
 
@@ -87,6 +159,10 @@ library support. It is not a complete migration of every md3Music feature.
 | `features/music_platform/data/platform_catalog.dart` | Public discovery, daily recommendations and public playlists |
 | `features/music_platform/data/platform_library_repository.dart` | Existing library contract backed by the current Kugou cloud identity |
 | `features/music_platform/data/platform_playback_resolver.dart` | Bounded media lookup, device registration retry and permitted preview fallback |
+| `features/music_platform/data/platform_artwork.dart` | Shared cover normalization and bounded read-only metadata recovery |
+| `features/music_platform/domain/platform_audio_quality.dart` | Verified quality request codes and permitted fallback order |
+| `features/music_platform/platform_quality_providers.dart` | Persisted quality preference and shared switching state |
+| `features/music_platform/presentation/platform_quality_button.dart` | Common player quality selector, actual-tier and trial/downgrade disclosure |
 | `features/music_platform/data/platform_comments_repository.dart` | Resource IDs, paging and explicit comment writes pinned to one Kugou identity |
 | `features/music_platform/data/platform_song_identity.dart` | Recording ID aliases and bounded parsing of nested metadata; skips zero IDs |
 | `features/music_platform/data/platform_search_repository.dart` | Upstream 30-row search pages, server order and result totals |
@@ -97,7 +173,9 @@ library support. It is not a complete migration of every md3Music feature.
 | `features/music_platform/presentation/platform_comments_page.dart` | Opaque comment/thread routes, compose, reply and delete-own actions |
 | `features/music_platform/presentation/platform_design.dart` | Shared Mesting surfaces, fields, buttons, page frame and feedback |
 | `features/music_platform/presentation/platform_comment_card.dart` | Comment author/date/content/count presentation without network writes |
-| `core/audio/mesting_audio_handler.dart` | Existing playback queue with optional URL resolver callback |
+| `core/audio/mesting_audio_handler.dart` | Existing playback queue, URL resolver callback and state-preserving current-source refresh |
+| `features/experience/presentation/beta_music_shell.dart`, `beta_bottom_bar.dart`, `floating_playback_pill.dart` | Official glass scaffold/searchable tabs/accessory composition with existing Mesting actions |
+| `features/themes/theme_controller.dart`, `theme_gallery_page.dart` | Beta appearance migration and settings; formal theme behavior retained |
 | `features/lyrics/data/lyrics_repository.dart` | Injectable JSON transport with existing lyric fallbacks |
 | `features/library/presentation/library_access.dart` | Beta local-library access without legacy cloud authentication |
 | `android/app/src/beta` | Beta name, scoped cleartext network policy and native libraries only |
@@ -135,8 +213,9 @@ favorites, track add/remove, playlist create/rename/delete and explicit refresh.
 Every request checks its expected user and token before sending and after
 receiving a response. Mutations are serialized and never retried automatically.
 Read-only collected lists are displayed without write controls. Creation uses a
-private cloud playlist by default. Cover upload and track reordering remain out
-of scope. Cloud data cannot be restored from a source or APK backup.
+private cloud playlist by default. Cover upload is connected through the common
+editor as described above; track reordering remains unimplemented. Cloud data
+cannot be restored from a source or APK backup.
 
 All Beta music sources use the embedded concept-platform transport regardless
 of login choice. Guests/Mesting users receive public new-song recommendations;
@@ -221,7 +300,7 @@ flutter test --flavor beta test/music_platform_test.dart test/beta_login_entry_t
 .\tool\build_android_md3_beta_apk.ps1
 ```
 
-The build script selects `beta`, version `1.0.37-beta.5` / `5`, ARMv7 + ARM64,
+The build script selects `beta`, version `1.0.37-beta.6` / `6`, ARMv7 + ARM64,
 CloudBase authentication retained, and automatic update checks disabled. It does
 not publish an update manifest or deploy a backend. The package is
 `com.mesting.music.beta`, separate from formal and Java/MySQL packages.

@@ -34,6 +34,7 @@ class ArtworkImage extends StatefulWidget {
     this.retryOnNetworkError = false,
     this.persistentNetworkCacheKey,
     this.networkImageCache,
+    this.onNetworkError,
     super.key,
   });
 
@@ -46,6 +47,7 @@ class ArtworkImage extends StatefulWidget {
   final bool retryOnNetworkError;
   final String? persistentNetworkCacheKey;
   final PersistentNetworkImageCache? networkImageCache;
+  final VoidCallback? onNetworkError;
 
   @override
   State<ArtworkImage> createState() => _ArtworkImageState();
@@ -159,6 +161,7 @@ class _ArtworkImageState extends State<ArtworkImage> {
         fit: widget.fit,
         gaplessPlayback: true,
         errorBuilder: (context, error, stackTrace) {
+          widget.onNetworkError?.call();
           _scheduleNetworkRetry(provider);
           return errorBuilder(context, error, stackTrace);
         },

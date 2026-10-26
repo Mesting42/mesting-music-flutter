@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../shared/widgets/music_notice.dart';
 import '../../shared/widgets/liquid_glass_sheet.dart';
+import '../../core/platform/distribution_channel.dart';
 import '../player/presentation/player_visual_stages.dart';
 import '../player/presentation/vinyl_disc.dart';
 import '../player/player_visual_style.dart';
@@ -229,13 +230,15 @@ class _ThemeSettingsPanelState extends ConsumerState<_ThemeSettingsPanel> {
                       const SizedBox(height: 21),
                       const _SettingsHeading(
                         title: '皮肤',
-                        description: '按角色系列挑选，再选择具体的静态或动态皮肤。',
+                        description: '选择浅色、深色或跟随系统，角色可在进度条中独立设置。',
                       ),
                       const SizedBox(height: 11),
                       GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        itemCount: MusicThemeIp.values.length,
+                        itemCount: DistributionChannel.isBeta
+                            ? 1
+                            : MusicThemeIp.values.length,
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 2,
@@ -351,13 +354,15 @@ class _ThemeSettingsPanelState extends ConsumerState<_ThemeSettingsPanel> {
                             .read(themeVisualSettingsProvider.notifier)
                             .setIpDecoration(value),
                       ),
-                      const SizedBox(height: 14),
-                      _PerformancePicker(
-                        selected: performance,
-                        onSelected: (value) => ref
-                            .read(themePerformanceProvider.notifier)
-                            .select(value),
-                      ),
+                      if (!DistributionChannel.isBeta) ...[
+                        const SizedBox(height: 14),
+                        _PerformancePicker(
+                          selected: performance,
+                          onSelected: (value) => ref
+                              .read(themePerformanceProvider.notifier)
+                              .select(value),
+                        ),
+                      ],
                       const SizedBox(height: 18),
                       Text(
                         '视频背景始终静音播放，并会在应用进入后台时自动暂停。',
@@ -1876,42 +1881,44 @@ class _VisualControls extends StatelessWidget {
     return _SettingSurface(
       child: Column(
         children: [
-          Row(
-            children: [
-              const Expanded(
-                child: _SettingLabel(
-                  title: '背景显示强度',
-                  description: '内容看不清时可以调低一点',
+          if (!DistributionChannel.isBeta) ...[
+            Row(
+              children: [
+                const Expanded(
+                  child: _SettingLabel(
+                    title: '背景显示强度',
+                    description: '内容看不清时可以调低一点',
+                  ),
                 ),
-              ),
-              Text(
-                '${(visual.backgroundStrength * 100).round()}%',
-                style: const TextStyle(
-                  color: Color(0xFF6C80EA),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
+                Text(
+                  '${(visual.backgroundStrength * 100).round()}%',
+                  style: const TextStyle(
+                    color: Color(0xFF6C80EA),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: const Color(0xFF6C80EA),
+                inactiveTrackColor: tokens.borderStrong,
+                trackHeight: 4,
+                thumbColor: const Color(0xFF6C80EA),
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+                overlayShape: SliderComponentShape.noOverlay,
               ),
-            ],
-          ),
-          const SizedBox(height: 5),
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              activeTrackColor: const Color(0xFF6C80EA),
-              inactiveTrackColor: tokens.borderStrong,
-              trackHeight: 4,
-              thumbColor: const Color(0xFF6C80EA),
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-              overlayShape: SliderComponentShape.noOverlay,
+              child: Slider(
+                value: visual.backgroundStrength,
+                min: .18,
+                max: .92,
+                onChanged: onStrengthChanged,
+              ),
             ),
-            child: Slider(
-              value: visual.backgroundStrength,
-              min: .18,
-              max: .92,
-              onChanged: onStrengthChanged,
-            ),
-          ),
-          Divider(height: 24, color: tokens.border),
+            Divider(height: 24, color: tokens.border),
+          ],
           Row(
             children: [
               const Expanded(

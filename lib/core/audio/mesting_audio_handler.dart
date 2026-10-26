@@ -29,13 +29,17 @@ typedef TrackPlaybackResolver = Future<Track> Function(Track track);
 /// an audible pause on some devices.
 class MestingAudioHandler extends BaseAudioHandler
     with QueueHandler, SeekHandler {
-  MestingAudioHandler({required List<Track> tracks, Random? random})
-    : _libraryTracks = List.of(tracks),
-      _random = random ?? Random(),
-      _knownTracks = <String, Track>{
-        for (final track in tracks) track.id: track,
-      },
-      _tracks = tracks.isEmpty ? <Track>[] : <Track>[tracks.first] {
+  MestingAudioHandler({
+    required List<Track> tracks,
+    Random? random,
+    AudioPlayer? player,
+  }) : _libraryTracks = List.of(tracks),
+       _player = player ?? AudioPlayer(),
+       _random = random ?? Random(),
+       _knownTracks = <String, Track>{
+         for (final track in tracks) track.id: track,
+       },
+       _tracks = tracks.isEmpty ? <Track>[] : <Track>[tracks.first] {
     _pauseFadeController = PauseFadeController(
       setVolume: _player.setVolume,
       pause: _player.pause,
@@ -73,7 +77,7 @@ class MestingAudioHandler extends BaseAudioHandler
   List<Track> _radioFallbackTracks = const <Track>[];
   final Map<String, Track> _knownTracks;
   List<Track> _tracks;
-  final AudioPlayer _player = AudioPlayer();
+  final AudioPlayer _player;
   final Random _random;
   final StreamController<PlaybackMode> _modeController =
       StreamController<PlaybackMode>.broadcast();
@@ -123,11 +127,71 @@ class MestingAudioHandler extends BaseAudioHandler
   final Set<String> _directRemoteSourceIds = <String>{};
   RadioTrackLoader? _radioTrackLoader;
   TrackPlaybackResolver? _trackPlaybackResolver;
+  bool _refreshingSource = false;
 
   /// A provider may refresh expiring URLs without coupling this audio owner to
   /// a particular account system, server transport or music catalogue.
   void configureTrackPlaybackResolver(TrackPlaybackResolver? resolver) {
     _trackPlaybackResolver = resolver;
+  }
+
+  /// Refresh the current stream without rebuilding the logical queue, history,
+  /// playback mode or consumed-track timer. Resolve while the old stream keeps
+  /// playing; a newer seek/pause/skip/account reset makes this result stale.
+  /// Only this audio owner may swap sources. UI never creates another player.
+  Future<bool> refreshCurrentSource() async {
+    await _ready;
+    final current = trackForId(mediaItem.value?.id ?? '');
+    final resolver = _trackPlaybackResolver;
+    if (current == null || resolver == null) return false;
+    _markUserCommand('changeQuality');
+    final command = _userCommandEpoch;
+    final epoch = _queueLoadEpoch;
+    bool currentRequest() =>
+        command == _userCommandEpoch &&
+        epoch == _queueLoadEpoch &&
+        mediaItem.value?.id == current.id;
+    final resolved = await resolver(current);
+    if (!currentRequest()) return false;
+    final item = await _mediaItemFor(resolved);
+    final source = await _audioSourceFor(resolved, item);
+    if (!currentRequest()) return false;
+    final position = _player.position;
+    final playing = _player.playing;
+    _cancelPlaybackStartGuard();
+    _refreshingSource = true;
+    try {
+      await _player.setAudioSources([source], initialPosition: position);
+      if (!currentRequest()) return false;
+      _knownTracks[resolved.id] = resolved;
+      _tracks = [
+        for (final track in _tracks)
+          if (track.id == resolved.id) resolved else track,
+      ];
+      queue.add([
+        for (final old in queue.value)
+          if (old.id == resolved.id) item else old,
+      ]);
+      mediaItem.add(item);
+      if (playing) _startPlayer();
+      return true;
+    } on Object {
+      // A failed decoder must not auto-skip a user's song. Restore the working
+      // source and position once, only if no newer command has taken ownership.
+      if (currentRequest()) {
+        final previousItem = await _mediaItemFor(current);
+        final previousSource = await _audioSourceFor(current, previousItem);
+        if (currentRequest()) {
+          await _player.setAudioSources([
+            previousSource,
+          ], initialPosition: position);
+          if (playing && currentRequest()) _startPlayer();
+        }
+      }
+      rethrow;
+    } finally {
+      _refreshingSource = false;
+    }
   }
 
   Future<void>? _radioLoadInFlight;
@@ -188,6 +252,7 @@ class MestingAudioHandler extends BaseAudioHandler
   @visibleForTesting
   Future<void> debugDispose() async {
     _cancelPlaybackStartGuard();
+    _consumptionTimer?.cancel();
     await _pauseFadeController.cancel();
     await _userCommandController.close();
     await _player.dispose();
@@ -540,7 +605,8 @@ class MestingAudioHandler extends BaseAudioHandler
   }) async {
     final failedTrackId = expectedTrackId ?? mediaItem.value?.id;
     final failureEpoch = expectedLoadEpoch ?? _queueLoadEpoch;
-    if (failedTrackId == null ||
+    if (_refreshingSource ||
+        failedTrackId == null ||
         (expectedTrackId != null && mediaItem.value?.id != expectedTrackId) ||
         (expectedLoadEpoch != null && _queueLoadEpoch != expectedLoadEpoch) ||
         _handlingPlaybackFailure ||

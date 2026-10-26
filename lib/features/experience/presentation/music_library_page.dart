@@ -7,7 +7,7 @@ import '../../music_platform/data/platform_library_repository.dart';
 import '../../music_platform/presentation/platform_design.dart';
 import '../../playlists/presentation/playlist_editor_dialog.dart';
 import '../../../shared/models/track.dart';
-import '../../../shared/widgets/artwork_image.dart';
+import '../../../shared/widgets/track_artwork.dart';
 import '../../themes/music_theme_tokens.dart';
 import 'editorial_widgets.dart';
 
@@ -206,8 +206,8 @@ class _CollectionTracks extends ConsumerWidget {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(18),
-                    child: ArtworkImage(
-                      uri: tracks.first.coverAsset,
+                    child: TrackArtwork(
+                      track: tracks.first,
                       width: 112,
                       height: 112,
                     ),

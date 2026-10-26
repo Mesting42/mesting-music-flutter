@@ -1,14 +1,14 @@
-# Beta.5 archival snapshot
+# Beta.6 archival snapshot
 
 Archived on 2026-10-27 from the retained original working-tree source ZIP.
-Original ZIP SHA-256: `2329CBD625812EA206804227237C6404196952C718C519022F260198D3AC1639`.
-All 660 original source entries were read and hash-verified.
+Original ZIP SHA-256: `4FEB428012D280E24511AD558872C3CD48AFB04A4C426F54CD951DB5FD5C808F`.
+All 674 original source entries were read and hash-verified.
 This commit was created during archival; it is not the original development
 commit or date. Text line endings may be normalized by Git. The accompanying
 source manifest preserves the original bytes' SHA-256 values.
 
 The historical APK is preserved without rebuilding or re-signing. Download:
-https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.5
+https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.6
 
 Additional archival material consists of this provenance document, the source
 manifest, and release metadata. Application code is the frozen delivered code.

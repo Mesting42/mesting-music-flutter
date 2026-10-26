@@ -1,5 +1,5 @@
 ---
-name: Mesting Android Beta.5
+name: Mesting Android Beta.6
 description: 封面主导、主题自适应的中文私人听歌空间
 colors:
   primary-seed: "#465CC7"
@@ -53,21 +53,21 @@ components:
   chip: {rounded: "{rounded.capsule}"}
   panel: {rounded: "{rounded.panel}", padding: "20px"}
   cover: {rounded: "{rounded.cover}"}
-  navigation: {rounded: "{rounded.capsule}", height: "62px"}
+  navigation: {rounded: "{rounded.capsule}", height: "64px"}
   playback-pill: {rounded: "{rounded.floating}", height: "64px"}
 ---
 
-# Design System: Mesting Android Beta.5
+# Design System: Mesting Android Beta.6
 
 ## Overview
 
 **Creative North Star: "封面主导的私人听歌空间"**
 
-封面承担视觉重心，中文大标题与留白组织阅读顺序。横向内容组露出下一项，歌曲列表保持紧凑；播放与导航悬浮于内容之上。既有装扮、浅深色和跟随系统继续共用新布局。
+封面承担视觉重心，中文大标题与留白组织阅读顺序。横向内容组露出下一项，歌曲列表保持紧凑；播放与导航悬浮于内容之上。经典浅色、深色和跟随系统继续共用新布局，进度条样式与角色独立选择。
 
-本文记录已经实现的 Android Beta.5。Beta 门限为 DistributionChannel.isBeta（Android appFlavor == beta）：推荐/发现入口、音乐库入口、导航、迷你播放条、平台账号个人页与播放器默认值分别按条件接入。正式分支保留既有页面、导航、迷你播放器与默认黑胶；共享主题和 PlatformStyle 不是全局发布开关。
+本文记录已经实现的 Android Beta.6。Beta 门限为 DistributionChannel.isBeta（Android appFlavor == beta）：推荐/发现入口、音乐库入口、官方玻璃底栏、平台账号个人页、播放器默认值与装扮精简分别按条件接入。正式 flavor 保留既有页面、导航、迷你播放器、完整主题与默认黑胶；共享主题和 PlatformStyle 不是全局发布开关。
 
-依据为项目主题、编辑式组件、导航、播放器、编辑器与 Replay 源码，以及 2026-10-25 beta5-review-round2 截图。beta5-finish-verdict2.md 的 disposition 为 ship：六项修复及 Replay 首屏页脚重叠均解决。截图中的账号、记录与重复人像是合成测试 fixture，不代表生产曲库素材，也不证明实体 Android 或云端链路已验证。
+依据为项目主题、编辑式组件、导航、播放器、编辑器与 Replay 源码，以及 2026-10-25 beta6-ui-approved 合成截图。Beta.6 独立复核 disposition 为 ship：键盘重复抬升、底栏默认文本继承和宽屏重复导航均已解决。截图中的账号、记录与重复人像是合成测试 fixture；测试字体覆盖边界不代表真机字形缺陷，截图也不证明实体 Android、GPU、CDN、真实音质切换或云端链路已验证。
 
 **Key Characteristics:**
 
@@ -101,29 +101,33 @@ display 用于页面标题，headline 用于分区；曲目使用 title 并单�
 
 Flutter 数值为逻辑像素；frontmatter 的 px 是可移植记法，文字遵循系统 TextScaler。页面左右（22dp）、书架间隔（14dp）、分区上/下（28/14dp）。页头计入安全区，正文回弹、可刷新。常规封面宽（158dp）、歌单（174dp）；歌曲行方封面（52dp），垂直内距（9dp）。
 
-窗口分级：compact <600dp、medium 600–839dp、expanded ≥840dp；内容上限依次为可用宽、760dp、1080dp。expanded 用 88dp 左轨；音乐库可用宽 ≥650dp 时两列变四列；宽播放条最大 720dp。特色封面按可用宽计算并夹紧，保留邻项露出。
+窗口分级：compact <600dp、medium 600–839dp、expanded ≥840dp；正文内容上限依次为可用宽、760dp、1080dp。Beta.6 手机和宽屏统一使用同一个官方底栏，不显示左轨或预留 88dp 左轨占位。音乐库可用宽 ≥650dp 时两列变四列；特色封面按可用宽计算并夹紧，保留邻项露出。正式 flavor 的既有自适应导航保持原有行为。
 
-**The Reachable Content Rule.** 编辑式正文保留 210dp 底部滚动余量；短屏播放器增加可滚动高度，文字缩放时增加空间，保留全部播放操作。导航包含手势安全区，搜索/设置/聊天/完整播放器/媒体预览分别控制悬浮层显示。
+**The Reachable Content Rule.** 编辑式正文保留 210dp 底部滚动余量；短屏播放器增加可滚动高度，文字缩放时增加空间，保留全部播放操作。官方底栏处理手势安全区和搜索键盘抬升，shell 仅为搜索正文避让键盘，不能重复移动底栏。设置/聊天/完整播放器/媒体预览分别控制悬浮层显示。
 
 ## Elevation & Depth
 
 正文依靠留白、稳定表面与封面层次。特色封面以底部深色渐层承载白字；播放器使用实际封面模糊与深色罩层。封面局部柔影、收藏轻红光晕不是全局卡片阴影。
 
-固定依赖 liquid_glass_widgets 1.15.0。MestingGlass 使用 standard、blur 12、thickness 22、lightIntensity .22、chromaticAberration .005；导航同样克制。高对比时前者改用不透明 surface + outline，底部导航采用包的 minimal；两条降级路径不同，不能宣称全部透明度均关闭。
+固定运行依赖 liquid_glass_widgets 1.15.0，官方示例来源快照保留在 third_party/liquid_glass_widgets/。Beta.6 底部 chrome 直接组合官方 Apple Music 示例的 GlassScaffold、GlassTabBar.searchable 与 GlassButton.custom，由库负责按压、拖动、弹簧和 accessory 形变。底栏使用 premium/full、blur 2、thickness 30、lightIntensity .2、chromaticAberration .01、saturation 1.2、fresnelStrength 0；播放胶囊单独使用 lightIntensity .18。浅/深底栏颜色分别为 #AAF2F2F7 / #AA1C1C1E，胶囊为 #CCF2F2F7 / #CC1C1C1E。
+
+原 MestingGlass 仍用于其他表面，其 standard、blur 12、thickness 22、lightIntensity .22、chromaticAberration .005 及高对比时不透明 surface + outline 是独立实现，不能套用到新官方底栏。官方 chrome 使用库自身行为，不能宣称继承原 MestingGlass 的降级或全部透明度均关闭。
 
 **The Floating Glass Rule.** 内容封面、列表、表单与账号面板保持稳定表面，折射限定悬浮 chrome。封面模糊属于音乐背景。
 
 ## Shapes
 
-小图片轻圆角，封面保留方形比例；普通封面、面板、弹窗使用 cover / panel / dialog。按钮、chip、导航为胶囊；搜索与主要播放为独立圆形。播放条是圆角超椭圆，编辑 sheet 只圆化顶部；封面选择以强调色边框表达。
+小图片轻圆角，封面保留方形比例；普通封面、面板、弹窗使用 cover / panel / dialog。按钮、chip、导航为胶囊；搜索与主要播放为独立圆形。官方播放胶囊使用 32dp 圆角矩形，编辑 sheet 只圆化顶部；封面选择以强调色边框表达。
 
 ## Components
 
 - **按钮与表单**：PlatformStyle 填充/描边最小 48×48dp，文字按钮 44×44dp；primary/onPrimary、低阶表面或安静文字区分层级。输入 18dp 圆角，焦点 primary 1.5dp 描边，错误使用主题 error；按压/焦点/禁用交给 Flutter Material。
 - **Chip / 面板**：chip 无描边，选中为 primary 轻填充。PlatformPanel 为 22dp 圆角、20dp 内距的不透明 surfaceContainerLow；加载、失败、空数据及适用重试如实显示。
-- **导航**：手机四目的地首页/发现/音乐库/我的，home/grid/library/person 图标族，另有 58dp 圆搜索。宽轨保留相同图标、强调色及 52dp 独立搜索，选中项有语义状态。
-- **播放条**：有当前媒体才显示；44dp 方封面、歌曲/歌手、播放/暂停、下一首、队列；正文点击打开播放器，左右滑动切歌。基础高度 64dp 随文字缩放增长，复用既有服务。
-- **播放器**：Beta 缺省沉浸封面，可选黑胶、流光唱片、星环脉冲、液态频谱，使用独立偏好键。方封面/大字同步歌词共用模糊背景；主要播放为白色 74dp 圆面，其余 transport 深色圆面与白图标，收藏拥有自己的主题圆面。歌词可点击同步位置，加载/失败/无歌词如实显示。
+- **导航**：手机和宽屏同用四目的地首页/发现/音乐库/我的及独立搜索，使用 Cupertino 空心/填充图标与主题强调色。官方底栏基础 64dp、搜索和 accessory 基础 50dp，随 TextScaler 最多增加 28dp；水平/垂直内距为 20/16dp，间距 8dp。正文滚动超过 50dp 时收拢并将 accessory 置于 inline；再次点击当前 tab 回到顶部。搜索展开/取消、清空与键盘行为交给官方组件，外层透明 Material 提供正常文字默认值。
+- **播放条**：有当前媒体才显示，作为官方底栏 accessory；32dp 方封面、歌曲/歌手、播放/暂停，宽度 ≥240dp 显示下一首，宽度 ≥300dp 显示队列。较窄且文字放大时可省略歌手；点击打开播放器、左右滑动切歌。GlassButton.custom 基础高度 64dp，复用既有音频服务。
+- **播放器**：Beta 缺省沉浸封面，可选黑胶、流光唱片、星环脉冲、液态频谱，使用独立偏好键。五种样式共用标准/高品质/无损/Hi-Res 选择与持久化偏好；切换由既有音频 handler 刷新当前源，保留进度、播放/暂停、队列和模式，过时操作不能覆盖新操作。偏好与平台实际返回音质分开表达，未知返回显示“音质/待平台确认”，试听与降档如实披露。方封面/大字同步歌词共用模糊背景；主要播放为白色 74dp 圆面，其余 transport 深色圆面与白图标，收藏拥有自己的主题圆面。歌词可点击同步位置，加载/失败/无歌词如实显示。
+- **装扮**：Beta 移除蜡笔小新、Hello Kitty、库洛米完整主题，经典浅/深/跟随系统保留；旧角色主题迁移到 classic，并把旧 followTheme 进度条样式和角色转换为原角色显式选择以保留实际外观。背景强度固定 .58，动态性能固定 automatic，设置页移除两项入口，IP 角色装饰开关及独立进度条样式/角色保留。正式 flavor 的主题行为保持原样。
+- **封面恢复**：推荐、搜索、歌单与播放器共用平台封面规范化，接受有效 HTTP/HTTPS 与协议相对 URL、替换尺寸占位并跳过裸文件名。列表元数据回退仅只读，合并同歌曲请求、最多 3 并发、缓存最近 256 个成功封面；临时失败不永久缓存，也不影响播放或触发云写入。
 - **歌单编辑**：PageView viewportFraction .72，中心方封面、邻项露出、相机/圆点指示；第一项现有/相册，另六项本地模板，空封面有加图占位。固定页头 48dp 强调对勾与安静取消；键盘上移、表单滚动。保存中禁用并显示进度，失败保留草稿，成功才关闭；结果为 640×640 不透明 PNG。
 - **Replay 与 owner**：当前账号本机每日记录按年/月聚合；年份菜单、全年/月 chip，选中月进入视野。封面氛围、大排名、时长及“歌曲封面”披露共存，不补算未记录月份。首页精选/最近、发现新歌/分组、音乐库收藏/歌单/最近/Replay 保持各自组合；云端/本地标签与社交能力反映真实归属，不新建第二套收藏或播放状态。
 

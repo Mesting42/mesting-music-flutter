@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../themes/mesting_palette.dart';
 import '../../themes/music_theme_tokens.dart';
 import 'music_page_transition.dart';
+import '../../experience/presentation/beta_bottom_bar.dart';
 import '../../../core/platform/distribution_channel.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
@@ -53,69 +54,15 @@ class MusicBottomNavigation extends ConsumerWidget {
     final selected = musicBottomNavigationIndexForLocation(location);
 
     if (DistributionChannel.isBeta) {
-      return Padding(
-        padding: EdgeInsets.only(bottom: bottomInset),
-        child: GlassTabBar.bottom(
-          selectedIndex: selected,
-          onTabSelected: (index) => _goToMusicTab(
-            context,
-            selected,
-            index,
-            const [
-              '/music/recommend',
-              '/music',
-              '/music/library',
-              '/profile',
-            ][index],
-          ),
-          tabs: const [
-            GlassTab(
-              label: '首页',
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home_rounded),
-            ),
-            GlassTab(label: '发现', icon: Icon(Icons.grid_view_rounded)),
-            GlassTab(
-              label: '音乐库',
-              icon: Icon(Icons.library_music_outlined),
-              activeIcon: Icon(Icons.library_music_rounded),
-            ),
-            GlassTab(
-              label: '我的',
-              icon: Icon(Icons.person_outline_rounded),
-              activeIcon: Icon(Icons.person_rounded),
-            ),
-          ],
-          extraButton: GlassTabBarExtraButton(
-            icon: const Icon(Icons.search_rounded),
-            onTap: () => context.push('/music/search'),
-            label: '搜索歌曲',
-            size: 58,
-          ),
-          barHeight: 62,
-          horizontalPadding: 14,
-          verticalPadding: 10,
-          spacing: 10,
-          labelFontSize: 10,
-          iconSize: 24,
-          iconLabelSpacing: 2,
-          selectedIconColor: accent,
-          selectedLabelColor: accent,
-          unselectedIconColor: tokens.textPrimary,
-          unselectedLabelColor: tokens.textPrimary,
-          indicatorColor: accent.withValues(alpha: .13),
-          quality: MediaQuery.highContrastOf(context)
-              ? GlassQuality.minimal
-              : GlassQuality.standard,
-          settings: LiquidGlassSettings(
-            glassColor: Theme.of(
-              context,
-            ).colorScheme.surface.withValues(alpha: .8),
-            thickness: 22,
-            blur: 12,
-            chromaticAberration: .005,
-            lightIntensity: .22,
-          ),
+      return BetaMusicBottomBar(
+        selectedIndex: selected,
+        onTabSelected: (index) =>
+            _goToMusicTab(context, selected, index, betaMusicRoutes[index]),
+        searchConfig: GlassSearchBarConfig(
+          hintText: '搜索歌曲、歌手',
+          onSearchToggle: (active) {
+            if (active) context.push('/music/search');
+          },
         ),
       );
     }

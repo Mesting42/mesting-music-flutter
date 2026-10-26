@@ -1,17 +1,20 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+
 import '../../../core/audio/playback_providers.dart';
-import '../../../shared/widgets/artwork_image.dart';
-import '../../../shared/widgets/mesting_glass.dart';
-import '../../themes/music_theme_tokens.dart';
+import '../../../shared/widgets/track_artwork.dart';
 import '../../queue/presentation/queue_page.dart';
 import '../../music_platform/presentation/platform_feedback.dart';
 import '../../player/presentation/persistent_mini_player.dart'
     show MiniPlayerSwipeRegion;
+import 'beta_bottom_bar.dart';
 
-/// Playback observes the existing service, so navigation never creates another
-/// player, queue, notification, or independent favorite state.
+/// Official Apple Music example's GlassButton.custom play pill (MIT), with live
+/// Mesting media/actions. The package owns press/spring/refraction, while the
+/// existing audio service and swipe contract own playback. No second player.
 class FloatingPlaybackPill extends ConsumerWidget {
   const FloatingPlaybackPill({super.key});
   @override
@@ -22,6 +25,7 @@ class FloatingPlaybackPill extends ConsumerWidget {
     final track = ref.watch(currentTrackProvider);
     final playing = ref.watch(playbackStateProvider).value?.playing ?? false;
     final handler = ref.watch(audioHandlerProvider);
+    final foreground = Theme.of(context).colorScheme.onSurface;
     Future<void> action(Future<void> Function() operation) async {
       try {
         await operation();
@@ -30,92 +34,99 @@ class FloatingPlaybackPill extends ConsumerWidget {
       }
     }
 
-    return MiniPlayerSwipeRegion(
-      onPrevious: () => action(handler.skipToPrevious),
-      onNext: () => action(handler.skipToNext),
-      child: MestingGlass(
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
+    Widget control({
+      required String label,
+      required IconData icon,
+      required VoidCallback onTap,
+    }) => Semantics(
+      label: label,
+      button: true,
+      child: CupertinoButton(
+        padding: EdgeInsets.zero,
+        minimumSize: const Size(44, 44),
+        onPressed: onTap,
+        child: Icon(icon, size: 23, color: foreground),
+      ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 300;
+        return MiniPlayerSwipeRegion(
+          onPrevious: () => action(handler.skipToPrevious),
+          onNext: () => action(handler.skipToNext),
+          child: GlassButton.custom(
+            key: const ValueKey('beta6-official-play-pill'),
             onTap: () => context.push('/player'),
-            borderRadius: BorderRadius.circular(32),
-            child: SizedBox(
-              key: const ValueKey('beta5-playback-pill'),
-              height:
-                  64 +
-                  (MediaQuery.textScalerOf(context).scale(27) - 27).clamp(
-                    0.0,
-                    45.0,
+            quality: GlassQuality.premium,
+            useOwnLayer: true,
+            width: double.infinity,
+            height: 64,
+            shape: const LiquidRoundedRectangle(borderRadius: 32),
+            settings: betaMusicPillGlass(context),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 16),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: TrackArtwork(track: track, width: 32, height: 32),
                   ),
-              child: Padding(
-                padding: const EdgeInsets.only(left: 10, right: 8),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: ArtworkImage(
-                        uri: track.coverAsset,
-                        width: 44,
-                        height: 44,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            track.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: context.musicThemeTokens.textPrimary,
-                            ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          track.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: foreground,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
                           ),
+                        ),
+                        if (!compact ||
+                            MediaQuery.textScalerOf(context).scale(12) <= 16)
                           Text(
                             track.artist,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
+                              color: foreground.withValues(alpha: .7),
                               fontSize: 12,
-                              height: 1.6,
-                              color: context.musicThemeTokens.textSecondary,
                             ),
                           ),
-                        ],
-                      ),
+                      ],
                     ),
-                    IconButton(
-                      tooltip: playing ? '暂停' : '播放',
-                      onPressed: () =>
-                          action(playing ? handler.pause : handler.play),
-                      icon: Icon(
-                        playing
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
-                        size: 31,
-                      ),
+                  ),
+                  control(
+                    label: playing ? '暂停' : '播放',
+                    icon: playing
+                        ? CupertinoIcons.pause_fill
+                        : CupertinoIcons.play_fill,
+                    onTap: () => action(playing ? handler.pause : handler.play),
+                  ),
+                  if (constraints.maxWidth >= 240)
+                    control(
+                      label: '下一首',
+                      icon: CupertinoIcons.forward_end_fill,
+                      onTap: () => action(handler.skipToNext),
                     ),
-                    IconButton(
-                      tooltip: '下一首',
-                      onPressed: () => action(handler.skipToNext),
-                      icon: const Icon(Icons.skip_next_rounded, size: 29),
+                  if (!compact)
+                    control(
+                      label: '播放队列',
+                      icon: CupertinoIcons.music_note_list,
+                      onTap: () => showPlaybackQueueSheet(context),
                     ),
-                    IconButton(
-                      tooltip: '播放队列',
-                      onPressed: () => showPlaybackQueueSheet(context),
-                      icon: const Icon(Icons.queue_music_rounded, size: 24),
-                    ),
-                  ],
-                ),
+                ],
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

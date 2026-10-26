@@ -1,6 +1,6 @@
 param(
-    [string]$VersionName = '1.0.37-beta.5',
-    [ValidateRange(1, 2147483647)][int]$VersionCode = 5,
+    [string]$VersionName = '1.0.37-beta.6',
+    [ValidateRange(1, 2147483647)][int]$VersionCode = 6,
     [ValidateSet('debug', 'release')][string]$Mode = 'release',
     [string]$TargetPlatform = 'android-arm,android-arm64',
     [string]$FlutterSdkRoot = $env:MESTING_BETA_FLUTTER_ROOT
@@ -20,7 +20,7 @@ try {
     $sdk = & $flutterCommand --version --machine | ConvertFrom-Json
     if ($LASTEXITCODE -ne 0) { throw 'Cannot read Flutter SDK version.' }
     if ([version]$sdk.frameworkVersion -lt [version]'3.41.0') {
-        throw 'Beta.5 requires Flutter >= 3.41.0. Use -FlutterSdkRoot with the independent Flutter 3.41.9 SDK.'
+        throw 'Beta requires Flutter >= 3.41.0. Use -FlutterSdkRoot with the independent Flutter 3.41.9 SDK.'
     }
     # No deployment, manifest write or formal build is performed by this tool.
     # Channel identity is also enforced from Flutter's generated appFlavor.

@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import '../../music_platform/presentation/platform_quality_button.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/audio/playback_providers.dart';
+import '../../../core/platform/distribution_channel.dart';
 import '../../../core/errors/user_facing_error.dart';
 import '../../../shared/layout/adaptive_layout.dart';
 import '../../../shared/widgets/artwork_image.dart';
@@ -735,6 +737,12 @@ class _NowPlayingPageState extends ConsumerState<NowPlayingPage> {
                 child: const Center(
                   child: Text('平台试听', style: TextStyle(color: Colors.white)),
                 ),
+              ),
+            if (DistributionChannel.isBeta && !_lyricsVisible)
+              Positioned(
+                left: 78,
+                top: safeTop + 8,
+                child: const PlatformQualityButton(),
               ),
             if (ref.watch(showMestingFeaturesProvider))
               Positioned(

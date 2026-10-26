@@ -1,10 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../../music_platform/presentation/platform_quality_button.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/audio/playback_mode.dart';
 import '../../../core/audio/playback_providers.dart';
-import '../../../shared/widgets/artwork_image.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../../shared/widgets/track_artwork.dart';
 import '../../../shared/widgets/mesting_glass.dart';
 import '../../../shared/utils/duration_format.dart';
 import '../../auth/account_capabilities.dart';
@@ -88,8 +90,8 @@ class _CoverPlayerPageState extends ConsumerState<CoverPlayerPage> {
                     imageFilter: ImageFilter.blur(sigmaX: 70, sigmaY: 70),
                     child: Transform.scale(
                       scale: 1.35,
-                      child: ArtworkImage(
-                        uri: track.coverAsset,
+                      child: TrackArtwork(
+                        track: track,
                         width: 800,
                         height: 1200,
                         fit: BoxFit.cover,
@@ -126,6 +128,8 @@ class _CoverPlayerPageState extends ConsumerState<CoverPlayerPage> {
                                 ),
                               ),
                               const Spacer(),
+                              if (DistributionChannel.isBeta)
+                                const PlatformQualityButton(),
                               PopupMenuButton<PlayerVisualStyle>(
                                 tooltip: '播放器样式',
                                 icon: const Icon(
@@ -167,8 +171,8 @@ class _CoverPlayerPageState extends ConsumerState<CoverPlayerPage> {
                                             ClipRRect(
                                               borderRadius:
                                                   BorderRadius.circular(9),
-                                              child: ArtworkImage(
-                                                uri: track.coverAsset,
+                                              child: TrackArtwork(
+                                                track: track,
                                                 width: 52,
                                                 height: 52,
                                               ),
@@ -235,8 +239,8 @@ class _CoverPlayerPageState extends ConsumerState<CoverPlayerPage> {
                                             ],
                                           ),
                                           clipBehavior: Clip.antiAlias,
-                                          child: ArtworkImage(
-                                            uri: track.coverAsset,
+                                          child: TrackArtwork(
+                                            track: track,
                                             width: 640,
                                             height: 640,
                                           ),

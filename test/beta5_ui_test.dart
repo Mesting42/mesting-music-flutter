@@ -6,7 +6,9 @@ import 'package:mesting_music/features/experience/presentation/music_library_pag
 import 'package:mesting_music/features/experience/presentation/cover_player_page.dart';
 import 'package:mesting_music/features/experience/presentation/listening_replay_page.dart';
 import 'package:mesting_music/features/player/presentation/music_shell.dart';
-import 'package:mesting_music/features/player/presentation/music_navigation.dart';
+import 'package:mesting_music/features/player/player_visual_style.dart';
+import 'package:mesting_music/features/player/presentation/now_playing_page.dart';
+import 'package:mesting_music/features/experience/presentation/beta_bottom_bar.dart';
 import 'package:mesting_music/features/lyrics/domain/lyrics_document.dart';
 import 'package:mesting_music/features/lyrics/lyrics_providers.dart';
 import 'package:mesting_music/features/playlists/presentation/playlist_editor_dialog.dart';
@@ -15,6 +17,9 @@ import 'dart:ui' as ui;
 import 'package:audio_service/audio_service.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart' show CupertinoIcons, CupertinoTextField;
+import 'package:mesting_music/features/themes/theme_gallery_page.dart';
+import 'package:mesting_music/features/music_platform/platform_catalog_providers.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -105,6 +110,17 @@ void main() {
             font.readAsBytes().then((bytes) => ByteData.sublistView(bytes)),
           );
         await loader.load();
+        // Cupertino widgets choose the iOS font family inside GlassScaffold.
+        // Supply its CJK test substitute as well; device builds use system fonts.
+        for (final family in [
+          'CupertinoSystemText',
+          'CupertinoSystemDisplay',
+        ]) {
+          await (FontLoader(family)..addFont(
+                font.readAsBytes().then((bytes) => ByteData.sublistView(bytes)),
+              ))
+              .load();
+        }
         final icons = FontLoader('MaterialIcons')
           ..addFont(
             File(
@@ -112,6 +128,13 @@ void main() {
             ).readAsBytes().then((bytes) => ByteData.sublistView(bytes)),
           );
         await icons.load();
+        final cupertino = FontLoader('packages/cupertino_icons/CupertinoIcons')
+          ..addFont(
+            rootBundle.load(
+              'packages/cupertino_icons/assets/CupertinoIcons.ttf',
+            ),
+          );
+        await cupertino.load();
         fontsLoaded = true;
       }
     }
@@ -236,6 +259,11 @@ void main() {
           (ref) => Stream.value(_track.toMediaItem()),
         ),
         currentTrackProvider.overrideWithValue(_track),
+        // These are parsed UI fixtures, not wire payloads. Real platform cover
+        // parsing rejects asset filenames and is covered in beta6_platform_test.
+        platformDailyProvider.overrideWith((ref) async => [_track]),
+        platformNewSongsProvider.overrideWith((ref) async => [_track]),
+        platformDiscoveryProvider.overrideWith((ref) async => [_track]),
         positionProvider.overrideWith(
           (ref) => Stream.value(const Duration(seconds: 37)),
         ),
@@ -392,7 +420,7 @@ void main() {
           capture: 'home-$suffix',
         );
         expect(find.text('为你精选'), findsOneWidget);
-        expect(find.byType(MusicBottomNavigation), findsOneWidget);
+        expect(find.byType(BetaMusicBottomBar), findsOneWidget);
         await pump(
           tester,
           const MusicLandingPage(discovery: true),
@@ -573,6 +601,119 @@ void main() {
       expect(tester.takeException(), null);
       await captureScreenshot(tester, 'playlist-editor-keyboard');
       tester.view.resetViewInsets();
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta6 official bottom morph, embedded search and quality dialog',
+    (tester) async {
+      viewport(tester);
+      await prepare();
+      await pump(
+        tester,
+        const MusicLandingPage(),
+        shell: true,
+        capture: 'beta6-home-expanded',
+      );
+      expect(
+        tester
+            .widget<BetaMusicBottomBar>(find.byType(BetaMusicBottomBar))
+            .inline,
+        false,
+      );
+      final navigationLabel = tester.element(find.text('首页').last);
+      final navigationText = DefaultTextStyle.of(navigationLabel).style;
+      expect(navigationText.fontFamily, isNot('monospace'));
+      expect(navigationText.decoration, isNot(TextDecoration.underline));
+      await tester.drag(find.byType(ListView).first, const Offset(0, -450));
+      for (var frame = 0; frame < 12; frame++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(
+        tester
+            .widget<BetaMusicBottomBar>(find.byType(BetaMusicBottomBar))
+            .inline,
+        true,
+      );
+      await captureScreenshot(tester, 'beta6-home-collapsed');
+      await tester.tap(find.byIcon(CupertinoIcons.search).hitTestable().last);
+      for (var frame = 0; frame < 12; frame++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(
+        tester
+            .widget<BetaMusicBottomBar>(find.byType(BetaMusicBottomBar))
+            .inline,
+        false,
+      );
+      await captureScreenshot(tester, 'beta6-search-expanded');
+      await tester.enterText(find.byType(CupertinoTextField).last, '薛之谦');
+      tester.view.viewInsets = const FakeViewPadding(bottom: 280);
+      await tester.pump(const Duration(milliseconds: 700));
+      expect(tester.takeException(), null);
+      final searchField = tester.getRect(find.byType(CupertinoTextField).last);
+      final keyboardTop = tester.view.physicalSize.height - 280;
+      expect(searchField.bottom, lessThanOrEqualTo(keyboardTop));
+      expect(searchField.bottom, greaterThan(keyboardTop - 120));
+      await captureScreenshot(tester, 'beta6-search-keyboard');
+      tester.view.resetViewInsets();
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta6 quality dialog and every player appearance share the entry',
+    (tester) async {
+      viewport(tester);
+      await prepare();
+      await pump(tester, const CoverPlayerPage());
+      await tester.tap(find.byKey(const ValueKey('player-quality-button')));
+      await tester.pump(const Duration(milliseconds: 400));
+      for (final label in ['标准', '高品质', '无损', 'Hi-Res']) {
+        expect(find.text(label), findsOneWidget);
+      }
+      await captureScreenshot(tester, 'beta6-quality-dialog');
+      for (final style in PlayerVisualStyle.values) {
+        await container.read(playerVisualStyleProvider.notifier).select(style);
+        await pump(tester, NowPlayingPage(key: ValueKey(style.id)));
+        expect(
+          find.byKey(const ValueKey('player-quality-button')),
+          findsOneWidget,
+          reason: style.displayName,
+        );
+        if (style == PlayerVisualStyle.classic) {
+          await captureScreenshot(tester, 'beta6-vinyl-quality');
+        }
+      }
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta6 dress-up keeps progress characters and removes retired controls',
+    (tester) async {
+      viewport(tester);
+      await prepare();
+      await pump(
+        tester,
+        const ThemeGalleryPage(),
+        capture: 'beta6-dress-up-top',
+      );
+      expect(find.text('蜡笔小新'), findsNothing);
+      expect(find.text('春日部晴空'), findsNothing);
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -1000));
+      await tester.pump(const Duration(milliseconds: 700));
+      expect(find.text('背景显示强度'), findsNothing);
+      expect(find.text('动态效果性能'), findsNothing);
+      expect(find.text('IP 角色装饰'), findsOneWidget);
+      expect(find.text('Hello Kitty'), findsWidgets);
+      expect(find.text('库洛米'), findsWidgets);
+      await captureScreenshot(tester, 'beta6-dress-up-progress');
+      expect(tester.takeException(), null);
       await disposeFixture(tester);
     },
     skip: !DistributionChannel.isBeta,

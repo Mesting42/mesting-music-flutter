@@ -7,6 +7,7 @@ import '../../social/listen_together_providers.dart';
 import '../../themes/music_theme_background.dart';
 import 'music_navigation.dart';
 import 'persistent_mini_player.dart';
+import '../../experience/presentation/beta_music_shell.dart';
 
 bool musicShellUsesImmersiveProfileMediaOverlay(String location) {
   final path = Uri.parse(location).path;
@@ -39,6 +40,9 @@ class MusicShell extends ConsumerWidget {
         !settingsOverlay &&
         !conversationOverlay &&
         !profileMediaOverlay;
+    if (DistributionChannel.isBeta && showNavigation) {
+      return BetaMusicShell(location: location, child: child);
+    }
     final useNavigationRail =
         showNavigation && mestingUsesNavigationRailForWidth(pageWidth);
     final contentLeft = useNavigationRail ? musicNavigationRailWidth : 0.0;

@@ -20,6 +20,15 @@ class PlatformCredits {
       yield LicenseEntryWithLineBreaks([
         'md3Music · zzyoxml and contributors',
       ], '$notice\n\n$license');
+      final glassLicense = await rootBundle.loadString(
+        'third_party/liquid_glass_widgets/LICENSE',
+      );
+      final glassNotice = await rootBundle.loadString(
+        'third_party/liquid_glass_widgets/NOTICE.md',
+      );
+      yield LicenseEntryWithLineBreaks([
+        'Liquid Glass Widgets Apple Music example · Sebastian Degenaar',
+      ], '$glassNotice\n\n$glassLicense');
     });
   }
 }

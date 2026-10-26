@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/audio/playback_providers.dart';
 import '../../../shared/models/track.dart';
 import '../../../shared/widgets/artwork_image.dart';
+import '../../../shared/widgets/track_artwork.dart';
 import '../../auth/auth_providers.dart';
 import '../../library/presentation/favorite_toggle_button.dart';
 import '../../music_platform/music_platform_providers.dart';
@@ -151,6 +152,7 @@ class EditorialSection extends StatelessWidget {
 class EditorialCover extends StatelessWidget {
   const EditorialCover({
     required this.cover,
+    this.track,
     required this.title,
     this.subtitle = '',
     this.width = 158,
@@ -161,6 +163,7 @@ class EditorialCover extends StatelessWidget {
     super.key,
   });
   final String cover;
+  final Track? track;
   final String title;
   final String subtitle;
   final double width;
@@ -184,12 +187,19 @@ class EditorialCover extends StatelessWidget {
               borderRadius: BorderRadius.circular(feature ? 22 : 12),
               child: Stack(
                 children: [
-                  ArtworkImage(
-                    uri: cover,
-                    width: width,
-                    height: height ?? width * (feature ? 1.13 : 1),
-                    fit: BoxFit.cover,
-                  ),
+                  if (track != null)
+                    TrackArtwork(
+                      track: track!,
+                      width: width,
+                      height: height ?? width * (feature ? 1.13 : 1),
+                    )
+                  else
+                    ArtworkImage(
+                      uri: cover,
+                      width: width,
+                      height: height ?? width * (feature ? 1.13 : 1),
+                      fit: BoxFit.cover,
+                    ),
                   if (feature)
                     Positioned.fill(
                       child: DecoratedBox(
@@ -328,7 +338,7 @@ class EditorialTrackRow extends ConsumerWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(9),
-            child: ArtworkImage(uri: track.coverAsset, width: 52, height: 52),
+            child: TrackArtwork(track: track, width: 52, height: 52),
           ),
           if (rank != null)
             SizedBox(
@@ -444,11 +454,9 @@ class EditorialCollectionHero extends ConsumerWidget {
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(18),
-          child: ArtworkImage(
-            uri: cover.isEmpty ? (tracks.firstOrNull?.coverAsset ?? '') : cover,
-            width: 210,
-            height: 210,
-          ),
+          child: cover.isEmpty && tracks.isNotEmpty
+              ? TrackArtwork(track: tracks.first, width: 210, height: 210)
+              : ArtworkImage(uri: cover, width: 210, height: 210),
         ),
         const SizedBox(height: 18),
         if (description.isNotEmpty)

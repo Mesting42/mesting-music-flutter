@@ -14,6 +14,7 @@ import '../core/platform/distribution_channel.dart';
 import '../features/music_platform/data/embedded_kugou_music_source.dart';
 import '../features/music_platform/data/music_platform_api.dart';
 import '../features/music_platform/music_platform_providers.dart';
+import '../features/music_platform/platform_quality_providers.dart';
 import '../shared/models/track.dart';
 import '../core/persistence/playback_persistence_controller.dart';
 import '../features/library/library_providers.dart';
@@ -49,7 +50,10 @@ class MestingMusicApp extends ConsumerWidget {
         // Playback restored from disk must use the current platform account,
         // rather than a signed URL left over from a previous login/session.
         await ref.read(platformAccountProvider.future);
-        final resolved = await source.resolveTrack(track);
+        final resolved = await source.resolveTrack(
+          track,
+          quality: ref.read(platformQualityProvider).preferred,
+        );
         if (!resolved.isPlayable) {
           throw MusicPlatformException(resolved.availabilityMessage);
         }
@@ -99,6 +103,7 @@ class MestingMusicApp extends ConsumerWidget {
     return DistributionChannel.isBeta
         ? LiquidGlassWidgets.wrap(
             brightnessResolver: Theme.maybeBrightnessOf,
+            adaptiveQuality: true,
             child: application,
           )
         : application;

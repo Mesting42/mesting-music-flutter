@@ -3,6 +3,8 @@ import '../../search/data/kugou_music_source.dart';
 import 'music_platform_api.dart';
 import 'platform_playback_resolver.dart';
 import 'platform_song_identity.dart';
+import 'platform_artwork.dart';
+import '../domain/platform_audio_quality.dart';
 
 /// Translates md3Music data into existing Mesting tracks and uses its one audio
 /// handler. Other distribution channels keep their existing source selection.
@@ -14,11 +16,19 @@ class EmbeddedKugouMusicSource extends KugouMusicSource {
 
   /// Refresh only the selected song at playback time. Stored library rows may
   /// outlive a signed URL or have been saved under a different platform login.
-  Future<Track> resolveTrack(Track track, {Future<void>? abortTrigger}) async {
+  Future<Track> resolveTrack(
+    Track track, {
+    Future<void>? abortTrigger,
+    PlatformAudioQuality quality = PlatformAudioQuality.standard,
+  }) async {
     if (track.source != TrackSource.kugou || !track.id.startsWith('kugou_')) {
       return track;
     }
-    return resolver.resolve(track, abortTrigger: abortTrigger);
+    return resolver.resolve(
+      track,
+      abortTrigger: abortTrigger,
+      quality: quality,
+    );
   }
 
   @override
@@ -159,13 +169,7 @@ class EmbeddedKugouMusicSource extends KugouMusicSource {
       album: text(['album_name', 'AlbumName', 'albumname']),
       duration: Duration(seconds: duration),
       audioAsset: '',
-      coverAsset: text([
-        'sizable_cover',
-        'img',
-        'Image',
-        'cover',
-        'album_sizable_cover',
-      ]).replaceAll('{size}', '400'),
+      coverAsset: PlatformArtwork.fromPayload(row),
       lyricsAsset: '',
       source: TrackSource.kugou,
       provider: '酷狗概念版',

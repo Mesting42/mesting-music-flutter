@@ -6,6 +6,8 @@ import '../../../shared/models/track.dart';
 import '../domain/platform_session.dart';
 import 'music_platform_api.dart';
 import 'platform_song_identity.dart';
+import 'platform_artwork.dart';
+import '../domain/platform_audio_quality.dart';
 
 /// Resolves media independently of search, catalog UI and the audio engine.
 /// Guest requests keep the upstream permitted-preview fallback. A membership
@@ -45,7 +47,11 @@ class PlatformPlaybackResolver {
         _registration = null;
       });
 
-  Future<Track> resolve(Track track, {Future<void>? abortTrigger}) async {
+  Future<Track> resolve(
+    Track track, {
+    Future<void>? abortTrigger,
+    PlatformAudioQuality quality = PlatformAudioQuality.standard,
+  }) async {
     final identity = api.session;
     final abort = Completer<void>();
     var timedOut = false;
@@ -63,7 +69,7 @@ class PlatformPlaybackResolver {
     var registered = false;
     final query = <String, String>{
       'hash': track.id.substring('kugou_'.length).toLowerCase(),
-      'quality': '128',
+      'quality': quality.code,
     };
 
     Future<Map<String, dynamic>> request(
@@ -109,6 +115,11 @@ class PlatformPlaybackResolver {
           int.tryParse('${data['fileSize'] ?? data['file_size'] ?? 0}') ?? 0;
       return track.copyWith(
         audioAsset: mediaUrl(data),
+        coverAsset: PlatformArtwork.fromPayload(data).isEmpty
+            ? track.coverAsset
+            : PlatformArtwork.fromPayload(data),
+        playbackQuality:
+            PlatformAudioQuality.fromCode(data['quality'])?.code ?? '',
         platformSongId: PlatformSongIdentity.fromPayload(data).isEmpty
             ? track.platformSongId
             : PlatformSongIdentity.fromPayload(data),
@@ -122,17 +133,29 @@ class PlatformPlaybackResolver {
 
     try {
       final vip = identity?.vipToken.isNotEmpty == true;
-      if (vip) {
-        final data = await load('/song/url/new');
+      for (final tier in quality.fallbackChain) {
+        query['quality'] = tier.code;
+        if (vip) {
+          final data = await load('/song/url/new');
+          final fail = data['fail_process'];
+          if (mediaUrl(data).isNotEmpty &&
+              '${data['priv_status']}' == '1' &&
+              (fail is! List || fail.isEmpty)) {
+            return resolved(data);
+          }
+        }
+        final data = await load('/song/url');
         final fail = data['fail_process'];
+        // The platform can return a trial URL for an unavailable paid tier.
+        // First try the next permitted tier; do not silently label a trial as
+        // the selected full-quality stream.
         if (mediaUrl(data).isNotEmpty &&
-            '${data['priv_status']}' == '1' &&
-            (fail is! List || fail.isEmpty)) {
+            (tier == PlatformAudioQuality.standard ||
+                fail is! List ||
+                !fail.contains('buy'))) {
           return resolved(data);
         }
       }
-      final data = await load('/song/url');
-      if (mediaUrl(data).isNotEmpty) return resolved(data);
       if (!vip) {
         final preview = await load('/song/url', preview: true);
         if (mediaUrl(preview).isNotEmpty) {

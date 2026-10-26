@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../shared/models/track.dart';
 import 'mesting_audio_handler.dart';
 import 'playback_mode.dart';
+import '../../features/music_platform/platform_artwork_providers.dart';
+import '../platform/distribution_channel.dart';
 
 final audioHandlerProvider = Provider<MestingAudioHandler>((ref) {
   throw StateError('audioHandlerProvider 必须在应用启动时覆盖');
@@ -45,7 +47,8 @@ final playbackModeProvider = StreamProvider<PlaybackMode>((ref) {
 final currentTrackProvider = Provider<Track>((ref) {
   final item = ref.watch(currentMediaItemProvider).value;
   final handler = ref.watch(audioHandlerProvider);
-  return handler.trackForId(item?.id ?? '') ??
+  final track =
+      handler.trackForId(item?.id ?? '') ??
       Track(
         id: item?.id ?? 'empty_player',
         title: item?.title ?? '暂无播放',
@@ -59,9 +62,17 @@ final currentTrackProvider = Provider<Track>((ref) {
             '',
         lyricsAsset: item?.extras?['lyricsAsset']?.toString() ?? '',
         platformSongId: item?.extras?['platformSongId']?.toString() ?? '',
+        playbackQuality: item?.extras?['playbackQuality']?.toString() ?? '',
         source: TrackSource.values.firstWhere(
           (source) => source.name == item?.extras?['source'],
           orElse: () => TrackSource.local,
         ),
       );
+  if (DistributionChannel.isBeta &&
+      track.source == TrackSource.kugou &&
+      !track.coverAsset.startsWith('assets/')) {
+    final cover = ref.watch(platformArtworkProvider(track)).value;
+    if (cover?.isNotEmpty == true) return track.copyWith(coverAsset: cover);
+  }
+  return track;
 });

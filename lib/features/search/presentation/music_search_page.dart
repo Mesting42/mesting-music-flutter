@@ -6,7 +6,7 @@ import '../../../core/audio/playback_providers.dart';
 import '../../../core/errors/user_facing_error.dart';
 import '../../../shared/models/track.dart';
 import '../../../shared/utils/duration_format.dart';
-import '../../../shared/widgets/artwork_image.dart';
+import '../../../shared/widgets/track_artwork.dart';
 import '../../../shared/widgets/mesting_loading_indicator.dart';
 import '../../../shared/widgets/music_notice.dart';
 import '../../library/library_providers.dart';
@@ -208,6 +208,25 @@ class _MusicSearchPageState extends ConsumerState<MusicSearchPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Search results reused by the official bottom search field. It consumes the
+/// same paged controller, so there is no second search implementation/state.
+class MusicSearchResultsBody extends ConsumerWidget {
+  const MusicSearchResultsBody({required this.onSearch, super.key});
+  final ValueChanged<String> onSearch;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(musicSearchControllerProvider);
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      child: state.query.isEmpty
+          ? _SearchLanding(onSearch: onSearch)
+          : state.isLoading
+          ? _SearchLoading(query: state.query)
+          : _SearchResults(state: state, onSearch: onSearch),
     );
   }
 }
@@ -1256,7 +1275,7 @@ class _NeteaseTrackResult extends ConsumerWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(9),
-              child: ArtworkImage(uri: track.coverAsset, width: 52, height: 52),
+              child: TrackArtwork(track: track, width: 52, height: 52),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1745,7 +1764,7 @@ class _TrackResults extends ConsumerWidget {
             },
             leading: ClipRRect(
               borderRadius: BorderRadius.circular(13),
-              child: ArtworkImage(uri: track.coverAsset, width: 52, height: 52),
+              child: TrackArtwork(track: track, width: 52, height: 52),
             ),
             title: Text(
               track.title,
