@@ -11,6 +11,10 @@ import '../features/legal/presentation/disclaimer_dialog.dart';
 import '../features/lyrics/presentation/lyrics_overlay_coordinator.dart';
 import '../features/app_update/presentation/app_update_coordinator.dart';
 import '../core/audio/playback_providers.dart';
+import '../core/platform/distribution_channel.dart';
+import '../features/music_platform/data/embedded_kugou_music_source.dart';
+import '../features/music_platform/music_platform_providers.dart';
+import '../shared/models/track.dart';
 import '../core/database/app_database.dart';
 import '../core/persistence/playback_persistence_controller.dart';
 import '../features/library/library_providers.dart';
@@ -26,6 +30,19 @@ class MestingMusicApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final musicTheme = ref.watch(effectiveMusicThemeProvider);
     final audioHandler = ref.read(audioHandlerProvider);
+    if (DistributionChannel.isBeta) {
+      final source = ref.watch(kugouMusicSourceProvider);
+      audioHandler.configureTrackPlaybackResolver((track) async {
+        if (source is! EmbeddedKugouMusicSource ||
+            track.source != TrackSource.kugou) {
+          return track;
+        }
+        // Playback restored from disk must use the current platform account,
+        // rather than a signed URL left over from a previous login/session.
+        await ref.read(platformAccountProvider.future);
+        return source.resolveTrack(track);
+      });
+    }
     final radioController = ref.watch(endlessRadioControllerProvider);
     final playbackPersistence = ref.read(playbackPersistenceControllerProvider);
     playbackPersistence.configureLibrarySynchronizer((ownerId) {

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../shared/widgets/mesting_loading_indicator.dart';
+import '../../../core/platform/distribution_channel.dart';
 import '../auth_providers.dart';
 import 'auth_gate.dart';
 
@@ -12,6 +13,7 @@ class AuthProtectedPage extends ConsumerStatefulWidget {
     required this.reason,
     required this.redirect,
     this.fallback = '/profile',
+    this.allowBetaLocalLibrary = false,
     super.key,
   });
 
@@ -19,6 +21,7 @@ class AuthProtectedPage extends ConsumerStatefulWidget {
   final String reason;
   final String redirect;
   final String fallback;
+  final bool allowBetaLocalLibrary;
 
   @override
   ConsumerState<AuthProtectedPage> createState() => _AuthProtectedPageState();
@@ -29,6 +32,9 @@ class _AuthProtectedPageState extends ConsumerState<AuthProtectedPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.allowBetaLocalLibrary && DistributionChannel.isBeta) {
+      return widget.child;
+    }
     final auth = ref.watch(authControllerProvider);
     if (auth.value?.user != null) return widget.child;
     if (!auth.isLoading && !_requesting) {

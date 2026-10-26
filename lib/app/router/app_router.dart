@@ -91,6 +91,7 @@ final appRouter = GoRouter(
             state: state,
             child: AuthProtectedPage(
               reason: '登录后才能查看和编辑个人歌单。',
+              allowBetaLocalLibrary: true,
               redirect: state.uri.toString(),
               child: PlaylistDetailPage(
                 playlistId: state.pathParameters['playlistId']!,

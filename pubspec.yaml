@@ -51,6 +51,7 @@ dependencies:
   http: ^1.6.0
   flutter_cache_manager: ^3.4.1
   crypto: 3.0.7
+  ffi: ^2.1.4
   pinyin: 3.3.0
   image_picker: ^1.2.3
   path_provider: ^2.1.5
@@ -90,6 +91,9 @@ flutter:
   uses-material-design: true
 
   assets:
+    - third_party/md3music/LICENSE
+    - third_party/md3music/NOTICE.md
+    - third_party/md3music/UPSTREAM_DISCLAIMER.md
     - assets/branding/mesting-mark-master.png
     - assets/branding/mesting-launch-lockup-master.png
     - assets/branding/dress-morning-icon-v2.png

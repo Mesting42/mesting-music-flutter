@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
 import '../../core/persistence/app_preferences.dart';
+import '../../core/platform/distribution_channel.dart';
+import '../music_platform/data/embedded_kugou_music_source.dart';
+import '../music_platform/music_platform_providers.dart';
 import '../../shared/models/track.dart';
 import 'data/audius_music_source.dart';
 import 'data/hot_music_repository.dart';
@@ -20,6 +23,14 @@ final musicSearchHttpClientProvider = Provider<http.Client>((ref) {
 });
 
 final kugouMusicSourceProvider = Provider<KugouMusicSource>((ref) {
+  if (DistributionChannel.isBeta) {
+    // Restore only the platform credential; never wait for CloudBase here.
+    ref.watch(platformAccountProvider);
+    return EmbeddedKugouMusicSource(
+      ref.watch(musicSearchHttpClientProvider),
+      ref.watch(musicPlatformApiProvider),
+    );
+  }
   return KugouMusicSource(ref.watch(musicSearchHttpClientProvider));
 });
 

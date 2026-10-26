@@ -40,6 +40,12 @@ android {
             dimension = "distribution"
             applicationIdSuffix = ".javatest"
         }
+        // Keep the integration sandbox installable beside both existing apps.
+        // Native md3Music libraries live in src/beta, never in stable/main.
+        create("beta") {
+            dimension = "distribution"
+            applicationIdSuffix = ".beta"
+        }
     }
 
     buildTypes {

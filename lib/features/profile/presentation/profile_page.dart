@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/user_facing_error.dart';
 import '../../../core/persistence/app_preferences.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../music_platform/presentation/platform_account_page.dart';
 import '../../../shared/layout/adaptive_layout.dart';
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../../shared/widgets/mesting_loading_indicator.dart';
@@ -171,11 +173,26 @@ class ProfilePage extends ConsumerWidget {
                     children: [
                       const DressUpAssetWarmup(),
                       header,
+                      if (DistributionChannel.isBeta)
+                        _musicPlatformEntry(context),
                       const SizedBox(height: 16),
                       if (auth.isLoading)
                         const _LoadingProfile()
                       else
                         const _GuestProfile(),
+                      if (DistributionChannel.isBeta) ...[
+                        ListTile(
+                          leading: const Icon(Icons.favorite_border),
+                          title: const Text('本机收藏'),
+                          subtitle: const Text('保存在此 Beta 应用中'),
+                          onTap: () => context.push('/music?view=favorites'),
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.queue_music),
+                          title: const Text('本机歌单'),
+                          onTap: () => context.push('/music?view=playlists'),
+                        ),
+                      ],
                     ],
                   ),
                 )
@@ -191,6 +208,8 @@ class ProfilePage extends ConsumerWidget {
                       background: profileBackground,
                       onEditTap: () => context.push('/profile/edit'),
                     ),
+                    if (DistributionChannel.isBeta)
+                      _musicPlatformEntry(context),
                     Padding(
                       padding: EdgeInsets.fromLTRB(14, 20, 14, bottomClearance),
                       child: _ProfileDashboard(
@@ -206,6 +225,16 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 }
+
+Widget _musicPlatformEntry(BuildContext context) => ListTile(
+  leading: const Icon(Icons.music_note_outlined),
+  title: const Text('音乐平台账号'),
+  subtitle: const Text('酷狗音乐 · 独立登录与退出'),
+  trailing: const Icon(Icons.chevron_right),
+  onTap: () => Navigator.of(
+    context,
+  ).push(MaterialPageRoute<void>(builder: (_) => const PlatformAccountPage())),
+);
 
 Future<void> _changeStatus(
   BuildContext context,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/persistence/app_preferences.dart';
 import '../../../core/platform/sensitive_screen.dart';
+import '../../../core/platform/distribution_channel.dart';
 import '../../../shared/widgets/mesting_loading_indicator.dart';
 import '../auth_providers.dart';
 import 'auth_page.dart';
@@ -52,7 +53,7 @@ class _FirstLaunchAuthCoordinatorState
         children: [
           widget.child,
           Positioned.fill(
-            child: auth.isLoading
+            child: auth.isLoading && !DistributionChannel.isBeta
                 ? const ColoredBox(
                     color: Color(0xFF15131A),
                     child: Center(

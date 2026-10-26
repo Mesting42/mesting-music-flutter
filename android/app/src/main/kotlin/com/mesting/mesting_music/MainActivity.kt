@@ -711,7 +711,9 @@ open class MainActivity : AudioServiceActivity() {
     )
 
     private fun launcherAlias(name: String): ComponentName =
-        ComponentName(packageName, "$packageName.$name")
+        // Flavor suffixes change the installed package, while Android classes
+        // and manifest aliases retain the namespace declared by this source.
+        ComponentName(packageName, "${MainActivity::class.java.`package`!!.name}.$name")
 
     private fun currentBrandStyle(): String {
         val preferences = getSharedPreferences(
@@ -1973,7 +1975,8 @@ private object LyricsOverlayController {
             0,
         )
         favoriteButton?.compoundDrawableTintList = ColorStateList.valueOf(
-            if (favorite) Color.parseColor("#FFFF8FA8") else Color.WHITE,
+            // Match Flutter's shared heart color for the native lyrics action.
+            if (favorite) Color.parseColor("#FFCC3F56") else Color.WHITE,
         )
         favoriteButton?.contentDescription =
             if (favorite) "取消收藏当前歌曲" else "收藏当前歌曲"
@@ -2068,7 +2071,7 @@ private object LyricsOverlayController {
             compoundDrawableTintList = ColorStateList.valueOf(
                 when (action) {
                     "favorite" -> if (favorite) {
-                        Color.parseColor("#FFFF8FA8")
+                        Color.parseColor("#FFCC3F56")
                     } else {
                         Color.WHITE
                     }

@@ -8,6 +8,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/user_facing_error.dart';
 import '../../../core/persistence/app_preferences.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../music_platform/presentation/platform_account_page.dart';
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../legal/presentation/disclaimer_dialog.dart';
 import '../../library/library_providers.dart';
@@ -89,7 +91,7 @@ class _AuthPageState extends ConsumerState<AuthPage>
     _disclaimerRead = read;
     _registrationTermsRead = read;
     unawaited(_loadRememberedAccount());
-    if (widget.firstLaunch) {
+    if (widget.firstLaunch && !DistributionChannel.isBeta) {
       unawaited(_detectDataSimPhoneNumber());
     }
   }
@@ -174,6 +176,20 @@ class _AuthPageState extends ConsumerState<AuthPage>
                             ),
                             SizedBox(height: widget.firstLaunch ? 54 : 24),
                             const _AuthBrand(),
+                            if (DistributionChannel.isBeta) ...[
+                              const SizedBox(height: 24),
+                              OutlinedButton.icon(
+                                key: const ValueKey('music-platform-login'),
+                                onPressed: _openMusicPlatform,
+                                icon: const Icon(Icons.music_note_outlined),
+                                label: const Text('使用音乐平台账号登录'),
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Mesting 账号登录 / 注册',
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
                             const SizedBox(height: 46),
                             if (_rememberedSession != null) ...[
                               _RememberedAccountCard(
@@ -961,6 +977,14 @@ class _AuthPageState extends ConsumerState<AuthPage>
     if (!widget.firstLaunch) context.go('/music/recommend');
   }
 
+  Future<void> _openMusicPlatform() async {
+    final success = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const PlatformAccountPage()),
+    );
+    // Completing onboarding does not fabricate a Mesting account/session.
+    if (success == true && mounted) _experienceNow();
+  }
+
   Future<void> _showLoginHelp() async {
     await showLiquidGlassBottomSheet<void>(
       context: context,
@@ -1075,9 +1099,9 @@ class _TopActions extends StatelessWidget {
         TextButton(
           key: const ValueKey('experience-now'),
           onPressed: onExperience,
-          child: const Text(
-            '立即体验',
-            style: TextStyle(fontWeight: FontWeight.w900),
+          child: Text(
+            DistributionChannel.isBeta ? '暂不登录，先体验' : '立即体验',
+            style: const TextStyle(fontWeight: FontWeight.w900),
           ),
         ),
       ],

@@ -19,6 +19,7 @@ import 'queue_engine.dart';
 
 typedef RadioTrackLoader =
     Future<List<Track>> Function(Set<String> excludedTrackKeys);
+typedef TrackPlaybackResolver = Future<Track> Function(Track track);
 
 /// The only owner of the active `just_audio` source and media-session state.
 ///
@@ -117,6 +118,14 @@ class MestingAudioHandler extends BaseAudioHandler
   bool _currentSourceFromCache = false;
   final Set<String> _directRemoteSourceIds = <String>{};
   RadioTrackLoader? _radioTrackLoader;
+  TrackPlaybackResolver? _trackPlaybackResolver;
+
+  /// A provider may refresh expiring URLs without coupling this audio owner to
+  /// a particular account system, server transport or music catalogue.
+  void configureTrackPlaybackResolver(TrackPlaybackResolver? resolver) {
+    _trackPlaybackResolver = resolver;
+  }
+
   Future<void>? _radioLoadInFlight;
   final Set<String> _autoplaySessionTrackKeys = <String>{};
   int _radioRecommendationGeneration = 0;
@@ -248,6 +257,17 @@ class MestingAudioHandler extends BaseAudioHandler
       ...tracks.skip(safeIndex + 1),
       ...tracks.take(safeIndex),
     ];
+    final resolver = _trackPlaybackResolver;
+    if (resolver != null) {
+      final active = await resolver(orderedTracks.first);
+      if (loadEpoch != _queueLoadEpoch ||
+          (requiredUserCommandEpoch != null &&
+              requiredUserCommandEpoch != _userCommandEpoch)) {
+        return false;
+      }
+      orderedTracks[0] = active;
+      _knownTracks[active.id] = active;
+    }
     final mediaItems = await Future.wait(orderedTracks.map(_mediaItemFor));
     if (loadEpoch != _queueLoadEpoch ||
         (requiredUserCommandEpoch != null &&

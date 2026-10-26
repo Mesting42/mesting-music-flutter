@@ -18,7 +18,8 @@ import '../../../shared/widgets/playing_equalizer.dart';
 import '../../discover/data/curated_playlists.dart';
 import '../../discover/domain/curated_playlist.dart';
 import '../../auth/auth_providers.dart';
-import '../../auth/presentation/auth_gate.dart';
+import '../../../core/platform/distribution_channel.dart';
+import 'library_access.dart';
 import '../../player/presentation/music_hub_top_bar.dart';
 import '../../player/presentation/music_page_transition.dart';
 import '../../player/presentation/persistent_mini_player.dart'
@@ -92,6 +93,7 @@ class _MusicHomePageState extends ConsumerState<MusicHomePage>
     final auth = ref.watch(authControllerProvider);
     final restrictedView = view == 'playlists';
     if (restrictedView &&
+        !DistributionChannel.isBeta &&
         !auth.isLoading &&
         auth.value?.user == null &&
         !_guardingRestrictedView) {
@@ -204,7 +206,7 @@ class _MusicHomePageState extends ConsumerState<MusicHomePage>
   }
 
   Future<void> _requestRestrictedView(String view) async {
-    final allowed = await ensureAuthenticated(
+    final allowed = await ensureLibraryAccess(
       context,
       ref,
       reason: '登录后才能创建和管理个人歌单，歌单内容会跟随账号同步。',

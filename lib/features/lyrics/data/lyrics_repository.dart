@@ -6,6 +6,12 @@ import 'package:http/http.dart' as http;
 import '../domain/lrc_parser.dart';
 import '../domain/lyrics_document.dart';
 
+typedef LyricsJsonRequest =
+    Future<Map<String, dynamic>> Function(
+      String path,
+      Map<String, String> query,
+    );
+
 class LyricsRepository {
   LyricsRepository({
     required http.Client client,
@@ -13,17 +19,20 @@ class LyricsRepository {
     required String neteaseApiBaseUrl,
     String kugouPublicLyricsBaseUrl = 'https://lyrics.kugou.com',
     LrcParser parser = const LrcParser(),
+    LyricsJsonRequest? kugouRequest,
   }) : _client = client,
        _kugouApiBaseUrl = _normalizeBaseUrl(kugouApiBaseUrl),
        _neteaseApiBaseUrl = _normalizeBaseUrl(neteaseApiBaseUrl),
        _kugouPublicLyricsBaseUrl = _normalizeBaseUrl(kugouPublicLyricsBaseUrl),
-       _parser = parser;
+       _parser = parser,
+       _kugouRequest = kugouRequest;
 
   final http.Client _client;
   final String _kugouApiBaseUrl;
   final String _neteaseApiBaseUrl;
   final String _kugouPublicLyricsBaseUrl;
   final LrcParser _parser;
+  final LyricsJsonRequest? _kugouRequest;
   final Map<String, LyricsDocument> _cache = {};
 
   Future<LyricsDocument> loadAsset(String assetPath) async {
@@ -55,10 +64,10 @@ class LyricsRepository {
       throw const LyricsUnavailableException('酷狗歌词参数不完整');
     }
 
-    if (_kugouApiBaseUrl.isNotEmpty) {
+    if (_kugouRequest != null || _kugouApiBaseUrl.isNotEmpty) {
       try {
         return await _loadKugouLyricsFromHostedApi(locator, hash);
-      } on LyricsUnavailableException {
+      } on Object {
         // The public lyrics service keeps online lyrics usable when a private
         // deployment is missing or temporarily unavailable.
       }
@@ -68,14 +77,12 @@ class LyricsRepository {
   }
 
   Future<String> _loadKugouLyricsFromHostedApi(Uri locator, String hash) async {
-    final search = await _getJson(
-      _endpoint(_kugouApiBaseUrl, '/search/lyric', {
-        'hash': hash,
-        'album_audio_id': locator.queryParameters['albumAudioId'] ?? '0',
-        'duration': locator.queryParameters['durationMs'] ?? '0',
-        'man': 'no',
-      }),
-    );
+    final search = await _getKugouJson('/search/lyric', {
+      'hash': hash,
+      'album_audio_id': locator.queryParameters['albumAudioId'] ?? '0',
+      'duration': locator.queryParameters['durationMs'] ?? '0',
+      'man': 'no',
+    });
     final candidates = search['candidates'];
     if (candidates is! List || candidates.isEmpty) {
       throw const LyricsUnavailableException('酷狗暂未提供这首歌的歌词');
@@ -87,14 +94,12 @@ class LyricsRepository {
       throw const LyricsUnavailableException('酷狗歌词参数不完整');
     }
 
-    final lyric = await _getJson(
-      _endpoint(_kugouApiBaseUrl, '/lyric', {
-        'id': lyricId,
-        'accesskey': accessKey,
-        'fmt': 'lrc',
-        'decode': 'true',
-      }),
-    );
+    final lyric = await _getKugouJson('/lyric', {
+      'id': lyricId,
+      'accesskey': accessKey,
+      'fmt': 'lrc',
+      'decode': 'true',
+    });
     final decoded = lyric['decodeContent']?.toString() ?? '';
     if (decoded.trim().isNotEmpty) return decoded;
     final encoded = lyric['content']?.toString() ?? '';
@@ -106,6 +111,18 @@ class LyricsRepository {
       }
     }
     throw const LyricsUnavailableException('酷狗暂未提供可读取的歌词');
+  }
+
+  /// An injected transport lets the Beta use the embedded adapter without
+  /// importing its server/account implementation into the lyrics feature.
+  Future<Map<String, dynamic>> _getKugouJson(
+    String path,
+    Map<String, String> query,
+  ) {
+    final request = _kugouRequest;
+    return request != null
+        ? request(path, query)
+        : _getJson(_endpoint(_kugouApiBaseUrl, path, query));
   }
 
   Future<String> _loadKugouLyricsFromPublicApi(Uri locator, String hash) async {

@@ -9,6 +9,8 @@ import 'app/branded_launch_screen.dart';
 import 'app/mesting_music_app.dart';
 import 'core/audio/mesting_audio_handler.dart';
 import 'core/audio/playback_providers.dart';
+import 'core/platform/distribution_channel.dart';
+import 'features/music_platform/platform_credits.dart';
 import 'core/database/app_database.dart';
 import 'core/persistence/app_preferences.dart';
 import 'core/persistence/playback_persistence_controller.dart';
@@ -20,6 +22,7 @@ import 'shared/models/track.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (DistributionChannel.isBeta) PlatformCredits.register();
   final preferences = await SharedPreferences.getInstance();
   final brandStyle = await AppBrandStyleBridge.current();
   final launchThemeMode = savedMusicThemeMode(preferences);

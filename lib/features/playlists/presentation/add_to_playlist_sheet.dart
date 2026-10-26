@@ -7,7 +7,7 @@ import '../../../shared/widgets/artwork_image.dart';
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../../shared/widgets/mesting_loading_indicator.dart';
 import '../../../shared/widgets/music_notice.dart';
-import '../../auth/presentation/auth_gate.dart';
+import '../../library/presentation/library_access.dart';
 import '../../library/data/library_repository.dart';
 import '../../library/library_providers.dart';
 import '../../themes/music_theme_tokens.dart';
@@ -19,7 +19,7 @@ Future<void> showAddToPlaylistSheet(
   WidgetRef ref,
   Track track,
 ) async {
-  final allowed = await ensureAuthenticated(
+  final allowed = await ensureLibraryAccess(
     context,
     ref,
     reason: '登录后才能创建和保存个人歌单，歌单内容会跟随账号同步。',

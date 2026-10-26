@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/models/track.dart';
-import '../../auth/presentation/auth_gate.dart';
+import 'library_access.dart';
 import '../../themes/mesting_palette.dart';
 import '../../themes/music_theme_tokens.dart';
 import '../library_providers.dart';
@@ -73,7 +73,7 @@ class FavoriteToggleButton extends ConsumerWidget {
             overlayColor: _favoriteAccent.withValues(alpha: .10),
           ),
           onPressed: () async {
-            final allowed = await ensureAuthenticated(
+            final allowed = await ensureLibraryAccess(
               context,
               ref,
               reason: '登录后才能收藏歌曲，喜欢的音乐会跟随账号在不同设备间同步。',

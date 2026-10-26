@@ -4,12 +4,21 @@ import 'data/lyrics_repository.dart';
 import 'domain/lyrics_document.dart';
 import '../search/data/online_music_config.dart';
 import '../search/search_providers.dart';
+import '../../core/platform/distribution_channel.dart';
+import '../music_platform/music_platform_providers.dart';
 
 final lyricsRepositoryProvider = Provider<LyricsRepository>((ref) {
+  if (DistributionChannel.isBeta) ref.watch(platformAccountProvider);
   return LyricsRepository(
     client: ref.watch(musicSearchHttpClientProvider),
     kugouApiBaseUrl: OnlineMusicConfig.kugouApiBaseUrl,
     neteaseApiBaseUrl: OnlineMusicConfig.neteaseApiBaseUrl,
+    kugouRequest: DistributionChannel.isBeta
+        ? (path, query) async {
+            await ref.read(platformAccountProvider.future);
+            return ref.read(musicPlatformApiProvider).get(path, query: query);
+          }
+        : null,
   );
 });
 

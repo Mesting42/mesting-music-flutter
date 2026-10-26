@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/database/app_database.dart';
 import '../../core/persistence/app_preferences.dart';
+import '../../core/platform/distribution_channel.dart';
 import '../../shared/models/track.dart';
 import '../auth/auth_providers.dart';
 import '../auth/data/auth_repository.dart';
@@ -112,7 +113,7 @@ final libraryRepositoryProvider = Provider<LibraryRepository>((ref) {
 });
 
 final favoriteTracksProvider = StreamProvider<List<Track>>((ref) {
-  if (!ref.watch(isAuthenticatedProvider)) {
+  if (!ref.watch(isAuthenticatedProvider) && !DistributionChannel.isBeta) {
     return Stream.value(const <Track>[]);
   }
   return ref.watch(libraryRepositoryProvider).watchFavorites();
@@ -124,7 +125,7 @@ final favoriteTrackIdsProvider = Provider<Set<String>>((ref) {
 });
 
 final playlistsProvider = StreamProvider<List<UserPlaylist>>((ref) {
-  if (!ref.watch(isAuthenticatedProvider)) {
+  if (!ref.watch(isAuthenticatedProvider) && !DistributionChannel.isBeta) {
     return Stream.value(const <UserPlaylist>[]);
   }
   return ref.watch(libraryRepositoryProvider).watchPlaylists();
@@ -134,7 +135,9 @@ final playlistProvider = FutureProvider.family<UserPlaylist?, String>((
   ref,
   id,
 ) {
-  if (!ref.watch(isAuthenticatedProvider)) return null;
+  if (!ref.watch(isAuthenticatedProvider) && !DistributionChannel.isBeta) {
+    return null;
+  }
   return ref.watch(libraryRepositoryProvider).getPlaylist(id);
 });
 
@@ -142,7 +145,7 @@ final playlistTracksProvider = StreamProvider.family<List<Track>, String>((
   ref,
   playlistId,
 ) {
-  if (!ref.watch(isAuthenticatedProvider)) {
+  if (!ref.watch(isAuthenticatedProvider) && !DistributionChannel.isBeta) {
     return Stream.value(const <Track>[]);
   }
   return ref.watch(libraryRepositoryProvider).watchPlaylistTracks(playlistId);
