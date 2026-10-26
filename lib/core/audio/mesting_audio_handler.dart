@@ -99,7 +99,16 @@ class MestingAudioHandler extends BaseAudioHandler
 
   late final Future<void> _ready;
   late final PauseFadeController _pauseFadeController;
-  PlaybackMode _mode = PlaybackMode.list;
+  PlaybackOrder _order = const PlaybackOrder();
+  List<String> _unshuffledUpcomingIds = const [];
+  PlaybackMode get _mode => _order.legacy;
+  final _orderController = StreamController<PlaybackOrder>.broadcast();
+  PlaybackOrder get playbackOrder => _order;
+  Stream<PlaybackOrder> get playbackOrderStream async* {
+    yield _order;
+    yield* _orderController.stream;
+  }
+
   List<MediaItem> _upcomingMediaItems = const <MediaItem>[];
   bool _currentFavorite = false;
   bool _lyricsOverlayVisible = false;
@@ -303,7 +312,7 @@ class MestingAudioHandler extends BaseAudioHandler
     final session = await AudioSession.instance;
     await session.configure(const AudioSessionConfiguration.music());
     await _loadQueue(_tracks);
-    await setPlaybackMode(_mode);
+    await _applyPlaybackOrder();
   }
 
   /// Replaces the logical queue while protecting against stale async loads.
@@ -563,6 +572,18 @@ class MestingAudioHandler extends BaseAudioHandler
   }
 
   void _publishUpcomingQueue() {
+    if (_continueAfterExplicitQueue) {
+      // Manual additions take priority in BOTH the visible queue and actual
+      // playback; the old grouped sheet already presented this ordering.
+      _upcomingMediaItems = [
+        ..._upcomingMediaItems.where(
+          (item) => !_recommendedUpcomingIds.contains(item.id),
+        ),
+        ..._upcomingMediaItems.where(
+          (item) => _recommendedUpcomingIds.contains(item.id),
+        ),
+      ];
+    }
     _upcomingQueueController.add(upcomingQueue);
   }
 
@@ -676,7 +697,7 @@ class MestingAudioHandler extends BaseAudioHandler
         try {
           final applied = await _loadQueue(_tracks);
           if (applied) {
-            await setPlaybackMode(_mode);
+            await _applyPlaybackOrder();
             _startPlayer();
             return;
           }
@@ -785,12 +806,12 @@ class MestingAudioHandler extends BaseAudioHandler
         bufferedPosition: _player.bufferedPosition,
         speed: _player.speed,
         queueIndex: mediaItem.value == null ? null : 0,
-        repeatMode: switch (_mode) {
-          PlaybackMode.list => AudioServiceRepeatMode.all,
-          PlaybackMode.single => AudioServiceRepeatMode.one,
-          PlaybackMode.random => AudioServiceRepeatMode.all,
+        repeatMode: switch (_order.repeat) {
+          PlaybackRepeat.off => AudioServiceRepeatMode.none,
+          PlaybackRepeat.all => AudioServiceRepeatMode.all,
+          PlaybackRepeat.one => AudioServiceRepeatMode.one,
         },
-        shuffleMode: _mode == PlaybackMode.random
+        shuffleMode: _order.shuffle
             ? AudioServiceShuffleMode.all
             : AudioServiceShuffleMode.none,
       ),
@@ -981,7 +1002,9 @@ class MestingAudioHandler extends BaseAudioHandler
     var advanced = false;
     var deferred = false;
     try {
-      if (automatic && _mode == PlaybackMode.single && !bypassSingleRepeat) {
+      if (automatic &&
+          _order.repeat == PlaybackRepeat.one &&
+          !bypassSingleRepeat) {
         await seek(Duration.zero);
         await play();
         return;
@@ -1044,7 +1067,10 @@ class MestingAudioHandler extends BaseAudioHandler
             : _upcomingMediaItems;
         final targetIndex = QueueEngine.resolveUpcomingIndex(
           length: candidates.length,
-          mode: _mode,
+          // Shuffle is materialized in the visible queue when enabled, so
+          // Next must play the first displayed candidate instead of rolling
+          // another independent random index behind the user's back.
+          mode: PlaybackMode.list,
           random: _random,
         );
         final target = trackForId(candidates[targetIndex].id);
@@ -1056,8 +1082,16 @@ class MestingAudioHandler extends BaseAudioHandler
         }
       }
 
+      if (forward &&
+          _order.repeat == PlaybackRepeat.off &&
+          _explicitPlaybackContext &&
+          !_continueAfterExplicitQueue) {
+        if (automatic) await _player.pause();
+        return;
+      }
+
       final fallback = _fallbackTrack(
-        avoidRecent: automatic || _mode == PlaybackMode.random,
+        avoidRecent: automatic || _order.shuffle,
         forward: forward,
       );
       if (fallback != null) {
@@ -1158,7 +1192,7 @@ class MestingAudioHandler extends BaseAudioHandler
       if (context.isEmpty) return null;
       final current = context.indexWhere((t) => t.id == mediaItem.value?.id);
       if (context.length == 1) return null;
-      if (_mode == PlaybackMode.random) {
+      if (_order.shuffle) {
         final candidates = context
             .where((t) => t.id != mediaItem.value?.id)
             .toList();
@@ -1208,7 +1242,7 @@ class MestingAudioHandler extends BaseAudioHandler
       recentIds: recentIds,
       currentId: currentId,
       avoidRecent: avoidRecent,
-      mode: _mode,
+      mode: _order.shuffle ? PlaybackMode.random : PlaybackMode.list,
       forward: forward,
       // Reaching this branch means the explicit Up Next queue is empty.
       // Treat that state as Autoplay even when the visible mode is list:
@@ -1224,7 +1258,7 @@ class MestingAudioHandler extends BaseAudioHandler
     if (_preserveServerOrder) return _radioFallbackTracks;
     final result = <Track>[];
     final seen = <String>{};
-    final candidates = _mode == PlaybackMode.random
+    final candidates = _order.shuffle
         ? <Track>[
             ..._radioFallbackTracks,
             ..._onlineFallbackTracks,
@@ -1351,7 +1385,7 @@ class MestingAudioHandler extends BaseAudioHandler
         final pending = _pendingAdvanceRequest;
         if (pending != null) {
           final fallback = _fallbackTrack(
-            avoidRecent: pending.automatic || _mode == PlaybackMode.random,
+            avoidRecent: pending.automatic || _order.shuffle,
             forward: pending.forward,
           );
           if (fallback == null && _upcomingMediaItems.isEmpty) {
@@ -1492,7 +1526,7 @@ class MestingAudioHandler extends BaseAudioHandler
     final transportEpoch = _transportIntentEpoch;
     if (!preservePendingAdvance) _cancelPendingAdvance();
     if (!preservePendingAdvance) _consecutiveLoadFailures = 0;
-    if (_mode == PlaybackMode.random) _rememberAutoplaySelection(track);
+    if (_order.shuffle) _rememberAutoplaySelection(track);
     if (playbackContext != null) {
       _onExplicitPlayback?.call();
       _explicitPlaybackContext = true;
@@ -1529,7 +1563,7 @@ class MestingAudioHandler extends BaseAudioHandler
       _historyNavigation = false;
       return;
     }
-    await setPlaybackMode(_mode);
+    await _applyPlaybackOrder();
     if (transportEpoch != _transportIntentEpoch) return;
     if (autoplay) _startPlayer();
     if (_continueAfterExplicitQueue) unawaited(_ensureRadioFallbackTracks());
@@ -1613,7 +1647,7 @@ class MestingAudioHandler extends BaseAudioHandler
       initialPosition: safePosition,
     );
     if (!applied) return;
-    await setPlaybackMode(_mode);
+    await _applyPlaybackOrder();
     if (playing) {
       _startPlayer();
     } else {
@@ -1671,7 +1705,16 @@ class MestingAudioHandler extends BaseAudioHandler
       initialPosition: initialPosition,
     );
     if (!applied) return;
-    await setPlaybackMode(_mode);
+    if (_order.shuffle) {
+      // A newly selected album keeps the tapped recording active and shuffles
+      // only its new pending recordings, without losing their original order.
+      _unshuffledUpcomingIds = _upcomingMediaItems
+          .map((item) => item.id)
+          .toList();
+      _upcomingMediaItems = [..._upcomingMediaItems]..shuffle(_random);
+      _publishUpcomingQueue();
+    }
+    await _applyPlaybackOrder();
     if (autoplay && tracks.isNotEmpty) _startPlayer();
   }
 
@@ -1681,6 +1724,7 @@ class MestingAudioHandler extends BaseAudioHandler
     required int currentIndex,
     required Duration position,
     required PlaybackMode mode,
+    PlaybackOrder? order,
   }) async {
     _explicitPlaybackContext = true;
     final restoreEpoch = _userCommandEpoch;
@@ -1697,7 +1741,8 @@ class MestingAudioHandler extends BaseAudioHandler
       requiredUserCommandEpoch: restoreEpoch,
     );
     if (applied) {
-      await setPlaybackMode(mode);
+      _order = order ?? PlaybackOrder.fromLegacy(mode);
+      await _applyPlaybackOrder();
       _trace('restore-applied id=${mediaItem.value?.id}');
     } else {
       _trace('restore-skipped-after-user-command');
@@ -1726,25 +1771,97 @@ class MestingAudioHandler extends BaseAudioHandler
   }
 
   Future<void> setPlaybackMode(PlaybackMode mode) async {
+    final next = PlaybackOrder.fromLegacy(mode);
+    _changeShuffleOrder(next.shuffle);
+    _order = next;
+    await _applyPlaybackOrder();
+  }
+
+  Future<void> setShuffleEnabled(bool enabled) async {
+    _changeShuffleOrder(enabled);
+    _order = _order.copyWith(shuffle: enabled);
+    await _applyPlaybackOrder();
+  }
+
+  /// Reordering touches logical pending items only: no active source reload.
+  /// Switching shuffle off restores the prior ordering of remaining songs.
+  void _changeShuffleOrder(bool enabled) {
+    if (enabled == _order.shuffle) return;
+    final next = [..._upcomingMediaItems];
+    if (enabled) {
+      _unshuffledUpcomingIds = next.map((item) => item.id).toList();
+      next.shuffle(_random);
+    } else {
+      final rank = {
+        for (var i = 0; i < _unshuffledUpcomingIds.length; i++)
+          _unshuffledUpcomingIds[i]: i,
+      };
+      final added = {
+        for (var i = 0; i < next.length; i++) next[i].id: i + rank.length,
+      };
+      next.sort(
+        (a, b) =>
+            (rank[a.id] ?? added[a.id]!).compareTo(rank[b.id] ?? added[b.id]!),
+      );
+      _unshuffledUpcomingIds = const [];
+    }
+    _upcomingMediaItems = next;
+    _publishUpcomingQueue();
+  }
+
+  @override
+  Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) async {
+    _order = _order.copyWith(
+      repeat: switch (repeatMode) {
+        AudioServiceRepeatMode.none => PlaybackRepeat.off,
+        AudioServiceRepeatMode.one => PlaybackRepeat.one,
+        _ => PlaybackRepeat.all,
+      },
+    );
+    await _applyPlaybackOrder();
+  }
+
+  @override
+  Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) =>
+      setShuffleEnabled(shuffleMode != AudioServiceShuffleMode.none);
+
+  Future<void> cycleRepeat() async {
+    _order = _order.copyWith(
+      repeat: PlaybackRepeat
+          .values[(_order.repeat.index + 1) % PlaybackRepeat.values.length],
+    );
+    await _applyPlaybackOrder();
+  }
+
+  /// Logical Up Next owns ordering. ExoPlayer shuffle stays disabled so manual
+  /// queue edits, consumed tracks and persisted snapshots share one authority.
+  Future<void> _applyPlaybackOrder() async {
     await _readyIfAvailable();
-    _mode = mode;
-    switch (mode) {
-      case PlaybackMode.list:
-        await _player.setShuffleModeEnabled(false);
-        await _player.setLoopMode(LoopMode.off);
-      case PlaybackMode.single:
-        await _player.setShuffleModeEnabled(false);
-        await _player.setLoopMode(LoopMode.one);
-      case PlaybackMode.random:
-        await _player.setLoopMode(LoopMode.off);
-        await _player.setShuffleModeEnabled(false);
-        final currentId = mediaItem.value?.id;
-        final currentTrack = currentId == null ? null : trackForId(currentId);
-        if (currentTrack != null) _rememberAutoplaySelection(currentTrack);
-        unawaited(_ensureRadioFallbackTracks());
+    await _player.setShuffleModeEnabled(false);
+    await _player.setLoopMode(
+      _order.repeat == PlaybackRepeat.one ? LoopMode.one : LoopMode.off,
+    );
+    if (_order.shuffle) {
+      final current = trackForId(mediaItem.value?.id ?? '');
+      if (current != null) _rememberAutoplaySelection(current);
+      unawaited(_ensureRadioFallbackTracks());
     }
     _modeController.add(_mode);
+    _orderController.add(_order);
     _broadcastState(_player.playbackEvent);
+  }
+
+  /// Reorders only pending recordings; the playing source and position remain
+  /// intact. Queue listeners also persist this authoritative order.
+  Future<void> reorderUpcoming(int oldIndex, int newIndex) async {
+    if (oldIndex < 0 || oldIndex >= _upcomingMediaItems.length) return;
+    final next = [..._upcomingMediaItems];
+    if (newIndex > oldIndex) newIndex--;
+    final item = next.removeAt(oldIndex);
+    next.insert(newIndex.clamp(0, next.length), item);
+    _markUserCommand('reorderQueue');
+    _upcomingMediaItems = next;
+    _publishUpcomingQueue();
   }
 
   Future<void> _readyIfAvailable() async {

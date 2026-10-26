@@ -1,13 +1,23 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/audio/playback_providers.dart';
 import '../../lyrics/lyrics_providers.dart';
 import '../../lyrics/domain/lyrics_document.dart';
 
+/// Position ticks resolve to an index here, so a long lyric list rebuilds only
+/// when the sung LINE changes, rather than at the audio position frequency.
+final activeLyricIndexProvider = Provider.family<int, LyricsDocument>(
+  (ref, document) => document.activeIndexAt(
+    ref.watch(positionProvider).value ?? Duration.zero,
+  ),
+);
+
 /// Variable-height lines keep long lyrics and accessibility text sizes intact.
 /// The measured offsets use the same text style as the rendered paragraphs.
 class ImmersiveLyrics extends ConsumerStatefulWidget {
-  const ImmersiveLyrics({super.key});
+  const ImmersiveLyrics({this.referenceDesign = false, super.key});
+  final bool referenceDesign;
   @override
   ConsumerState<ImmersiveLyrics> createState() => _ImmersiveLyricsState();
 }
@@ -33,7 +43,6 @@ class _ImmersiveLyricsState extends ConsumerState<ImmersiveLyrics> {
       _track = track.id;
       _active = -2;
     }
-    final position = ref.watch(positionProvider).value ?? Duration.zero;
     return ref
         .watch(lyricsProvider(track.resolvedLyricsAsset))
         .when(
@@ -59,14 +68,14 @@ class _ImmersiveLyricsState extends ConsumerState<ImmersiveLyrics> {
                 ),
               );
             }
-            final active = document.activeIndexAt(position);
+            final active = ref.watch(activeLyricIndexProvider(document));
             return LayoutBuilder(
               builder: (context, constraints) {
                 final style = Theme.of(context).textTheme.headlineLarge!
                     .copyWith(
-                      fontSize: 24,
+                      fontSize: widget.referenceDesign ? 30 : 24,
                       fontWeight: FontWeight.w700,
-                      height: 1.4,
+                      height: widget.referenceDesign ? 1.3 : 1.4,
                       letterSpacing: -.5,
                     );
                 final textWidth = (constraints.maxWidth - 48).clamp(
@@ -103,7 +112,12 @@ class _ImmersiveLyricsState extends ConsumerState<ImmersiveLyrics> {
                       .take(active.clamp(0, _heights.length))
                       .fold(0.0, (a, b) => a + b);
                   WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (!mounted || !_scroll.hasClients) return;
+                    if (!mounted ||
+                        !_scroll.hasClients ||
+                        !identical(_measured, document) ||
+                        _active != active) {
+                      return;
+                    }
                     _scroll.animateTo(
                       target.clamp(0.0, _scroll.position.maxScrollExtent),
                       duration: MediaQuery.disableAnimationsOf(context)
@@ -146,14 +160,38 @@ class _ImmersiveLyricsState extends ConsumerState<ImmersiveLyrics> {
                           : null,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        child: AnimatedDefaultTextStyle(
-                          duration: const Duration(milliseconds: 260),
-                          style: style.copyWith(
-                            color: index == active
-                                ? Colors.white
-                                : const Color(0xA6FFFFFF),
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween(
+                            end: !document.isSynced || index == active ? 0 : 1,
                           ),
-                          child: Text(document.lines[index].text),
+                          duration: MediaQuery.disableAnimationsOf(context)
+                              ? Duration.zero
+                              : const Duration(milliseconds: 460),
+                          curve: Curves.easeOutCubic,
+                          child: Text(
+                            document.lines[index].text,
+                            style: style.copyWith(color: Colors.white),
+                          ),
+                          builder: (_, distance, child) => ImageFiltered(
+                            imageFilter: ImageFilter.blur(
+                              sigmaX: distance * 3.4,
+                              sigmaY: distance * 3.4,
+                            ),
+                            enabled: widget.referenceDesign && distance > .01,
+                            child: Opacity(
+                              opacity:
+                                  1 -
+                                  distance *
+                                      (widget.referenceDesign ? .55 : .35),
+                              child: Transform.scale(
+                                scale: widget.referenceDesign
+                                    ? 1 - distance * .035
+                                    : 1,
+                                alignment: Alignment.centerLeft,
+                                child: child,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),

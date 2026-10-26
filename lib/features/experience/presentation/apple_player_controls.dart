@@ -1,3 +1,5 @@
+import 'player_toolbar_glyphs.dart';
+import '../../music_platform/presentation/platform_quality_button.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -11,7 +13,7 @@ import '../../music_platform/music_platform_providers.dart';
 import '../../auth/presentation/beta_login_navigation.dart';
 import '../../music_platform/presentation/platform_comments_page.dart';
 import '../../music_platform/presentation/platform_feedback.dart';
-import '../../music_platform/presentation/platform_quality_button.dart';
+import '../../../core/audio/audio_output_controller.dart';
 import '../../player/presentation/ip_progress_decoration.dart';
 import '../../player/presentation/shinchan_progress_walker.dart';
 import '../../queue/presentation/queue_page.dart';
@@ -20,10 +22,18 @@ import '../../themes/music_theme_preset.dart';
 
 /// CONTRACT: Apple Music transport from the user's pinned reference. All five
 /// Beta styles share this exact component: progress, naked white glyphs, system
-/// media volume, then comments / quality / current queue. IP rail and character
+/// media volume, then lyrics / audio output / current queue. IP rail and character
 /// preferences are independent decoration, never an alternate control layout.
 class ApplePlayerControls extends ConsumerStatefulWidget {
-  const ApplePlayerControls({super.key});
+  const ApplePlayerControls({
+    this.lyricsActive = false,
+    this.queueActive = false,
+    this.onToggleLyrics,
+    this.onToggleQueue,
+    super.key,
+  });
+  final bool lyricsActive, queueActive;
+  final VoidCallback? onToggleLyrics, onToggleQueue;
   @override
   ConsumerState<ApplePlayerControls> createState() =>
       _ApplePlayerControlsState();
@@ -67,6 +77,11 @@ class _ApplePlayerControlsState extends ConsumerState<ApplePlayerControls> {
     final characterIp = decorationIp(visual.progressCharacter, preset);
     final classic = railIp == MusicThemeIp.classic;
     final volume = ref.watch(mediaVolumeProvider);
+    final output = widget.onToggleLyrics != null
+        ? ref.watch(audioOutputProvider)
+        : const AudioOutput();
+    final order =
+        ref.watch(playbackOrderProvider).value ?? handler.playbackOrder;
     return Padding(
       key: const ValueKey('apple-player-controls'),
       // Reserve real layout space above the thumb. Shrinking artwork alone
@@ -99,7 +114,11 @@ class _ApplePlayerControlsState extends ConsumerState<ApplePlayerControls> {
                               : progressTrackColorForIp(railIp),
                           inactiveTrackColor: Colors.white24,
                           thumbColor: Colors.white,
-                          thumbShape: characterIp == MusicThemeIp.classic
+                          // Beta's rail stays draggable and accessible without
+                          // a painted thumb; IP companions retain their layout.
+                          thumbShape:
+                              widget.onToggleLyrics == null &&
+                                  characterIp == MusicThemeIp.classic
                               ? RoundSliderThumbShape(
                                   enabledThumbRadius: _scrub == null ? 2.5 : 5,
                                 )
@@ -307,29 +326,77 @@ class _ApplePlayerControlsState extends ConsumerState<ApplePlayerControls> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _Transport(
-                label: '歌曲评论',
-                glyph: const PlayerCommentGlyph(),
+                label: widget.onToggleLyrics != null ? '显示或隐藏歌词' : '歌曲评论',
+                glyph: widget.onToggleLyrics != null
+                    ? PlayerToolbarGlyph(
+                        tool: PlayerToolbarTool.lyrics,
+                        active: widget.lyricsActive,
+                      )
+                    : const PlayerCommentGlyph(),
                 icon: CupertinoIcons.text_quote,
                 size: 26,
-                onPressed: () async {
-                  if (ref.read(platformAccountProvider).value == null) {
-                    await openBetaLogin(context, redirect: '/player');
-                    if (!context.mounted) return;
-                  }
-                  if (context.mounted) {
-                    await openPlatformSongComments(context, ref, track);
-                  }
-                },
+                onPressed:
+                    widget.onToggleLyrics ??
+                    () async {
+                      if (ref.read(platformAccountProvider).value == null) {
+                        await openBetaLogin(context, redirect: '/player');
+                        if (!context.mounted) return;
+                      }
+                      if (context.mounted) {
+                        await openPlatformSongComments(context, ref, track);
+                      }
+                    },
               ),
-              const PlatformQualityButton(inline: true),
+              if (widget.onToggleLyrics == null)
+                const PlatformQualityButton(inline: true)
+              else
+                _Transport(
+                  label: '音频输出，${output.name}',
+                  glyph: PlayerToolbarGlyph(
+                    key: const ValueKey('player-output-glyph'),
+                    tool: PlayerToolbarTool.output,
+                    headphones: output.headphones,
+                  ),
+                  icon: output.headphones
+                      ? Icons.headphones_rounded
+                      : Icons.airplay_rounded,
+                  size: 25,
+                  onPressed: () =>
+                      _act(ref.read(audioOutputProvider.notifier).choose),
+                ),
               _Transport(
                 label: '播放队列',
+                glyph: widget.onToggleQueue != null
+                    ? PlayerToolbarGlyph(
+                        tool: PlayerToolbarTool.queue,
+                        active: widget.queueActive,
+                        order: order,
+                      )
+                    : null,
                 icon: CupertinoIcons.list_bullet,
                 size: 27,
-                onPressed: () => showPlaybackQueueSheet(context),
+                onPressed:
+                    widget.onToggleQueue ??
+                    () => showPlaybackQueueSheet(context),
               ),
             ],
           ),
+          if (widget.onToggleLyrics != null)
+            ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 20),
+              child: Center(
+                child: Text(
+                  output.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white60,
+                    fontSize: 11,
+                    height: 1.3,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

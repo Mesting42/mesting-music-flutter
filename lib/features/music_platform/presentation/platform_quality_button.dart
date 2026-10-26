@@ -1,4 +1,4 @@
-import 'dart:ui';
+import '../../../shared/widgets/beta_glass_popover.dart';
 import 'package:flutter/cupertino.dart';
 import '../../../core/haptics/app_haptics.dart';
 import 'package:flutter/material.dart';
@@ -81,111 +81,99 @@ class _QualityDialog extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       elevation: 0,
       insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(30),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 26, sigmaY: 26),
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 360),
-            decoration: BoxDecoration(
-              color: dark ? const Color(0xE52A2A2D) : const Color(0xEBF7F7FA),
-              borderRadius: BorderRadius.circular(30),
-              border: Border.all(color: dark ? Colors.white12 : Colors.white70),
-            ),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(22),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    '音质选择',
-                    style: TextStyle(
-                      color: ink,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                    ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 360),
+        child: BetaGlassMenuSurface(
+          radius: 30,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  '音质选择',
+                  style: TextStyle(
+                    color: ink,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
                   ),
-                  const SizedBox(height: 18),
-                  if (qualities != null)
-                    qualities.when(
-                      loading: () => const Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Center(child: CupertinoActivityIndicator()),
-                      ),
-                      error: (_, _) => Column(
-                        children: [
-                          Text('暂未获取到歌曲音质信息', style: TextStyle(color: ink)),
-                          TextButton(
-                            onPressed: () => ref.invalidate(
-                              platformSongQualitiesProvider(track.id),
-                            ),
-                            child: const Text('重新加载'),
+                ),
+                const SizedBox(height: 18),
+                if (qualities != null)
+                  qualities.when(
+                    loading: () => const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(child: CupertinoActivityIndicator()),
+                    ),
+                    error: (_, _) => Column(
+                      children: [
+                        Text('暂未获取到歌曲音质信息', style: TextStyle(color: ink)),
+                        TextButton(
+                          onPressed: () => ref.invalidate(
+                            platformSongQualitiesProvider(track.id),
                           ),
-                        ],
-                      ),
-                      data: (available) => Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          for (final quality
-                              in PlatformAudioQuality.values.where(
-                                available.contains,
-                              ))
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 5),
-                              child: Material(
-                                color: actual == quality
-                                    ? accent.withValues(alpha: .18)
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(17),
-                                clipBehavior: Clip.antiAlias,
-                                child: ListTile(
-                                  key: ValueKey(
-                                    'quality-option-${quality.code}',
+                          child: const Text('重新加载'),
+                        ),
+                      ],
+                    ),
+                    data: (available) => Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (final quality in PlatformAudioQuality.values.where(
+                          available.contains,
+                        ))
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 5),
+                            child: Material(
+                              color: actual == quality
+                                  ? accent.withValues(alpha: .18)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(17),
+                              clipBehavior: Clip.antiAlias,
+                              child: ListTile(
+                                key: ValueKey('quality-option-${quality.code}'),
+                                minVerticalPadding: 10,
+                                title: Text(
+                                  quality.label,
+                                  style: TextStyle(
+                                    color: actual == quality ? accent : ink,
+                                    fontSize: 17,
+                                    fontWeight: actual == quality
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
                                   ),
-                                  minVerticalPadding: 10,
-                                  title: Text(
-                                    quality.label,
-                                    style: TextStyle(
-                                      color: actual == quality ? accent : ink,
-                                      fontSize: 17,
-                                      fontWeight: actual == quality
-                                          ? FontWeight.w600
-                                          : FontWeight.w400,
-                                    ),
-                                  ),
-                                  trailing: actual == quality
-                                      ? Icon(
-                                          CupertinoIcons.check_mark,
-                                          color: accent,
-                                          size: 20,
-                                        )
-                                      : null,
-                                  onTap: switching
-                                      ? null
-                                      : () => Navigator.pop(
-                                          context,
-                                          _QualitySelection(track.id, quality),
-                                        ),
                                 ),
+                                trailing: actual == quality
+                                    ? Icon(
+                                        CupertinoIcons.check_mark,
+                                        color: accent,
+                                        size: 20,
+                                      )
+                                    : null,
+                                onTap: switching
+                                    ? null
+                                    : () => Navigator.pop(
+                                        context,
+                                        _QualitySelection(track.id, quality),
+                                      ),
                               ),
                             ),
-                        ],
-                      ),
+                          ),
+                      ],
                     ),
+                  ),
+                if (!supported) ...[
                   const SizedBox(height: 12),
                   Text(
-                    supported
-                        ? '当前：${track.isPreview ? "试听" : actual?.label ?? "待平台确认"}'
-                        : '当前音源不支持在线音质切换',
+                    '当前音源不支持在线音质切换',
                     style: TextStyle(
                       color: ink.withValues(alpha: .65),
                       fontSize: 12,
-                      height: 1.5,
                     ),
                   ),
                 ],
-              ),
+              ],
             ),
           ),
         ),

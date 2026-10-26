@@ -105,10 +105,7 @@ class PlaybackPersistenceController with WidgetsBindingObserver {
       final restoredIndex = currentId == null
           ? 0
           : tracks.indexWhere((track) => track.id == currentId);
-      final mode = PlaybackMode.values.firstWhere(
-        (candidate) => candidate.name == session.playbackMode,
-        orElse: () => PlaybackMode.list,
-      );
+      final order = PlaybackOrder.parse(session.playbackMode);
       if (tracks.isEmpty) {
         await _audioHandler.clearSession();
         return;
@@ -119,7 +116,8 @@ class PlaybackPersistenceController with WidgetsBindingObserver {
         position: restoredIndex < 0
             ? Duration.zero
             : Duration(milliseconds: session.positionMs),
-        mode: mode,
+        mode: order.legacy,
+        order: order,
       );
     } on Object {
       // A damaged or obsolete snapshot must neither stop startup nor leak the
@@ -163,7 +161,7 @@ class PlaybackPersistenceController with WidgetsBindingObserver {
       }),
     );
     _subscriptions.add(
-      _audioHandler.playbackModeStream.listen((_) => saveNow()),
+      _audioHandler.playbackOrderStream.listen((_) => saveNow()),
     );
     _subscriptions.add(
       _audioHandler.playbackState.listen((state) {
@@ -240,7 +238,7 @@ class PlaybackPersistenceController with WidgetsBindingObserver {
     final persistedQueue = queue ?? _audioHandler.persistedQueue;
     if (persistedQueue.isEmpty) return;
     final position = _audioHandler.currentPosition;
-    final playbackMode = _audioHandler.playbackMode.name;
+    final playbackMode = _audioHandler.playbackOrder.serialized;
     await _database.savePlaybackSession(
       ownerId: ownerId,
       queue: persistedQueue,

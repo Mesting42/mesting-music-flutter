@@ -3,9 +3,16 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  final source = File(
-    'android/app/src/main/kotlin/com/mesting/mesting_music/MainActivity.kt',
-  ).readAsStringSync();
+  final source =
+      File(
+        'android/app/src/main/kotlin/com/mesting/mesting_music/MainActivity.kt',
+      ).readAsStringSync() +
+      File(
+        'android/app/src/main/kotlin/com/mesting/mesting_music/LyricsOverlayController.kt',
+      ).readAsStringSync() +
+      File(
+        'android/app/src/main/kotlin/com/mesting/mesting_music/LyricsOverlayGlassHost.kt',
+      ).readAsStringSync();
   final manifest = File(
     'android/app/src/main/AndroidManifest.xml',
   ).readAsStringSync();
@@ -48,13 +55,13 @@ void main() {
     expect(notificationLyricsOnIcon, contains('android:strokeWidth="2.2"'));
   });
 
-  test('展开的桌面歌词使用轻量单层面板与钴蓝强调色', () {
+  test('桌面歌词使用有界系统背景模糊与可读降级材质', () {
     expect(source, contains('"Mesting Music"'));
     expect(source, contains('R.drawable.mesting_mark_foreground'));
-    expect(source, contains('Color.parseColor("#F21B1E28")'));
-    expect(source, contains('Color.parseColor("#F214161E")'));
-    expect(source, contains('Color.parseColor("#3D91A5FF")'));
-    expect(source, contains('Color.parseColor("#FF667DE0")'));
+    expect(source, contains('setBackgroundBlurRadius'));
+    expect(source, contains('isCrossWindowBlurEnabled'));
+    expect(source, contains('Color.parseColor("#EB35404B")'));
+    expect(source, contains('Color.parseColor("#FF0A84FF")'));
     expect(source, isNot(contains('#FFFF8DA8')));
     expect(source, isNot(contains('#FFFF668A')));
     expect(source, isNot(contains('Color.parseColor("#42FF9CB4")')));
@@ -74,10 +81,7 @@ void main() {
     expect(source, contains('setLineSpacing(dp(2).toFloat(), 1.04f)'));
     expect(source, contains('dp(if (action == "playPause") 50 else 48)'));
     expect(source, isNot(contains('Color.parseColor("#CC292C37")')));
-    expect(
-      source,
-      isNot(contains('LinearLayout.LayoutParams(dp(44), dp(44))')),
-    );
+    expect(source, contains('LinearLayout.LayoutParams(dp(44), dp(44))'));
   });
 
   test('控制栏使用可着色矢量图标而非字形伪图标', () {
@@ -145,13 +149,13 @@ void main() {
     expect(source, contains('灵动岛或通知中心的音乐面板中点击“词”解锁'));
   });
 
-  test('字体大小与颜色设置面板保持原有视觉与功能', () {
+  test('字体大小与颜色设置保留即时预览、调色和恢复默认', () {
     expect(source, contains('settingText(appContext, "桌面歌词", 18f'));
     expect(source, contains('settingText(appContext, "字体颜色", 14f'));
     expect(source, contains('settingsPreview = settingText'));
     expect(source, contains('colorPalette.toList().chunked(4)'));
-    expect(source, contains('Color.parseColor("#F51C1F29")'));
-    expect(source, contains('Color.parseColor("#2EFFFFFF")'));
+    expect(source, contains('glassHost?.appearance(settingsExpanded)'));
+    expect(source, contains('Color.parseColor("#20FFFFFF")'));
     expect(source, contains('settingButton(appContext, "恢复默认样式")'));
   });
 

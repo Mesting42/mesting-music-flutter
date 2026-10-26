@@ -1,6 +1,6 @@
 param(
-    [string]$VersionName = '1.0.37-beta.15',
-    [ValidateRange(1, 2147483647)][int]$VersionCode = 15,
+    [string]$VersionName = '1.0.37-beta.16',
+    [ValidateRange(1, 2147483647)][int]$VersionCode = 16,
     [ValidateSet('debug', 'release')][string]$Mode = 'release',
     [string]$TargetPlatform = 'android-arm,android-arm64',
     [string]$FlutterSdkRoot = $env:MESTING_BETA_FLUTTER_ROOT
@@ -24,7 +24,7 @@ try {
     }
     # No deployment, manifest write or formal build is performed by this tool.
     # Channel identity is also enforced from Flutter's generated appFlavor.
-    & $flutterCommand build apk "--$Mode" --flavor beta `
+    & $flutterCommand build apk "--$Mode" --no-pub --flavor beta `
         "--target-platform=$TargetPlatform" `
         "--build-name=$VersionName" "--build-number=$VersionCode" `
         '--dart-define=USE_CLOUDBASE_AUTH=true' `

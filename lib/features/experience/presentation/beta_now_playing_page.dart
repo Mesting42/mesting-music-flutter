@@ -1,10 +1,14 @@
+import '../../music_platform/presentation/platform_quality_button.dart';
+import '../../music_platform/presentation/platform_comments_page.dart';
+import '../../music_platform/music_platform_providers.dart';
+import '../../auth/presentation/beta_login_navigation.dart';
+import 'player_queue_panel.dart';
 import 'dart:ui';
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/audio/playback_mode.dart';
 import '../../../core/audio/playback_providers.dart';
 import '../../../shared/widgets/music_notice.dart';
 import '../../../shared/widgets/track_artwork.dart';
@@ -36,12 +40,14 @@ class BetaNowPlayingPage extends ConsumerStatefulWidget {
 
 class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
   late bool _lyrics = widget.lyricsInitially;
+  bool _queue = false;
   double _direction = 1;
   StreamSubscription<String>? _commands;
   bool _routeExitRequested = false;
   void _showLyrics(bool show) => setState(() {
     _direction = show ? 1 : -1;
     _lyrics = show;
+    _queue = false;
   });
   void _dismissPlayer() {
     if (_routeExitRequested || ModalRoute.of(context)?.isCurrent == false) {
@@ -71,7 +77,12 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
     super.dispose();
   }
 
+  void _toggleQueue() => setState(() => _queue = !_queue);
   void _close() {
+    if (_queue) {
+      _toggleQueue();
+      return;
+    }
     if (_lyrics) {
       _showLyrics(false);
       return;
@@ -84,7 +95,8 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
     final track = ref.watch(currentTrackProvider);
     final style = ref.watch(playerVisualStyleProvider);
     final playing = ref.watch(playbackStateProvider).value?.playing ?? false;
-    final classic = style == PlayerVisualStyle.classic && !_lyrics;
+    final detail = _lyrics || _queue;
+    final classic = style == PlayerVisualStyle.classic && !detail;
     final theme = Theme.of(context);
     final darkTheme = theme.copyWith(
       brightness: Brightness.dark,
@@ -110,10 +122,10 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
           onProgress: (value) =>
               ref.read(playerChromeRevealProvider).value = value,
           child: PopScope(
-            canPop: !_lyrics,
+            canPop: !detail,
             onPopInvokedWithResult: (didPop, _) {
               if (didPop) _routeExitRequested = true;
-              if (!didPop && _lyrics) _showLyrics(false);
+              if (!didPop) _close();
             },
             child: Scaffold(
               backgroundColor: const Color(0xFF17191F),
@@ -140,7 +152,7 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
                             ),
                           ),
                   ),
-                  if (style != PlayerVisualStyle.cover && !classic && !_lyrics)
+                  if (style != PlayerVisualStyle.cover && !classic && !detail)
                     Positioned.fill(child: PlayerStyleAtmosphere(style: style)),
                   Positioned.fill(
                     child: DecoratedBox(
@@ -178,32 +190,33 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
                               children: [
                                 const SizedBox(height: 8),
                                 PlayerDismissHandle(onTap: _dismissPlayer),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      IconButton(
-                                        tooltip: _lyrics ? '返回封面' : '收起播放器',
-                                        onPressed: _close,
-                                        icon: const Icon(
-                                          CupertinoIcons.chevron_down,
-                                          size: 23,
+                                if (!detail)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        IconButton(
+                                          tooltip: _lyrics ? '返回封面' : '收起播放器',
+                                          onPressed: _close,
+                                          icon: const Icon(
+                                            CupertinoIcons.chevron_down,
+                                            size: 23,
+                                          ),
                                         ),
-                                      ),
-                                      const Spacer(),
-                                      _more(context),
-                                    ],
+                                        const Spacer(),
+                                        _more(context),
+                                      ],
+                                    ),
                                   ),
-                                ),
                                 AnimatedSize(
                                   duration: const Duration(milliseconds: 320),
                                   reverseDuration: const Duration(
                                     milliseconds: 260,
                                   ),
                                   curve: Curves.easeInOutCubic,
-                                  child: !_lyrics
+                                  child: !detail
                                       ? const SizedBox.shrink()
                                       : Padding(
                                           padding: const EdgeInsets.fromLTRB(
@@ -242,6 +255,12 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
                                                   small: true,
                                                 ),
                                               ),
+                                              FavoriteToggleButton(
+                                                track: track,
+                                                star: true,
+                                                compact: true,
+                                              ),
+                                              _more(context),
                                             ],
                                           ),
                                         ),
@@ -249,8 +268,13 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
                                 Expanded(
                                   child: PlayerContentTransition(
                                     direction: _direction,
-                                    child: _lyrics
+                                    child: _queue
+                                        ? const PlayerQueuePanel(
+                                            key: ValueKey('player-queue-panel'),
+                                          )
+                                        : _lyrics
                                         ? ImmersiveLyrics(
+                                            referenceDesign: true,
                                             key: ValueKey(
                                               'immersive-lyrics-${track.id}',
                                             ),
@@ -286,7 +310,7 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
                                     milliseconds: 260,
                                   ),
                                   curve: Curves.easeInOutCubic,
-                                  child: _lyrics
+                                  child: detail
                                       ? const SizedBox.shrink()
                                       : Padding(
                                           padding: const EdgeInsets.fromLTRB(
@@ -307,12 +331,19 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
                                               const SizedBox(width: 12),
                                               FavoriteToggleButton(
                                                 track: track,
+                                                star: true,
                                               ),
                                             ],
                                           ),
                                         ),
                                 ),
-                                const ApplePlayerControls(),
+                                ApplePlayerControls(
+                                  lyricsActive: _lyrics && !_queue,
+                                  queueActive: _queue,
+                                  onToggleLyrics: () =>
+                                      _showLyrics(_queue || !_lyrics),
+                                  onToggleQueue: _toggleQueue,
+                                ),
                               ],
                             ),
                           ),
@@ -338,8 +369,6 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
   }
 
   Widget _more(BuildContext context) {
-    final handler = ref.read(audioHandlerProvider);
-    final mode = ref.watch(playbackModeProvider).value ?? PlaybackMode.list;
     final current = ref.watch(playerVisualStyleProvider);
     final recommendation = ref.read(platformRecommendationSessionProvider);
     final track = ref.read(currentTrackProvider);
@@ -362,14 +391,20 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
           return;
         }
         if (value == 'mode') {
-          await handler.setPlaybackMode(mode.next);
-          if (context.mounted) {
-            showMusicNotice(
-              context,
-              icon: CupertinoIcons.repeat,
-              title: mode.next.label,
-              message: '',
-            );
+          _toggleQueue();
+          return;
+        }
+        if (value == 'quality') {
+          await showPlatformQualityPicker(context, ref);
+          return;
+        }
+        if (value == 'comments') {
+          if (ref.read(platformAccountProvider).value == null) {
+            await openBetaLogin(context, redirect: '/player');
+          }
+          if (context.mounted &&
+              ref.read(platformAccountProvider).value != null) {
+            await openPlatformSongComments(context, ref, track);
           }
           return;
         }
@@ -394,15 +429,13 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
             _lyrics ? '查看封面' : '查看歌词',
             CupertinoIcons.text_alignleft,
           ),
-          PlayerMenuAction(
+          const PlayerMenuAction(
             'mode',
-            '播放模式 · ${mode.label}',
-            mode == PlaybackMode.random
-                ? CupertinoIcons.shuffle
-                : mode == PlaybackMode.single
-                ? CupertinoIcons.repeat_1
-                : CupertinoIcons.repeat,
+            '待播列表与播放模式',
+            CupertinoIcons.list_bullet,
           ),
+          const PlayerMenuAction('quality', '音质选择', CupertinoIcons.waveform),
+          const PlayerMenuAction('comments', '歌曲评论', CupertinoIcons.text_quote),
           const PlayerMenuAction(
             'playlist',
             '添加到歌单',
@@ -443,30 +476,33 @@ class _Identity extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PlayerContentTransition(
     direction: direction,
-    child: Column(
+    child: SizedBox(
       key: ValueKey('$title/$artist/$small'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          maxLines: small ? 1 : 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: small ? 18 : 26,
-            height: 1.16,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -.4,
+      width: double.infinity,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            maxLines: small ? 1 : 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: small ? 18 : 26,
+              height: 1.16,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -.4,
+            ),
           ),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          artist,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: Colors.white, fontSize: small ? 14 : 17),
-        ),
-      ],
+          const SizedBox(height: 5),
+          Text(
+            artist,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: Colors.white, fontSize: small ? 14 : 17),
+          ),
+        ],
+      ),
     ),
   );
 }

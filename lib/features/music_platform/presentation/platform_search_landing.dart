@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../../../shared/widgets/music_notice.dart';
 import '../../../shared/widgets/automatic_song_paging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -65,12 +66,24 @@ class _PlatformSearchLandingState extends ConsumerState<PlatformSearchLanding> {
             ? '已是最新热搜'
             : '热搜已更新',
       );
+      showMusicNotice(
+        context,
+        icon: Icons.check_rounded,
+        title: _refreshStatus!,
+        message: '',
+      );
     } catch (_) {
       if (mounted) {
         setState(
           () => _refreshStatus = previous?.isNotEmpty == true
               ? '刷新失败，已保留原榜单，请重试'
               : '刷新失败，请重试',
+        );
+        showMusicNotice(
+          context,
+          icon: Icons.error_outline_rounded,
+          title: _refreshStatus!,
+          message: '',
         );
       }
     } finally {
@@ -126,17 +139,6 @@ class _PlatformSearchLandingState extends ConsumerState<PlatformSearchLanding> {
             ),
           ],
         ),
-        if (_refreshStatus != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Semantics(
-              liveRegion: true,
-              child: Text(
-                _refreshStatus!,
-                key: const ValueKey('hot-search-refresh-status'),
-              ),
-            ),
-          ),
         boards.when(
           skipError: true,
           loading: () => const PlatformFeedbackState(loading: true),

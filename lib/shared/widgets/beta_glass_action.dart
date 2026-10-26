@@ -30,6 +30,7 @@ class BetaGlassAction extends StatelessWidget {
     required this.onPressed,
     this.loading = false,
     this.blue = true,
+    this.compact = false,
     super.key,
   });
   final String label;
@@ -38,35 +39,66 @@ class BetaGlassAction extends StatelessWidget {
   final bool loading;
   final bool blue;
 
+  /// Search uses an inset 36dp lens inside a stable 48dp touch target.
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
     final foreground = blue
         ? Colors.white
         : Theme.of(context).colorScheme.onSurface;
+    void activate() {
+      if (loading || onPressed == null) return;
+      appHaptic(context, AppHapticEvent.impact);
+      onPressed!();
+    }
+
     return Semantics(
       button: true,
       enabled: onPressed != null && !loading,
       label: label,
       child: Tooltip(
         message: label,
+        triggerMode: compact
+            ? TooltipTriggerMode.manual
+            : TooltipTriggerMode.longPress,
         child: RepaintBoundary(
-          child: GlassButton.custom(
-            onTap: () {
-              if (loading || onPressed == null) return;
-              appHaptic(context, AppHapticEvent.impact);
-              onPressed!();
-            },
-            enabled: onPressed != null && !loading,
-            width: 48,
-            height: 48,
-            useOwnLayer: true,
-            quality: GlassQuality.premium,
-            stretch: .15,
-            shape: const LiquidRoundedRectangle(borderRadius: 24),
-            settings: blue ? betaBlueActionGlass : betaMusicPillGlass(context),
-            child: loading
-                ? CupertinoActivityIndicator(color: foreground)
-                : Icon(icon, color: foreground, size: blue ? 25 : 27),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: compact && onPressed != null && !loading ? activate : null,
+            child: SizedBox.square(
+              dimension: 48,
+              child: Center(
+                child: IgnorePointer(
+                  ignoring: compact,
+                  child: GlassButton.custom(
+                    onTap: activate,
+                    enabled: onPressed != null && !loading,
+                    width: compact ? 36 : 48,
+                    height: compact ? 36 : 48,
+                    useOwnLayer: true,
+                    quality: GlassQuality.premium,
+                    interactionScale: compact ? 1 : null,
+                    stretch: compact ? 0 : .15,
+                    shape: const LiquidRoundedRectangle(borderRadius: 24),
+                    settings: blue
+                        ? betaBlueActionGlass
+                        : betaMusicPillGlass(context),
+                    child: loading
+                        ? CupertinoActivityIndicator(color: foreground)
+                        : Icon(
+                            icon,
+                            color: foreground,
+                            size: compact
+                                ? 23
+                                : blue
+                                ? 25
+                                : 27,
+                          ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),

@@ -16,11 +16,13 @@ class FavoriteToggleButton extends ConsumerWidget {
   const FavoriteToggleButton({
     required this.track,
     this.compact = false,
+    this.star = false,
     super.key,
   });
 
   final Track track;
   final bool compact;
+  final bool star;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -66,7 +68,11 @@ class FavoriteToggleButton extends ConsumerWidget {
                 if (context.mounted) {
                   showMusicNotice(
                     context,
-                    icon: favorite
+                    icon: star
+                        ? (favorite
+                              ? Icons.star_border_rounded
+                              : Icons.star_rounded)
+                        : favorite
                         ? Icons.heart_broken_outlined
                         : Icons.favorite_rounded,
                     title: favorite ? '已取消喜欢' : '已添加到喜欢',
@@ -77,7 +83,16 @@ class FavoriteToggleButton extends ConsumerWidget {
                 if (context.mounted) showPlatformFailure(context, error);
               }
             },
-            icon: _FavoriteGlyph(favorite: favorite, size: compact ? 21 : 23),
+            icon: star
+                ? AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    child: Icon(
+                      favorite ? Icons.star_rounded : Icons.star_border_rounded,
+                      key: ValueKey(favorite),
+                      size: compact ? 25 : 28,
+                    ),
+                  )
+                : _FavoriteGlyph(favorite: favorite, size: compact ? 21 : 23),
           ),
         ),
       ),

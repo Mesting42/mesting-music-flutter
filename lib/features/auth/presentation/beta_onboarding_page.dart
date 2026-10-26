@@ -24,13 +24,13 @@ const betaGuidePages = <({String title, String body, List<String> tags})>[
   ),
   (
     title: '顺手的播放器操作',
-    body: '从顶部灰条下拉收起。底部可打开评论、音质与队列；更多菜单里切换播放模式与外观。',
-    tags: ['灰条下拉', '音质选择', '评论与队列'],
+    body: '从顶部灰条下拉收起。底部切换歌词、输出设备与待播列表；队列里设置随机和循环，更多菜单里打开评论、音质与外观。',
+    tags: ['歌词与设备', '随机与循环', '更多操作'],
   ),
   (
     title: '私人 FM 与收藏',
-    body: '在发现页探索私人 FM。轻点爱心收藏喜欢的音乐，云端收藏与歌单跟随当前账号。',
-    tags: ['发现推荐', '爱心收藏', '账号歌单'],
+    body: '在发现页探索私人 FM。轻点播放器的星标收藏喜欢的音乐，云端收藏与歌单跟随当前账号。',
+    tags: ['发现推荐', '星标收藏', '账号歌单'],
   ),
   (
     title: '让音乐接着播放',
@@ -493,7 +493,7 @@ class _GuidePainter extends CustomPainter {
         final a = time * math.pi * 2 + i * math.pi / 2;
         icon(
           index == 3
-              ? (alternate ? CupertinoIcons.heart_fill : CupertinoIcons.heart)
+              ? (alternate ? CupertinoIcons.star_fill : CupertinoIcons.star)
               : CupertinoIcons.music_note,
           Offset(math.cos(a) * 91, math.sin(a) * 91),
           alternate ? 25 : 20,
@@ -548,7 +548,7 @@ class _GuidePainter extends CustomPainter {
       panel(const Rect.fromLTWH(-68, 20, 136, 4), ink.withValues(alpha: .16));
       panel(Rect.fromLTWH(-68, 20, 60 + wave * 12, 4), accent);
       paintPlayerCommentGlyph(c, const Rect.fromLTWH(-65, 47, 25, 25), accent);
-      icon(CupertinoIcons.hifispeaker_fill, const Offset(0, 60), 24, ink);
+      icon(Icons.earbuds_rounded, const Offset(0, 60), 24, ink);
       icon(CupertinoIcons.list_bullet, const Offset(53, 60), 25, ink);
       if (alternate) {
         panel(const Rect.fromLTWH(27, -68, 90, 91), ink.withValues(alpha: .9));

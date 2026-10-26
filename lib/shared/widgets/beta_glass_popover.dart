@@ -31,6 +31,7 @@ class BetaGlassMenuSurface extends StatelessWidget {
         visibility: visibility,
       ),
       shape: LiquidRoundedRectangle(borderRadius: radius),
+      clipBehavior: Clip.hardEdge,
       child: Material(type: MaterialType.transparency, child: child),
     ),
   );
@@ -99,29 +100,30 @@ class _BetaGlassMenuTransitionState extends State<BetaGlassMenuTransition> {
   @override
   Widget build(BuildContext context) {
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    return AnimatedBuilder(
-      animation: widget.animation,
-      // The glass surface and shader configuration stay stable for the entire
-      // transition. Geometry/fade change outside it, avoiding optical rebuilds
-      // every frame as the menu grows out of its real trigger.
-      child: FadeTransition(
-        opacity: reduceMotion ? kAlwaysCompleteAnimation : _reveal,
-        child: BetaGlassMenuSurface(child: widget.child),
+    // A screen-sampling shader cannot share an ancestor's nonuniform scale
+    // with its text: on Android its retained filter can sample a different
+    // rectangle during composition. Animate the surface's REAL layout bounds
+    // instead. The unscaled content is laid out once and clipped inside those
+    // bounds, so every frame has matching optics, clipping and hit testing.
+    return FadeTransition(
+      opacity: reduceMotion ? kAlwaysCompleteAnimation : _reveal,
+      child: BetaGlassMenuSurface(
+        child: AnimatedBuilder(
+          animation: widget.animation,
+          child: widget.child,
+          builder: (context, child) {
+            final stretch = reduceMotion ? 1.0 : _stretch.value;
+            return ClipRect(
+              child: Align(
+                alignment: widget.origin,
+                widthFactor: .82 + .18 * stretch,
+                heightFactor: .16 + .84 * stretch,
+                child: child,
+              ),
+            );
+          },
+        ),
       ),
-      builder: (context, child) {
-        // CurvedAnimation retains the active curve when a gesture reverses
-        // mid-flight. Switching curves by status would visibly jump in size.
-        final stretch = reduceMotion ? 1.0 : _stretch.value;
-        return Transform.translate(
-          offset: Offset(0, widget.origin.y * (1 - stretch) * 12),
-          child: Transform.scale(
-            scaleX: .82 + .18 * stretch,
-            scaleY: .16 + .84 * stretch,
-            alignment: widget.origin,
-            child: child,
-          ),
-        );
-      },
     );
   }
 }

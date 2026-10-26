@@ -397,6 +397,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
                     onSubmitted: _submit,
                     trailingBuilder: (context) => BetaGlassAction(
                       label: '搜索',
+                      compact: true,
                       icon: Icons.arrow_upward_rounded,
                       blue: true,
                       onPressed: () => _submit(_searchText.text),

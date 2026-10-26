@@ -1,6 +1,6 @@
 # Mesting Music
 
-> **Beta 归档分支：当前为 1.0.37-beta.15。** 源码标签、APK 下载、快照来源和回滚方式见 [BETA_ARCHIVE.md](BETA_ARCHIVE.md)。以下正式版介绍保留为原项目说明。
+> **Beta 归档分支：当前为 1.0.37-beta.16。** 源码标签、APK 下载、快照来源和回滚方式见 [BETA_ARCHIVE.md](BETA_ARCHIVE.md)。以下正式版介绍保留为原项目说明。
 
 一款面向 Android 的 Flutter 音乐应用，提供本地与在线音乐浏览、播放控制、歌词、主题换肤，以及好友音乐互动体验。
 

@@ -52,6 +52,10 @@ final playbackModeProvider = StreamProvider<PlaybackMode>((ref) {
   return ref.watch(audioHandlerProvider).playbackModeStream;
 });
 
+final playbackOrderProvider = StreamProvider<PlaybackOrder>(
+  (ref) => ref.watch(audioHandlerProvider).playbackOrderStream,
+);
+
 final currentTrackProvider = Provider<Track>((ref) {
   ref.watch(currentMediaRevisionProvider);
   final item = ref.watch(currentMediaItemProvider).value;

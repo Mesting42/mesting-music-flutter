@@ -1,3 +1,8 @@
+import 'package:mesting_music/shared/widgets/beta_glass_action.dart';
+import 'package:mesting_music/features/experience/presentation/player_toolbar_glyphs.dart';
+import 'package:mesting_music/features/experience/presentation/immersive_lyrics.dart';
+import 'package:mesting_music/core/audio/audio_output_controller.dart';
+import 'package:mesting_music/features/experience/presentation/player_queue_panel.dart';
 import 'package:mesting_music/features/player/presentation/shinchan_progress_walker.dart';
 import 'package:mesting_music/shared/widgets/beta_text_editing.dart';
 import 'package:mesting_music/features/experience/presentation/player_chrome_reveal.dart';
@@ -155,6 +160,16 @@ class _CategoryFixtures extends PlatformCategorySearchRepository {
   );
 }
 
+class _Output extends AudioOutputController {
+  @override
+  AudioOutput build() => const AudioOutput(name: '本机扬声器', available: true);
+  void connect(String name) =>
+      state = AudioOutput(name: name, headphones: true, available: true);
+  void disconnect() => state = const AudioOutput(available: true);
+  @override
+  Future<void> choose() async {}
+}
+
 class _Volume extends MediaVolumeController {
   @override
   MediaVolumeState build() =>
@@ -257,6 +272,7 @@ void main() {
     bool qualityUnknown = false,
     bool playing = false,
     Stream<PlaybackState>? playbackEvents,
+    Stream<Duration>? positionEvents,
     Duration position = const Duration(seconds: 37),
     Future<List<PlatformHotSearchBoard>> Function()? hotSearch,
   }) async {
@@ -386,6 +402,23 @@ void main() {
           (ref) => ref.watch(_qaRecordingProvider),
         ),
         mediaVolumeProvider.overrideWith(_Volume.new),
+        audioOutputProvider.overrideWith(_Output.new),
+        upcomingQueueProvider.overrideWith(
+          (ref) => Stream.value([
+            MediaItem(
+              id: 'pending-a',
+              title: '下一段旋律',
+              artist: _track.artist,
+              artUri: Uri.parse(_track.coverAsset),
+            ),
+            MediaItem(
+              id: 'pending-b',
+              title: '留给夜晚的歌',
+              artist: _track.artist,
+              artUri: Uri.parse(_track.coverAsset),
+            ),
+          ]),
+        ),
         // These are parsed UI fixtures, not wire payloads. Real platform cover
         // parsing rejects asset filenames and is covered in beta6_platform_test.
         platformFmProvider.overrideWith((ref) async => [_track]),
@@ -409,7 +442,9 @@ void main() {
         platformDailyProvider.overrideWith((ref) async => [_track]),
         platformNewSongsProvider.overrideWith((ref) async => [_track]),
         platformDiscoveryProvider.overrideWith((ref) async => [_track]),
-        positionProvider.overrideWith((ref) => Stream.value(position)),
+        positionProvider.overrideWith(
+          (ref) => positionEvents ?? Stream.value(position),
+        ),
         durationProvider.overrideWith((ref) => Stream.value(_track.duration)),
         lyricsProvider.overrideWith(
           (ref, asset) async => const LyricsDocument(
@@ -573,6 +608,16 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+  }
+
+  Future<void> openQuality(WidgetTester tester) async {
+    await tester.tap(find.byTooltip('更多操作'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 450));
+    await tester.tap(find.text('音质选择'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 400));
   }
 
   testWidgets(
@@ -833,7 +878,17 @@ void main() {
       await captureScreenshot(tester, 'beta7-search-expanded');
       await tester.enterText(find.byType(CupertinoTextField).last, '薛之谦');
       tester.view.viewInsets = const FakeViewPadding(bottom: 280);
-      await tester.pump(const Duration(milliseconds: 700));
+      // Keyboard layout retargets its springs after a frame. Advance real
+      // frame-sized steps before checking the settled action/dismiss spacing.
+      for (var frame = 0; frame < 12; frame++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      final submit = find.descendant(
+        of: find.byType(BetaGlassAction),
+        matching: find.byType(GlassButton),
+      );
+      final cancel = find.bySemanticsLabel('关闭搜索').last;
+      expect(tester.getRect(submit).overlaps(tester.getRect(cancel)), false);
       expect(tester.takeException(), null);
       final searchField = tester.getRect(find.byType(CupertinoTextField).last);
       final keyboardTop = tester.view.physicalSize.height - 280;
@@ -854,7 +909,7 @@ void main() {
         viewport(tester);
         await prepare();
         await pump(tester, const BetaNowPlayingPage());
-        await tester.tap(find.byKey(const ValueKey('player-quality-button')));
+        await openQuality(tester);
         await tester.pump(const Duration(milliseconds: 400));
         for (var frame = 0; frame < 5; frame++) {
           await tester.pump(const Duration(milliseconds: 100));
@@ -869,7 +924,7 @@ void main() {
               .select(style);
           await pump(tester, NowPlayingPage(key: ValueKey(style.id)));
           expect(
-            find.byKey(const ValueKey('player-quality-button')),
+            find.byTooltip('更多操作'),
             findsOneWidget,
             reason: style.displayName,
           );
@@ -902,7 +957,7 @@ void main() {
             find.byKey(const ValueKey('system-media-volume')),
             findsOneWidget,
           );
-          expect(find.byTooltip('歌曲评论'), findsOneWidget);
+          expect(find.byTooltip('显示或隐藏歌词'), findsOneWidget);
           expect(find.byTooltip('播放队列'), findsOneWidget);
           await captureScreenshot(tester, 'beta7-player-${style.name}');
         }
@@ -949,7 +1004,7 @@ void main() {
       viewport(tester);
       await prepare(standardOnly: true);
       await pump(tester, const BetaNowPlayingPage());
-      await tester.tap(find.byKey(const ValueKey('player-quality-button')));
+      await openQuality(tester);
       for (var i = 0; i < 7; i++) {
         await tester.pump(const Duration(milliseconds: 100));
       }
@@ -969,7 +1024,7 @@ void main() {
       viewport(tester);
       await prepare(qualityUnknown: true);
       await pump(tester, const BetaNowPlayingPage());
-      await tester.tap(find.byKey(const ValueKey('player-quality-button')));
+      await openQuality(tester);
       for (var i = 0; i < 7; i++) {
         await tester.pump(const Duration(milliseconds: 100));
       }
@@ -1325,15 +1380,18 @@ void main() {
       viewport(tester);
       await prepare();
       await pump(tester, const BetaNowPlayingPage());
-      final quality = find.byKey(const ValueKey('player-quality-button'));
+      final quality = find.byTooltip('更多操作');
       expect(
         find.descendant(of: quality, matching: find.byType(Text)),
         findsNothing,
       );
-      final speaker = find.byIcon(CupertinoIcons.hifispeaker_fill);
+      final speaker = find.byKey(const ValueKey('player-output-glyph'));
       expect(
         tester.getCenter(speaker).dy,
-        closeTo(tester.getCenter(find.bySemanticsLabel('歌曲评论').first).dy, .1),
+        closeTo(
+          tester.getCenter(find.bySemanticsLabel('显示或隐藏歌词').first).dy,
+          .1,
+        ),
       );
       expect(
         tester.getCenter(speaker).dy,
@@ -1769,7 +1827,7 @@ void main() {
       await tester.tap(find.bySemanticsLabel('查看歌词'));
       await middle('beta10-lyrics-enter-middle');
       await tester.pump(const Duration(milliseconds: 400));
-      await tester.tap(find.byTooltip('返回封面'));
+      await tester.tap(find.bySemanticsLabel('返回封面'));
       await middle('beta10-lyrics-exit-middle');
       await tester.pump(const Duration(milliseconds: 400));
       // Use the production menu callback, rather than replacing the page.
@@ -2874,6 +2932,139 @@ void main() {
           await disposeFixture(tester);
         }
       }
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+  for (final sample in [
+    (const Size(390, 844), 1.0),
+    (const Size(320, 640), 1.6),
+    (const Size(844, 390), 1.0),
+  ]) {
+    testWidgets(
+      'beta16 reference lyrics and inline queue ${sample.$1} text ${sample.$2}',
+      (tester) async {
+        viewport(tester, sample.$1);
+        await prepare();
+        await pump(
+          tester,
+          const BetaNowPlayingPage(lyricsInitially: true),
+          scale: sample.$2,
+        );
+        expect(find.byIcon(Icons.star_border_rounded), findsOneWidget);
+        expect(find.byType(ApplePlayerControls), findsOneWidget);
+        final seek = find.byKey(const ValueKey('playback-seek-slider'));
+        expect(
+          SliderTheme.of(tester.element(seek)).thumbShape,
+          same(SliderComponentShape.noThumb),
+        );
+        expect(tester.widget<Slider>(seek).onChanged, isNotNull);
+        expect(find.byType(ImageFiltered), findsWidgets);
+        if (sample.$1.height >= 800) {
+          await captureScreenshot(tester, 'beta16-immersive-lyrics');
+          (container.read(audioOutputProvider.notifier) as _Output).connect(
+            '通勤耳机 WH-1000XM5',
+          );
+          await tester.pump();
+          expect(find.text('通勤耳机 WH-1000XM5'), findsOneWidget);
+          expect(
+            tester
+                .widget<PlayerToolbarGlyph>(
+                  find.byKey(const ValueKey('player-output-glyph')),
+                )
+                .headphones,
+            true,
+          );
+          await captureScreenshot(tester, 'beta16-headphones');
+        }
+        final button = find.byTooltip('播放队列');
+        await tester.ensureVisible(button);
+        await tester.tap(button);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 650));
+        expect(find.byType(PlayerQueuePanel), findsOneWidget);
+        expect(find.text('下一段旋律'), findsOneWidget);
+        expect(find.byKey(const ValueKey('player-shuffle')), findsOneWidget);
+        expect(find.byKey(const ValueKey('player-repeat')), findsOneWidget);
+        await captureScreenshot(
+          tester,
+          'beta16-inline-queue-${sample.$1.width.toInt()}',
+        );
+        expect(tester.takeException(), isNull);
+        await tester.ensureVisible(button);
+        await tester.tap(button);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 650));
+        expect(find.byType(PlayerQueuePanel), findsNothing);
+        await disposeFixture(tester);
+      },
+      skip: !DistributionChannel.isBeta,
+    );
+  }
+  testWidgets(
+    'beta16 next lyric crossfades focus without replacing the player transition',
+    (tester) async {
+      viewport(tester);
+      final positions = StreamController<Duration>.broadcast();
+      await prepare(positionEvents: positions.stream);
+      await pump(tester, const BetaNowPlayingPage(lyricsInitially: true));
+      positions.add(const Duration(seconds: 21));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      final transition = find
+          .ancestor(
+            of: find.byType(ImmersiveLyrics),
+            matching: find.byType(PlayerContentTransition),
+          )
+          .first;
+      final first = tester.element(transition);
+      positions.add(const Duration(seconds: 41));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 130));
+      expect(tester.element(transition), same(first));
+      await captureScreenshot(
+        tester,
+        'beta16-lyric-between-lines',
+        settle: Duration.zero,
+      );
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(tester.takeException(), isNull);
+      await disposeFixture(tester);
+      await positions.close();
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+  testWidgets(
+    'beta16 player glass opening and closing keep bounded real geometry',
+    (tester) async {
+      viewport(tester);
+      await prepare();
+      await pump(tester, const BetaNowPlayingPage(lyricsInitially: true));
+      await tester.tap(find.byTooltip('更多操作'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 70));
+      await captureScreenshot(
+        tester,
+        'beta16-more-opening',
+        settle: Duration.zero,
+      );
+      await tester.pump(const Duration(milliseconds: 450));
+      await captureScreenshot(
+        tester,
+        'beta16-more-open',
+        settle: Duration.zero,
+      );
+      await tester.tapAt(const Offset(8, 350));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 80));
+      await captureScreenshot(
+        tester,
+        'beta16-more-closing',
+        settle: Duration.zero,
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('待播列表与播放模式'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await disposeFixture(tester);
     },
     skip: !DistributionChannel.isBeta,
   );

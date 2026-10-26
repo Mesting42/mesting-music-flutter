@@ -1,17 +1,19 @@
 # Mesting Music Beta 版本归档
 
-归档日期：2026-10-26（Asia/Shanghai）。当前快照：**1.0.37-beta.15**。
+归档日期：2026-10-26（Asia/Shanghai）。当前快照：**1.0.37-beta.16**。
 本分支用于保存这台电脑交付的 Beta 版本；现有正式版 `main`、旧标签和旧 Release 保留。
 
 | 版本 | 源码标签 | 已交付安装包 |
 | --- | --- | --- |
 | Beta.14 | [`v1.0.37-beta.14`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.14) | [APK / 校验值 / 安装说明](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.14) |
 | Beta.15 | [`v1.0.37-beta.15`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.15) | [APK / 校验值 / 安装说明](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.15) |
+| Beta.16 | [`v1.0.37-beta.16`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.16) | [APK / 校验值 / 安装说明](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.16) |
 
 ## 快照来源
 
 - Beta.14：根据实施 Beta.15 前的完整模块备份还原；本轮 17 个修改文件与当时打包记录的 SHA-256 一致。
 - Beta.15：根据实施 Beta.16 前的 640 文件备份还原；备份清单逐项核验，本轮 35 个修改文件与打包记录一致。
+- Beta.16：直接保存当前工作目录的源码；本轮 29 个新增或修改文件与最终打包记录一致。
 
 这些提交创建于此次归档，不是补造过去的开发提交日期。备份未覆盖的未改动文件沿用当前解压项目，
 因此对历史快照的证明范围是备份和已有哈希记录，不宣称有原始历史 Git 提交或可逐字节复现 APK。
@@ -40,7 +42,7 @@ Git 标签用于恢复源码。安装旧 APK 还受 Android 的 versionCode 降�
 
 ```powershell
 flutter pub get
-.\tool\build_android_md3_beta_apk.ps1 -VersionName '1.0.37-beta.15' -VersionCode 15
+.\tool\build_android_md3_beta_apk.ps1 -VersionName '1.0.37-beta.16' -VersionCode 16
 ```
 
 脚本支持 `-FlutterSdkRoot`，具体过程见脚本注释。三个版本保持包名 `com.mesting.music.beta`，
@@ -55,6 +57,7 @@ flutter pub get
 
 - Beta.14: `361255B0F52D13EA8CE86987F9B37B6F05EF56F72123FA1091551932A8E137DF`
 - Beta.15: `8AA701E21D204B3DBEAC45A2B4A5E3906E315AF09C4B775570AD70ED39ED36DF`
+- Beta.16: `5CCB834B65DB51C1EEF68A2A7C2B392209126FBF79C02D1EDEBA1502CE0E611C`
 
 ## 验证边界与依赖
 
