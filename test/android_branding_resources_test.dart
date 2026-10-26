@@ -399,14 +399,19 @@ void main() {
       expect(onCreate, isNot(contains('applyPendingBrandStyle()')));
       expect(activity, contains('"applyQueuedBrandStyle"'));
       expect(bootstrap, contains('updateLauncher: false'));
-      final firstFrameCallback = bootstrap.substring(
-        bootstrap.indexOf('WidgetsBinding.instance.addPostFrameCallback'),
-        bootstrap.indexOf('return dependencies;'),
-      );
-      expect(
-        firstFrameCallback,
-        isNot(contains('AppBrandStyleBridge.applyQueuedStyle()')),
-      );
+      // Persistence now starts after the startup film and the real app's first
+      // frame. Check the callback contract independently of its old position
+      // before `return dependencies`, which no longer owns that frame.
+      final firstFrameCallbacks = RegExp(
+        r'WidgetsBinding\.instance\.addPostFrameCallback\(\(_\)\s*\{([\s\S]*?)\}\);',
+      ).allMatches(bootstrap);
+      expect(firstFrameCallbacks, isNotEmpty);
+      for (final callback in firstFrameCallbacks) {
+        expect(
+          callback.group(1),
+          isNot(contains('AppBrandStyleBridge.applyQueuedStyle()')),
+        );
+      }
       final currentBrandStyle = activity.substring(
         activity.indexOf('private fun currentBrandStyle()'),
         activity.indexOf('private fun queueBrandStyle('),

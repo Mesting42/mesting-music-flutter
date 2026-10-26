@@ -5,7 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/audio/playback_mode.dart';
 import '../../../core/audio/playback_providers.dart';
 import '../../../core/platform/distribution_channel.dart';
-import '../../../shared/utils/duration_format.dart';
+import '../../../shared/models/track.dart';
+import 'queue_track_duration.dart';
 import '../../../shared/widgets/artwork_image.dart';
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../themes/music_theme_tokens.dart';
@@ -169,8 +170,8 @@ class QueuePage extends ConsumerWidget {
                               '',
                           title: item.title,
                           artist: item.artist ?? '未知歌手',
-                          duration:
-                              item.duration ?? track?.duration ?? Duration.zero,
+                          duration: item.duration,
+                          track: track,
                           isNext: rowIndex == 0,
                           onPlay: () => handler.playTrack(item.id),
                           onRemove: () =>
@@ -384,6 +385,7 @@ class _QueueSongRow extends StatelessWidget {
     required this.title,
     required this.artist,
     required this.duration,
+    required this.track,
     required this.isNext,
     required this.onPlay,
     required this.onRemove,
@@ -393,7 +395,8 @@ class _QueueSongRow extends StatelessWidget {
   final String coverUri;
   final String title;
   final String artist;
-  final Duration duration;
+  final Duration? duration;
+  final Track? track;
   final bool isNext;
   final VoidCallback onPlay;
   final Future<void> Function() onRemove;
@@ -466,8 +469,9 @@ class _QueueSongRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  formatDuration(duration),
+                QueueTrackDuration(
+                  track: track,
+                  mediaDuration: duration,
                   style: TextStyle(
                     color: tokens.textMuted,
                     fontSize: 10,

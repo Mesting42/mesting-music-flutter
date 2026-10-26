@@ -164,7 +164,9 @@ class ProfilePage extends ConsumerWidget {
           color: MestingPalette.teal,
         ),
         title: '装扮',
-        subtitle: '皮肤、IP 主题、图标与启动页',
+        subtitle: DistributionChannel.isBeta
+            ? '启动页、播放器、背景与进度条'
+            : '皮肤、IP 主题、图标与启动页',
         onTap: () => showDressUpCenterSheet(context),
       ),
     ];

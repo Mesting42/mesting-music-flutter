@@ -42,6 +42,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart' show CupertinoIcons, CupertinoTextField;
 import 'package:mesting_music/features/themes/theme_gallery_page.dart';
+import 'package:mesting_music/features/themes/startup_style_picker.dart';
 import 'package:mesting_music/features/music_platform/platform_catalog_providers.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -517,6 +518,7 @@ void main() {
           key: const ValueKey('beta5-capture'),
           child: LiquidGlassWidgets.wrap(
             brightnessResolver: Theme.maybeBrightnessOf,
+            adaptiveQuality: false,
             child: MaterialApp.router(
               debugShowCheckedModeBanner: false,
               theme: fontsLoaded
@@ -1779,6 +1781,339 @@ void main() {
       await openAlbums();
       expect(activeScroll().offset, 0);
       await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta12 embedded search advertises and consumes real system back history for every category',
+    (tester) async {
+      viewport(tester);
+      await prepare(guest: true);
+      production.appRouter.go('/music/recommend');
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            routerConfig: production.appRouter,
+            theme: buildMestingTheme(musicThemePresetById('classic')),
+          ),
+        ),
+      );
+      Future<void> settle() async {
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 600));
+      }
+
+      await settle();
+      expect(production.appRouter.canPop(), false);
+      await tester.tap(find.byIcon(CupertinoIcons.search).hitTestable().last);
+      await settle();
+      // Android needs a real Navigator target, not only a Dart dispatcher hook.
+      expect(production.appRouter.canPop(), true);
+      for (final kind in PlatformSearchKind.values) {
+        await tester.enterText(find.byType(CupertinoTextField).last, '薛之谦');
+        await tester.testTextInput.receiveAction(TextInputAction.search);
+        await settle();
+        await tester.tap(find.byKey(ValueKey('search-kind-${kind.name}')));
+        await settle();
+        expect(production.appRouter.canPop(), true);
+        if (kind == PlatformSearchKind.albums) {
+          expect(await production.appRouter.routerDelegate.popRoute(), true);
+        } else {
+          await tester.binding.handlePopRoute();
+        }
+        await settle();
+        expect(container.read(musicSearchControllerProvider).query, isEmpty);
+        expect(find.byType(PlatformSearchLanding), findsOneWidget);
+        expect(production.appRouter.canPop(), true);
+      }
+      await tester.binding.handlePopRoute();
+      await settle();
+      expect(find.byType(PlatformSearchLanding), findsNothing);
+      expect(production.appRouter.canPop(), false);
+      expect(
+        production.appRouter.routeInformationProvider.value.uri.path,
+        '/music/recommend',
+      );
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta12 handle drives one real route exit and a cancelled drag rebounds without popping',
+    (tester) async {
+      viewport(tester);
+      await prepare(playing: true);
+      production.appRouter.go('/music/recommend');
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            routerConfig: production.appRouter,
+            theme: buildMestingTheme(musicThemePresetById('classic')),
+            builder: (context, child) => RepaintBoundary(
+              key: const ValueKey('beta5-capture'),
+              child: child!,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      final pushed = production.appRouter.push('/player');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      final player = find.byType(BetaNowPlayingPage);
+      final route = ModalRoute.of(tester.element(player))!;
+      final handle = find.byKey(const ValueKey('player-dismiss-handle'));
+      var drag = await tester.startGesture(tester.getCenter(handle));
+      await drag.moveBy(const Offset(0, 20));
+      await drag.moveBy(const Offset(0, 70));
+      await tester.pump();
+      expect(tester.getTopLeft(player).dy, greaterThan(40));
+      await drag.cancel();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 320));
+      expect(tester.getTopLeft(player).dy, closeTo(0, .1));
+      expect(route.isCurrent, true);
+      drag = await tester.startGesture(tester.getCenter(handle));
+      await drag.moveBy(const Offset(0, 20));
+      await drag.moveBy(const Offset(0, 260));
+      await tester.pump();
+      final releasedAt = tester.getTopLeft(player).dy;
+      expect(releasedAt, greaterThan(200));
+      await captureScreenshot(
+        tester,
+        'beta12-player-drag-held',
+        settle: Duration.zero,
+      );
+      await drag.up();
+      await tester.pump();
+      var previous = releasedAt;
+      for (var frame = 0; frame < 24; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        if (player.evaluate().isNotEmpty) {
+          final top = tester.getTopLeft(player).dy;
+          expect(top, greaterThanOrEqualTo(previous - .5));
+          previous = top;
+        }
+        if (frame == 4) {
+          await captureScreenshot(
+            tester,
+            'beta12-player-drag-finishing',
+            settle: Duration.zero,
+          );
+        }
+      }
+      expect(player, findsNothing);
+      expect(
+        production.appRouter.routeInformationProvider.value.uri.path,
+        '/music/recommend',
+      );
+      expect(production.appRouter.canPop(), false);
+      await pushed;
+      await captureScreenshot(
+        tester,
+        'beta12-player-drag-complete',
+        settle: Duration.zero,
+      );
+      expect(tester.takeException(), null);
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta12 glass background and compact matrix plus responsive startup and edit controls',
+    (tester) async {
+      for (final scenario in [
+        (false, false, const Size(390, 844)),
+        (false, true, const Size(390, 844)),
+        (true, false, const Size(390, 844)),
+        (true, true, const Size(390, 844)),
+        (false, true, const Size(900, 740)),
+      ]) {
+        final (dark, detailed, size) = scenario;
+        viewport(tester, size);
+        await prepare(playing: true);
+        final scroll = ScrollController();
+        final page = ListView.builder(
+          controller: scroll,
+          itemExtent: 96,
+          itemCount: 30,
+          itemBuilder: (context, index) => detailed
+              ? Container(
+                  color: index.isEven
+                      ? const Color(0xFF496ABD)
+                      : const Color(0xFFAB5148),
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      TrackArtwork(track: _track, width: 64, height: 64),
+                      const SizedBox(width: 14),
+                      const Expanded(
+                        child: Text(
+                          '认真的雪\n薛之谦 · 玻璃背景测试',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : const SizedBox.expand(),
+        );
+        final name =
+            'beta12-glass-${dark ? "dark" : "light"}-${detailed ? "content" : "plain"}-${size.width.toInt()}';
+        await pump(
+          tester,
+          page,
+          shell: true,
+          dark: dark,
+          capture: '$name-expanded',
+        );
+        scroll.jumpTo(300);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 80));
+        await captureScreenshot(tester, '$name-morph', settle: Duration.zero);
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(
+          tester
+              .widget<BetaMusicBottomBar>(find.byType(BetaMusicBottomBar))
+              .inline,
+          true,
+        );
+        await captureScreenshot(tester, '$name-compact', settle: Duration.zero);
+        await disposeFixture(tester);
+        scroll.dispose();
+      }
+      for (final dark in [false, true]) {
+        viewport(tester, const Size(320, 640));
+        await prepare();
+        await pump(
+          tester,
+          const SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: StartupStylePicker(),
+            ),
+          ),
+          dark: dark,
+          scale: 1.6,
+          capture: 'beta12-startup-picker-${dark ? "dark" : "light"}-large',
+        );
+        expect(tester.takeException(), null);
+        await disposeFixture(tester);
+        viewport(tester);
+        await prepare();
+        await pump(
+          tester,
+          Builder(
+            builder: (context) => Center(
+              child: TextButton(
+                onPressed: () => showPlaylistEditorDialog(
+                  context,
+                  initialName: '我的歌单',
+                  initialDescription: '把喜欢的音乐留在这里',
+                ),
+                child: const Text('编辑'),
+              ),
+            ),
+          ),
+          dark: dark,
+        );
+        await tester.tap(find.text('编辑'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        await captureScreenshot(
+          tester,
+          'beta12-playlist-edit-${dark ? "dark" : "light"}',
+        );
+        expect(tester.takeException(), null);
+        await disposeFixture(tester);
+      }
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta12 rendered comment action stays saturated blue across scrolling backdrops',
+    (tester) async {
+      viewport(tester);
+      for (final dark in [false, true]) {
+        await prepare();
+        final scroll = ScrollController();
+        final text = TextEditingController();
+        await pump(
+          tester,
+          Scaffold(
+            extendBody: true,
+            body: ListView.builder(
+              controller: scroll,
+              itemExtent: 200,
+              itemCount: 12,
+              itemBuilder: (context, index) => index.isEven
+                  ? ColoredBox(
+                      color: dark ? const Color(0xFF11141B) : Colors.white,
+                    )
+                  : TrackArtwork(
+                      track: _track,
+                      width: 390,
+                      height: 200,
+                      fit: BoxFit.cover,
+                    ),
+            ),
+            bottomNavigationBar: PlatformCommentComposer(
+              controller: text,
+              sending: false,
+              keyboardVisible: false,
+              onSend: () {},
+            ),
+          ),
+          dark: dark,
+        );
+        for (var step = 0; step < 3; step++) {
+          scroll.jumpTo(step * 280.0);
+          await tester.pump(const Duration(milliseconds: 16));
+          final rect = tester.getRect(
+            find.byKey(const ValueKey('comment-blue-glass-send')),
+          );
+          final boundary = tester.renderObject<RenderRepaintBoundary>(
+            find.byKey(const ValueKey('beta5-capture')),
+          );
+          final rgb = await tester.runAsync(() async {
+            final picture = await boundary.toImage();
+            final bytes = await picture.toByteData(
+              format: ui.ImageByteFormat.rawRgba,
+            );
+            final offset =
+                ((rect.center.dy.floor() * picture.width) +
+                    rect.left.floor() +
+                    12) *
+                4;
+            final sample = [
+              bytes!.getUint8(offset),
+              bytes.getUint8(offset + 1),
+              bytes.getUint8(offset + 2),
+            ];
+            picture.dispose();
+            return sample;
+          });
+          expect(rgb![2] - rgb[0], greaterThan(80));
+          expect(rgb[2] - rgb[1], greaterThan(30));
+          // ignore: avoid_print
+          print('BETA12_BLUE_SAMPLE ${dark ? "dark" : "light"} $step $rgb');
+          await captureScreenshot(
+            tester,
+            'beta12-blue-scroll-${dark ? "dark" : "light"}-$step',
+            settle: Duration.zero,
+          );
+        }
+        await disposeFixture(tester);
+        scroll.dispose();
+        text.dispose();
+      }
     },
     skip: !DistributionChannel.isBeta,
   );

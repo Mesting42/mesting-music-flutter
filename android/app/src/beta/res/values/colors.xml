@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Every Beta startup choice shares the supplied films' coral canvas. -->
+    <color name="mesting_splash_background">#D95046</color>
+    <color name="mesting_coral_launch_light">#D95046</color>
+    <color name="mesting_coral_launch_dark">#D95046</color>
+</resources>

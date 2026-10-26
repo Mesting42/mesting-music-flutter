@@ -11,13 +11,15 @@ LiquidGlassSettings betaMusicPillGlass(BuildContext context) =>
     LiquidGlassSettings(
       glassColor: Theme.of(context).brightness == Brightness.dark
           ? const Color(0xCC1C1C1E)
-          : const Color(0xCCF2F2F7),
+          : const Color(0x80F2F2F7),
       thickness: 30,
       blur: 2,
-      lightIntensity: .18,
+      lightIntensity: Theme.of(context).brightness == Brightness.dark
+          ? .18
+          : .28,
       chromaticAberration: .01,
       saturation: 1.2,
-      fresnelStrength: 0,
+      fresnelStrength: Theme.of(context).brightness == Brightness.dark ? 0 : .2,
     );
 
 const betaMusicRoutes = [
@@ -100,18 +102,25 @@ class BetaMusicBottomBar extends StatelessWidget {
       iconLabelSpacing: 0,
       quality: GlassQuality.premium,
       interactionBehavior: GlassInteractionBehavior.full,
+      // Scroll-bottom whitening can flatten a compact pill's optical body.
+      // Readability comes from the shared material, not a scroll-time white veil.
+      whitenAtBottom: false,
       settings: LiquidGlassSettings(
         glassColor: Theme.of(context).brightness == Brightness.dark
             ? const Color(0xAA1C1C1E)
-            : const Color(0xAAF2F2F7),
+            : const Color(0x80F2F2F7),
         thickness: 30,
         blur: 2,
         chromaticAberration: .01,
         lightAngle: GlassDefaults.lightAngle,
-        lightIntensity: .2,
+        lightIntensity: Theme.of(context).brightness == Brightness.dark
+            ? .2
+            : .28,
         ambientStrength: 0,
         refractiveIndex: 1.2,
-        fresnelStrength: 0,
+        fresnelStrength: Theme.of(context).brightness == Brightness.dark
+            ? 0
+            : .2,
         saturation: 1.2,
         specularSharpness: GlassSpecularSharpness.medium,
       ),

@@ -13,6 +13,7 @@ import '../../themes/music_theme_background.dart';
 import 'beta_bottom_bar.dart';
 import 'floating_playback_pill.dart';
 import 'player_chrome_reveal.dart';
+import 'beta_search_back_history.dart';
 
 /// The official Apple Music GlassScaffold/searchable-tab/accessory composition
 /// is the shell, not an overlay of independently positioned imitation pills.
@@ -50,6 +51,8 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
   bool? _pendingCompact;
   bool _searching = false, _focused = false;
   bool _hasOpenedSearch = false;
+  final _backHistory = BetaSearchBackHistory();
+  bool _historyScheduled = false;
   bool _searchBeforeOverlay = false;
   late int _selected = musicBottomNavigationIndexForLocation(widget.location);
 
@@ -67,6 +70,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
       _searchText.clear();
       _focus.unfocus();
       ref.read(musicSearchControllerProvider.notifier).setQuery('');
+      _scheduleBackHistory();
     } else {
       _search(false);
     }
@@ -74,6 +78,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
 
   @override
   void dispose() {
+    _backHistory.clear();
     _compact.dispose();
     _searchMotion.dispose();
     _searchText.dispose();
@@ -110,6 +115,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
       }
       _focus.unfocus();
       _searching ? _searchMotion.forward() : _searchMotion.reverse();
+      _scheduleBackHistory();
     }
   }
 
@@ -122,6 +128,24 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
     });
     _searching ? _searchMotion.forward() : _searchMotion.reverse();
     if (!active) _focus.unfocus();
+    _scheduleBackHistory();
+  }
+
+  void _scheduleBackHistory() {
+    if (_historyScheduled) return;
+    _historyScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _historyScheduled = false;
+      if (!mounted) return;
+      _backHistory.synchronize(
+        route: ModalRoute.of(context),
+        visible: _searching,
+        hasResults: ref.read(musicSearchControllerProvider).query.isNotEmpty,
+        onClose: () => _search(false),
+        onClear: _backSearch,
+      );
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   /// Destination navigation ends a search; overlays only suspend its view.
@@ -176,6 +200,10 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(
+      musicSearchControllerProvider.select((state) => state.query.isNotEmpty),
+      (_, value) => _scheduleBackHistory(),
+    );
     final selected = widget.navigationOwner ?? _selected;
     final hasTrack = ref.watch(
       currentMediaItemProvider.select((s) => s.value != null),

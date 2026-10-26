@@ -8,6 +8,7 @@ import 'music_platform_api.dart';
 import 'platform_song_identity.dart';
 import 'platform_quality_catalog.dart';
 import 'platform_artwork.dart';
+import 'platform_track_duration.dart';
 import '../domain/platform_audio_quality.dart';
 
 /// Resolves media independently of search, catalog UI and the audio engine.
@@ -149,7 +150,13 @@ class PlatformPlaybackResolver {
       }
       final size =
           int.tryParse('${data['fileSize'] ?? data['file_size'] ?? 0}') ?? 0;
+      final isPreview =
+          preview ||
+          (fail is List && fail.contains('buy')) ||
+          (size > 0 && size < 200 * 1024);
       return track.copyWith(
+        // A permitted preview's short stream length is not the song's total.
+        duration: isPreview ? null : PlatformTrackDuration.fromFields(data),
         audioAsset: mediaUrl(data),
         coverAsset: PlatformArtwork.fromPayload(data).isEmpty
             ? track.coverAsset
@@ -158,10 +165,7 @@ class PlatformPlaybackResolver {
         platformSongId: PlatformSongIdentity.fromPayload(data).isEmpty
             ? track.platformSongId
             : PlatformSongIdentity.fromPayload(data),
-        isPreview:
-            preview ||
-            (fail is List && fail.contains('buy')) ||
-            (size > 0 && size < 200 * 1024),
+        isPreview: isPreview,
         availabilityMessage: preview ? '平台提供的试听片段' : '',
       );
     }

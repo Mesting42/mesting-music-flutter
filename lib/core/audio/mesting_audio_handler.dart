@@ -572,6 +572,21 @@ class MestingAudioHandler extends BaseAudioHandler
       return;
     }
     mediaItem.add(current.copyWith(duration: duration));
+    final known = trackForId(current.id);
+    // Decoder measurements belong to this exact recording. Persist a complete
+    // source's duration, but never replace full-song metadata with a preview.
+    if (known != null && !known.isPreview && duration > Duration.zero) {
+      _knownTracks[current.id] = known.copyWith(duration: duration);
+      var changed = false;
+      _upcomingMediaItems = _upcomingMediaItems
+          .map((item) {
+            if (item.id != current.id || item.duration == duration) return item;
+            changed = true;
+            return item.copyWith(duration: duration);
+          })
+          .toList(growable: false);
+      if (changed) _publishUpcomingQueue();
+    }
   }
 
   void _handlePosition(Duration position) {

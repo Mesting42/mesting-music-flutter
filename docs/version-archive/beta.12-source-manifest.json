@@ -1,22 +1,22 @@
 {
-  "versionName": "1.0.37-beta.11",
-  "versionCode": 11,
+  "versionName": "1.0.37-beta.12",
+  "versionCode": 12,
   "archivedOn": "2026-10-27",
   "sourceOrigin": "Frozen working-tree delivery archive; archive commit created now, not original development history.",
-  "originalArchiveName": "Mesting-Music-md3-Beta-1.0.37-beta.11-source.zip",
-  "originalArchiveBytes": 39888836,
-  "originalArchiveSha256": "CA0FD207C025A51EBFA2EE11C07801D850E7273B1E619BFE3421250C83CFFB1D",
+  "originalArchiveName": "Mesting-Music-md3-Beta-1.0.37-beta.12-source.zip",
+  "originalArchiveBytes": 41888193,
+  "originalArchiveSha256": "E24302C1AB6DB61934AF1AFBC57E3B0D253FE0E52F5584896277F6A4D310A95C",
   "archiveRootPrefixRemoved": "",
-  "fileCount": 735,
+  "fileCount": 926,
   "excludedFiles": [],
   "allArchiveEntriesReadAndHashed": true,
   "originalDeliveryMetadataHashMatches": {
     "apk": true,
     "source": true
   },
-  "apkName": "Mesting-Music-md3-Beta-1.0.37-beta.11.apk",
-  "apkBytes": 89244110,
-  "apkSha256": "64B761F855B4E44F26979375C04CAE266D608A18DB954D500494B4334D3DC4F3",
+  "apkName": "Mesting-Music-md3-Beta-1.0.37-beta.12.apk",
+  "apkBytes": 90136848,
+  "apkSha256": "AC098F96C92839CD3B8830D1662826C8427EA09852BA34F5DE0B2AF8084CD74E",
   "packageName": "com.mesting.music.beta",
   "architectures": [
     "arm64-v8a",
@@ -28,7 +28,7 @@
   "signerCertificateSha256": "08C3774545B89E3A30F5D20F162A30D1B48C13C19205A5073AA945CB8360AD4F",
   "historicalApkNotRebuiltOrResigned": true,
   "physicalDeviceRetestedDuringArchive": false,
-  "dependencyLockSha256": "D6451AD8331BC6CBCC9CF284B3801F202091FAA8D355194BF0CBA85DF94AADD1",
+  "dependencyLockSha256": "D836F76F4FD5179AFE2BC49089B496D202934759737FB9ECB37943D2B5FA9D57",
   "files": [
     {
       "file": ".gitignore",
@@ -37,8 +37,8 @@
     },
     {
       "file": ".impeccable/design.json",
-      "bytes": 77828,
-      "sha256": "7C276617FEB646B6F0EC5D7276132D67992B2193C43D174D33151AC10C261BB5"
+      "bytes": 94283,
+      "sha256": "A7D35D6F357B9327360CE4A5D628F8E00230A0F52D5DF35F706F4C6BCE132750"
     },
     {
       "file": ".impeccable/surfaces/es-experience-presentation-music-landing-page-dart.md",
@@ -52,8 +52,13 @@
     },
     {
       "file": ".impeccable/surfaces/features-search-presentation-beta-category-search-results-dart.md",
-      "bytes": 5311,
-      "sha256": "70B614415F9C15668DE9D9CF18F550281573588EF23CACCB99D78CF1EC7F708B"
+      "bytes": 6714,
+      "sha256": "63F1E100D9EFCF73689BF27CA399C24924FA2AA8619F5B531889327C0F576347"
+    },
+    {
+      "file": ".impeccable/surfaces/features-themes-startup-style-picker-dart.md",
+      "bytes": 4662,
+      "sha256": "D52755C2AB2A5B56712D063BD02EEA657B54EBB03F85BBF0EC4BF91322752A6C"
     },
     {
       "file": ".metadata",
@@ -67,13 +72,13 @@
     },
     {
       "file": "DESIGN.md",
-      "bytes": 28455,
-      "sha256": "C426F25F65ADF118451A0CAEBF28E65D9CC97F96DD7C3FD24B836DEA5127BF2B"
+      "bytes": 34814,
+      "sha256": "D54A92E08EE58AF46D3D28880A9FFAEDC1ED433EDBF10DC5946904CCD8128E26"
     },
     {
       "file": "PRODUCT.md",
-      "bytes": 23855,
-      "sha256": "0A8317CAE0176972127A3CF2BC5BAD662075942C8BBF8CEE9D6EEDFDC1858029"
+      "bytes": 29716,
+      "sha256": "6091968A9E8C325A5207C7DF58274F3213B22CE4CDB05BC5F048A10C75D59020"
     },
     {
       "file": "README.md",
@@ -109,6 +114,26 @@
       "file": "android/app/src/beta/jniLibs/x86_64/libkugou_server.so",
       "bytes": 5761288,
       "sha256": "EE68F74143A6F8C0B30B7B79AA2E53B6FAB73D35F7A028DE278015390522F5CF"
+    },
+    {
+      "file": "android/app/src/beta/res/drawable-v21/launch_background.xml",
+      "bytes": 190,
+      "sha256": "71F57CD0D35463D2CDBB45A3F932EE863398F3203BBE885C1D50D896CE883A14"
+    },
+    {
+      "file": "android/app/src/beta/res/drawable/launch_background.xml",
+      "bytes": 348,
+      "sha256": "112D51A3EDD24CFAAE8C995AD65CE9B2EE5D7952970864D173F994F1D905396E"
+    },
+    {
+      "file": "android/app/src/beta/res/values-night/colors.xml",
+      "bytes": 245,
+      "sha256": "8A43B417E696AAF0CA89C44D250D6DB865F0F87755CB5FC597E850AFFB68EB4E"
+    },
+    {
+      "file": "android/app/src/beta/res/values/colors.xml",
+      "bytes": 325,
+      "sha256": "902637C2FC096C34600E3A863247BBB87112492082F5BFC919CBF4A3AD35DB50"
     },
     {
       "file": "android/app/src/beta/res/values/strings.xml",
@@ -554,6 +579,26 @@
       "file": "assets/branding/mesting-mark-master.png",
       "bytes": 294859,
       "sha256": "67C76FA36E7700BF503E0689A5FBA4D585E27149DF522BB876B0EA3D44E092C8"
+    },
+    {
+      "file": "assets/branding/startup/companions-1.mp4",
+      "bytes": 585308,
+      "sha256": "8C96CCFB8753F905FF00DC2B55E40EA506ABE66FFCBCD0B9A95EBCC96722A527"
+    },
+    {
+      "file": "assets/branding/startup/companions-1.webp",
+      "bytes": 41916,
+      "sha256": "D9DE4F8E6896BDA3CF9A9FEC5122F9631F1A8B2DD9B9D4EC06898642B1A95231"
+    },
+    {
+      "file": "assets/branding/startup/companions-2.mp4",
+      "bytes": 343662,
+      "sha256": "DA76DBDBC97704FA127E125794C0B0FCBBF0E6DF65A59071A82668BF7D946620"
+    },
+    {
+      "file": "assets/branding/startup/companions-2.webp",
+      "bytes": 38434,
+      "sha256": "4AF382EF8C6F9304C53B4721BCF07A621FF5EB8B1263AB3107750235C90113CE"
     },
     {
       "file": "assets/images/player/netease-style-tonearm.png",
@@ -1142,8 +1187,8 @@
     },
     {
       "file": "docs/MD3MUSIC_BETA.md",
-      "bytes": 95211,
-      "sha256": "B45642049C5EE45503E90F6ABF03CA570667245C50D5DDE41B3566F8DC3FBA6B"
+      "bytes": 104074,
+      "sha256": "93F8494B10F3E768D28402F6D71432303ABD0A7EC7D7A5D2E216D8CEDCB5AA73"
     },
     {
       "file": "docs/apk-downloads.md",
@@ -1207,18 +1252,23 @@
     },
     {
       "file": "lib/app/branded_launch_screen.dart",
-      "bytes": 7942,
-      "sha256": "925A3F0679B6163D6621AD2B41A8625B8A8C883081A83D4CF32412EA3F20F8FF"
+      "bytes": 8102,
+      "sha256": "338618B2E5F1287A32E4B378241A8BC495543C7393C8C085123DD9531A776D04"
     },
     {
       "file": "lib/app/mesting_music_app.dart",
-      "bytes": 5484,
-      "sha256": "BA1F186B3C2E1CC3C3E30748F63D812CEF829393E6C5777CA5E48FC59747A60C"
+      "bytes": 5719,
+      "sha256": "14E96D16594AB4897A0F0AE2FD12EC727F15A602141E1C74217597CED21D52F6"
     },
     {
       "file": "lib/app/router/app_router.dart",
-      "bytes": 27951,
-      "sha256": "1427C45086A06EAE17AB2A4CE4FE2FA855078219560D6D3BD656D54097A86F0A"
+      "bytes": 28932,
+      "sha256": "CE4818AC73A20D2B158D39FE205215A35A92272A388546FB1B1F55A76ECB9F00"
+    },
+    {
+      "file": "lib/app/startup_video_surface.dart",
+      "bytes": 5489,
+      "sha256": "67C2E67642ED49B4193861D455C1DFF22DBF2E5609CA336B744F85E27D48E941"
     },
     {
       "file": "lib/core/audio/media_volume_controller.dart",
@@ -1227,8 +1277,8 @@
     },
     {
       "file": "lib/core/audio/mesting_audio_handler.dart",
-      "bytes": 62924,
-      "sha256": "55CA08713E7626E481D8653812421AE13795B15E0051850E380F6BD9E0DBA4F8"
+      "bytes": 63627,
+      "sha256": "82C4294DCBA8236A1FD4397C5638998441C05DE25595F50975601100970E769D"
     },
     {
       "file": "lib/core/audio/pause_fade_controller.dart",
@@ -1547,18 +1597,23 @@
     },
     {
       "file": "lib/features/experience/presentation/beta_bottom_bar.dart",
-      "bytes": 3804,
-      "sha256": "2207546E730ADFBDD322D62617A5DA3FF56E4E479AACE8F8A8CA4D7BF3683445"
+      "bytes": 4282,
+      "sha256": "B7E67FC526706DE68CA33A373FEF1DC43477ADCC0E26B8C0BC7BB24FB5C197E7"
     },
     {
       "file": "lib/features/experience/presentation/beta_music_shell.dart",
-      "bytes": 14351,
-      "sha256": "A4BC27AB4CA89800F216D75594D15EB7DF9D22DCDBFE8D9803A47448D146C749"
+      "bytes": 15293,
+      "sha256": "E8E1E217DBFE336D00A0877912CCC12D73195FD27599F2EAAD54A7DC5BB731F9"
     },
     {
       "file": "lib/features/experience/presentation/beta_now_playing_page.dart",
-      "bytes": 19807,
-      "sha256": "D7511CFB1F88D7465917802D1C2CAA2F26AD699D11CEC018D2AE83E6455651CB"
+      "bytes": 19983,
+      "sha256": "8D5509B828F7F26AEFCA8CB6C19D9B6100AE8A8B838D39D835873020FD327972"
+    },
+    {
+      "file": "lib/features/experience/presentation/beta_search_back_history.dart",
+      "bytes": 1621,
+      "sha256": "54E1D7001E98900FC149D711EA8AB324181EC83D8959C2A62F7ACF3C4EEA5C9F"
     },
     {
       "file": "lib/features/experience/presentation/cover_player_page.dart",
@@ -1606,14 +1661,19 @@
       "sha256": "6AE3BD9FF4F773117F393D0D427A63B0A1606F0F3E710AE3999A27A2844A87FF"
     },
     {
+      "file": "lib/features/experience/presentation/player_dismiss_motion.dart",
+      "bytes": 2413,
+      "sha256": "BF80958060D6DB68BE49A09531D2F549156F0306DBE1EF929AD986522991C87A"
+    },
+    {
       "file": "lib/features/experience/presentation/player_more_menu.dart",
       "bytes": 8253,
       "sha256": "67023BEA1CD53E565B26A659687BF1B262080568FFC1838F6B7F7E4A7913576E"
     },
     {
       "file": "lib/features/experience/presentation/player_pull_to_dismiss.dart",
-      "bytes": 3815,
-      "sha256": "7177B41B81D89AE2763E35696AB34F95D5E5FDB867847FE7C0684AA3E0F00B72"
+      "bytes": 5126,
+      "sha256": "9987D03BB7FBA37C45ACE7F2DB2B9E39297D67FAF7563DAD59BB9A2304BD08B1"
     },
     {
       "file": "lib/features/history/listening_history_providers.dart",
@@ -1712,8 +1772,8 @@
     },
     {
       "file": "lib/features/music_platform/data/embedded_kugou_music_source.dart",
-      "bytes": 5612,
-      "sha256": "6500DBAAD770EA07A7833981AA83D252E847499BB626CEA9C443CEBD9D0EE50B"
+      "bytes": 5498,
+      "sha256": "BBA38BA80CA10F103F9C63C4E3274D5C738C567384E7926DF365C9C98007E595"
     },
     {
       "file": "lib/features/music_platform/data/embedded_music_server.dart",
@@ -1757,8 +1817,8 @@
     },
     {
       "file": "lib/features/music_platform/data/platform_playback_resolver.dart",
-      "bytes": 8761,
-      "sha256": "2C5FC43B33785DCBAA557016187644311B0C881D67C4B0831DA16DF65910A10C"
+      "bytes": 8984,
+      "sha256": "1F07222C5430F7C418BA88AC22AAB3C75E018FAF0B734D09150320101EE1D104"
     },
     {
       "file": "lib/features/music_platform/data/platform_quality_catalog.dart",
@@ -1784,6 +1844,16 @@
       "file": "lib/features/music_platform/data/platform_song_identity.dart",
       "bytes": 1541,
       "sha256": "539E9DB7F0519A45E62EA7AA6F85D3B59BFAE387C1DB389AE39076F19AB45946"
+    },
+    {
+      "file": "lib/features/music_platform/data/platform_track_duration.dart",
+      "bytes": 1965,
+      "sha256": "9AD361665645F7C381B85913A681F2F47587F4FD4B0481B94CE00BB5EA2FD137"
+    },
+    {
+      "file": "lib/features/music_platform/data/platform_track_duration_repository.dart",
+      "bytes": 5297,
+      "sha256": "1B51ED993DD6C45B7452E655264996F34A3E9EFFCBE03496689AA708FEB0FD67"
     },
     {
       "file": "lib/features/music_platform/domain/platform_audio_quality.dart",
@@ -1867,8 +1937,8 @@
     },
     {
       "file": "lib/features/music_platform/presentation/platform_comment_composer.dart",
-      "bytes": 5050,
-      "sha256": "5EA841AAD62857962B5B4CDDF41A4A58D86F3C17AC9E382527722565835EFC54"
+      "bytes": 4695,
+      "sha256": "12E5F4C1A3CE2C86C022C0275C70444BE75C10601ECA4CD895DB66B6DDC47D45"
     },
     {
       "file": "lib/features/music_platform/presentation/platform_comments_page.dart",
@@ -1897,8 +1967,8 @@
     },
     {
       "file": "lib/features/music_platform/presentation/platform_profile.dart",
-      "bytes": 7189,
-      "sha256": "915451B5F3DAD29F0A6D06635B0D87F78C04CCE9663BE03530731CBA6E668BD9"
+      "bytes": 7204,
+      "sha256": "83E7EFA9CC31E8F9E400FAC5BB1746EFB57AD1180ABA46B7DF70EFBAD30585BE"
     },
     {
       "file": "lib/features/music_platform/presentation/platform_quality_button.dart",
@@ -1997,8 +2067,8 @@
     },
     {
       "file": "lib/features/playlists/presentation/playlist_editor_dialog.dart",
-      "bytes": 22602,
-      "sha256": "034C085C4B5FFF292B00687521E158DF7E70A9A28C698C87B1BEDE875F252B7D"
+      "bytes": 23385,
+      "sha256": "86E4900AA7B0F243CE10B87ADCCA8E5690BA9AAFA523E4670271E34B69D256B5"
     },
     {
       "file": "lib/features/profile/data/profile_background_sync_api.dart",
@@ -2027,8 +2097,8 @@
     },
     {
       "file": "lib/features/profile/presentation/profile_page.dart",
-      "bytes": 58370,
-      "sha256": "4D775CEE7F0882D49EF0BFBCA6C4CE9BCCA1B4D2D02EC9D1E6B5F35DC46D010D"
+      "bytes": 58472,
+      "sha256": "F0AF5B3EBC597532DD34CAEAD90BBBD4D1685A345873BBA0E7D213BA1869557E"
     },
     {
       "file": "lib/features/profile/presentation/social_status_sheet.dart",
@@ -2042,8 +2112,13 @@
     },
     {
       "file": "lib/features/queue/presentation/queue_page.dart",
-      "bytes": 19209,
-      "sha256": "37EB434C77141F1CB7216879938CB24223C0FBA5A4AE9F0D6F063F2452D58AC3"
+      "bytes": 19307,
+      "sha256": "218B8CF76D322C2C81243BBB34334E060137A1CB1AA95D67BDCCBDD05FE9D631"
+    },
+    {
+      "file": "lib/features/queue/presentation/queue_track_duration.dart",
+      "bytes": 2229,
+      "sha256": "782DC7F5EA5739247DB6E2BEF601DEEFA820C314EE8C70DAC15E454033682732"
     },
     {
       "file": "lib/features/recommendation/data/daily_recommendations.dart",
@@ -2158,7 +2233,7 @@
     {
       "file": "lib/features/settings/presentation/settings_page.dart",
       "bytes": 24223,
-      "sha256": "3F6E18451A445E65D07ADCB6424BA7C62F24A2A5628A6860FA3514A83631863A"
+      "sha256": "8E3027289E1892890E8C637443ED9EFA330023B044519D4F61CEE88CB7F8C9B2"
     },
     {
       "file": "lib/features/social/data/cloudbase_social_repository.dart",
@@ -2311,6 +2386,16 @@
       "sha256": "EA1A8C01BB428C85187896C63FAB9A23EEBFAE847FBBCED5BE34236661367962"
     },
     {
+      "file": "lib/features/themes/startup_style.dart",
+      "bytes": 1810,
+      "sha256": "AA14BDA5D6360F403FE16B34DB1E3D4D39E56ADFD950A6F76F5A5485C9F65526"
+    },
+    {
+      "file": "lib/features/themes/startup_style_picker.dart",
+      "bytes": 6734,
+      "sha256": "38E3062D0A61494307DF3815620D270A9BC6F63F7C5B35B777B7B3EB99EC5C76"
+    },
+    {
       "file": "lib/features/themes/theme_controller.dart",
       "bytes": 9611,
       "sha256": "8CC5A890AA8B585238998C589692777B016EBE1A0F95BD99950A2888295DBFA6"
@@ -2322,13 +2407,13 @@
     },
     {
       "file": "lib/features/themes/theme_gallery_page.dart",
-      "bytes": 71962,
-      "sha256": "08CB5826B49F192D6424D6E3BA9AB5A3CECA657D020DB4CD917CB51063173E52"
+      "bytes": 72624,
+      "sha256": "4EC516A5729D8D9DAFB3765D00C9F3C761C2A0AFE35FF92F216508C406968EB9"
     },
     {
       "file": "lib/main.dart",
-      "bytes": 6571,
-      "sha256": "602CDD114B15812097C787C6C455E7B83B16122BA5FC37937CEF59BB4EAB9AE0"
+      "bytes": 8168,
+      "sha256": "3B348FEB9B201266FB20823F9663065B4A81678D89E5B152B48A633D7364D96D"
     },
     {
       "file": "lib/shared/layout/adaptive_layout.dart",
@@ -2342,8 +2427,8 @@
     },
     {
       "file": "lib/shared/models/track.dart",
-      "bytes": 5325,
-      "sha256": "8AFA2BDAC2F11926477AA3E6EF341BD3055D90E392FD98D7D8C02730822EE7FA"
+      "bytes": 5367,
+      "sha256": "A0E5CDE36197FBE9D7024D90D4D1E6691349D9C9F5F129AE4342505CA5075FD3"
     },
     {
       "file": "lib/shared/utils/duration_format.dart",
@@ -2369,6 +2454,11 @@
       "file": "lib/shared/widgets/beta_edge_back.dart",
       "bytes": 2534,
       "sha256": "0F54314E54381045C8C5229B56E2DD5B3F15744337EFA9D9D0FD2CA26ABD1A26"
+    },
+    {
+      "file": "lib/shared/widgets/beta_glass_action.dart",
+      "bytes": 2215,
+      "sha256": "99558735FF0902528751DFF6A447F8031A1B1C595FAFFA9F6E7E59D999F7334E"
     },
     {
       "file": "lib/shared/widgets/beta_glass_controls.dart",
@@ -2437,13 +2527,13 @@
     },
     {
       "file": "pubspec.lock",
-      "bytes": 41517,
-      "sha256": "D6451AD8331BC6CBCC9CF284B3801F202091FAA8D355194BF0CBA85DF94AADD1"
+      "bytes": 41447,
+      "sha256": "D836F76F4FD5179AFE2BC49089B496D202934759737FB9ECB37943D2B5FA9D57"
     },
     {
       "file": "pubspec.yaml",
-      "bytes": 6099,
-      "sha256": "1F2774D76EADFBE94F8FCA15DA0F6F84E656C4901513644C184C21A1F5D5D0BD"
+      "bytes": 6384,
+      "sha256": "BF4B14637886727D5039F201D260B4D2D6071DDF5997171BEDA73B13304D7986"
     },
     {
       "file": "test/adaptive_layout_test.dart",
@@ -2452,8 +2542,8 @@
     },
     {
       "file": "test/android_branding_resources_test.dart",
-      "bytes": 18237,
-      "sha256": "19E12CF639BBF75652A5875E799F6843100D0FD40CE47932DBE5F00F18D98392"
+      "bytes": 18556,
+      "sha256": "105B65EA3E649A1E3C75F65AEB72655C8B224838A8D95096D36EC6F92AA30D99"
     },
     {
       "file": "test/app_brand_style_test.dart",
@@ -2531,6 +2621,16 @@
       "sha256": "B4531DA0363D7FFD91264C903EAA12BBE429906099DF59BD1105A978EBA0C415"
     },
     {
+      "file": "test/beta12_duration_test.dart",
+      "bytes": 7990,
+      "sha256": "D0EA5A0547D45D5C9A83B98943D5364BA2245110F6E0CDAA32A75A70CF79E5D7"
+    },
+    {
+      "file": "test/beta12_startup_test.dart",
+      "bytes": 6354,
+      "sha256": "94E4B143DA7FFF9B639F96754A8F2EC9BA1E531AEC01AA36C7E48D4E36A83511"
+    },
+    {
       "file": "test/beta5_cloud_cover_test.dart",
       "bytes": 6208,
       "sha256": "2986850AABCD5CED794AA90828A0A37E6D4E704A1D1D5DCD7722C12DB7DE62AF"
@@ -2542,8 +2642,8 @@
     },
     {
       "file": "test/beta5_ui_test.dart",
-      "bytes": 69704,
-      "sha256": "7D008D60D44D0475A6599BF394E14CB7E14914F512A0B99B217E02E8D78C0358"
+      "bytes": 81980,
+      "sha256": "EFBC1D1C4C5B9F172F4E79F18774DACD39EB8E44F6A2D93D3042FA099D101383"
     },
     {
       "file": "test/beta6_audio_refresh_test.dart",
@@ -3056,14 +3156,869 @@
       "sha256": "BD51C3772DB92289B777325BBB19583F10D7FECE48B956667DB0B826237C46A0"
     },
     {
+      "file": "third_party/liquid_glass_widgets/MESTING_PATCHES.md",
+      "bytes": 1321,
+      "sha256": "3B40C486B51E1417D20B3BFD7B3507B19A51C86908AB6BDF0D56CCECB45D26B2"
+    },
+    {
       "file": "third_party/liquid_glass_widgets/NOTICE.md",
-      "bytes": 920,
-      "sha256": "08E47D48A5A8562230AB6E26B7978267B6CEB7185198587186DD039A20D54C39"
+      "bytes": 1073,
+      "sha256": "F8C9BD05872F57BB70A0796B97E7CEAEAF7565E1FFF9ED89DE8DC4CEA5D783E7"
     },
     {
       "file": "third_party/liquid_glass_widgets/apple_music_demo.reference.dart.txt",
       "bytes": 35734,
       "sha256": "7DE55BBBD00232013E80ABA429A5DDE7BC26F3F6B908F0B904C3C179911CBB75"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/CHANGELOG.md",
+      "bytes": 105637,
+      "sha256": "A07187220D55886C4E39CD8DE0FD2249FBC594F911020C785775E50F53DA349F"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/LICENSE",
+      "bytes": 1081,
+      "sha256": "BD51C3772DB92289B777325BBB19583F10D7FECE48B956667DB0B826237C46A0"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/README.md",
+      "bytes": 53839,
+      "sha256": "BBC00676B8791F15D4B17B2B742201244035582ECC05AB5D1BD8A0CDC45F56CD"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/ios/liquid_glass_widgets.podspec",
+      "bytes": 1101,
+      "sha256": "046806D3D87FA836AF2B3ADAB80774B2447A4FF7A249311FC507B33B8D676B69"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/ios/liquid_glass_widgets/Package.swift",
+      "bytes": 673,
+      "sha256": "420D2C27DCF5DEBB3E8C3A0F1A0C9F0A750214AD5EF9FB7C6FCFA802CEB33B4C"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/ios/liquid_glass_widgets/Sources/liquid_glass_widgets/LiquidGlassWidgetsPlugin.swift",
+      "bytes": 5880,
+      "sha256": "18E1468CBE66AAF6307DB5F3F0C4D1FEF1A321B8D29C5BA0EE486D8560F0FBDF"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/constants/glass_defaults.dart",
+      "bytes": 8193,
+      "sha256": "8DE5C4CA26989B14114B6B6C8923E5E9FFB392D71FF0DB4182F58A64DDC6023A"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/constants/glass_shadow.dart",
+      "bytes": 2110,
+      "sha256": "69E33DE30B72489C3332CAC37E0CDA60F8B634CCE4B34ADA626A892767AB1B26"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/liquid_glass_setup.dart",
+      "bytes": 13819,
+      "sha256": "811A83076F7383A1A849DA935E334886C6FD2876A05A38C4EBDAB9D65E44BD56"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/liquid_glass_widgets.dart",
+      "bytes": 7032,
+      "sha256": "930D4C742F8531A49810ACD95102E7BE185E6754AC7D8DD137F612E8EAEB0358"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/engine/ATTRIBUTION.md",
+      "bytes": 7439,
+      "sha256": "1902D98ADCDC4075B43EE881CA7EB5952D86CDD4A948597159A7632BAF7B53D1"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/engine/LICENSE",
+      "bytes": 1076,
+      "sha256": "0BD917D4E97BFDA6EFF40087CF1E3F968605F634A70C45DAAEA5BAE374B1E062"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/engine/glass_drag_builder.dart",
+      "bytes": 5706,
+      "sha256": "586C82769A1BF1CCB669AE84250A87F1D8A45DE8B2C316C37EBB6CE5DD9CC112"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/engine/glass_glow.dart",
+      "bytes": 28292,
+      "sha256": "E87DDFE9D3C5A71BB990FA729DCA98BC341BC3ED7DAE4A2FCEDB8239E2556A01"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/engine/internal/transform_tracking_repaint_boundary_mixin.dart",
+      "bytes": 5420,
+      "sha256": "EE045A58F325B978AB5980269643D24E6E60B7EB0C42A95315BEAEC355663C4F"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/engine/liquid_glass.dart",
+      "bytes": 11464,
+      "sha256": "CFE24B166395D34FD1DDCCACF6ED8D44D4896F07E5027CF6A90CA7A4287D6B5C"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/engine/liquid_glass_blend_group.dart",
+      "bytes": 18989,
+      "sha256": "6D50C7E3C0A52AA199E05B3A56D081E802ADD78DD5ACB5D61D9E3CAC86409E8C"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/engine/liquid_glass_layer.dart",
+      "bytes": 46583,
+      "sha256": "547094D17C09BBD139461137F54A744DD64017FA13EB8693CD54F3C9A5E88C56"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/engine/liquid_glass_render_scope.dart",
+      "bytes": 1179,
+      "sha256": "6E6BD679AB103174788442B728ADA1D94297878D01262C5BFE9752DDF0783A12"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/engine/liquid_glass_settings.dart",
+      "bytes": 45353,
+      "sha256": "E551BE9EAF2C5983F006978155FF0E82858BBE7D21CE0613D49F59C8E5104836"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/engine/liquid_shape.dart",
+      "bytes": 10969,
+      "sha256": "1B90777C4A5931A1DA085ADB9A6AF810A013025B894495F1B89AFDB6D3B210EE"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/engine/multi_shader_builder.dart",
+      "bytes": 8551,
+      "sha256": "26F211ADAB47AC18B65F71E5957FFFD736C8F5506CB7F188A3D1613939BF175E"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/engine/render_liquid_glass_geometry.dart",
+      "bytes": 19006,
+      "sha256": "B9902D1B78508012205F5F267E16598054512C48D241B74C2B11C65C3334A96D"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/engine/rendering/liquid_glass_render_object.dart",
+      "bytes": 47620,
+      "sha256": "19677B69CFD9F12F3F837E4FB974AC57BDCDE1E446EA64D2C159FCC6CBB494CF"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/engine/shaders.dart",
+      "bytes": 827,
+      "sha256": "462901998D56E17B24917184AA8759E1C0F129AD6622D31A1D5F8B7E5D603729"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/engine/snap_rect_to_pixels.dart",
+      "bytes": 900,
+      "sha256": "F18377DD6B11D9962255BAEF2ECDE9F0086F08E26666D567B960F88E0E9C1FEC"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/engine/stretch.dart",
+      "bytes": 30469,
+      "sha256": "415B6F303FFE0A2180C6A4EF297967FE1EE91D10FA8A819395DC98000B1A4E6F"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/renderer/_env_io.dart",
+      "bytes": 143,
+      "sha256": "4353BF46388FFB7354E57C87AAA6CDD1F2D433B6B5028A09BFC4A7FE1507F59C"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/renderer/_env_web.dart",
+      "bytes": 81,
+      "sha256": "DDF4E82E1912DB51D33B5CAAAF6C66A67E4856E14E92A8F3857C080E4E4999BB"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/renderer/fragment_shader_extensions.dart",
+      "bytes": 1853,
+      "sha256": "8D3BBB8CE035EBFC1CB2403F0E35EF090F8EFF7DA9A911174C52DA3C7F5BBAA0"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/renderer/glass_backdrop_group.dart",
+      "bytes": 5142,
+      "sha256": "D00111527EFA8D89B0F5DEEFFB71278EE91EBE33983386E72FC669C2D4F4B43F"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/renderer/glass_backdrop_group_boundary.dart",
+      "bytes": 5738,
+      "sha256": "0D64625F66C2336B441E0010898455C1756EAA9ACF6ACD7A3A1D1629C9F23E04"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/renderer/glass_frost_budget.dart",
+      "bytes": 2145,
+      "sha256": "614448AFCAFD38889D04A1E8AD68A633B2E9E976EFBC4369103BABF40364DE6C"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/renderer/glass_materialize_scope.dart",
+      "bytes": 5282,
+      "sha256": "B74F6367B38237A3129C5E426F5C12E2982BD0D6552CA1E3518FAA90185C2952"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/renderer/liquid_glass_push_back_scope.dart",
+      "bytes": 1695,
+      "sha256": "26DAE8AF6724335CC3F93B89CC994FA011D9DC92722DB2249597C7EBAA8B536B"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/renderer/liquid_glass_renderer.dart",
+      "bytes": 1592,
+      "sha256": "0259A8CA31A576E87940220937E3E8CF6945D0D321A36E4C99E38C4C6771CF48"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/renderer/liquid_glass_self_scale_scope.dart",
+      "bytes": 2827,
+      "sha256": "53CFD4D63214E30E6B9208D1D28E045904E252378513FB0210306A5539FB68A3"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/types/glass_interaction_behavior.dart",
+      "bytes": 2543,
+      "sha256": "6F668025387C61668C7C13515F746945B3BDAC8163C0A940204285EBA341B9BE"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/utils/glass_localizations.dart",
+      "bytes": 717,
+      "sha256": "2D6EEE5CECF80694DBB9548FC45D1468F7BFEEC40913C0B105535EEBAAD6F98C"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/widgets/interactive/scrollable_segment_content.dart",
+      "bytes": 52497,
+      "sha256": "C5C6794B593431A745E789A134322B1D3D5CBE7EE182D2B6C4C69C80D842B618"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/widgets/interactive/segmented_control_internal.dart",
+      "bytes": 20480,
+      "sha256": "6B96880EFA7854D8B07A29E0831C757E45BF0C27A24432C48CFF119D8D944ED1"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/widgets/overlays/glass_sheet_defaults.dart",
+      "bytes": 1377,
+      "sha256": "F509521BFC42E53AF54EF6509451B299BA9502C1A1C53B7A42109D403E3103F0"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/widgets/surfaces/dynamic_preferred_size.dart",
+      "bytes": 1302,
+      "sha256": "03BADB636E70C671C0089211B41202533E0E87B4F96245731C59C45B393FE210"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/widgets/surfaces/status_bar_row.dart",
+      "bytes": 3668,
+      "sha256": "CB90101B968D01BDAC83CC4DFE975BCCAED34421E9EF50B944381FA018427D1D"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/widgets/surfaces/tab_bar_bottom_internal.dart",
+      "bytes": 47558,
+      "sha256": "B4B490194EB0809FF67CECD822E6D9CAF9E74E5C5601B0A4F94D8B569778047E"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/widgets/surfaces/tab_bar_bottom_layout.dart",
+      "bytes": 22776,
+      "sha256": "4788EEA6D6D21637C879468B62F2E9D63EEBF2A4E5EF397B56A7ED962573091B"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/widgets/surfaces/tab_bar_drag_gesture_mixin.dart",
+      "bytes": 22213,
+      "sha256": "521D9B0F3BDDD822679072370A260226807269427357B60DD02E3A39E459B87A"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/widgets/surfaces/tab_bar_layout_utils.dart",
+      "bytes": 3999,
+      "sha256": "57BBD30D91F88B25D038208365133BC97B15101B2C9F5B35969347D37C1135C8"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/widgets/surfaces/tab_bar_searchable_internal.dart",
+      "bytes": 60939,
+      "sha256": "BDB2349A9D5D8C3914BD73079B6743813B71CC7DD70EA2EAE2F27E3F0117DF50"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/widgets/surfaces/tab_bar_searchable_layout.dart",
+      "bytes": 60806,
+      "sha256": "5C34747DC135B49723753E89C61EACB42C849A725F7DC450436BE5EA3ECB27B5"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/widgets/surfaces/tab_bar_vertical_layout.dart",
+      "bytes": 37133,
+      "sha256": "01274044FE0CB71E9695D462786498FB51CA65986A4E127F0236BB4EC2BEFF62"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/widgets/surfaces/vertical_bar_background.dart",
+      "bytes": 4007,
+      "sha256": "DAB834B08BA2E71D7290CACE3E037B358A80BAEA985877FB1D1660C5F65AC067"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/widgets/surfaces/vertical_bar_presentation.dart",
+      "bytes": 2138,
+      "sha256": "DA6C876E12E17D50B3ECAF8FD04E1526FC6D9570AC2DA0D716CE571F754D5B47"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/widgets/surfaces/vertical_bar_regions.dart",
+      "bytes": 4166,
+      "sha256": "8899CD2B47E4639CC3915E2FEEF7C43CCC8529AA5185329A8CF711C9A7C06BCA"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/widgets/surfaces/vertical_bar_reservation.dart",
+      "bytes": 3643,
+      "sha256": "F7433F99E142219985CBD5040F652A3B2A5BD1CDF6E2507B1738A74E3AAE99EF"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/src/widgets/surfaces/vertical_bar_title_row.dart",
+      "bytes": 3611,
+      "sha256": "051C8A1B65735DD178909519C16D0DBDE5F3315111B3BE8A4561E7AEFF675F38"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/theme/glass_interaction_settings.dart",
+      "bytes": 5341,
+      "sha256": "40C8CD32C86A9A65A073A13CB261A294F9CD230FBEF885CDE44A91F283A8D51C"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/theme/glass_theme.dart",
+      "bytes": 4815,
+      "sha256": "075AA85611C483D77E9562572FFEF45E4134E3D7F10969EDDA323B69CAA06953"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/theme/glass_theme_data.dart",
+      "bytes": 24417,
+      "sha256": "3CC1299D6CDA887D383FB500604B771E35F8627F8543946D4C35A56417E45256"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/theme/glass_theme_helpers.dart",
+      "bytes": 13817,
+      "sha256": "D576D95A395662BC371A9E90563B516720DBF666A073B5D5243F1F7AFED8502D"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/theme/glass_theme_settings.dart",
+      "bytes": 15066,
+      "sha256": "9CCD01A2AF7D6FFBBC8F2A7CBFCE6F86B1AC01903A3171E061654EC8FDD23CA8"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/types/glass_button_style.dart",
+      "bytes": 883,
+      "sha256": "FA34BBEDBFC81B121F4A580FC329FF01125B25A803B011CDC0EEF998623AED4D"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/types/glass_quality.dart",
+      "bytes": 4541,
+      "sha256": "2A8364B0F5A5416EF99F489A8AC71DBF577960306F0D996DEE755C9C43C36D18"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/types/glass_quality_change_reason.dart",
+      "bytes": 2195,
+      "sha256": "992B330B9242E76B9B1A87780A37C286F2595AC86FF3A2B89F5087766BFF1A4B"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/types/glass_specular_sharpness.dart",
+      "bytes": 1758,
+      "sha256": "04BD7A0836E2BDA9F5AB6F411D8533BADF2B78D8FCEC4FFA03F747BC782A6D11"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/types/glass_surface_style.dart",
+      "bytes": 1681,
+      "sha256": "BAC06CE37EC7D2385999CCFDD7EDD1F29270FB429A8A16794031C506BD1D6BE7"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/types/interaction_notification.dart",
+      "bytes": 453,
+      "sha256": "BBE8698486F1232328C58D9CF0E6384F1B9CC7E08E7229F83BB3E057BBC4E60F"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/utils/accessibility_config.dart",
+      "bytes": 579,
+      "sha256": "F68E1AF256A03CDCEA5546D1DA43B193F40DF55DF03CC11B9EA47F757ECC5AD8"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/utils/draggable_indicator_physics.dart",
+      "bytes": 13181,
+      "sha256": "F42A2EE7B9FEC93188DDE2788B90EE16CFB692B486C0EE76B013746FB058ECA4"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/utils/glass_brightness.dart",
+      "bytes": 3402,
+      "sha256": "4B5B05DBFA86CA2D5F47EB7D8D6E715962A448B7E69F28AFD1405EB157A083E6"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/utils/glass_morph_controller.dart",
+      "bytes": 14768,
+      "sha256": "98C5E71D9C33D77B1E2B47DA1CCEDF13111CA811A3006FC4FEBBC4D0A0B32980"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/utils/glass_performance_monitor.dart",
+      "bytes": 10678,
+      "sha256": "B78973514107D612E2314AFF576279D8C29FF9A5BB5150EF5BBE356BF9AD11C2"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/utils/glass_quality_adapter.dart",
+      "bytes": 39278,
+      "sha256": "A63F0F33B70EB07A27F5D3DFCB1684A5E311D931E43157157AD4980BD9D6E02D"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/utils/glass_spring.dart",
+      "bytes": 21590,
+      "sha256": "CD03D464C8054E5A22966142CB1E3C1B4C522579D396A1179BDE71BB537EC75F"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/utils/liquid_morph_physics.dart",
+      "bytes": 25044,
+      "sha256": "63F6C5BEE30BD0D23747D15B58EDA6E2552B5F18B27E36A3429706DAFAFF1E86"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/containers/glass_card.dart",
+      "bytes": 7495,
+      "sha256": "E7B91D2404DDFDACE6CD7D408CD2271B98E3D4C56AAE1B9F7B43743EE217DE90"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/containers/glass_container.dart",
+      "bytes": 16934,
+      "sha256": "B6C3D055C8389AFCDE6506BE90972592CF4A38162D1D3F66048C04A4CE0625DC"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/containers/glass_disclosure_group.dart",
+      "bytes": 16619,
+      "sha256": "5A872A9817C21739EAA488168848F8911391C8075446BFB16D7789B4A81DCB80"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/containers/glass_divider.dart",
+      "bytes": 4325,
+      "sha256": "977ADF378DD4D6A9DE7ED18E4ED025BE73AA5FE514FB09A21C2C9A2F2B4AECF1"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/containers/glass_grouped_section.dart",
+      "bytes": 10088,
+      "sha256": "14B33DEF4C66E2D1A2EA562BF227FCF075CF5BD7B7E6E36B09D42082DE9CBF3F"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/containers/glass_list_tile.dart",
+      "bytes": 36787,
+      "sha256": "6F063F5470B7C18A54A4FBFDCD73C16A91B9CC1BC2E881C525DA2D170B777F2C"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/containers/glass_reorderable_list.dart",
+      "bytes": 18458,
+      "sha256": "9BF09D4C58186CB3CB8DE92A9C1CDA9B2B192FD5D56AD6BF415A56331235161E"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/containers/glass_stepper.dart",
+      "bytes": 14130,
+      "sha256": "7A9FFD1F0B38B799763B45FB5768DF666877955DD02193FF304E31965B042022"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/containers/glass_swipe_actions.dart",
+      "bytes": 45291,
+      "sha256": "46AA1D00347765F4DC6D4CC691A068A513DA19649A7DA1FF5A0CCA868D62AA5F"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/effects/glass_materialize.dart",
+      "bytes": 9976,
+      "sha256": "BBA0599194BA9CE24970248D5920F7782BF40C91A85540C33D144509BA52341B"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/effects/progressive_blur.dart",
+      "bytes": 15504,
+      "sha256": "C12D16DD36812E88B2EECF0C5E47800471CC7BDFA3BE933C03B9C57C5AB6BF0F"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/effects/shared/glass_materialize_effect.dart",
+      "bytes": 7714,
+      "sha256": "0E83C41CEFE30FED5008EAA91A7ABED7C2FC8B9B279C968961F690BBAE27AA50"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/feedback/glass_progress_indicator.dart",
+      "bytes": 16521,
+      "sha256": "3E376FC1D734CCE46587D2FF02C4C08C102D962B0354A8ECF8259C60DDDD26E4"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/input/glass_date_picker.dart",
+      "bytes": 68443,
+      "sha256": "64B64686FBA6EE4CD6E591000268D15E416CB05C713EFF7A42210C451E0B9F8F"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/input/glass_form_field.dart",
+      "bytes": 3164,
+      "sha256": "A1A5E75A34C68A015940F5BD2B994B98D38F4411BE60A85FA3C44EB068C9AFA5"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/input/glass_password_field.dart",
+      "bytes": 5832,
+      "sha256": "E891208CBF4AE96325A8246786CA44ED4FDBE3FCCB8BBD3BFF168FE14E8C29AA"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/input/glass_picker.dart",
+      "bytes": 5945,
+      "sha256": "47410831A6788471E4A7475F22DB53A61FC770C04AB2824C422585AC9C8DD8CA"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/input/glass_search_bar.dart",
+      "bytes": 14037,
+      "sha256": "37CC161740568A7CB4990F7E754D92ABE61AA50A9B321BBE10566F8F75386983"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/input/glass_text_area.dart",
+      "bytes": 5149,
+      "sha256": "24FB45EA5C7F2F4ACA5F2A15FF256017CB87D5991FF69FD8F2795B22AC2C1D0D"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/input/glass_text_field.dart",
+      "bytes": 28299,
+      "sha256": "418FD8C5457957781AFE87AEBA9EA51F9E0DC818EF8AC6C6EFCF30D89E1FD15B"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/interactive/glass_badge.dart",
+      "bytes": 12000,
+      "sha256": "07E1EE1BF785A579AF0FD25F5194D1352F743A1C8D8FC9C3751EC1DC974B5E99"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/interactive/glass_button.dart",
+      "bytes": 43914,
+      "sha256": "C28ACDC2B90AA796DF14ECB0820629B28F651C3E8929FAEA45E4B9C45214EED7"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/interactive/glass_button_group.dart",
+      "bytes": 20244,
+      "sha256": "666571A5580A180007163942B9A0FBF83C5F36106D5E89F09136F0CCFA6BFD3F"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/interactive/glass_chip.dart",
+      "bytes": 12763,
+      "sha256": "1ACC138B80970D21033810AA778CF3F16ED937F406AB87294573546E56CA92EE"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/interactive/glass_edit_button.dart",
+      "bytes": 3795,
+      "sha256": "E48449E3AACE4E7AB8056D886F44A5DF4A239A352B99C797F06E8DC62B5FB4B0"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/interactive/glass_icon_button.dart",
+      "bytes": 9000,
+      "sha256": "37CD3A4940D41654C616AB42E9570A65CB52E5D8800E46A8A139085BBC0DFACA"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/interactive/glass_page_control.dart",
+      "bytes": 11371,
+      "sha256": "086AC5F9DFDD80A915D883B2B5AE6D51B5CF54177F8CF4CD42877987A5255FEC"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/interactive/glass_pull_down_button.dart",
+      "bytes": 6677,
+      "sha256": "9C0F1082BF99A0057D85E99E5F3D747B576B35B15A3D213D8CBE5E8D91840636"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/interactive/glass_segmented_control.dart",
+      "bytes": 26861,
+      "sha256": "4058CF0EE15A374FE5F720ADE4BAA800FA1F2450036C6FB7D521F73306552604"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/interactive/glass_slider.dart",
+      "bytes": 29042,
+      "sha256": "874C7F3783A0351EE96A96C59064F2DFF64D878F08F50B04E6ACE55D19B2DD31"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/interactive/glass_switch.dart",
+      "bytes": 26727,
+      "sha256": "36805692ADB6D71F7BBEDFE8BBEBD54005D0230E18BA3EFEB1014426CA7471BF"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/interactive/liquid_glass_scope.dart",
+      "bytes": 4952,
+      "sha256": "0335B5BFC63EB3FF676F25D73138478487B21E4D71F03C84087A5491C12F287F"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/overlays/glass_action_sheet.dart",
+      "bytes": 13309,
+      "sha256": "572A8BF51027EDBC37F5CF3B87369EB364089640E5AABA7D429667091B960520"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/overlays/glass_context_menu.dart",
+      "bytes": 49526,
+      "sha256": "BB5AFDC5EC97C2EA9A9D3038C322E4B6A070A2CF5B38ED8889671F7572DB13C6"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/overlays/glass_dialog.dart",
+      "bytes": 14484,
+      "sha256": "C4FB78B2787AEEDE51F68158109AAFD41B45B21FB1A0A0547265AD8A864C4C05"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/overlays/glass_full_screen_cover.dart",
+      "bytes": 21722,
+      "sha256": "DF533845688DF60B5849B76A13A746D58F964E68B8B324EC5ED7BBE360445892"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/overlays/glass_menu.dart",
+      "bytes": 17966,
+      "sha256": "26A0D2538A08B3B4C99B61CC0FB6312B7D2FF06501136B29DC2FA5A750CF5116"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/overlays/glass_menu_item.dart",
+      "bytes": 15512,
+      "sha256": "9D66BBF3D980AABA6ED2BFA495812907933E7F66B8BD39F36F97336A16AD6B7A"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/overlays/glass_modal_sheet.dart",
+      "bytes": 36590,
+      "sha256": "1BE1C831F7628D6DA80EACDC84E77BA999B9E64EC671EE6AD2987BA4D86286E2"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/overlays/glass_popover.dart",
+      "bytes": 11595,
+      "sha256": "F32A038242DA997B12DA826AA0E6504D2EDA1E6486D7BA79E2EE56EE2379E91E"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/overlays/glass_sheet.dart",
+      "bytes": 24343,
+      "sha256": "AF0FA08B14968CDEDC8AC28447823277508F0C02832D99DA4B8047F323A557C2"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/overlays/glass_toast.dart",
+      "bytes": 16378,
+      "sha256": "0E2F61A10BF4B448D2A6B167EADF9D6147482ED5389A699E9A40AA3B3ABA66D9"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/overlays/shared/glass_menu_internal.dart",
+      "bytes": 93848,
+      "sha256": "0714F4F6C4E5D420F25361D7C89178554DFAE3877F4A0CBBE77FFEBB9A30E22F"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/overlays/shared/glass_modal_sheet_internal.dart",
+      "bytes": 39380,
+      "sha256": "41679E3B6C3B480EB5A41C17160ED2D3C2ACA4669D1EDBEA4BB93C8F2B1C6586"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/overlays/shared/glass_modal_sheet_mechanics.dart",
+      "bytes": 31707,
+      "sha256": "405B2C9E095E08071349979AF92B68092A928FA62C8E1676E06F893F045C133B"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/overlays/shared/glass_modal_sheet_morph.dart",
+      "bytes": 76899,
+      "sha256": "20FCE2620D84F09CC14A48823374EFC280F0413C56D957E81C0397BDB9BAE01C"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/overlays/shared/glass_modal_sheet_state.dart",
+      "bytes": 49590,
+      "sha256": "6B6D3D2242633C0B5828F1BA47D35A03B75693B88C1CBCF07D03F63176F29104"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/overlays/shared/glass_popover_internal.dart",
+      "bytes": 46407,
+      "sha256": "44A2E23C701940A7C4DE9FD68F3E4247A5DEA441052A82EAAB434FB8AC4A3614"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/shared/adaptive_glass.dart",
+      "bytes": 55247,
+      "sha256": "677E0EDCFC90A9BC0FB3D869A3DC5DA57FDE126D32BEE756DB2D9A0F4C58C7EE"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/shared/adaptive_liquid_glass_layer.dart",
+      "bytes": 8177,
+      "sha256": "4F53AF2C443BA271B683A3D4172CDCCE1AF4B8DAF67A2AF68806F58AB50E8977"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/shared/animated_glass_indicator.dart",
+      "bytes": 27290,
+      "sha256": "2BE8B7842853712F690C1D89D7520C1EFB085CED26C4866D13A856072D416BC8"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/shared/glass_accessibility_scope.dart",
+      "bytes": 7559,
+      "sha256": "39A21754E82C812FFDEFF1717E5C7BAFA57873255122AF0EE0745F4D42159F5B"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/shared/glass_adaptive_scope.dart",
+      "bytes": 34019,
+      "sha256": "BC297E45CFC5876E439BE0424A0B198DDA2FB7FCA796BC762D19B5E715B56A21"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/shared/glass_content_aware_scope.dart",
+      "bytes": 34462,
+      "sha256": "64D1F1DC4B81CF2BEBEF99C77BD57F34034A86E98EE4A63A31D4F61C3D31F357"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/shared/glass_edit_scope.dart",
+      "bytes": 5557,
+      "sha256": "5338F95C77CCE34C076F8A545019FA54FAB8CC231BA224D49E896083BE4B402A"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/shared/glass_effect.dart",
+      "bytes": 43463,
+      "sha256": "9DDDDD3DA307E0F6170F2E9A68951ACF1483C5AD5DA4DA483728BBC07B377190"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/shared/glass_focus_region.dart",
+      "bytes": 17685,
+      "sha256": "C031C9079974EAB7757A12AFC1A2F002D75D26A21114A0D16623C216FD9CE4CE"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/shared/glass_focus_ring_painter.dart",
+      "bytes": 2534,
+      "sha256": "B6318F7F3020A84BE443030741190439BB4DBD554D9B4334A52ABA78DFAD7420"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/shared/glass_interaction_state_mixin.dart",
+      "bytes": 5623,
+      "sha256": "46E5F097F9510D1C5ADAA635B2E39A353E7A0CA1332EAD0FA94515A37D75B7FE"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/shared/glass_isolation_scope.dart",
+      "bytes": 4242,
+      "sha256": "9938AD60DD146C43DFEA30B53136072465A839E547FE044E5D024FEAC0B5E88E"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/shared/glass_motion_scope.dart",
+      "bytes": 2786,
+      "sha256": "10BE7C1B65CAD1AA0817AA7B00CD65876906486CD0FAFCC1EA3085D6394AD4FB"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/shared/glass_page.dart",
+      "bytes": 19141,
+      "sha256": "67EBA6D8639BF2C5780324E64581BB9A90FB5B43D0BB733263A1DC059AA93A5F"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/shared/glass_scroll_edge_effect.dart",
+      "bytes": 22213,
+      "sha256": "1C1F2A976118737ED37E35155E0BBEC8736044A18A0C03A2FD471E83436DCC58"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/shared/glass_solid_surface.dart",
+      "bytes": 3651,
+      "sha256": "8996078EB5F3772598075A982D89DA6032A1CA1698909240B68A09A3A5713337"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/shared/glass_swipe_action_scope.dart",
+      "bytes": 4914,
+      "sha256": "36D7C339E247DB05566F4C08B0E61A1776D22CFA5E85DF9809CFF46175D4F889"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/shared/inherited_liquid_glass.dart",
+      "bytes": 2962,
+      "sha256": "D90E38D8CEF97E17AC446A550A686CE446FF3D88AF1692DB00C99F0117F8404D"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/shared/lightweight_liquid_glass.dart",
+      "bytes": 39944,
+      "sha256": "B2D4E948B486BDD650BDE38B334F5C6DA1833C7EC6CF23E9E1E8236B42EB03D3"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/surfaces/glass_app_bar.dart",
+      "bytes": 30129,
+      "sha256": "AA850B88489683CE4B3F7CC7D56999365E65767E0FEF57AA3B3E995B04ACAFC4"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/surfaces/glass_bar_item.dart",
+      "bytes": 17052,
+      "sha256": "275B8E586B36A74114E9F8F71FDB97DCB9617A644AAEC8C5F480E854D2C66B1F"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/surfaces/glass_large_title.dart",
+      "bytes": 25667,
+      "sha256": "740C20B74B7FCE23AA33645CB26A919DD623FBE45B3EEA3B0A1007063F53D970"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/surfaces/glass_navigation_shell.dart",
+      "bytes": 52688,
+      "sha256": "BD3A547909F0A7E89116896F5DF7E50CD0F27CC4C5828A80A8B0661B16B6A97A"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/surfaces/glass_navigation_stack.dart",
+      "bytes": 18148,
+      "sha256": "1311FB4DC97F9686D9EE949A62CDF86F1AFC35765C692B794083E7D4A78FABC0"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/surfaces/glass_pinned_bar_chrome.dart",
+      "bytes": 34847,
+      "sha256": "3687F8F50BFDD02CFA9430A92393634E82E27C9D20B0A0E71FBA321F5597CD11"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/surfaces/glass_scaffold.dart",
+      "bytes": 31094,
+      "sha256": "047C57FDFE1D01D19BECF1CC76940FCEA5EF5B883AA3F9AD12657265D77E3661"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/surfaces/glass_tab_bar.dart",
+      "bytes": 79624,
+      "sha256": "CC9F45C29EE59FF8C8CD9473CF4DC293105851405EC5B8A976E2556A0003AAF2"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/surfaces/glass_toolbar.dart",
+      "bytes": 7723,
+      "sha256": "6480260A65EC596C773E3B101841EC526811B9C2D229F3B669B273E1D61E558F"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/surfaces/glass_vertical_bar.dart",
+      "bytes": 17581,
+      "sha256": "A815859BABFBC898510B20937ED5F65B3E16CD6CA78BFBE10A6D323A0959B37F"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/surfaces/shared/glass_bar_minimize_behavior.dart",
+      "bytes": 2039,
+      "sha256": "0372FB939DDBA73186D07AAAE19E418AE08702DC0971CD9E1FCEA9CECED2260E"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/surfaces/shared/glass_nav_pinned_host.dart",
+      "bytes": 106877,
+      "sha256": "028B701BABB0F4F8B7B1B79DB347607E09F55AF94A61D7ED046528EFEE4D9284"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/surfaces/shared/glass_search_bar_config.dart",
+      "bytes": 15460,
+      "sha256": "464C550568F35554B49171CF6028CD29D3EECB1A8C6F50897AB509F6DD8A13E6"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/surfaces/shared/tab_bar_accessory_placement.dart",
+      "bytes": 3426,
+      "sha256": "94EC6330FFD3E0088FB408D9C31E7B5E4983F31339FCC9879E43D39329914CC9"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/surfaces/shared/tab_bar_extra_button.dart",
+      "bytes": 6331,
+      "sha256": "FA6047DFB05443A8A4082C1603C2131150200AA8C9EEB88285CA53271F050C0E"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/surfaces/shared/tab_bar_minimize_controller.dart",
+      "bytes": 19193,
+      "sha256": "261F0A31DFC44B6D952D7C9773F463A3D31919E90B4097984E236AC958E211E4"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/surfaces/shared/tab_bar_searchable_controller.dart",
+      "bytes": 17843,
+      "sha256": "90F159DFB8ECB195E227C0D844F70014CA6DAE47D412A732933F96CA4F6D61E2"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/lib/widgets/surfaces/shared/tab_bar_types.dart",
+      "bytes": 7056,
+      "sha256": "685ECBC2262049E483E6DAB7F0409427B234C880489721C3CE6649FE5D0BA0B3"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/pubspec.yaml",
+      "bytes": 1131,
+      "sha256": "D1B50F532E99ED84AE82254DDAE9B981994576C7C0F65C318F553AF73F905D04"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/shaders/displacement_encoding.glsl",
+      "bytes": 2252,
+      "sha256": "C4F1D7FDF4E2F0B875C771EB28CBAA33CA02E48BAFA1922B8B5C5A7C7B136B54"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/shaders/gles_compat.glsl",
+      "bytes": 2736,
+      "sha256": "5CCAECDE1FFE1A9E92293EEE422D5BE08CC53537C37304D77BC722186190A58B"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/shaders/interactive_indicator.frag",
+      "bytes": 21339,
+      "sha256": "D80710370F98E25EBBBA033112481106315E67DE1B16DF4AD6937A47F6834A5C"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/shaders/lightweight_glass.frag",
+      "bytes": 27462,
+      "sha256": "93B88C1D686B37C88ED23A939E894B09791DAD4FFAE705D06C3BB5FC8BEFCCB7"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/shaders/liquid_glass_geometry_blended.frag",
+      "bytes": 7231,
+      "sha256": "1C9462B9911BEA5D7AEB5CF864696A2B942B604033CF22A2F7A3F0D9E3B6A51B"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/shaders/liquid_glass_render.frag",
+      "bytes": 50618,
+      "sha256": "C7FEECD4AF4A7DB094EE5A6B354AC5BFFD3727E7E4E2972044CB37AB3E6907AC"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/shaders/progressive_blur.frag",
+      "bytes": 5024,
+      "sha256": "CB4BC3C3BEEAACE5CD97586CAEE9B06DC8580606B4DD4250B2F0B9068BE19771"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/shaders/render.glsl",
+      "bytes": 5314,
+      "sha256": "554589D39ACAFDA8147CC80936FD5F6AEAA22A2EBC91489D43EFA949F05F0D33"
+    },
+    {
+      "file": "third_party/liquid_glass_widgets/package/shaders/sdf.glsl",
+      "bytes": 23325,
+      "sha256": "7F62A88F3E2C4674D0BD05F5207446AE780F66AA11C2891D740C61E06F76F865"
     },
     {
       "file": "third_party/liquid_glass_widgets/reference.json",
@@ -3678,7 +4633,7 @@
     {
       "file": "tool/build_android_md3_beta_apk.ps1",
       "bytes": 2011,
-      "sha256": "02C250F715D00DC14CC38F2FA91F9D70C98A0DAB320D047E1E51431D5A7C1270"
+      "sha256": "946D67388D3EBCE7875B76A8CDD8D7B18D9F5E039CF9CDCEBA0848A11AD51043"
     },
     {
       "file": "tool/build_md3_beta_native.ps1",

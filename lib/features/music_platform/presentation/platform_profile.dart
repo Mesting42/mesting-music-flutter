@@ -108,7 +108,7 @@ class PlatformProfile extends ConsumerWidget {
                 _ProfileLink(
                   icon: Icons.palette_outlined,
                   title: '装扮',
-                  subtitle: '皮肤与主题',
+                  subtitle: '启动页、播放器与外观',
                   onTap: () => showDressUpCenterSheet(context),
                 ),
                 _ProfileLink(

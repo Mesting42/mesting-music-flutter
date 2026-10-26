@@ -55,7 +55,7 @@ class SettingsPage extends ConsumerWidget {
                   iconColor: const Color(0xFF745CC7),
                   title: '装扮',
                   subtitle: DistributionChannel.isBeta
-                      ? '外观模式、自定义背景与进度条'
+                      ? '启动页、播放器、背景与进度条'
                       : '皮肤、IP 主题、图标与启动页',
                   highlighted: true,
                   onTap: () => showDressUpCenterSheet(context),

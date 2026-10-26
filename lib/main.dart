@@ -8,6 +8,7 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'app/branded_launch_screen.dart';
 import 'app/mesting_music_app.dart';
+import 'app/startup_video_surface.dart';
 import 'core/audio/mesting_audio_handler.dart';
 import 'core/audio/playback_providers.dart';
 import 'core/platform/distribution_channel.dart';
@@ -19,6 +20,7 @@ import 'core/performance/frame_timing_probe.dart';
 import 'features/library/library_providers.dart';
 import 'features/themes/app_brand_style.dart';
 import 'features/themes/theme_controller.dart';
+import 'features/themes/startup_style.dart';
 import 'shared/models/track.dart';
 
 Future<void> main() async {
@@ -68,10 +70,17 @@ class _MestingBootstrap extends StatefulWidget {
 
 class _MestingBootstrapState extends State<_MestingBootstrap> {
   late Future<_MestingDependencies> _dependencies;
+  late final StartupStyle _startupStyle;
+  bool _startupFinished = false;
+  bool _persistenceStarted = false;
+  bool _videoAborted = false;
 
   @override
   void initState() {
     super.initState();
+    _startupStyle = savedStartupStyle(widget.preferences);
+    _startupFinished =
+        !DistributionChannel.isBeta || _startupStyle == StartupStyle.classic;
     _dependencies = _initializeDependencies();
   }
 
@@ -115,9 +124,6 @@ class _MestingBootstrapState extends State<_MestingBootstrap> {
       // Launcher aliases are only changed by an explicit brand selection.
       // Retrying a pending alias update during cold start can make OEM
       // launchers briefly surface both the old and new icons.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        playbackPersistence.start();
-      });
       return dependencies;
     } on Object {
       await database.close();
@@ -126,7 +132,12 @@ class _MestingBootstrapState extends State<_MestingBootstrap> {
   }
 
   void _retry() {
-    setState(() => _dependencies = _initializeDependencies());
+    setState(() {
+      // Retry dependency initialization, not the already attempted startup film.
+      _startupFinished = true;
+      _videoAborted = true;
+      _dependencies = _initializeDependencies();
+    });
   }
 
   @override
@@ -136,15 +147,41 @@ class _MestingBootstrapState extends State<_MestingBootstrap> {
       builder: (context, snapshot) {
         final dependencies = snapshot.data;
         final Widget child;
-        if (dependencies == null) {
-          child = MestingBrandedLaunchApp(
-            key: const ValueKey('branded-launch-app'),
-            brandStyle: widget.brandStyle,
-            themeMode: widget.launchThemeMode,
-            failed: snapshot.hasError,
-            onRetry: snapshot.hasError ? _retry : null,
-          );
+        if (dependencies == null || !_startupFinished) {
+          child =
+              DistributionChannel.isBeta &&
+                  _startupStyle != StartupStyle.classic &&
+                  !_videoAborted &&
+                  !snapshot.hasError
+              ? MaterialApp(
+                  key: const ValueKey('startup-video-app'),
+                  debugShowCheckedModeBanner: false,
+                  home: StartupVideoSurface(
+                    style: _startupStyle,
+                    onFinished: () {
+                      if (mounted && !_startupFinished) {
+                        setState(() => _startupFinished = true);
+                      }
+                    },
+                  ),
+                )
+              : MestingBrandedLaunchApp(
+                  key: const ValueKey('branded-launch-app'),
+                  brandStyle: widget.brandStyle,
+                  themeMode: widget.launchThemeMode,
+                  forceCoral: DistributionChannel.isBeta,
+                  failed: snapshot.hasError,
+                  onRetry: snapshot.hasError ? _retry : null,
+                );
         } else {
+          if (!_persistenceStarted) {
+            _persistenceStarted = true;
+            // Only the real app's first frame starts persistence/restoration.
+            // In particular the startup film cannot race a restored track.
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              dependencies.playbackPersistence.start();
+            });
+          }
           child = ProviderScope(
             key: const ValueKey('mesting-music-app'),
             overrides: [

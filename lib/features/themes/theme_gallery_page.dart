@@ -18,6 +18,7 @@ import 'music_theme_preset.dart';
 import 'theme_follow_icons.dart';
 import 'theme_controller.dart';
 import 'music_theme_tokens.dart';
+import 'startup_style_picker.dart';
 
 Future<void>? _dressUpAssetWarmup;
 
@@ -192,6 +193,15 @@ class _ThemeSettingsPanelState extends ConsumerState<_ThemeSettingsPanel> {
                     children: [
                       const _PanelHeader(),
                       const SizedBox(height: 16),
+                      if (DistributionChannel.isBeta) ...[
+                        const _SettingsHeading(
+                          title: '启动页',
+                          description: '下次冷启动时展示，视频保留原声；后台切回不会重播。',
+                        ),
+                        const SizedBox(height: 11),
+                        const StartupStylePicker(),
+                        const SizedBox(height: 24),
+                      ],
                       if (!DistributionChannel.isBeta) ...[
                         const _SettingsHeading(
                           title: '品牌套装',
@@ -467,7 +477,9 @@ class _PanelHeader extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '选择播放器、背景与进度角色，装扮你的音乐空间。',
+            DistributionChannel.isBeta
+                ? '选择启动页、播放器、背景与进度角色，装扮你的音乐空间。'
+                : '选择播放器、背景与进度角色，装扮你的音乐空间。',
             style: TextStyle(
               color: tokens.textSecondary,
               fontSize: 12,

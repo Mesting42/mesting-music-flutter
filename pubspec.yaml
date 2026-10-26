@@ -83,6 +83,12 @@ dev_dependencies:
   drift_dev: 2.31.0
   build_runner: ^2.15.1
 
+# Keep the optical correction reproducible in APK and source archives. The
+# local MIT fork removes a synthetic dark-mode perimeter, not refraction.
+dependency_overrides:
+  liquid_glass_widgets:
+    path: third_party/liquid_glass_widgets/package
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -103,6 +109,7 @@ flutter:
     - assets/branding/mesting-mark-master.png
     - assets/branding/mesting-app-icon.png
     - assets/branding/mesting-launch-lockup-master.png
+    - assets/branding/startup/
     - assets/branding/dress-morning-icon-v2.png
     - assets/branding/dress-morning-launch.webp
     - assets/branding/dress-midnight-icon-v2.png

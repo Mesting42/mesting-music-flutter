@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import '../../experience/presentation/beta_bottom_bar.dart';
+import '../../../shared/widgets/beta_glass_action.dart';
 
 /// Input and send are sibling glass surfaces. Nesting a glass button inside a
 /// glass container disables its refraction in the renderer. Keep both bounded
@@ -104,17 +105,7 @@ class PlatformCommentComposer extends StatelessWidget {
                     quality: GlassQuality.premium,
                     stretch: .15,
                     shape: const LiquidRoundedRectangle(borderRadius: 24),
-                    settings: const LiquidGlassSettings(
-                      glassColor: Color(0xF20063D8),
-                      thickness: 32,
-                      blur: 2,
-                      lightIntensity: .3,
-                      ambientStrength: .15,
-                      refractiveIndex: 1.25,
-                      chromaticAberration: .01,
-                      fresnelStrength: .12,
-                      saturation: 1.2,
-                    ),
+                    settings: betaBlueActionGlass,
                     child: sending
                         ? const CupertinoActivityIndicator(color: Colors.white)
                         : const Icon(

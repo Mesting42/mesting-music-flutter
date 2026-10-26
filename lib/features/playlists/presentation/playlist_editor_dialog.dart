@@ -7,6 +7,8 @@ import 'package:path_provider/path_provider.dart';
 import '../../../shared/widgets/artwork_image.dart';
 import '../../themes/music_theme_tokens.dart';
 import '../../music_platform/presentation/platform_design.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../../shared/widgets/beta_glass_action.dart';
 
 class PlaylistDraft {
   const PlaylistDraft({
@@ -145,11 +147,20 @@ class _PlaylistEditorState extends State<_PlaylistEditor> {
     final tokens = context.musicThemeTokens;
     final header = Row(
       children: [
-        IconButton(
-          tooltip: '取消',
-          onPressed: _saving ? null : () => Navigator.pop(context),
-          icon: const Icon(Icons.close_rounded, size: 29),
-        ),
+        if (DistributionChannel.isBeta)
+          BetaGlassAction(
+            key: const ValueKey('playlist-editor-close'),
+            label: '取消',
+            icon: Icons.close_rounded,
+            blue: false,
+            onPressed: _saving ? null : () => Navigator.pop(context),
+          )
+        else
+          IconButton(
+            tooltip: '取消',
+            onPressed: _saving ? null : () => Navigator.pop(context),
+            icon: const Icon(Icons.close_rounded, size: 29),
+          ),
         Expanded(
           child: Text(
             widget.initialName == null ? '新建歌单' : '编辑歌单',
@@ -161,28 +172,37 @@ class _PlaylistEditorState extends State<_PlaylistEditor> {
             ),
           ),
         ),
-        IconButton.filled(
-          key: const ValueKey('playlist-editor-save'),
-          tooltip: '保存歌单',
-          onPressed: _saving ? null : _save,
-          style: IconButton.styleFrom(
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            foregroundColor: Theme.of(context).colorScheme.onPrimary,
-            disabledBackgroundColor: Theme.of(
-              context,
-            ).colorScheme.primary.withValues(alpha: .35),
-            minimumSize: const Size.square(48),
+        if (DistributionChannel.isBeta)
+          BetaGlassAction(
+            key: const ValueKey('playlist-editor-save'),
+            label: '保存歌单',
+            icon: Icons.check_rounded,
+            loading: _saving,
+            onPressed: _saving ? null : _save,
+          )
+        else
+          IconButton.filled(
+            key: const ValueKey('playlist-editor-save'),
+            tooltip: '保存歌单',
+            onPressed: _saving ? null : _save,
+            style: IconButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              disabledBackgroundColor: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: .35),
+              minimumSize: const Size.square(48),
+            ),
+            icon: _saving
+                ? SizedBox.square(
+                    dimension: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
+                  )
+                : const Icon(Icons.check_rounded, size: 28),
           ),
-          icon: _saving
-              ? SizedBox.square(
-                  dimension: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Theme.of(context).colorScheme.onPrimary,
-                  ),
-                )
-              : const Icon(Icons.check_rounded, size: 28),
-        ),
       ],
     );
     return PopScope(

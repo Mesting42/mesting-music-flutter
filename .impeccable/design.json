@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-25T16:26:31.8776708Z",
-  "title": "Design System: Mesting Music Android Beta.11",
+  "generatedAt": "2026-10-25T18:16:53.636Z",
+  "title": "Design System: Mesting Music Android Beta.12",
   "extensions": {
     "colorMeta": {
       "primary-seed": {
@@ -302,6 +302,21 @@
           "oklch(84% 0.07 24)",
           "oklch(95% 0.02 24)"
         ]
+      },
+      "action-blue": {
+        "role": "secondary",
+        "displayName": "局部蓝色玻璃操作",
+        "purpose": "既有评论发送蓝色，由 Beta.12 的 clear-body 共享材质用于评论发送与新建/编辑歌单确认；不是新的全局强调。生产原值由 DESIGN.md frontmatter 持有，色带仅合成预览。",
+        "tonalRamp": [
+          "oklch(15% 0.20 258)",
+          "oklch(25% 0.20 258)",
+          "oklch(35% 0.20 258)",
+          "oklch(45% 0.20 258)",
+          "oklch(55% 0.20 258)",
+          "oklch(65% 0.20 258)",
+          "oklch(80% 0.20 258)",
+          "oklch(95% 0.20 258)"
+        ]
       }
     },
     "typographyMeta": {
@@ -398,6 +413,16 @@
         "name": "beta-content-route-paired",
         "value": "360ms in / 320ms out",
         "purpose": "BetaPageMotion将不透明surface与正文共同横移一整页，easeInOutCubic；手势线性，减少动画返回稳定surface，源页连续显露。"
+      },
+      {
+        "name": "player-route-handle",
+        "value": "240ms remaining reverse / 280ms cancellation rebound",
+        "purpose": "PlayerDismissMotion drives the route controller; gesture progress is linear. Commit reverses only current remaining progress, cancellation uses easeOutCubic; reduce motion zeroes duration, guards reject duplicate/late work."
+      },
+      {
+        "name": "startup-preview",
+        "value": "240ms",
+        "purpose": "Explicit separate preview route: fade/scale .96 to 1 using easeOutCubic; it does not reset the cold-process gate."
       }
     ],
     "breakpoints": [
@@ -417,7 +442,7 @@
     "glassSurfaces": {
       "betaChrome": {
         "source": "third_party/liquid_glass_widgets/apple_music_demo.reference.dart.txt",
-        "runtimeDependency": "liquid_glass_widgets 1.15.0",
+        "runtimeDependency": "liquid_glass_widgets 1.15.0; local MIT package override",
         "components": [
           "GlassScaffold",
           "GlassTabBar.searchable",
@@ -428,18 +453,34 @@
         "settings": {
           "blur": 2,
           "thickness": 30,
-          "lightIntensity": 0.2,
+          "lightIntensity": {
+            "light": 0.28,
+            "dark": 0.2
+          },
           "chromaticAberration": 0.01,
           "saturation": 1.2,
-          "fresnelStrength": 0
+          "fresnelStrength": {
+            "light": 0.2,
+            "dark": 0
+          },
+          "ambientStrength": 0,
+          "refractiveIndex": 1.2,
+          "specularSharpness": "medium"
         },
         "barGlassColor": {
-          "light": "#AAF2F2F7",
+          "light": "#80F2F2F7",
           "dark": "#AA1C1C1E"
         },
         "playPillOverrides": {
-          "lightIntensity": 0.18,
-          "glassColorLight": "#CCF2F2F7",
+          "lightIntensity": {
+            "light": 0.28,
+            "dark": 0.18
+          },
+          "fresnelStrength": {
+            "light": 0.2,
+            "dark": 0
+          },
+          "glassColorLight": "#80F2F2F7",
           "glassColorDark": "#CC1C1C1E"
         },
         "layout": {
@@ -451,7 +492,17 @@
           "spacing": 8,
           "maximumTextScaleHeightAddition": 28
         },
-        "behavior": "手机和宽屏共用底栏，无左轨及88dp占位；正文宽度仍约束。官方组件拥有安全区和搜索键盘抬升。shell在播放器/设置后方保持挂载，仅改变chrome透明度/显露；下拉显露由小ValueNotifier连接。超过88dp才收拢，回到24dp才展开。迷你条只有播放/暂停和下一首，订阅playing布尔值并调用共享实时toggle，保留打开和横滑。 Beta.11 compact状态为局部ValueNotifier，同帧滚动合并至帧后，只让底栏重建；目的地导航明确结束搜索，临时页面仅暂存。"
+        "behavior": "手机和宽屏共用底栏，正文宽度约束；官方组件拥有安全区/搜索键盘抬升。持续挂载、88/24dp滞回、完整accessory形变和premium/full保持；局部ValueNotifier合并同帧更新。应用级adaptiveQuality=false，whitenAtBottom=false，不以滚动降级或不透明盖层修复材质。目的地结束搜索，临时页面暂存。灰条退场读取同一路由控制器进度。",
+        "vendoredPath": "third_party/liquid_glass_widgets/package",
+        "adaptiveQuality": false,
+        "whitenAtBottom": false,
+        "shaderCorrection": {
+          "file": "third_party/liquid_glass_widgets/package/shaders/lightweight_glass.frag",
+          "provenance": "MIT 1.15.0 local fork; NOTICE.md and MESTING_PATCHES.md; no Pub-cache-only patch",
+          "removes": "Only dark backdrop constant structural perimeter and minimum rim floor",
+          "preserves": "Directional specular, refraction displacement, chromatic dispersion, meniscus absorption, body tint, press feedback, paired animations and premium native renderer",
+          "verificationBoundary": "Software plain/content light/dark compact/expanded/morph captures do not certify every native GPU branch, lensing, directional glint or FPS. Light compact plain/content native finish remains deferred."
+        }
       },
       "existingMestingGlass": {
         "quality": "standard",
@@ -465,7 +516,7 @@
         "highContrast": "不透明surface与outline，仅适用于此组件；不代表官方底栏的降级路径。"
       },
       "commentComposer": {
-        "runtimeDependency": "liquid_glass_widgets 1.15.0",
+        "runtimeDependency": "liquid_glass_widgets 1.15.0; local MIT package override",
         "structure": "GlassContainer input and GlassButton.custom send are siblings, each useOwnLayer=true and independent RepaintBoundary; never nest the button in input glass.",
         "input": {
           "quality": "premium",
@@ -493,13 +544,15 @@
           "chromaticAberration": 0.01,
           "fresnelStrength": 0.12,
           "saturation": 1.2,
-          "icon": "CupertinoIcons.arrow_up, white, 23dp"
+          "icon": "CupertinoIcons.arrow_up, white, 23dp",
+          "settings": "betaBlueActionGlass",
+          "bodyMode": "clear"
         },
         "keyboard": "KeyboardVisibilityBuilder observes View.of(context).viewInsets and native metrics rather than consumed Scaffold body MediaQuery.",
-        "validation": "Real Flutter renderer implementation; HTML preview and software captures cannot certify Android GPU optics or frame rate."
+        "validation": "ui-final.log paired normal-blue samples remain saturated in the host software renderer. Native Android optics, focus/volume and actual IME remain unverified; RGB thresholds do not prove native glass fidelity."
       },
       "betaAccountControls": {
-        "runtimeDependency": "liquid_glass_widgets 1.15.0",
+        "runtimeDependency": "liquid_glass_widgets 1.15.0; local MIT package override",
         "components": [
           "BetaGlassButton",
           "BetaGlassField",
@@ -513,18 +566,40 @@
         "field": "24dp圆角，保留焦点/错误/键盘语义。_InlineCodeField仅管理布局，按TextScaler测量六位数字与normal/countdown标签；窄屏大字显示框外14dp标签、两行suffix并增高，compact输入基准16dp继续系统缩放，正常18dp/44dp操作。输入与框内右侧按钮始终为Stack独立兄弟premium层；320dp/1.6浅深响应验证2/2通过，六位863432 maxScrollExtent<1，标签/键盘主登录hitTestable；review R1 resolved。",
         "back": "48x48dp，返回语义",
         "validation": "Live Flutter premium implementation; static previews/software captures do not certify Android GPU optics.",
-        "licenseEntry": "Historical Beta10 login license glass is superseded. Beta Settings application group settings-open-source calls shared showLicensePage; no login-page license button in current Beta11."
+        "licenseEntry": "Historical Beta.10 login license glass is superseded. Beta Settings application group settings-open-source calls shared showLicensePage; current Beta has no login-page license button.",
+        "adaptiveQuality": false
+      },
+      "betaPlaylistActions": {
+        "component": "BetaGlassAction",
+        "scope": "Both new and edit playlist headers",
+        "quality": "premium",
+        "interactionBehavior": "full",
+        "adaptiveQuality": false,
+        "size": "48x48dp",
+        "shape": "24dp circle",
+        "layerOwnership": "Independent useOwnLayer and RepaintBoundary for each action",
+        "confirm": {
+          "settings": "betaBlueActionGlass (same as comment send)",
+          "bodyMode": "clear",
+          "icon": "white checkmark"
+        },
+        "close": {
+          "settings": "betaMusicPillGlass(context)",
+          "icon": "X using local colorScheme.onSurface; neutral glass"
+        },
+        "businessOwnership": "Page retains validation, saving/loading, duplicate and Back guards, navigation, draft/cover retention on failure; material owns optics/feedback only",
+        "verificationBoundary": "Production software fixtures cover new/edit and light/dark; static HTML does not certify native GPU optics"
       }
     },
     "beta6Behavior": {
       "quality": "五种播放器共用标准/高品质/无损/Hi-Res持久化偏好；保留进度、播放/暂停、队列与模式。实际音质取自平台返回，未知不标成所选值，试听和降档如实披露。",
       "appearance": "Beta.6完整IP主题退役为classic，背景强度.58、性能automatic，保留IP装饰与显式进度选择。Beta.6已转成显式IP的值保留；残留followTheme别名在Beta.7转classic。正式flavor保持既有行为。",
       "artwork": "统一有效URL解析与只读元数据回退；合并请求、3并发、256成功缓存，失败不永久缓存。",
-      "status": "历史 Beta.6 记录；固定四档菜单及 IP 装饰开关由 beta8Behavior 替代，其余按当前源码延续。 当前实现以 beta9Behavior 为准。"
+      "status": "历史 Beta.6 记录；固定四档菜单及 IP 装饰开关由 beta8Behavior 替代，其余按当前源码延续。 当前实现以 beta9Behavior 为准。 Beta.12 startup selection, queue duration and optical continuity follow beta12Behavior; historical release facts are unchanged."
     },
     "previewNotes": [
       "以下HTML/CSS是Flutter视觉规则的独立预览，不含业务行为、官方shader或真实原生系统音量。",
-      "Beta.10预览沿用参考红色，经典浅色内容面板使用中性白灰；正式flavor仍读取原主题。",
+      "当前Beta.12预览沿用参考红色，经典浅色内容面板使用中性白灰；正式flavor仍读取原主题。",
       "色带为展示用合成OKLCH，不是生产新增色阶；颜色原值由DESIGN.md frontmatter所有。",
       "图像占位不冒充真实专辑封面。",
       "官方按压、拖动、弹簧、搜索、accessory形变与蓝色评论发送由真实Flutter组件提供；静态预览不能证明原生GPU折射保真度。",
@@ -534,12 +609,17 @@
       "历史Beta.10有界最终review为ship，R1–R8 resolved；普通635通过/54条件跳过、Beta150通过、软件UI34通过，组间重叠不相加；analyze无问题，发布APK身份/签名/对齐/ARM/bytes/SHA256已验证。源码归档身份由冻结后生成的外部delivery-manifest.json记录。",
       "Beta.10独立玻璃账号控件按指定调用点扩展，列表/正文背景不变；HTML仅示意，非Flutter光学或业务验收。",
       "motion-export.log另4通过，欢迎/样式浅深GIF每个36帧/80ms；软件fixture演示，不是Android原生GPU或FPS验收。",
-      "当前Beta.11最终review-final literal disposition ship，R1/R2 resolved、许可迁移match；常规644/58条件跳过/0失败，Beta163/0/0，approvedUI43，设置1，responsive2，analyze无问题；APK身份/签名/16KiB/原生对应/bytes/SHA已验证，组不相加。",
+      "历史Beta.11最终review-final literal disposition ship，R1/R2 resolved、许可迁移match；常规644/58条件跳过/0失败，Beta163/0/0，approvedUI43，设置1，responsive2，analyze无问题；APK身份/签名/16KiB/原生对应/bytes/SHA已验证，组不相加。",
       "Beta.11参考为已确认Mesting/Apple世界、居中协议截图、Raycast简洁表单、最新右侧验证码操作及五分类截图；无独立comp/QUALITY BAR/随机seed。",
       "同120次playing-scroll刺激：shell重建120→0、bar仍120；八类主机只读响应status=1与合成UI fixture分开，不表示FPS、真实短信或账号/CDN已验收。",
       "最新用户确认：登录类移除开源许可与致谢，Beta设置应用分组settings-open-source调用共享showLicensePage；原登录页许可按钮只属于历史Beta10。",
       "R1 partial后修复已通过两项320dp/1.6浅深六位863432、标签/键盘主登录验证；外部标签/两行inside-right兄弟premium层及TextScaler保留，最终review R1/R2 resolved。",
-      "Beta.11 motion-export 4/4通过：外部fixture复用当前真实欢迎/样式组件，四个浅深GIF各36帧80ms；无生产源码变更，不用Beta10旧图冒充，不是设备GPU/FPS。"
+      "Beta.11 motion-export 4/4通过：外部fixture复用当前真实欢迎/样式组件，四个浅深GIF各36帧80ms；无生产源码变更，不用Beta10旧图冒充，不是设备GPU/FPS。",
+      "Beta.12 keeps the incumbent Mesting/Apple Music world; supplied films and confirmed full text plan are authority. No new approved ImageGen comp, QUALITY BAR, approval sidecar or FORM seed was created.",
+      "Beta.12 final normal651/63 conditional skips/0 failures, Beta175/0/0, softwareUI47/0/0 and clean analyze; groups overlap and must not be added. Actual capture directory is work/beta12/captures-final/existing.",
+      "Beta.12 normal-blue software samples: light [13,107,218] in all three frames; dark [1,95,206]/[13,107,218]/[1,95,206]. Native saturation/glass fidelity is not inferred.",
+      "Beta.12 same120-frame playing-scroll stimulus remains bar120/shell0/pill0/home0, equal to Beta.11 host baseline; no native FPS improvement measured.",
+      "Beta.12 release identity/certificate/ZIP16KiB/ARM64 LOAD/native chain/shader/videos verified. Source ZIP exact identity stays external after documentation freeze. No attached Android acceptance for GPU/FPS, system edge Back, audio focus/volume, actual decoder lifecycle or TalkBack."
     ],
     "beta7Behavior": {
       "selectedChrome": "BetaAppearance提供参考红色与深色明红，导航选中图标/文字、个人页图标及相关选择统一；个人页面板浅红/深红。进度/角色红色选中框使用主要文字标签，显式IP图案保留自身配色。",
@@ -560,7 +640,7 @@
         "lib/features/experience/presentation/floating_playback_pill.dart",
         "lib/shared/widgets/music_notice.dart"
       ],
-      "status": "历史 Beta.7 记录；固定音质菜单、IP 装饰开关和较小收藏目标由 beta8Behavior 替代。 当前浅色面板与其余更新以 beta9Behavior 为准。"
+      "status": "历史 Beta.7 记录；固定音质菜单、IP 装饰开关和较小收藏目标由 beta8Behavior 替代。 当前浅色面板与其余更新以 beta9Behavior 为准。 Beta.12 replaces the fixed coral startup with an independent three-choice selector; coral launcher icon remains."
     },
     "beta8Behavior": {
       "visualAuthority": "延续用户确认的 Apple Music 参考、红色和同一 North Star；普通记录更新，无 schema 迁移。",
@@ -736,7 +816,7 @@
       ]
     },
     "beta11Behavior": {
-      "status": "Verified release and final records complete. review-final.md literal disposition: ship; R1/R2 resolved, license relocation match, no remaining material fix in its bounded scope. Native/device/live limitations remain explicit; source ZIP identity stays external after freeze.",
+      "status": "Historical Beta.11 verified release and final records only. Its literal review-final ship/R1/R2 resolved and release facts do not establish a Beta.12 verdict. Retained inherited behavior is supplemented or superseded by beta12Behavior; device/live limits remain.",
       "identity": {
         "displayName": "Mesting Music",
         "applicationId": "com.mesting.music.beta",
@@ -869,7 +949,8 @@
         ],
         "superseded": "Initial normal642/56, Beta159, UI39, intermediate UI42 and analyzer 1-info are historical stages; final normal644/58, Beta163, approvedUI43 and clean analyze replace them. Groups overlap; no aggregate sum.",
         "deviceEvidence": "release-verification/adb-devices.txt: empty; no attached Android device acceptance",
-        "motionExport": "motion-export.log: 4/4 passed; export-motion.py uses external fixture with actual current Beta11 welcome/style components for four light/dark GIFs, 36 frames each at 80ms/frame. No production source changes or historical Beta10 images passed as current. Software demonstration, not Android GPU/FPS."
+        "motionExport": "motion-export.log: 4/4 passed; export-motion.py uses external fixture with actual current Beta11 welcome/style components for four light/dark GIFs, 36 frames each at 80ms/frame. No production source changes or historical Beta10 images passed as current. Software demonstration, not Android GPU/FPS.",
+        "scope": "Historical frozen Beta.11 build only; not current Beta.12 test counts, hashes or review verdict"
       },
       "sourceEntries": [
         "lib/features/auth/presentation/beta_consent_row.dart",
@@ -903,6 +984,131 @@
         "lib/features/library/presentation/library_access.dart"
       ],
       "settingsLicense": "All login pages remove 开源许可与致谢. Beta Settings application group settings-open-source calls shared showLicensePage; prior source had no separate Settings entry. settings-capture-final.log 1 passed with corrected /music/settings fixture; settings-final.png is the correct final image. Agreement/privacy gate remains separate; reviewer license relocation match."
+    },
+    "beta12Behavior": {
+      "status": "Implemented confirmed Beta.12 refinement; final software suites, analysis and release verification complete. Independent final review belongs to the reviewer; source ZIP identity remains external after document freeze.",
+      "identity": {
+        "displayName": "Mesting Music",
+        "applicationId": "com.mesting.music.beta",
+        "versionName": "1.0.37-beta.12",
+        "versionCode": 12,
+        "releaseVerified": true
+      },
+      "provenance": "Inherited Mesting/Apple Music world and explicit user confirmation of the complete Beta.12 plan. Historical 待确认 filename is not current approval status. Two supplied films are actual media, not redraw prompts. No generated approved comp, QUALITY BAR, approval sidecar or new FORM seed.",
+      "startup": {
+        "choices": [
+          "音乐伙伴 (first supplied film; default)",
+          "唱片派对 (second supplied film)",
+          "经典启动页 (coral/white M lockup)"
+        ],
+        "preference": "beta12_startup_style, independent of launcher aliases/theme/background video/player visual style; publish selection after successful persistence",
+        "picker": "Static posters, selected semantics and separate explicit preview; no autoplay while browsing or choosing",
+        "gate": "One cold-process bootstrap gate waits for dependencies and video completion before mounting business app/account and playback restoration; dependency retry does not replay film",
+        "lifecycle": "One controller, original soundtrack volume1 and contain aspect ratio; background pause/resume unfinished position, no completed replay; bounded initialize/stall classic fallback, one-shot completion, disposal",
+        "preview": "Separately owned route/controller; closes and disposes without resetting completed process gate",
+        "compatibleMedia": [
+          {
+            "choice": 1,
+            "sourceUnchanged": true,
+            "codec": "H.264 Main / yuv420p / 608x1280 / 30fps",
+            "originalAacBitstreamUnchanged": true,
+            "psnrAverageDb": 49.825196
+          },
+          {
+            "choice": 2,
+            "sourceUnchanged": true,
+            "codec": "H.264 Main / yuv420p / 608x1280 / 30fps",
+            "originalAacBitstreamUnchanged": true,
+            "psnrAverageDb": 51.435274
+          }
+        ]
+      },
+      "searchBack": "BetaSearchBackHistory adds real nested LocalHistoryEntry for results -> landing -> actual origin. Post-frame sync, PopScope, BackButtonListener and both32dp edge strips preserve all five categories and existing destination-end versus temporary-route session rules. Native Android edge/predictive Back unverified.",
+      "playerDismiss": "Grey handle owns no second production offset exit: PlayerDismissMotion drives PlayerDismissRoute controller. Commit pops once from current progress and completes remaining reverse; cancellation rebounds continuously; route/gesture/dispose guards reject duplicate/late work. Mounted origin/pill reveal uses same progress; existing audio owner continues.",
+      "queueDuration": "Manual/automatic visible rows show matching-recording positive total or --:--; preview excerpt decoder length is not total. Central aliases include lower-case timelength milliseconds. Read-only /audio hydration coalesces identity, two workers, bounded cache/timeout, account/recording/hash stale guards; no playback or queue/position mutation to learn duration.",
+      "optics": "Application adaptive quality disabled; premium/full independent layers and paired morph/press motion retained. Local MIT fallback shader removes only dark constant/minimum perimeter, preserving directional/refraction/meniscus terms and native premium path. Light compact plain/content native optical quality remains a device acceptance item.",
+      "actions": "Clear-body betaBlueActionGlass is shared by comments and new/edit playlist confirmation. Neutral close X uses betaMusicPillGlass and local onSurface. 48dp independent premium layers; page retains saving/validation/navigation/draft state.",
+      "evidence": {
+        "testSummary": {
+          "normal": {
+            "success": 651,
+            "skipped": 63,
+            "runnerSuccess": true,
+            "errors": []
+          },
+          "beta": {
+            "success": 175,
+            "runnerSuccess": true,
+            "errors": []
+          },
+          "softwareUI": {
+            "success": 47,
+            "skipped": 0,
+            "failure": 0,
+            "log": "ui-final.log"
+          },
+          "blueSamples": [
+            "BETA12_BLUE_SAMPLE light 0 [13, 107, 218]",
+            "BETA12_BLUE_SAMPLE light 1 [13, 107, 218]",
+            "BETA12_BLUE_SAMPLE light 2 [13, 107, 218]",
+            "BETA12_BLUE_SAMPLE dark 0 [1, 95, 206]",
+            "BETA12_BLUE_SAMPLE dark 1 [13, 107, 218]",
+            "BETA12_BLUE_SAMPLE dark 2 [1, 95, 206]"
+          ],
+          "benchmark": {
+            "frames": 120,
+            "barRebuilds": 120,
+            "shellRebuilds": 0,
+            "playPillRebuilds": 0,
+            "homeRebuilds": 0,
+            "sameAsBeta11HostBaseline": true,
+            "nativeFpsMeasured": false
+          },
+          "overlapNotice": "Groups overlap; do not add. Hidden setup/loading/teardown excluded. Software rendering is not native GPU validation."
+        },
+        "analyze": "analyze-approved.log: No issues found (13.4s); prior analyze-final.log also clean",
+        "captures": "ui-final.log 47 passed; actual production widgets, synthetic fixture tracks/text/backgrounds and Windows QA CJK fonts; captures-final/existing",
+        "targeted": "targeted-navigation.log 2 passed; targeted-startup-cleanup.log 3 passed; overlapping groups",
+        "liveRead": "live-duration-probe.json: genuine embedded-host search + three /audio status1, same hashes; search261/257/279 seconds corresponds to metadata261276/257252/279196 milliseconds. Read-only data evidence, not SMS/account/CDN playback.",
+        "superseded": "Initial normal static source-position assertion failed, then was repaired and complete regular suite rerun successfully. Initial UI45 and matrix28 overlap and are superseded by final47; do not add groups.",
+        "release": {
+          "apkBytes": 90136848,
+          "apkSHA256": "AC098F96C92839CD3B8830D1662826C8427EA09852BA34F5DE0B2AF8084CD74E",
+          "signature": "same Beta certificate",
+          "zip16KiBAlignment": true,
+          "arm64Load16KiB": true,
+          "nativeSourceMergedStrippedApkChain": true,
+          "nativeServersSameAsBeta11": true,
+          "shaderChangedSinceBeta11": true,
+          "bundledVideosMatchRepositoryAssets": true,
+          "verification": "release-verification/artifact-verification.json and final build checks"
+        },
+        "sourceArchive": "Exact source ZIP bytes/hash belong to the external manifest generated after documentation freeze; no invented completed archive identity",
+        "device": "No adb device. Native GPU/lensing/directional glints/FPS, actual Android system edge/predictive Back, media audio focus/volume, actual decoder lifecycle and TalkBack not certified."
+      },
+      "sourceEntries": [
+        "lib/features/themes/startup_style.dart",
+        "lib/features/themes/startup_style_picker.dart",
+        "lib/app/startup_video_surface.dart",
+        "lib/main.dart",
+        "lib/features/themes/theme_gallery_page.dart",
+        "lib/features/experience/presentation/beta_search_back_history.dart",
+        "lib/features/experience/presentation/beta_music_shell.dart",
+        "lib/features/experience/presentation/player_dismiss_motion.dart",
+        "lib/features/experience/presentation/player_pull_to_dismiss.dart",
+        "lib/app/router/app_router.dart",
+        "lib/features/queue/presentation/queue_track_duration.dart",
+        "lib/features/music_platform/data/platform_track_duration.dart",
+        "lib/features/music_platform/data/platform_track_duration_repository.dart",
+        "lib/features/experience/presentation/beta_bottom_bar.dart",
+        "lib/app/mesting_music_app.dart",
+        "lib/shared/widgets/beta_glass_action.dart",
+        "lib/features/music_platform/presentation/platform_comment_composer.dart",
+        "lib/features/playlists/presentation/playlist_editor_dialog.dart",
+        "pubspec.yaml",
+        "third_party/liquid_glass_widgets/MESTING_PATCHES.md",
+        "third_party/liquid_glass_widgets/package/shaders/lightweight_glass.frag"
+      ]
     }
   },
   "components": [
@@ -942,15 +1148,15 @@
       "name": "四目的地导航",
       "kind": "nav",
       "refersTo": "navigation",
-      "description": "Beta官方可搜索四目的地底栏，红色选中，手机/宽屏同一64dp基础导航，premium/full。持续挂载，来源tab/滚动保留，88/24dp滞回；HTML仅静态示意。",
+      "description": "Beta官方四目的地和独立搜索，premium/full，adaptiveQuality=false，whitenAtBottom=false；持续挂载、88/24dp滞回、完整形变。HTML只示意浅色结构，不含原生光学。",
       "html": "<nav class=\"ds-nav\" aria-label=\"主导航\"><div class=\"ds-tabs\"><button aria-current=\"page\">首页</button><button>发现</button><button>音乐库</button><button>我的</button></div><button class=\"ds-search\" aria-label=\"搜索歌曲\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><circle cx=\"10\" cy=\"10\" r=\"6\"/><path d=\"m15 15 6 6\"/></svg></button></nav>",
-      "css": ".ds-nav{display:flex;gap:8px;align-items:center;width:362px;max-width:100%;font-family:sans-serif}.ds-tabs{display:flex;flex:1;height:64px;box-sizing:border-box;padding:4px;border:1px solid rgba(255,255,255,.75);border-radius:999px;background:rgba(242,242,247,.667);backdrop-filter:blur(2px)}.ds-nav button{height:54px;min-width:0;flex:1;border:0;border-radius:999px;background:transparent;color:#20232B;font-size:10px;cursor:pointer}.ds-nav button[aria-current]{color:#DE3A3D;background:rgba(32,35,43,.2)}.ds-nav button:hover{background:rgba(222,58,61,.09)}.ds-nav button:active{background:rgba(222,58,61,.2)}.ds-nav .ds-search{width:50px;height:50px;flex:none;background:rgba(242,242,247,.667);backdrop-filter:blur(2px)}.ds-button:focus-visible,.ds-chip:focus-visible,.ds-nav button:focus-visible{outline:2px solid #DE3A3D;outline-offset:3px}"
+      "css": ".ds-nav{display:flex;gap:8px;align-items:center;width:362px;max-width:100%;font-family:sans-serif}.ds-tabs{display:flex;flex:1;height:64px;box-sizing:border-box;padding:4px;border:0;border-radius:999px;background:rgba(242,242,247,.501961);backdrop-filter:blur(2px)}.ds-nav button{height:54px;min-width:0;flex:1;border:0;border-radius:999px;background:transparent;color:#20232B;font-size:10px;cursor:pointer}.ds-nav button[aria-current]{color:#DE3A3D;background:rgba(32,35,43,.2)}.ds-nav button:hover{background:rgba(222,58,61,.09)}.ds-nav button:active{background:rgba(222,58,61,.2)}.ds-nav .ds-search{width:50px;height:50px;flex:none;background:rgba(242,242,247,.501961);backdrop-filter:blur(2px)}.ds-button:focus-visible,.ds-chip:focus-visible,.ds-nav button:focus-visible{outline:2px solid #DE3A3D;outline-offset:3px}"
     },
     {
       "name": "共享播放器控件",
       "kind": "custom",
       "refersTo": "player-transport",
-      "description": "五样式封面/歌词共用透明白色transport与独立可调节轨；48dp音量响应区，仅顶部handle下拉。实际历史/队列/自动续播由唯一音频owner负责；静态预览无原生音量。",
+      "description": "五样式封面/歌词共用透明白色transport与独立可调节轨；48dp音量响应区，仅顶部handle下拉。实际历史/队列/自动续播由唯一音频owner负责；静态预览无原生音量。 Beta.12生产灰条由同一路由控制器连续退场，完成剩余反向或取消回弹，不重播第二次退出。",
       "html": "<section class=\"ds-player\" aria-label=\"共享播放器控件\"><label class=\"ds-rail\">播放进度<input type=\"range\" value=\"14\" aria-label=\"播放进度\" aria-valuetext=\"0分37秒，共4分19秒\"/></label><div class=\"ds-times\"><span>0:37</span><span>-3:42</span></div><div class=\"ds-transports\"><button aria-label=\"上一首\"><svg viewBox=\"0 0 36 36\" aria-hidden=\"true\"><path d=\"M17 7 3 18l14 11V7Zm16 0L19 18l14 11V7Z\"/></svg></button><button class=\"ds-main-play\" aria-label=\"播放\"><svg viewBox=\"0 0 36 36\" aria-hidden=\"true\"><path d=\"m10 5 23 13-23 13V5Z\"/></svg></button><button aria-label=\"下一首\"><svg viewBox=\"0 0 36 36\" aria-hidden=\"true\"><path d=\"m3 7 14 11L3 29V7Zm16 0 14 11-14 11V7Z\"/></svg></button></div><label class=\"ds-rail\">系统媒体音量<input type=\"range\" value=\"55\" aria-label=\"系统媒体音量\" aria-valuetext=\"55%\"/></label><div class=\"ds-player-actions\"><button>评论</button><button>音质</button><button>当前队列</button></div></section>",
       "css": ".ds-player{width:330px;max-width:100%;padding:20px 26px;background:#17191F;color:#fff;font:13px sans-serif}.ds-rail{display:grid;gap:5px;color:rgba(255,255,255,.6);font-size:11px}.ds-rail input{width:100%;height:48px;margin:0;accent-color:white}.ds-times{display:flex;justify-content:space-between;color:rgba(255,255,255,.6);font-size:11px}.ds-transports{display:flex;align-items:center;justify-content:space-evenly;margin:14px 0 12px}.ds-player button{border:0;background:transparent;color:white;min-width:48px;min-height:48px;padding:8px;cursor:pointer}.ds-transports svg{width:35px;height:35px;fill:currentColor}.ds-transports .ds-main-play{width:84px;height:74px}.ds-main-play svg{width:49px;height:49px}.ds-player button:hover{opacity:.8}.ds-player button:active{opacity:.6}.ds-player button:focus-visible,.ds-rail input:focus-visible{outline:2px solid white;outline-offset:3px}.ds-player-actions{display:flex;justify-content:space-around;margin-top:6px}"
     },
@@ -960,15 +1166,15 @@
       "refersTo": "playback-pill",
       "description": "仅播放/暂停与下一首，保持封面/歌曲身份。播放布尔订阅，共享实时toggle；玻璃全程挂载，实际按压/下拉显露由Flutter提供。",
       "html": "<div class=\"ds-mini\"><div class=\"ds-art\" aria-label=\"封面占位\"></div><div class=\"ds-mini-copy\"><strong>当前歌曲</strong><span>歌手</span></div><button aria-label=\"播放\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m6 3 15 9-15 9V3Z\"/></svg></button><button aria-label=\"下一首\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m3 3 14 9-14 9V3Zm15 0h3v18h-3V3Z\"/></svg></button></div>",
-      "css": ".ds-mini{display:flex;gap:10px;align-items:center;width:330px;max-width:100%;min-height:64px;padding:0 16px;border-radius:32px;background:rgba(242,242,247,.8);backdrop-filter:blur(2px);color:#20232B;font-family:sans-serif}.ds-art{width:32px;height:32px;flex:none;border-radius:8px;background:#94969D}.ds-mini-copy{display:grid;flex:1;gap:3px;min-width:0;font-size:14px}.ds-mini-copy span{font-size:12px;opacity:.7}.ds-mini button{width:44px;height:44px;padding:0;flex:none;border:0;background:transparent;color:inherit;cursor:pointer}.ds-mini svg{width:23px;height:23px;fill:currentColor}.ds-mini button:hover{opacity:.75}.ds-mini button:active{opacity:.55}.ds-mini button:focus-visible{outline:2px solid #DE3A3D;outline-offset:2px}"
+      "css": ".ds-mini{display:flex;gap:10px;align-items:center;width:330px;max-width:100%;min-height:64px;padding:0 16px;border-radius:32px;background:rgba(242,242,247,.501961);backdrop-filter:blur(2px);color:#20232B;font-family:sans-serif}.ds-art{width:32px;height:32px;flex:none;border-radius:8px;background:#94969D}.ds-mini-copy{display:grid;flex:1;gap:3px;min-width:0;font-size:14px}.ds-mini-copy span{font-size:12px;opacity:.7}.ds-mini button{width:44px;height:44px;padding:0;flex:none;border:0;background:transparent;color:inherit;cursor:pointer}.ds-mini svg{width:23px;height:23px;fill:currentColor}.ds-mini button:hover{opacity:.75}.ds-mini button:active{opacity:.55}.ds-mini button:focus-visible{outline:2px solid #DE3A3D;outline-offset:2px}"
     },
     {
       "name": "独立评论玻璃输入与发送",
       "kind": "custom",
       "refersTo": "comment-send",
-      "description": "输入与蓝色48dp发送的独立兄弟材质；HTML是结构/色彩预览，真实3D Liquid Glass由Flutter premium组件提供，不能以静态或位图替代。原生键盘显示2行、否则4行。",
+      "description": "输入与48dp蓝色发送为独立兄弟premium层；发送使用共享betaBlueActionGlass clear body，保留白箭头和光学，和新建/编辑歌单确认同材质。原生键盘2行/否则4行；HTML仅结构色彩示意。",
       "html": "<div class=\"ds-composer\"><label class=\"ds-comment-input\"><span>评论</span><textarea rows=\"2\" maxlength=\"1000\" placeholder=\"写下你的评论…\"></textarea></label><button class=\"ds-comment-send\" aria-label=\"发送评论\"><svg viewBox=\"0 0 24 24\" width=\"23\" height=\"23\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"/></svg></button></div>",
-      "css": ".ds-composer{display:flex;align-items:flex-end;gap:8px;width:360px;max-width:100%;font-family:sans-serif}.ds-comment-input{min-width:0;flex:1;padding:13px 18px;border-radius:24px;background:rgba(242,242,247,.8);backdrop-filter:blur(2px);color:#20232B}.ds-comment-input span{display:block;font-size:11px;margin-bottom:4px;color:#5D6572}.ds-comment-input textarea{width:100%;padding:0;border:0;resize:vertical;background:transparent;color:inherit;font:16px/1.4 sans-serif}.ds-comment-input:hover{background:rgba(242,242,247,.9)}.ds-comment-input:focus-within{outline:2px solid #DE3A3D;outline-offset:2px}.ds-comment-input textarea:focus-visible{outline:none}.ds-comment-send{display:grid;place-items:center;flex:none;width:48px;height:48px;padding:0;border:0;border-radius:24px;background:rgba(0,99,216,.94902);color:#fff;cursor:pointer;backdrop-filter:blur(2px)}.ds-comment-send:hover{filter:brightness(1.04)}.ds-comment-send:active{transform:scale(.96)}.ds-comment-send:focus-visible{outline:2px solid #0063D8;outline-offset:3px}.ds-comment-send:disabled{opacity:.38}"
+      "css": ".ds-composer{display:flex;align-items:flex-end;gap:8px;width:360px;max-width:100%;font-family:sans-serif}.ds-comment-input{min-width:0;flex:1;padding:13px 18px;border-radius:24px;background:rgba(242,242,247,.501961);backdrop-filter:blur(2px);color:#20232B}.ds-comment-input span{display:block;font-size:11px;margin-bottom:4px;color:#5D6572}.ds-comment-input textarea{width:100%;padding:0;border:0;resize:vertical;background:transparent;color:inherit;font:16px/1.4 sans-serif}.ds-comment-input:hover{background:rgba(242,242,247,.9)}.ds-comment-input:focus-within{outline:2px solid #DE3A3D;outline-offset:2px}.ds-comment-input textarea:focus-visible{outline:none}.ds-comment-send{display:grid;place-items:center;flex:none;width:48px;height:48px;padding:0;border:0;border-radius:24px;background:rgba(0,99,216,.94902);color:#fff;cursor:pointer;backdrop-filter:blur(2px)}.ds-comment-send:hover{filter:brightness(1.04)}.ds-comment-send:active{transform:scale(.96)}.ds-comment-send:focus-visible{outline:2px solid #0063D8;outline-offset:3px}.ds-comment-send:disabled{opacity:.38}"
     },
     {
       "name": "Beta 玻璃按钮与圆形返回",
@@ -976,7 +1182,7 @@
       "refersTo": "glass-button",
       "description": "指定Beta账号操作与返回共用premium/独立层。主按钮默认52dp、返回48dp；静态HTML仅结构色彩示意，不包含Flutter真实折射。",
       "html": "<div class=\"ds-glass-actions\"><button class=\"ds-glass-button ds-glass-back\" aria-label=\"返回\"><svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m14 5-7 7 7 7\"/></svg></button><button class=\"ds-glass-button ds-glass-primary\">手机号登录</button></div>",
-      "css": ".ds-glass-actions{display:flex;gap:12px;align-items:center;font-family:sans-serif}.ds-glass-button{height:52px;padding:0 18px;border:1px solid rgba(255,255,255,.65);border-radius:999px;background:rgba(242,242,247,.8);backdrop-filter:blur(2px);color:#20232B;font:700 15px sans-serif;cursor:pointer;transition:transform .16s,opacity .16s}.ds-glass-primary{color:#DE3A3D}.ds-glass-back{width:48px;height:48px;padding:0;display:grid;place-items:center;flex:none}.ds-glass-button:hover{filter:brightness(1.025)}.ds-glass-button:active{transform:scale(.96)}.ds-glass-button:focus-visible{outline:2px solid #DE3A3D;outline-offset:3px}.ds-glass-button:disabled{opacity:.38;cursor:default}"
+      "css": ".ds-glass-actions{display:flex;gap:12px;align-items:center;font-family:sans-serif}.ds-glass-button{height:52px;padding:0 18px;border:0;border-radius:999px;background:rgba(242,242,247,.501961);backdrop-filter:blur(2px);color:#20232B;font:700 15px sans-serif;cursor:pointer;transition:transform .16s,opacity .16s}.ds-glass-primary{color:#DE3A3D}.ds-glass-back{width:48px;height:48px;padding:0;display:grid;place-items:center;flex:none}.ds-glass-button:hover{filter:brightness(1.025)}.ds-glass-button:active{transform:scale(.96)}.ds-glass-button:focus-visible{outline:2px solid #DE3A3D;outline-offset:3px}.ds-glass-button:disabled{opacity:.38;cursor:default}"
     },
     {
       "name": "Beta 独立玻璃账号字段",
@@ -984,19 +1190,28 @@
       "refersTo": "glass-field",
       "description": "当前_InlineCodeField的compact结构示意：框外标签、两行inside-right操作与独立兄弟玻璃层，输入继续系统缩放；实际尺寸按Flutter TextScaler测量。320dp/1.6浅深响应2/2与approved原图已通过有界复核；HTML仅结构示意，不认证原生GPU或真实登录。",
       "html": "<div class=\"ds-auth-label\"><label for=\"ds-code\">验证码</label><div class=\"ds-code-row\"><span class=\"ds-auth-field\"><input id=\"ds-code\" class=\"ds-auth-input\" inputmode=\"numeric\" autocomplete=\"one-time-code\" placeholder=\"\" maxlength=\"6\"/></span><button class=\"ds-code-action\" type=\"button\" aria-label=\"获取验证码\">获取<br/>验证码</button></div></div>",
-      "css": ".ds-auth-label{display:grid;gap:8px;max-width:320px;color:#5D6572;font:14px sans-serif}.ds-auth-label>label{padding-left:16px}.ds-code-row{position:relative}.ds-auth-field{display:block;padding:0 3px;border:1px solid rgba(255,255,255,.65);border-radius:24px;background:rgba(242,242,247,.8);backdrop-filter:blur(2px)}.ds-auth-input{width:100%;box-sizing:border-box;min-height:80px;padding:17px 106px 17px 12px;border:0;border-radius:24px;background:transparent;color:#20232B;font:16px sans-serif}.ds-auth-field:hover{background:rgba(242,242,247,.88)}.ds-auth-field:focus-within{outline:2px solid #DE3A3D;outline-offset:2px}.ds-auth-input:focus-visible{outline:none}.ds-auth-input:disabled{opacity:.38}.ds-auth-input[aria-invalid=true]{color:#B3261E}.ds-code-action{position:absolute;right:7px;top:50%;transform:translateY(-50%);min-height:68px;padding:0 12px;border:1px solid rgba(255,255,255,.65);border-radius:999px;background:rgba(242,242,247,.82);backdrop-filter:blur(2px);color:#20232B;font:700 13px/1.3 sans-serif;text-align:center;cursor:pointer}.ds-code-action:hover{background:rgba(242,242,247,.94)}.ds-code-action:active{filter:brightness(.94)}.ds-code-action:focus-visible{outline:2px solid #DE3A3D;outline-offset:2px}.ds-code-action:disabled{opacity:.38;cursor:default}"
+      "css": ".ds-auth-label{display:grid;gap:8px;max-width:320px;color:#5D6572;font:14px sans-serif}.ds-auth-label>label{padding-left:16px}.ds-code-row{position:relative}.ds-auth-field{display:block;padding:0 3px;border:0;border-radius:24px;background:rgba(242,242,247,.501961);backdrop-filter:blur(2px)}.ds-auth-input{width:100%;box-sizing:border-box;min-height:80px;padding:17px 106px 17px 12px;border:0;border-radius:24px;background:transparent;color:#20232B;font:16px sans-serif}.ds-auth-field:hover{background:rgba(242,242,247,.88)}.ds-auth-field:focus-within{outline:2px solid #DE3A3D;outline-offset:2px}.ds-auth-input:focus-visible{outline:none}.ds-auth-input:disabled{opacity:.38}.ds-auth-input[aria-invalid=true]{color:#B3261E}.ds-code-action{position:absolute;right:7px;top:50%;transform:translateY(-50%);min-height:68px;padding:0 12px;border:0;border-radius:999px;background:rgba(242,242,247,.82);backdrop-filter:blur(2px);color:#20232B;font:700 13px/1.3 sans-serif;text-align:center;cursor:pointer}.ds-code-action:hover{background:rgba(242,242,247,.94)}.ds-code-action:active{filter:brightness(.94)}.ds-code-action:focus-visible{outline:2px solid #DE3A3D;outline-offset:2px}.ds-code-action:disabled{opacity:.38;cursor:default}"
+    },
+    {
+      "name": "新建/编辑歌单共享玻璃操作",
+      "kind": "button",
+      "refersTo": "glass-action-confirm",
+      "description": "48dp中性X与共享clear-body蓝色白对勾，各自premium独立层；业务页面保留保存中禁用/返回防护、spinner、名称校验及失败草稿。HTML不含真实Flutter折射。",
+      "html": "<div class=\"ds-playlist-actions\"><button class=\"ds-playlist-close\" aria-label=\"取消\"><svg viewBox=\"0 0 24 24\" width=\"27\" height=\"27\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.3\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"m6 6 12 12M18 6 6 18\"/></svg></button><strong>编辑歌单</strong><button class=\"ds-playlist-save\" aria-label=\"保存歌单\"><svg viewBox=\"0 0 24 24\" width=\"25\" height=\"25\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m5 12 4 4L19 6\"/></svg></button></div>",
+      "css": ".ds-playlist-actions{display:flex;align-items:center;gap:12px;width:354px;max-width:100%;color:#20232B;font:700 21px sans-serif}.ds-playlist-actions strong{flex:1;text-align:center}.ds-playlist-actions button{display:grid;place-items:center;flex:none;width:48px;height:48px;padding:0;border:0;border-radius:24px;cursor:pointer;backdrop-filter:blur(2px);transition:transform .16s,opacity .16s}.ds-playlist-close{background:rgba(242,242,247,.501961);color:#20232B}.ds-playlist-save{background:rgba(0,99,216,.94902);color:#fff}.ds-playlist-actions button:hover{opacity:.9}.ds-playlist-actions button:active{transform:scale(.96)}.ds-playlist-actions button:focus-visible{outline:2px solid #DE3A3D;outline-offset:3px}.ds-playlist-actions button:disabled{opacity:.38;cursor:default}"
     }
   ],
   "narrative": {
     "northStar": "封面主导的私人听歌空间",
-    "overview": "封面承担视觉重心，中文大标题与留白组织阅读顺序。横向内容组露出下一项，歌曲列表保持紧凑；播放与导航悬浮于内容之上。Beta 使用用户参考图采样的红色强调，经典浅色、深色和跟随系统共用布局，进度条样式与角色独立选择。\n\n本文按当前 Beta.11 源码更新已经确认的设计系统，沿用 Apple Music 视觉依据与同一 North Star。可见名称为 Mesting Music。经典浅色使用中性白灰面板与既有红色强调，深色和封面播放器配色保留；入口与指南在此世界内使用珊瑚红原创音乐双角色和局部暖色背景。Beta.11 在这个世界内加入居中同意组、Raycast 参考适配的简洁按方式登录、统一账号模块与真实五类搜索，不引入新全局配色。Beta 门限为 DistributionChannel.isBeta（Android appFlavor == beta）；正式 flavor 的页面、导航、迷你播放器、完整主题、定制推荐与默认黑胶契约保留，共享工具按调用点生效。\n\n当前发布 APK 已验证为 Mesting Music / com.mesting.music.beta / 1.0.37-beta.11 / 11，assembleBetaRelease 成功；最终常规 644 通过/58 条件跳过/0 失败、Beta163 通过/0 跳过/0 失败、approved 软件 UI43 通过，后补设置捕获1通过，analyze-approved 无问题，组间重叠不可相加。_InlineCodeField 的外部标签/两行右侧操作在 320dp/1.6 浅深色通过两项六位数字/标签/键盘操作验证，reviewer 已看 approved 原图并确认 R1、R2 resolved；新 review-final.md 的独立有界结论为 disposition: ship，R1/R2 resolved、许可迁移 match，无剩余 material fix；它不扩大设备/线上证据范围。登录页许可按钮已移入设置应用分组，正确设置截图为 settings-final.png。APK 身份、同一证书、16KiB ZIP、ARM64 ELF16KiB 与原始→merged→stripped→APK 的两种 ARM 库对应链已核验；精确字节/哈希见 docs/MD3MUSIC_BETA.md。源码归档身份留冻结后的外部 manifest，不嵌入自引用 ZIP 哈希。Beta.10 的 ship、计数及哈希仅属于历史构建。当前 Beta.11 motion-export 4/4 通过，外部 fixture 复用实际欢迎/样式组件导出浅深四个 GIF，各36帧/80ms，无生产源码变更；不是沿用旧版图。软件捕获和 GIF 使用合成数据、Flutter 软件渲染及 Windows QA 中文字体；adb-devices 为空，不能证明原生 GPU 折射、帧率、硬件音量、TalkBack、真实 IME 或线上服务，八类 genuine host 只读响应也不等于真实收码或 CDN 验收。入口方向来自既有 Mesting 世界、用户参考构图、珊瑚红矢量双角色选择及确认后的 Beta.10/Beta.11 文字方案；没有独立 ImageGen 批准图、approval sidecar、QUALITY BAR card 或随机 FORM seed。",
+    "overview": "封面承担视觉重心，中文大标题与留白组织阅读顺序。横向内容组露出下一项，歌曲列表保持紧凑；播放与导航悬浮于内容之上。Beta 使用用户参考图采样的红色强调，经典浅色、深色和跟随系统共用布局，进度条样式与角色独立选择。\n\n本文按当前 Beta.12 源码合并已确认的设计规则，沿用 Mesting/Apple Music 视觉依据与同一 North Star。可见名称为 Mesting Music。经典浅色使用中性白灰面板与既有红色强调，深色和封面播放器配色保留；入口与指南继续使用珊瑚红原创音乐双角色和局部暖色背景。Beta.11 建立的居中同意组、Raycast 参考适配的简洁按方式登录、统一账号模块与真实五类搜索继续使用。Beta.12 加入两段用户给定短片与经典页的独立启动选择、真实本地搜索返回层级、路由连续拖动退场、真实队列总时长及共享中性/蓝色玻璃操作，不建立新全局配色。Beta 门限为 DistributionChannel.isBeta（Android appFlavor == beta）；正式 flavor 的页面、导航、迷你播放器、完整主题、定制推荐与默认黑胶契约保留，共享工具按调用点生效。\n\nBeta.12 当前软件证据为 ui-final.log 47 项通过及 captures-final/existing 的生产控件捕获，包含纯色/内容、浅/深、收拢/展开/形变、手机/宽屏和小屏大字配对；蓝色滚动前/变化中/稳定后浅色三帧均为 [13,107,218]，深色为 [1,95,206] / [13,107,218] / [1,95,206]。test-summary.json 记录最终常规 651 通过/63 条件跳过/0 失败、Beta175 通过/0 跳过/0 失败；analyze-approved.log 为 No issues found，组间有重叠不可相加。媒体核验确认用户原文件未改，兼容副本保留原 AAC 流；assembleBetaRelease 成功，1.0.37-beta.12 / 12 的身份、同一 Beta 证书、16KiB ZIP/ARM64 LOAD 对齐、打包原生库对应链、修正 shader 与两段兼容视频均已核验。精确包字节/哈希见 PRODUCT.md 与外部 release-verification/artifact-verification.json；源码 ZIP 身份留文档冻结后的外部清单。软件捕获使用合成 fixture、软件渲染与 Windows QA 中文字体；不能认证 Android GPU 光学、FPS、实际系统边缘/预测返回、原声解码/媒体焦点/硬件音量或 TalkBack。没有新 ImageGen 批准 comp、approval sidecar、QUALITY BAR card 或 FORM seed；历史待确认文件名不改变用户随后对 Beta.12 完整文字方案的明确确认。\n\n历史 Beta.11 发布 APK 已验证为 Mesting Music / com.mesting.music.beta / 1.0.37-beta.11 / 11，assembleBetaRelease 成功；该版最终常规 644 通过/58 条件跳过/0 失败、Beta163 通过/0 跳过/0 失败、approved 软件 UI43 通过，后补设置捕获1通过，analyze-approved 无问题，组间重叠不可相加。_InlineCodeField 的外部标签/两行右侧操作在 320dp/1.6 浅深色通过两项六位数字/标签/键盘操作验证，reviewer 已看该版 approved 原图并确认 R1、R2 resolved；该版 review-final.md 的独立有界结论为 disposition: ship，R1/R2 resolved、许可迁移 match，无剩余 material fix；它不扩大到 Beta.12 或设备/线上证据。登录页许可按钮已移入设置应用分组，settings-final.png 是该版正确设置截图。历史 APK 身份、同一证书、16KiB ZIP、ARM64 ELF16KiB 与原始→merged→stripped→APK 的两种 ARM 库对应链已核验，精确字节/哈希见 docs/MD3MUSIC_BETA.md；源码归档身份留该版冻结后的外部 manifest，不嵌入自引用 ZIP 哈希。Beta.10 的 ship、计数及哈希同样仅属于历史构建。Beta.11 motion-export 4/4 通过，外部 fixture 复用该版实际欢迎/样式组件导出浅深四个 GIF，各36帧/80ms，无生产源码变更；不是沿用旧版图。软件捕获和 GIF 使用合成数据、Flutter 软件渲染及 Windows QA 中文字体；adb-devices 为空，不能证明原生 GPU 折射、帧率、硬件音量、TalkBack、真实 IME 或线上服务，八类 genuine host 只读响应也不等于真实收码或 CDN 验收。历史入口方向来自既有 Mesting 世界、用户参考构图、珊瑚红矢量双角色选择及确认后的 Beta.10/Beta.11 文字方案，没有独立 ImageGen 批准图、approval sidecar、QUALITY BAR card 或随机 FORM seed。",
     "keyCharacteristics": [
       "封面主导，正文使用清楚稳定的主题表面。",
       "大标题、粗体分区、紧凑曲目元数据形成层级。",
       "中性白灰支撑经典浅色，Beta 红色统一导航和选中 chrome，显式 IP 图案与角色保留自身配色。",
       "五种播放器共用白色播放操作、进度、系统媒体音量与底部功能。",
       "真实玻璃服务持续挂载的悬浮 chrome、独立评论输入/发送与明确指定的 Beta 账号操作/字段；正文背景清楚稳定。",
-      "原创音符/唱片双角色以可控矢量、关节动作和浅深色可辨轮廓承载入口识别；等待与成功采用共享分段 spinner 和绘制标记。"
+      "原创音符/唱片双角色以可控矢量、关节动作和浅深色可辨轮廓承载入口识别；等待与成功采用共享分段 spinner 和绘制标记。",
+      "两段给定启动短片与经典标识页保留各自原貌，选择与显式预览分离；中性关闭和局部蓝色确认共享清楚的操作语义。"
     ],
     "rules": [
       {
@@ -1026,7 +1241,7 @@
       },
       {
         "name": "The Floating Glass Rule",
-        "body": "内容封面、列表与正文背景保持稳定表面；折射用于悬浮 chrome、评论输入/发送及用户指定的 Beta 返回、欢迎/账号/验证码/退出操作与账号字段。每个玻璃控件独立拥有层，不能嵌套玻璃而失去子层折射。封面模糊、播放器音质弹层和短时状态 HUD 各按自身局部背景处理；该扩展不构成正式渠道全局改版。",
+        "body": "内容封面、列表与正文背景保持稳定表面；折射用于悬浮 chrome、评论输入/发送、用户指定的 Beta 返回/欢迎/账号/验证码/退出操作与账号字段，以及新建/编辑歌单的关闭/确认。每个玻璃控件独立拥有层，不能嵌套玻璃而失去子层折射。封面模糊、播放器音质弹层和短时状态 HUD 各按自身局部背景处理；该扩展不构成正式渠道全局改版。",
         "section": "elevation"
       }
     ],
@@ -1034,7 +1249,8 @@
       "Do 使用语义色并检查浅深色、红色选中 chrome 与装扮背景的最终对比。",
       "Do 让封面、歌曲、歌手与真实平台内容承担信息层级。",
       "Do 提供中文 tooltip/语义标签、selected 状态、文字缩放及可达操作。",
-      "Do 让加载、空状态、失败、草稿与账号归属如实可见。"
+      "Do 让加载、空状态、失败、草稿与账号归属如实可见。",
+      "Do 在纯色/内容、浅/深、收拢/展开/形变配对中检查玻璃，保持指定 premium/full 质量、独立层与连续路由进度。"
     ],
     "donts": [
       "Don't 把 Beta 条件组合推广为正式分支的全局布局或默认播放器。",
@@ -1042,7 +1258,8 @@
       "Don't 以无意义眉题、重复圆角外框或装饰渐变替代真实内容。",
       "Don't 把 fixture、歌曲封面、未记录月份或失败写入描述为生产素材、艺人肖像、历史统计或成功。",
       "Don't 给共享播放 transport 恢复大圆面，或把两个滑块合成无名且不可调的语义节点。",
-      "Don't 以软件截图宣称真机 TalkBack、硬件音量、GPU Apple 效果或线上服务已验收。"
+      "Don't 以软件截图宣称真机 TalkBack、硬件音量、GPU Apple 效果或线上服务已验收。",
+      "Don't 用连续装饰描边、滚动时降级或不透明平面盖层替代光学修正，或把未知队列时长编成真实数据。"
     ]
   }
 }

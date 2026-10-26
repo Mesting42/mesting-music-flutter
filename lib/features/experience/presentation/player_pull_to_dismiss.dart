@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'player_dismiss_motion.dart';
 
 /// The handle owns dismissal; artwork, lyric scrolling and adjustable controls
 /// never compete with this vertical drag. AnimatedBuilder keeps the live
@@ -23,6 +24,25 @@ class _PlayerPullToDismissState extends State<PlayerPullToDismiss>
     vsync: this,
   );
   bool _closing = false;
+  PlayerDismissMotion? _routeMotion;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    final motion = route is PlayerDismissRoute
+        ? (route as PlayerDismissRoute).playerDismissMotion
+        : null;
+    if (motion == _routeMotion) return;
+    _routeMotion?.controller.removeListener(_reportRouteProgress);
+    _routeMotion = motion;
+    motion?.controller.addListener(_reportRouteProgress);
+  }
+
+  void _reportRouteProgress() {
+    if (mounted) widget.onProgress?.call(_routeMotion!.progress);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -38,12 +58,18 @@ class _PlayerPullToDismissState extends State<PlayerPullToDismiss>
 
   @override
   void dispose() {
+    _routeMotion?.controller.removeListener(_reportRouteProgress);
     _offset.dispose();
     super.dispose();
   }
 
   void update(DragUpdateDetails details) {
     if (_closing) return;
+    final motion = _routeMotion;
+    if (motion != null) {
+      motion.update(details.delta.dy, MediaQuery.sizeOf(context).height);
+      return;
+    }
     _offset.stop();
     _offset.value = (_offset.value + details.delta.dy).clamp(
       0,
@@ -51,19 +77,37 @@ class _PlayerPullToDismissState extends State<PlayerPullToDismiss>
     );
   }
 
-  Future<void> finish([double speed = 0]) async {
+  Future<void> finish([double speed = 0, bool cancelled = false]) async {
     if (_closing) return;
     final height = MediaQuery.sizeOf(context).height;
+    final motion = _routeMotion;
+    if (motion != null) {
+      await motion.finish(
+        speed: speed,
+        height: height,
+        cancelled: cancelled,
+        reduceMotion: MediaQuery.disableAnimationsOf(context),
+        onDismiss: widget.onDismiss,
+      );
+      return;
+    }
     final close =
-        _offset.value > height * .18 || (_offset.value > 16 && speed > 650);
+        !cancelled &&
+        (_offset.value > height * .18 || (_offset.value > 16 && speed > 650));
     _closing = close;
-    await _offset.animateTo(
-      close ? height : 0,
-      duration: MediaQuery.disableAnimationsOf(context)
-          ? Duration.zero
-          : Duration(milliseconds: close ? 240 : 280),
-      curve: Curves.easeOutCubic,
-    );
+    try {
+      await _offset
+          .animateTo(
+            close ? height : 0,
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : Duration(milliseconds: close ? 240 : 280),
+            curve: Curves.easeOutCubic,
+          )
+          .orCancel;
+    } on TickerCanceled {
+      return;
+    }
     if (mounted && close) widget.onDismiss();
   }
 
@@ -112,7 +156,7 @@ class PlayerDismissHandle extends StatelessWidget {
         onVerticalDragUpdate: state.update,
         onVerticalDragEnd: (details) =>
             state.finish(details.primaryVelocity ?? 0),
-        onVerticalDragCancel: () => state.finish(),
+        onVerticalDragCancel: () => state.finish(0, true),
         child: SizedBox(
           width: 112,
           height: 36,

@@ -137,6 +137,7 @@ class Track {
   }
 
   Track copyWith({
+    Duration? duration,
     String? audioAsset,
     String? coverAsset,
     String? lyricsAsset,
@@ -150,7 +151,7 @@ class Track {
       title: title,
       artist: artist,
       album: album,
-      duration: duration,
+      duration: duration ?? this.duration,
       audioAsset: audioAsset ?? this.audioAsset,
       coverAsset: coverAsset ?? this.coverAsset,
       lyricsAsset: lyricsAsset ?? this.lyricsAsset,

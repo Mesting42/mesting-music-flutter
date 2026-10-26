@@ -38,11 +38,16 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
   late bool _lyrics = widget.lyricsInitially;
   double _direction = 1;
   StreamSubscription<String>? _commands;
+  bool _routeExitRequested = false;
   void _showLyrics(bool show) => setState(() {
     _direction = show ? 1 : -1;
     _lyrics = show;
   });
   void _dismissPlayer() {
+    if (_routeExitRequested || ModalRoute.of(context)?.isCurrent == false) {
+      return;
+    }
+    _routeExitRequested = true;
     context.canPop() ? context.pop() : context.go('/music/recommend');
   }
 
@@ -71,7 +76,7 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
       _showLyrics(false);
       return;
     }
-    context.canPop() ? context.pop() : context.go('/music/recommend');
+    _dismissPlayer();
   }
 
   @override
@@ -107,6 +112,7 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
           child: PopScope(
             canPop: !_lyrics,
             onPopInvokedWithResult: (didPop, _) {
+              if (didPop) _routeExitRequested = true;
               if (!didPop && _lyrics) _showLyrics(false);
             },
             child: Scaffold(

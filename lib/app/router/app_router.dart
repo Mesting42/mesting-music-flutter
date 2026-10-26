@@ -1,4 +1,5 @@
 import '../../shared/widgets/beta_page_motion.dart';
+import '../../features/experience/presentation/player_dismiss_motion.dart';
 import '../../features/music_platform/data/platform_category_search.dart';
 import '../../features/music_platform/presentation/platform_catalog_detail_page.dart';
 import 'dart:ui';
@@ -364,7 +365,8 @@ class _NowPlayingTransitionPage extends Page<void> {
 
   @override
   Route<void> createRoute(BuildContext context) {
-    return _NowPlayingRoute(
+    late final _NowPlayingRoute route;
+    route = _NowPlayingRoute(
       settings: this,
       // The vinyl flight is rendered inside the live player page so it can use
       // the mini player's exact global bounds without route snapshot artifacts.
@@ -379,23 +381,34 @@ class _NowPlayingTransitionPage extends Page<void> {
       // The player animates its vinyl and chrome from the route animation.
       transitionsBuilder: (context, animation, secondaryAnimation, child) =>
           DistributionChannel.isBeta
-          ? SlideTransition(
-              position: Tween(begin: const Offset(0, 1), end: Offset.zero)
-                  .animate(
-                    CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.easeOutCubic,
-                      reverseCurve: Curves.easeInCubic,
-                    ),
-                  ),
+          ? AnimatedBuilder(
+              animation: Listenable.merge([
+                animation,
+                route.playerDismissMotion,
+              ]),
+              builder: (context, child) {
+                final motion = route.playerDismissMotion;
+                final progress = motion.dragDriven
+                    ? animation.value
+                    : (animation.status == AnimationStatus.reverse
+                              ? Curves.easeInCubic
+                              : Curves.easeOutCubic)
+                          .transform(animation.value);
+                return FractionalTranslation(
+                  translation: Offset(0, 1 - progress),
+                  child: child,
+                );
+              },
               child: RepaintBoundary(child: child),
             )
           : child,
     );
+    return route;
   }
 }
 
-class _NowPlayingRoute extends PageRouteBuilder<void> {
+class _NowPlayingRoute extends PageRouteBuilder<void>
+    implements PlayerDismissRoute {
   _NowPlayingRoute({
     required super.pageBuilder,
     required super.transitionsBuilder,
@@ -405,6 +418,27 @@ class _NowPlayingRoute extends PageRouteBuilder<void> {
     required super.allowSnapshotting,
     super.settings,
   });
+
+  @override
+  late final PlayerDismissMotion playerDismissMotion;
+
+  @override
+  void install() {
+    super.install();
+    playerDismissMotion = PlayerDismissMotion(controller!);
+  }
+
+  @override
+  bool didPop(void result) {
+    playerDismissMotion.markPopped();
+    return super.didPop(result);
+  }
+
+  @override
+  void dispose() {
+    playerDismissMotion.dispose();
+    super.dispose();
+  }
 
   @override
   DelegatedTransitionBuilder get delegatedTransition =>

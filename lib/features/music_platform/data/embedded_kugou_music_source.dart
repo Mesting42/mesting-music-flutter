@@ -4,6 +4,7 @@ import 'music_platform_api.dart';
 import 'platform_playback_resolver.dart';
 import 'platform_song_identity.dart';
 import 'platform_artwork.dart';
+import 'platform_track_duration.dart';
 import '../domain/platform_audio_quality.dart';
 
 /// Translates md3Music data into existing Mesting tracks and uses its one audio
@@ -145,12 +146,6 @@ class EmbeddedKugouMusicSource extends KugouMusicSource {
               .where((name) => name.isNotEmpty)
               .join(' / ')
         : '';
-    var duration =
-        int.tryParse(
-          text(['duration', 'Duration', 'timelength', 'TimeLength']),
-        ) ??
-        0;
-    if (duration > 10000) duration ~/= 1000;
     return Track(
       id: 'kugou_$hash',
       title: text([
@@ -172,7 +167,7 @@ class EmbeddedKugouMusicSource extends KugouMusicSource {
               'author',
             ]),
       album: text(['album_name', 'AlbumName', 'albumname']),
-      duration: Duration(seconds: duration),
+      duration: PlatformTrackDuration.fromFields(row) ?? Duration.zero,
       audioAsset: '',
       coverAsset: PlatformArtwork.fromPayload(row),
       lyricsAsset: '',

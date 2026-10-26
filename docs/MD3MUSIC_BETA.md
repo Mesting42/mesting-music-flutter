@@ -1,6 +1,126 @@
-# md3Music integration Beta.11 handoff
+# md3Music integration Beta.12 handoff
 
-## Beta.11 current implementation and verified release boundary
+## Beta.12 current implementation and verified release boundary
+
+User-confirmed scope builds on the preserved Beta.11 working tree. Release:
+**Mesting Music / com.mesting.music.beta / 1.0.37-beta.12 / versionCode 12**.
+The ordinary Flutter package version remains the formal-channel version; the
+Beta build script supplies the isolated release identity. No branch switch,
+reset, commit, push, phone installation or public deployment occurred.
+
+### Startup media and settings
+
+- 装扮 → 启动页 has 音乐伙伴 (first/default film), 唱片派对 (second film), and
+  经典启动页. StartupStyle persists independently of theme, launcher aliases,
+  custom background media and player style. Settings show static posters;
+  explicit preview creates one controller and is guarded against duplicate taps.
+- Both supplied originals are unchanged. Compatible bundled copies are H.264
+  Main, 608×1280, 30fps, approximately 3.04s, with their original AAC bitstreams.
+  Extracted ADTS hashes match original/copy for both audio tracks. PSNR averages
+  are 49.825196 and 51.435274 dB. Original/copy identities and audio evidence are
+  recorded in the external media-verification.json.
+- The bootstrap runs initialization and video preparation concurrently, holds
+  the film's final frame if dependencies are still loading, and mounts business
+  account/music restoration only after completion. System placeholder and the
+  classic choice use the coral/white launch identity in Beta light/dark modes.
+- A film runs once per bootstrap cold start; background resume continues it
+  without seeking/recreating, and completed playback never restarts on resume.
+  Decoder initialization has a three-second deadline and a foreground playback
+  watchdog. Failure uses the classic lockup and releases startup, with one-shot
+  completion and owned controller disposal. Original audio uses existing system
+  media volume. Real device decoding/audio-focus behavior remains unverified.
+
+### Return, dismissal and full optical quality
+
+- BetaSearchBackHistory adds actual LocalHistoryEntry targets to embedded search,
+  making the Navigator advertise a back target at a root route. Five categories
+  retain results → hot/history landing → actual origin; the existing bottom-tab
+  search-end and temporary-detail suspension boundaries remain. Dispatcher and
+  PopScope handlers work with those entries, rather than being the only target.
+- PlayerDismissMotion owns the route controller used by the grey handle. A
+  completed drag reverses only the remaining route distance; cancellation
+  rebounds from its current progress. Repeated navigation is guarded. There is
+  no independent full-height animation followed by a second complete route pop.
+  Existing tap/system/lyrics exit paths and other player animations are retained.
+- Global adaptiveQuality is disabled: the library's adaptive ceiling can cap
+  explicit premium settings and reparent render paths during load. Bottom
+  controls retain premium/full optics in both states. Light pill/bar tint is
+  #80F2F2F7, lightIntensity .28, Fresnel .2, thickness 30 and blur 2; scroll-bottom
+  whitening is disabled. Dark existing AA/CC body tint and light .2/.18 remain.
+- The MIT liquid_glass_widgets 1.15.0 source is reproducibly vendored under
+  third_party/liquid_glass_widgets/package. Only two constant dark perimeter
+  terms in lightweight_glass.frag are suppressed. Directional specular light,
+  refraction, chromatic dispersion, meniscus and interaction remain; the Impeller
+  premium path is retained. LICENSE, NOTICE and MESTING_PATCHES record provenance.
+  The compiled APK shader differs from Beta.11, proving the patch was packaged.
+- betaBlueActionGlass uses the library's clear body tint to prevent background
+  luminance normalization from bleaching its normal blue while retaining optical
+  edge/specular behavior. Comment send and new/edit playlist confirmation share
+  this recipe; playlist close is neutral glass. Saving validation, disabled state,
+  spinner, failure draft retention and business writes remain page-owned.
+
+### Honest queue duration
+
+PlatformTrackDuration centralizes aliases, fractional values, nonpositive
+fallback, known millisecond timelength (including short clips), and search seconds.
+Visible queue rows prefer a positive duration and show **--:--** while unknown.
+A preview decoder's excerpt length is not treated as the full recording length.
+Decoder measurements for full sources also update known track metadata.
+
+PlatformTrackDurationRepository performs read-only /audio metadata hydration for
+visible unknown rows, coalesces per recording, limits active reads to two, bounds
+cache/failure state, validates hash/recording and account identity, and discards
+late account responses. It never switches songs or resolves every playback URL.
+Four genuine embedded-host reads (search plus three metadata queries) returned
+status=1 and matching hashes: search seconds 261/257/279 correspond to metadata
+milliseconds 261276/257252/279196. This proves wire shape at probe time, not
+authenticated playback, SMS or CDN behavior.
+
+### Beta.12 evidence
+
+| Check | Final result and boundary |
+| --- | --- |
+| Regular tests | **651 passed / 63 conditional skips / 0 failures**, normal-tests-final.jsonl |
+| Beta tests | **175 passed / 0 skipped / 0 failures**, beta-tests.jsonl |
+| Final software UI batch | **47 passed / 0 failures**, ui-final.log; groups overlap and are not added |
+| Static analysis | **No issues found**, analyze-approved.log |
+| Blue scrolling samples | Light RGB [13,107,218] at all three positions; dark [1,95,206] → [13,107,218] → [1,95,206], six actual capture frames |
+| Glass/layout matrix | Plain/content, light/dark, expanded/morph/compact, phone/900dp wide; 320dp/1.6 startup choice and new/edit actions |
+| Production routing | Five-category system/dispatcher return and grey-handle completion/cancel regressions pass |
+| Playing/scroll rebuild benchmark | 120 frames: bar 120 rebuilds; shell/play-pill/home 0, equal to Beta.11 host baseline; **not a native FPS improvement measurement** |
+| Release | **assembleBetaRelease succeeded**; same Beta certificate; ZIP16KiB; every ARM64 LOAD ≥16KiB; four C FFI exports |
+| Native provenance | Both ARM libraries equal Beta.11; original → merged → stripped → APK chain verified |
+| APK | **90,136,848 bytes**, SHA256 **AC098F96C92839CD3B8830D1662826C8427EA09852BA34F5DE0B2AF8084CD74E** |
+| Source ZIP | Final bytes/hash and per-file verification remain in the external Beta.12 delivery manifest after documentation freeze |
+
+The initial regular run found one old static test assuming the first-frame
+callback preceded return-dependencies. The test now checks every callback for
+the original no-launcher-mutation contract, independent of source position; the
+entire final regular suite then passed. Startup texture disposal is verified
+after Flutter's end-of-test frame cleanup, before replacing the fake platform.
+
+Software captures contain synthetic fixture tracks/text and Windows QA CJK fonts.
+No Android device is connected. Native GPU glass/refraction/FPS, actual Android
+edge/predictive Back, hardware/system volume, audio focus, real decoder lifecycle,
+TalkBack and live account/CDN operations require their own device evidence.
+The review/manifest packet retains this boundary; software enum values, pixel
+samples and interface screenshots do not certify those native outcomes.
+
+### Beta.12 handoff entry points
+
+| Entry | Responsibility |
+| --- | --- |
+| lib/main.dart; lib/app/startup_video_surface.dart | Initialization/video gate, bounded fallback, lifecycle and original audio |
+| lib/features/themes/startup_style.dart; startup_style_picker.dart; theme_gallery_page.dart | Independent saved choice, explicit preview and setting entry |
+| android/app/src/beta/res | Beta-only coral system placeholder, retaining formal resources |
+| lib/features/experience/presentation/beta_search_back_history.dart; beta_music_shell.dart | Actual internal back history and existing search/session ownership |
+| lib/features/experience/presentation/player_dismiss_motion.dart; player_pull_to_dismiss.dart; lib/app/router/app_router.dart | One route-owned interactive exit/cancel and navigation guard |
+| lib/features/experience/presentation/beta_bottom_bar.dart; lib/app/mesting_music_app.dart; third_party/liquid_glass_widgets | Full-quality optics and reproducible dark perimeter correction |
+| lib/shared/widgets/beta_glass_action.dart; platform_comment_composer.dart; playlist_editor_dialog.dart | Shared stable blue recipe and neutral/blue editor actions |
+| lib/features/music_platform/data/platform_track_duration.dart; platform_track_duration_repository.dart; lib/features/queue/presentation/queue_track_duration.dart | Duration wire units, identity-safe hydration and independent row updates |
+
+## Beta.11 historical implementation and verified release boundary
+
 
 Verified source/release identity: **Mesting Music / com.mesting.music.beta / 1.0.37-beta.11 / 11**, with successful **assembleBetaRelease**. This is a source-grounded record of the user-confirmed extension to Beta.10 and the actual final regression/release evidence. The historical filename `work/beta11/Beta11-统一账号与导航性能修改方案-待确认.md` reflects its draft state before confirmation; it is not an outstanding approval gate. The valuable dirty Beta.5–10 working tree, pinned md3Music provenance, account ownership and single MestingAudioHandler remain. No reset/clean, branch/worktree change, commit/push, phone installation or public release is part of this handoff.
 

@@ -121,7 +121,10 @@ class MestingMusicApp extends ConsumerWidget {
     return DistributionChannel.isBeta
         ? LiquidGlassWidgets.wrap(
             brightnessResolver: Theme.maybeBrightnessOf,
-            adaptiveQuality: true,
+            // The app's brief requires full optical quality even while music
+            // and scrolling are active. The adaptive ceiling overrides an
+            // explicit premium setting, so keep it disabled; optimize rebuilds.
+            adaptiveQuality: false,
             child: application,
           )
         : application;
