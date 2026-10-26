@@ -1,3 +1,7 @@
+import 'package:mesting_music/features/player/presentation/shinchan_progress_walker.dart';
+import 'package:mesting_music/shared/widgets/beta_text_editing.dart';
+import 'package:mesting_music/features/experience/presentation/player_chrome_reveal.dart';
+import 'package:mesting_music/features/auth/beta_entry_flow.dart';
 import 'package:mesting_music/features/music_platform/data/platform_category_search.dart';
 import 'package:mesting_music/features/settings/presentation/settings_page.dart';
 import 'package:mesting_music/features/music_platform/platform_category_search_providers.dart';
@@ -247,6 +251,7 @@ void main() {
     bool qualityUnknown = false,
     bool playing = false,
     Stream<PlaybackState>? playbackEvents,
+    Duration position = const Duration(seconds: 37),
   }) async {
     metadataReady = false;
     paths = [];
@@ -395,9 +400,7 @@ void main() {
         platformDailyProvider.overrideWith((ref) async => [_track]),
         platformNewSongsProvider.overrideWith((ref) async => [_track]),
         platformDiscoveryProvider.overrideWith((ref) async => [_track]),
-        positionProvider.overrideWith(
-          (ref) => Stream.value(const Duration(seconds: 37)),
-        ),
+        positionProvider.overrideWith((ref) => Stream.value(position)),
         durationProvider.overrideWith((ref) => Stream.value(_track.duration)),
         lyricsProvider.overrideWith(
           (ref, asset) async => const LyricsDocument(
@@ -2188,6 +2191,269 @@ void main() {
       await tester.pump();
       expect(handler.toggles, 2);
       await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+  for (final dark in [false, true]) {
+    testWidgets(
+      'beta13 capsule long press opens anchored premium glass and reverses on outside tap ($dark)',
+      (tester) async {
+        viewport(tester);
+        await prepare();
+        await pump(tester, const MusicLandingPage(), shell: true, dark: dark);
+        final capsule = find.byKey(const ValueKey('beta6-official-play-pill'));
+        final rect = tester.getRect(capsule);
+        await tester.longPress(capsule);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 340));
+        final surface = find.byKey(const ValueKey('beta13-glass-menu-surface'));
+        expect(surface, findsOneWidget);
+        expect(tester.getRect(surface).bottom, lessThanOrEqualTo(rect.top + 1));
+        final glass = tester.widget<GlassContainer>(surface);
+        expect(glass.quality, GlassQuality.premium);
+        expect(find.text('查看歌词'), findsOneWidget);
+        expect(find.text('创建电台'), findsNothing);
+        expect(find.text('分享歌词'), findsNothing);
+        expect(find.text('不喜欢这首'), findsNothing);
+        await captureScreenshot(
+          tester,
+          'beta13-capsule-menu-${dark ? 'dark' : 'light'}',
+        );
+        await tester.tapAt(const Offset(12, 100));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(surface, findsOneWidget);
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(surface, findsNothing);
+        expect(tester.getRect(capsule), rect);
+        expect(tester.takeException(), isNull);
+        await disposeFixture(tester);
+      },
+      skip: !DistributionChannel.isBeta,
+    );
+
+    for (final numeric in [false, true]) {
+      testWidgets(
+        'beta13 editing menu preserves selection and field formatters ($dark/$numeric)',
+        (tester) async {
+          viewport(tester, const Size(320, 700));
+          await prepare();
+          final controller = TextEditingController(
+            text: numeric ? '13800138000' : '喜欢的音乐',
+          );
+          await pump(
+            tester,
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: TextField(
+                  controller: controller,
+                  contextMenuBuilder: buildBetaEditingMenu,
+                  selectionControls: betaTextSelectionControls,
+                  keyboardType: numeric
+                      ? TextInputType.phone
+                      : TextInputType.multiline,
+                  maxLines: numeric ? 1 : 4,
+                  inputFormatters: numeric
+                      ? [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(11),
+                        ]
+                      : null,
+                ),
+              ),
+            ),
+            dark: dark,
+            scale: 1.3,
+          );
+          final field = find.byType(TextField);
+          await tester.tap(field);
+          await tester.pump();
+          controller.selection = const TextSelection.collapsed(offset: 2);
+          final editable = tester.state<EditableTextState>(
+            find.byType(EditableText),
+          );
+          editable.showToolbar();
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 300));
+          expect(
+            find.byKey(const ValueKey('beta13-glass-menu-surface')),
+            findsOneWidget,
+          );
+          await tester.tap(find.bySemanticsLabel('更多编辑操作'));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 300));
+          if (numeric) {
+            expect(find.text('#'), findsNothing);
+            expect(find.text('换行'), findsNothing);
+          } else {
+            expect(find.text('#'), findsOneWidget);
+            expect(find.text('换行'), findsOneWidget);
+          }
+          expect(find.text('朗读'), findsNothing);
+          await captureScreenshot(
+            tester,
+            'beta13-edit-menu-${dark ? 'dark' : 'light'}-${numeric ? 'numeric' : 'multiline'}',
+          );
+          if (!numeric) {
+            await tester.tap(find.text('#'));
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 250));
+            expect(controller.text, '喜欢#的音乐');
+            expect(controller.selection.baseOffset, 3);
+          } else {
+            editable.hideToolbar();
+            editable.userUpdateTextEditingValue(
+              const TextEditingValue(
+                text: '13#abc800138000',
+                selection: TextSelection.collapsed(offset: 14),
+              ),
+              SelectionChangedCause.toolbar,
+            );
+            expect(controller.text, '13800138000');
+          }
+          expect(tester.takeException(), isNull);
+          await disposeFixture(tester);
+          controller.dispose();
+        },
+        skip: !DistributionChannel.isBeta,
+      );
+    }
+  }
+  testWidgets(
+    'beta13 search keeps real results until return motion finishes',
+    (tester) async {
+      viewport(tester);
+      await prepare(guest: true);
+      final key = GlobalKey<MusicSearchResultsBodyState>();
+      await pump(tester, MusicSearchResultsBody(key: key, onSearch: (_) {}));
+      await container
+          .read(musicSearchControllerProvider.notifier)
+          .submit('薛之谦');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      key.currentState!.returnToLanding(
+        () =>
+            container.read(musicSearchControllerProvider.notifier).setQuery(''),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(container.read(musicSearchControllerProvider).query, '薛之谦');
+      expect(find.byType(BetaCategorySearchResults), findsOneWidget);
+      expect(find.byType(PlatformSearchLanding), findsOneWidget);
+      await captureScreenshot(
+        tester,
+        'beta13-search-return-middle',
+        settle: Duration.zero,
+      );
+      await tester.pump(const Duration(milliseconds: 240));
+      expect(container.read(musicSearchControllerProvider).query, isEmpty);
+      expect(find.byType(BetaCategorySearchResults), findsNothing);
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta13 player entrance never reveals bottom chrome; reverse and drag do',
+    (tester) async {
+      viewport(tester);
+      await prepare();
+      production.appRouter.go('/music/recommend');
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            routerConfig: production.appRouter,
+            theme: buildMestingTheme(musicThemePresetById('classic')),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      final pushed = production.appRouter.push('/player');
+      await tester.pump();
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(container.read(playerChromeRevealProvider).value, 0);
+      }
+      await tester.pump(const Duration(milliseconds: 500));
+      production.appRouter.pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 130));
+      expect(container.read(playerChromeRevealProvider).value, greaterThan(0));
+      await tester.pump(const Duration(milliseconds: 500));
+      await pushed;
+      expect(tester.takeException(), isNull);
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta13 cold greeting waits for entry, expires once and does not replay on remount',
+    (tester) async {
+      viewport(tester);
+      await prepare();
+      await pump(tester, const MusicLandingPage());
+      expect(find.byKey(const ValueKey('beta13-cold-greeting')), findsNothing);
+      await container.read(betaEntryFlowProvider.notifier).finish();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(
+        find.byKey(const ValueKey('beta13-cold-greeting')),
+        findsOneWidget,
+      );
+      await captureScreenshot(tester, 'beta13-home-greeting');
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byKey(const ValueKey('beta13-cold-greeting')), findsNothing);
+      await pump(tester, const SizedBox());
+      await pump(tester, const MusicLandingPage());
+      expect(find.byKey(const ValueKey('beta13-cold-greeting')), findsNothing);
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+  testWidgets(
+    'beta13 reviewed companions stay centered and below song text at start middle end',
+    (tester) async {
+      viewport(tester);
+      for (final character in [
+        ProgressDecoration.shinchan,
+        ProgressDecoration.helloKitty,
+        ProgressDecoration.kuromi,
+      ]) {
+        for (final seconds in [0, 129, 259]) {
+          await prepare(position: Duration(seconds: seconds));
+          await container
+              .read(themeVisualSettingsProvider.notifier)
+              .setProgressCharacter(character);
+          await container
+              .read(themeVisualSettingsProvider.notifier)
+              .setProgressStyle(character);
+          await pump(tester, const BetaNowPlayingPage(), dark: true);
+          final marker = character == ProgressDecoration.shinchan
+              ? find.byType(ShinchanProgressWalker)
+              : find.byKey(ValueKey('ip-progress-companion-${character.name}'));
+          final slider = find.byKey(const ValueKey('playback-seek-slider'));
+          final rect = tester.getRect(slider);
+          expect(
+            tester.getCenter(marker).dx,
+            closeTo(rect.left + rect.width * seconds / 259, .1),
+          );
+          expect(
+            tester.getRect(marker).top,
+            greaterThan(tester.getRect(find.text(_track.artist).last).bottom),
+          );
+          await captureScreenshot(
+            tester,
+            'beta13-companion-${character.name}-$seconds',
+          );
+          await disposeFixture(tester);
+        }
+      }
     },
     skip: !DistributionChannel.isBeta,
   );

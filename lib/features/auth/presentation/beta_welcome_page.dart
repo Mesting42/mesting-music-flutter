@@ -5,12 +5,13 @@
 // FORM: User-specified native reference composition; no random seed or AI comp.
 // FINISH: unreviewed and undocumented is unfinished; this build ends with the
 // finish review, the verdict, and DESIGN.md.
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/persistence/app_preferences.dart';
 import '../../../shared/widgets/beta_glass_controls.dart';
 import '../../../shared/widgets/music_notice.dart';
+import '../../../shared/widgets/beta_page_motion.dart';
+import '../../../shared/widgets/beta_edge_back.dart';
 import '../../legal/presentation/disclaimer_dialog.dart';
 import '../../legal/presentation/legal_documents_page.dart';
 import '../../legal/domain/legal_documents.dart';
@@ -25,23 +26,11 @@ import 'beta_consent_row.dart';
 Route<T> betaEntryRoute<T>(Widget page) => PageRouteBuilder<T>(
   transitionDuration: const Duration(milliseconds: 340),
   reverseTransitionDuration: const Duration(milliseconds: 260),
-  pageBuilder: (_, _, _) => page,
-  transitionsBuilder: (context, animation, _, child) => SlideTransition(
-    position:
-        Tween(
-          begin: MediaQuery.disableAnimationsOf(context)
-              ? Offset.zero
-              : const Offset(1, 0),
-          end: Offset.zero,
-        ).animate(
-          CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutCubic,
-            reverseCurve: Curves.easeInCubic,
-          ),
-        ),
-    child: child,
-  ),
+  pageBuilder: (_, _, _) => BetaEdgeBack(child: page),
+  // Move the opaque page surface together with its body in both directions.
+  // A transparent Scaffold would expose the previous login during the push.
+  transitionsBuilder: (context, animation, secondary, child) =>
+      BetaPageMotion(animation: animation, child: child),
 );
 
 class BetaWelcomePage extends ConsumerStatefulWidget {
@@ -212,10 +201,7 @@ class _BetaWelcomePageState extends ConsumerState<BetaWelcomePage> {
                             child: const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
-                                  CupertinoIcons.device_phone_portrait,
-                                  size: 19,
-                                ),
+                                Icon(Icons.smartphone_rounded, size: 23),
                                 SizedBox(width: 9),
                                 Text('手机号登录'),
                               ],

@@ -126,6 +126,7 @@ void main() {
         child: RepaintBoundary(
           key: _captureKey,
           child: MaterialApp(
+            debugShowCheckedModeBanner: false,
             theme: theme,
             builder: (context, child) => MediaQuery(
               data: MediaQuery.of(
@@ -162,7 +163,7 @@ void main() {
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
       image.dispose();
       final file = File(
-        '${const String.fromEnvironment('BETA10_CAPTURE_DIR')}/$name.png',
+        '${const String.fromEnvironment('BETA10_CAPTURE_DIR', defaultValue: String.fromEnvironment('BETA_SCREENSHOT_DIR'))}/$name.png',
       );
       await file.parent.create(recursive: true);
       await file.writeAsBytes(bytes!.buffer.asUint8List());
@@ -234,6 +235,10 @@ void main() {
         await tester.pump(const Duration(milliseconds: 420));
         expect(find.text('五种播放器风格'), findsOneWidget);
         await tester.tap(find.text('跳过'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 420));
+        expect(finished, 0);
+        await tester.tap(find.byKey(const ValueKey('guide-next')));
         expect(finished, 1);
         await tester.pumpWidget(const SizedBox());
       },
@@ -438,13 +443,13 @@ void main() {
       Scaffold(body: BetaLoginSuccess(onComplete: () => completed++)),
     );
     await capture(tester, 'login-success');
-    await tester.pump(const Duration(milliseconds: 1000));
+    await tester.pump(const Duration(milliseconds: 1400));
     await tester.pump(const Duration(milliseconds: 300));
     expect(completed, 1);
     await tester.pumpWidget(const SizedBox());
   });
   testWidgets(
-    'each fresh login shows success and guide; skip returns to app; logout resets',
+    'each fresh login shows success and guide; skip reaches last guide page; logout resets',
     (tester) async {
       var reset = 0;
       final c = await prepare(
@@ -468,6 +473,9 @@ void main() {
       await tester.tap(find.text('跳过'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
+      expect(c.read(betaEntryFlowProvider), BetaEntryStage.guide);
+      await tester.tap(find.byKey(const ValueKey('guide-next')));
+      await tester.pump();
       expect(c.read(betaEntryFlowProvider), BetaEntryStage.app);
       await c.read(betaEntryFlowProvider.notifier).welcome();
       await tester.pump();
@@ -478,6 +486,116 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.byType(BetaLoginSuccess), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets(
+    'beta13 entry dispatcher returns phone QR and both legal pages through their owning Navigator',
+    (tester) async {
+      final dispatcher = RootBackButtonDispatcher();
+      Future<bool> fallback() async => false;
+      dispatcher.addCallback(fallback);
+      addTearDown(() => dispatcher.removeCallback(fallback));
+      await prepare(
+        tester,
+        BetaEntryCoordinator(
+          backDispatcher: dispatcher,
+          child: const Scaffold(body: Text('应用主页')),
+        ),
+      );
+      await tester.tap(find.bySemanticsLabel('我已阅读并同意用户协议和隐私政策'));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('welcome-phone-login')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byKey(const ValueKey('beta11-phone-field')), findsOneWidget);
+      expect(find.text('+86'), findsOneWidget);
+      expect(await dispatcher.didPopRoute(), true);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(PlatformAccountPage), findsNothing);
+      expect(find.byType(BetaWelcomePage), findsOneWidget);
+      for (final title in ['用户协议', '隐私政策']) {
+        await tester.tap(find.text(title).hitTestable());
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        if (title == '用户协议') {
+          await tester.tap(find.byKey(const ValueKey('legal-page-back')));
+        } else {
+          expect(await dispatcher.didPopRoute(), true);
+        }
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.byType(BetaWelcomePage), findsOneWidget);
+      }
+      await tester.tap(find.text('微信扫码登录'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(PlatformAccountPage), findsOneWidget);
+      expect(await dispatcher.didPopRoute(), true);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(PlatformAccountPage), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
+    'beta13 success covers the already-mounted guide, plays one sound and keeps its page state',
+    (tester) async {
+      var sounds = 0;
+      const channel = MethodChannel('com.mesting.music/ui_sound');
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            if (call.method == 'loginSuccess') sounds++;
+            return null;
+          });
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, null),
+      );
+      final c = await prepare(
+        tester,
+        const BetaEntryCoordinator(child: Scaffold(body: Text('应用主页'))),
+        values: {BetaEntryFlow.completedKey: true},
+      );
+      final semantics = tester.ensureSemantics();
+      expect(sounds, 0);
+      c.read(betaEntryFlowProvider.notifier).authenticated();
+      await tester.pump();
+      expect(find.byType(BetaOnboardingPage), findsOneWidget);
+      final guideState = tester.state(find.byType(BetaOnboardingPage));
+      expect(find.bySemanticsLabel('下一步'), findsNothing);
+      expect(find.bySemanticsLabel('跳过'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('beta13-success-cover')),
+        findsOneWidget,
+      );
+      await tester.pump(const Duration(milliseconds: 350));
+      final card = tester.getRect(
+        find.byKey(const ValueKey('beta10-login-success')),
+      );
+      expect(card.width, 214);
+      expect(card.center.dy, lessThan(844 / 2));
+      await capture(tester, 'beta13-success-over-guide');
+      c.read(betaEntryFlowProvider.notifier).authenticated();
+      await tester.pump(const Duration(milliseconds: 1500));
+      await tester.pump(const Duration(milliseconds: 110));
+      await capture(tester, 'beta13-success-fading-to-guide');
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(sounds, 1);
+      expect(find.byType(BetaLoginSuccess), findsNothing);
+      expect(tester.state(find.byType(BetaOnboardingPage)), same(guideState));
+      expect(find.bySemanticsLabel('下一步'), findsOneWidget);
+      await tester.tap(find.text('跳过'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(c.read(betaEntryFlowProvider), BetaEntryStage.guide);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('开始使用'), findsOneWidget);
+      await capture(tester, 'beta13-guide-skip-final');
+      semantics.dispose();
       await tester.pumpWidget(const SizedBox());
     },
   );

@@ -278,7 +278,7 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
         showMusicNotice(
           context,
           icon: Icons.check_rounded,
-          title: '已提交到酷狗，等待平台审核',
+          title: '已发送',
           message: '',
         );
       }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -152,7 +153,9 @@ class _StartupVideoSurfaceState extends State<StartupVideoSurface>
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: mestingBrandCoral,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarContrastEnforced: false,
+        systemStatusBarContrastEnforced: false,
         systemNavigationBarIconBrightness: Brightness.light,
       ),
       child: ColoredBox(
@@ -160,13 +163,34 @@ class _StartupVideoSurfaceState extends State<StartupVideoSurface>
         color: mestingBrandCoral,
         // Contain preserves both characters and the wordmark on every ratio;
         // the matching coral canvas absorbs any extra width/height.
-        child: Center(
-          child: _ready
-              ? AspectRatio(
-                  aspectRatio: _controller.value.aspectRatio,
-                  child: VideoPlayer(_controller),
-                )
-              : const SizedBox.shrink(),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (_ready)
+              Positioned.fill(
+                child: ClipRect(
+                  child: ImageFiltered(
+                    imageFilter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                    child: FittedBox(
+                      fit: BoxFit.fill,
+                      child: SizedBox(
+                        width: _controller.value.size.width,
+                        height: _controller.value.size.height,
+                        child: VideoPlayer(_controller),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            Center(
+              child: _ready
+                  ? AspectRatio(
+                      aspectRatio: _controller.value.aspectRatio,
+                      child: VideoPlayer(_controller),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ],
         ),
       ),
     );

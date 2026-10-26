@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import '../../features/experience/presentation/beta_bottom_bar.dart';
 import '../../features/themes/beta_appearance.dart';
+import 'beta_glass_action.dart';
 
 /// Floating controls share the navigation's optical material. Each surface
 /// owns its layer: nesting glass would disable the child's refraction.
@@ -15,13 +16,14 @@ class BetaGlassButton extends StatelessWidget {
     this.height = 52,
     this.width,
     this.accent = false,
+    this.blue = false,
     this.fontSize = 15,
     this.horizontalPadding = 18,
     super.key,
   });
   final Widget child;
   final VoidCallback? onPressed;
-  final bool loading, accent;
+  final bool loading, accent, blue;
   final String? label;
   final double height;
   final double fontSize;
@@ -42,19 +44,21 @@ class BetaGlassButton extends StatelessWidget {
         useOwnLayer: true,
         quality: GlassQuality.premium,
         stretch: .12,
-        settings: betaMusicPillGlass(context),
+        settings: blue ? betaBlueActionGlass : betaMusicPillGlass(context),
         shape: LiquidRoundedRectangle(borderRadius: height / 2),
         child: Padding(
           padding: width == height
               ? EdgeInsets.zero
               : EdgeInsets.symmetric(horizontal: horizontalPadding),
           child: loading
-              ? const BetaActivityIndicator()
+              ? BetaActivityIndicator(color: blue ? Colors.white : null)
               : DefaultTextStyle.merge(
                   style: TextStyle(
                     fontSize: fontSize,
                     fontWeight: FontWeight.w700,
-                    color: accent
+                    color: blue
+                        ? Colors.white
+                        : accent
                         ? BetaAppearance.accent(Theme.of(context).brightness)
                         : Theme.of(context).colorScheme.onSurface,
                   ),

@@ -40,7 +40,15 @@ class _PlayerPullToDismissState extends State<PlayerPullToDismiss>
   }
 
   void _reportRouteProgress() {
-    if (mounted) widget.onProgress?.call(_routeMotion!.progress);
+    if (!mounted) return;
+    final motion = _routeMotion!;
+    // 1-controller.value is also high at the start of an entrance. Reporting
+    // it unconditionally painted the whole bottom bar over the rising player.
+    // Reveal belongs only to a dismissal or a finger-owned cancel/complete.
+    final entering =
+        !motion.dragDriven &&
+        motion.controller.status == AnimationStatus.forward;
+    widget.onProgress?.call(entering ? 0 : motion.progress);
   }
 
   @override

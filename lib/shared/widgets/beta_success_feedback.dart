@@ -11,7 +11,7 @@ class BetaSuccessMark extends StatelessWidget {
     tween: Tween(begin: 0, end: 1),
     duration: MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
-        : const Duration(milliseconds: 560),
+        : const Duration(milliseconds: 900),
     builder: (_, value, _) =>
         CustomPaint(size: Size.square(size), painter: _MarkPainter(value)),
   );
@@ -70,11 +70,14 @@ class _BetaLoginSuccessState extends State<BetaLoginSuccess>
     reverseDuration: const Duration(milliseconds: 220),
   );
   Timer? _timer;
+  bool _leaving = false;
   @override
   void initState() {
     super.initState();
     _motion.forward();
-    _timer = Timer(const Duration(milliseconds: 1400), () async {
+    _timer = Timer(const Duration(milliseconds: 1800), () async {
+      if (!mounted) return;
+      setState(() => _leaving = true);
       await _motion.reverse();
       if (mounted) widget.onComplete();
     });
@@ -91,45 +94,63 @@ class _BetaLoginSuccessState extends State<BetaLoginSuccess>
   Widget build(BuildContext context) => Semantics(
     liveRegion: true,
     label: '登录成功',
-    child: Center(
-      child: FadeTransition(
-        opacity: _motion,
-        child: ScaleTransition(
-          scale: Tween(begin: .9, end: 1.0).animate(
-            CurvedAnimation(
-              parent: _motion,
-              curve: Curves.easeOutCubic,
-              reverseCurve: Curves.easeInCubic,
-            ),
+    child: Stack(
+      fit: StackFit.expand,
+      children: [
+        // Opaque from the first frame. During dismissal this veil fades to the
+        // already-mounted guide, together with the smaller success card.
+        FadeTransition(
+          opacity: _leaving ? _motion : kAlwaysCompleteAnimation,
+          child: ColoredBox(
+            key: const ValueKey('beta13-success-cover'),
+            color: Theme.of(context).colorScheme.surface,
           ),
-          child: Container(
-            key: const ValueKey('beta10-login-success'),
-            width: 238,
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
-            decoration: BoxDecoration(
-              color: const Color(0xF20D1012),
-              borderRadius: BorderRadius.circular(34),
-              border: Border.all(color: Colors.white12),
-            ),
-            child: const Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                BetaSuccessMark(size: 98),
-                SizedBox(height: 23),
-                Text(
-                  '登录成功',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    decoration: TextDecoration.none,
-                  ),
+        ),
+        Align(
+          alignment: const Alignment(0, -.28),
+          child: FadeTransition(
+            opacity: _motion,
+            child: ScaleTransition(
+              scale: Tween(begin: .9, end: 1.0).animate(
+                CurvedAnimation(
+                  parent: _motion,
+                  curve: Curves.easeOutCubic,
+                  reverseCurve: Curves.easeInCubic,
                 ),
-              ],
+              ),
+              child: Container(
+                key: const ValueKey('beta10-login-success'),
+                width: 214,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 26,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xF20D1012),
+                  borderRadius: BorderRadius.circular(34),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const BetaSuccessMark(size: 82),
+                    const SizedBox(height: 23),
+                    Text(
+                      '登录成功',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
-      ),
+      ],
     ),
   );
 }

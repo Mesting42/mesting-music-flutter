@@ -6,6 +6,7 @@ import '../../app/branded_launch_screen.dart';
 import '../../app/startup_video_surface.dart';
 import '../../shared/widgets/beta_glass_controls.dart';
 import '../../shared/widgets/music_notice.dart';
+import '../../shared/widgets/beta_press_surface.dart';
 import 'startup_style.dart';
 
 /// Static posters keep scrolling cheap and silent. Each explicit preview owns
@@ -115,9 +116,8 @@ class _StartupStylePickerState extends ConsumerState<StartupStylePicker> {
                   child: Semantics(
                     selected: selected == style,
                     button: true,
-                    child: InkWell(
+                    child: BetaPressSurface(
                       key: ValueKey('startup-style-${style.id}'),
-                      borderRadius: BorderRadius.circular(12),
                       onTap: _saving ? null : () => _select(style),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 6),
@@ -153,14 +153,26 @@ class _StartupStylePickerState extends ConsumerState<StartupStylePicker> {
                               ),
                             ),
                             const SizedBox(width: 6),
-                            Icon(
-                              selected == style
-                                  ? CupertinoIcons.checkmark_circle_fill
-                                  : CupertinoIcons.circle,
-                              color: selected == style
-                                  ? color.primary
-                                  : color.onSurfaceVariant,
-                              size: 24,
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 240),
+                              transitionBuilder: (child, animation) =>
+                                  ScaleTransition(
+                                    scale: animation,
+                                    child: FadeTransition(
+                                      opacity: animation,
+                                      child: child,
+                                    ),
+                                  ),
+                              child: Icon(
+                                key: ValueKey(selected == style),
+                                selected == style
+                                    ? CupertinoIcons.checkmark_circle_fill
+                                    : CupertinoIcons.circle,
+                                color: selected == style
+                                    ? color.primary
+                                    : color.onSurfaceVariant,
+                                size: 24,
+                              ),
                             ),
                           ],
                         ),

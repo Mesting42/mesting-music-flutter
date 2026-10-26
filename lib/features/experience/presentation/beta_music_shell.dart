@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import '../../../shared/widgets/beta_edge_back.dart';
+import '../../../shared/widgets/beta_text_editing.dart';
 
 import '../../../core/audio/playback_providers.dart';
 import '../../../shared/layout/adaptive_layout.dart';
@@ -41,6 +42,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
     duration: const Duration(milliseconds: 300),
     reverseDuration: const Duration(milliseconds: 240),
   );
+  final _resultsKey = GlobalKey<MusicSearchResultsBodyState>();
   final _searchText = TextEditingController();
   final _focus = FocusNode();
   final _positions = <String, ScrollPosition>{};
@@ -67,10 +69,16 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
   void _backSearch() {
     final search = ref.read(musicSearchControllerProvider);
     if (search.query.isNotEmpty) {
-      _searchText.clear();
-      _focus.unfocus();
-      ref.read(musicSearchControllerProvider.notifier).setQuery('');
-      _scheduleBackHistory();
+      void clear() {
+        if (!mounted) return;
+        _searchText.clear();
+        _focus.unfocus();
+        ref.read(musicSearchControllerProvider.notifier).setQuery('');
+        _scheduleBackHistory();
+      }
+
+      final results = _resultsKey.currentState;
+      results == null ? clear() : results.returnToLanding(clear);
     } else {
       _search(false);
     }
@@ -90,6 +98,11 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
   void didUpdateWidget(covariant BetaMusicShell oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.location != oldWidget.location) {
+      if (widget.location == '/player') {
+        // Reset synchronously before the bar's next paint. A post-frame reset
+        // left the previously revealed capsule visible over the entering page.
+        ref.read(playerChromeRevealProvider).value = 0;
+      }
       // Detail paths describe content, not the tab that opened it. Only an
       // explicit root destination changes ownership of the persistent bar.
       _selected = _rootTab(widget.location) ?? _selected;
@@ -277,6 +290,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
                                     child: BetaEdgeBack(
                                       onBack: _backSearch,
                                       child: MusicSearchResultsBody(
+                                        key: _resultsKey,
                                         onSearch: _submit,
                                       ),
                                     ),
@@ -324,6 +338,9 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
                     context.go(betaMusicRoutes[index]);
                   },
                   searchConfig: GlassSearchBarConfig(
+                    contextMenuBuilder: buildBetaEditingMenu,
+                    selectionControls: betaTextSelectionControls,
+                    cursorColor: betaEditingBlue(context),
                     controller: _searchText,
                     focusNode: _focus,
                     autoFocusOnExpand: false,

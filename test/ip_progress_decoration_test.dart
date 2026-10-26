@@ -10,40 +10,27 @@ void main() {
     expect(colors, hasLength(MusicThemeIp.values.length));
   });
 
-  test('progress companions stay inside the available rail width', () {
-    expect(
-      progressCompanionLeft(
-        progress: 0,
-        availableWidth: 320,
-        companionWidth: 68,
-      ),
-      0,
-    );
-    expect(
-      progressCompanionLeft(
-        progress: 1,
-        availableWidth: 320,
-        companionWidth: 68,
-      ),
-      252,
-    );
-    expect(
-      progressCompanionLeft(
-        progress: .5,
-        availableWidth: 320,
-        companionWidth: 68,
-      ),
-      126,
-    );
-  });
-
-  test('head-only IP companions stay compact with a larger leading dot', () {
-    expect(progressCompanionSize(MusicThemeIp.helloKitty), const Size(50, 42));
-    expect(progressCompanionSize(MusicThemeIp.kuromi), const Size(48, 44));
-    expect(ipProgressLeadingDotDiameter, greaterThan(ipProgressTrackHeight));
-  });
-
-  testWidgets('head-only IP companions use anchored badges instead of rides', (
+  test(
+    'companion center follows the exact thumb at beginning middle and end',
+    () {
+      for (final progress in [0.0, .5, 1.0]) {
+        for (final width in [28.0, 56.0]) {
+          final left = progressCompanionLeft(
+            progress: progress,
+            availableWidth: 320,
+            companionWidth: width,
+          );
+          expect(left + width / 2, closeTo(progress * 320, .001));
+        }
+      }
+      expect(
+        progressCompanionSize(MusicThemeIp.helloKitty),
+        const Size(28, 28),
+      );
+      expect(progressCompanionSize(MusicThemeIp.kuromi), const Size(28, 28));
+    },
+  );
+  testWidgets('compact heads have no medallion crest ribbons or extra dot', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -59,78 +46,21 @@ void main() {
         ),
       ),
     );
-    await tester.pump();
-
-    expect(
-      find.byKey(const ValueKey('ip-progress-companion-helloKitty')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey('ip-progress-companion-kuromi')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey('hello-kitty-progress-character')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey('kuromi-progress-character')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey('hello-kitty-progress-ribbon-medallion')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey('kuromi-progress-mischief-crest')),
-      findsOneWidget,
-    );
-    final kittyDot = find.byKey(
-      const ValueKey('ip-progress-leading-dot-helloKitty'),
-    );
-    final kuromiDot = find.byKey(
-      const ValueKey('ip-progress-leading-dot-kuromi'),
-    );
-    expect(kittyDot, findsOneWidget);
-    expect(kuromiDot, findsOneWidget);
-    expect(
-      tester.getSize(kittyDot),
-      const Size.square(ipProgressLeadingDotDiameter),
-    );
-    expect(
-      tester.getSize(kuromiDot),
-      const Size.square(ipProgressLeadingDotDiameter),
-    );
-
-    for (final dot in [kittyDot, kuromiDot]) {
-      final stack = tester.widget<Stack>(
-        find.ancestor(of: dot, matching: find.byType(Stack)).first,
-      );
-      expect(stack.children.last.key, tester.widget<Positioned>(dot).key);
+    for (final key in [
+      'hello-kitty-progress-character',
+      'kuromi-progress-character',
+    ]) {
+      expect(find.byKey(ValueKey(key)), findsOneWidget);
+      expect(tester.getSize(find.byKey(ValueKey(key))), const Size(28, 28));
     }
-
-    final kittyImage = tester.widget<Image>(
-      find.byKey(const ValueKey('hello-kitty-progress-character')),
-    );
-    final kuromiImage = tester.widget<Image>(
-      find.byKey(const ValueKey('kuromi-progress-character')),
-    );
-    expect(kittyImage.fit, BoxFit.contain);
-    expect(kuromiImage.fit, BoxFit.contain);
-    expect(
-      find.ancestor(
-        of: find.byKey(const ValueKey('hello-kitty-progress-character')),
-        matching: find.byType(Transform),
-      ),
-      findsNothing,
-    );
-    expect(
-      find.ancestor(
-        of: find.byKey(const ValueKey('kuromi-progress-character')),
-        matching: find.byType(Transform),
-      ),
-      findsNothing,
-    );
+    for (final key in [
+      'hello-kitty-progress-ribbon-medallion',
+      'kuromi-progress-mischief-crest',
+      'ip-progress-leading-dot-helloKitty',
+      'ip-progress-leading-dot-kuromi',
+    ]) {
+      expect(find.byKey(ValueKey(key)), findsNothing);
+    }
     expect(tester.takeException(), isNull);
   });
 

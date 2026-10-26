@@ -1,4 +1,46 @@
-# md3Music integration Beta.12 handoff
+# md3Music integration Beta.13 handoff
+
+## Beta.13 current implementation and verification (2026-10-26)
+
+User explicitly confirmed the combined fifteen-item plan. Isolated identity:
+**Mesting Music / com.mesting.music.beta / 1.0.37-beta.13 / versionCode 13**.
+The build script supplies the Beta identity; ordinary package/formal flavor
+contracts remain. Work extends the valuable Beta.5–Beta.12 dirty tree in place:
+`integration/md3music-beta`, HEAD `1b669e8239f1641f5f008e8d286940142e6daf35`.
+
+| Confirmed area | Current behavior |
+| --- | --- |
+| Account restoration | Both stores explicitly disable the installed Android secure-storage plugin's resetOnError, whose default would deleteAll on a native exception. Platform read/JSON errors do not erase credentials; short missing/attach failures retry, restoration is bounded5s, and writes require readback. Provider automatic retries are disabled so permanent errors settle. The gate offers retry or explicit fresh login, retaining old bytes until confirmed new credentials replace them through the serialized mutation. This does not establish the first real-device trigger or blame startup selection. Mesting's existing per-key JSON behavior otherwise stays as before. |
+| Startup selection | Rounded scale/highlight/return press response and animated check; independent persisted preference, static browsing, explicit preview only. |
+| Dress-up close | Circular independent premium neutral-glass X. |
+| Search return | Five real category result surfaces return to hot/history with paired horizontal motion, clearing providers only after return. Destination navigation still ends a session; player/details preserve it. |
+| Player entrance | Forward animation no longer reports dismissal reveal; real reverse/handle complete/cancel still expose the underlying page and mounted capsule continuously. |
+| Companions | Shinchan56dp; Kitty/Kuromi28dp transparent heads without medallion/crest/ribbons/extra dot. Center follows exact thumb at zero/middle/end; real top padding prevents artist collision. Nine production-control images and geometry assertions cover three roles at three positions. |
+| Home greeting | First visible home in each cold process shows time/nickname for5s; hidden entry time does not consume it; no remount/background replay. |
+| Success HUD | Comment title 已发送; drawn green check900ms, Beta success HUD2.6s. Actual successful SMS uses the same HUD with 验证码已发送. Other notices retain timing; failures remain truthful. |
+| Header spacing | Shared editorial and platform detail back/title separation16dp; login/legal spacing checked. |
+| Startup edges | Original contained video plus a live blurred extension of the same texture palette, transparent system bars. Ratio/original sound/cold-only gating remain. Actual GPU/decoder/system bars still need device confirmation. |
+| Login and legal | Nested entry dispatcher gets priority, pages pop their actual owning Navigator, opaque surfaces move with content. Permanent +86; only initiating action spins; shared blue-glass submit; clearer rounded phone icon. |
+| Success to guide | The same eight-page guide is mounted under a smaller214dp card at y=-.28; success cover fades to guide rather than home. Guide focus/semantics/pointer actions excluded until dismissal. Original0.48s SoundPool UI chime once per interactive success, no music focus request or second audio owner; restore/refresh/duplicates stay silent. See BETA13_SOUND.md. |
+| Skip | Direct current-page to page8 fade/slide, without sweeping intermediate illustrations. Explicit final Start enters app. |
+| Unlike | Confirmed unlike shows broken heart transiently, then restores empty heart. Failed writes keep actual favorite state. |
+| Menus and editing | Original capsule stays while anchored menu grows up/reverses down; business runs after dismissal, existing capabilities only. All app fields and bottom search share toolbar/`>` panel; only paste/select/all/actual autofill/multiline newline/non-numeric `#`. Both menu families reuse actual premium pill settings and independent layers. Blue caret/selection/Cupertino bar-ball handles preserve framework IME/controller/formatters. |
+
+Final evidence: **657 regular passed /78 conditional skips**, **196 Beta passed**,
+**53 current software UI passed**, zero failures; groups overlap and are not added.
+The earlier rendered batch had52 cases; the reviewer-requested batch had12
+overlapping cases plus nine enabled-companion images. Analyze: **No issues found**.
+Independent review: **ship**, R1–R4 resolved, remaining clear. One detector pass
+returned no findings. Exact APK/source hashes, signature,16KiB/native/resource
+verification live in the new delivery's manifest and verification records.
+
+No connected Android device. These checks are not native GPU/glass/FPS,
+predictive-back, IME/autofill/TalkBack, decoder/audio focus/volume or real SMS,
+login/CDN/cloud end-to-end acceptance. No phone installation, real SMS/cloud
+mutation, commit/push or public release was performed.
+
+The following Beta.12 and older sections are **historical evidence**. Their
+counts and superseded guide skip/success ordering are not the current result.
 
 ## Beta.12 current implementation and verified release boundary
 

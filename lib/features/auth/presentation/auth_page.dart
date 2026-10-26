@@ -1,3 +1,4 @@
+import '../../../shared/widgets/beta_text_editing.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
@@ -345,6 +346,9 @@ class _AuthPageState extends ConsumerState<AuthPage>
         ],
         _glassAuthField(
           TextFormField(
+            contextMenuBuilder: buildBetaEditingMenu,
+            selectionControls: mestingTextSelectionControls,
+            cursorRadius: const Radius.circular(1),
             key: const ValueKey('phone-number-field'),
             controller: _accountController,
             readOnly: _detectedPhone != null,
@@ -397,6 +401,9 @@ class _AuthPageState extends ConsumerState<AuthPage>
                   padding: const EdgeInsets.only(top: 13),
                   child: _glassAuthField(
                     TextFormField(
+                      contextMenuBuilder: buildBetaEditingMenu,
+                      selectionControls: mestingTextSelectionControls,
+                      cursorRadius: const Radius.circular(1),
                       key: const ValueKey('phone-code-field'),
                       controller: _codeController,
                       keyboardType: TextInputType.number,
@@ -498,6 +505,9 @@ class _AuthPageState extends ConsumerState<AuthPage>
         const SizedBox(height: 14),
         _glassAuthField(
           TextFormField(
+            contextMenuBuilder: buildBetaEditingMenu,
+            selectionControls: mestingTextSelectionControls,
+            cursorRadius: const Radius.circular(1),
             key: const ValueKey('email-account-field'),
             controller: _accountController,
             keyboardType: TextInputType.emailAddress,
@@ -522,6 +532,9 @@ class _AuthPageState extends ConsumerState<AuthPage>
           const SizedBox(height: 13),
           _glassAuthField(
             TextFormField(
+              contextMenuBuilder: buildBetaEditingMenu,
+              selectionControls: mestingTextSelectionControls,
+              cursorRadius: const Radius.circular(1),
               key: const ValueKey('email-code-field'),
               controller: _codeController,
               keyboardType: TextInputType.number,
@@ -552,6 +565,9 @@ class _AuthPageState extends ConsumerState<AuthPage>
         const SizedBox(height: 13),
         _glassAuthField(
           TextFormField(
+            contextMenuBuilder: buildBetaEditingMenu,
+            selectionControls: mestingTextSelectionControls,
+            cursorRadius: const Radius.circular(1),
             key: const ValueKey('email-password-field'),
             controller: _passwordController,
             obscureText: _obscurePassword,
@@ -576,6 +592,9 @@ class _AuthPageState extends ConsumerState<AuthPage>
           const SizedBox(height: 13),
           _glassAuthField(
             TextFormField(
+              contextMenuBuilder: buildBetaEditingMenu,
+              selectionControls: mestingTextSelectionControls,
+              cursorRadius: const Radius.circular(1),
               key: const ValueKey('email-confirm-password-field'),
               controller: _confirmPasswordController,
               obscureText: _obscureConfirmPassword,

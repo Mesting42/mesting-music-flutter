@@ -16,7 +16,7 @@ Mesting 是一款 Flutter 音乐应用，帮助用户快速发现、播放和管
 
 ## Positioning
 
-以封面主导、中文内容和连续播放组织发现与音乐库。Android Beta.12 延续固定版本 md3Music 平台来源、顺序和反馈契约，沿用用户确认的 Mesting/Apple Music 视觉依据、原创音乐伙伴、统一账号入口、真实分类搜索及八页使用指南；在此基础上提供独立可选启动页、连续返回与真实队列时长。正式渠道保留既有“当下状态驱动”的定制推荐。
+以封面主导、中文内容和连续播放组织发现与音乐库。Android Beta.13 延续固定版本 md3Music 平台来源、顺序和反馈契约，沿用用户确认的 Mesting/Apple Music 视觉依据、原创音乐伙伴、统一账号入口、真实分类搜索、八页使用指南、独立启动页和真实队列时长；本轮修正账号恢复、进入与返回顺序、播放胶囊菜单及文本编辑交互。正式渠道保留既有“当下状态驱动”的定制推荐。
 
 ## Operating Context
 
@@ -25,10 +25,11 @@ Mesting 是一款 Flutter 音乐应用，帮助用户快速发现、播放和管
 ## Capabilities and Constraints
 
 - 现有项目使用 Flutter。Android Beta 由 DistributionChannel.isBeta（appFlavor == beta）接入，包名 com.mesting.music.beta；正式 flavor 的页面、主题、定制推荐、导航和默认黑胶保持其原有契约。共享工具的改进按调用点生效，不构成全局渠道切换。
-- Beta.12 的装扮 → 启动页提供用户给定的两段短片“音乐伙伴”“唱片派对”及珊瑚红/白色 M 经典启动页；新装及缺少偏好的升级默认第一段。选择写入成功才更新勾选，静态海报与独立预览操作分开，浏览/选择不自动播放。偏好与图标别名、主题、自定义背景视频、播放器样式独立。短片保留原声与比例，每个冷进程只播放一次；依赖就绪且视频结束后才挂载业务应用与账号/播放恢复。后台暂停、回前台接续未完成片段，已完成不重播；有界初始化/停滞失败回退经典页，重试依赖不会重播短片。预览单独持有并释放控制器，不改变冷启动门控。
-- Beta.11 延续首次未完成进入且无恢复会话时显示欢迎页；每次新的交互式登录成功都依次显示成功卡、八页引导，再进入应用。恢复凭证与刷新 token 不算新登录，二维码轮询不能重复触发成功流程。游客直接进入应用，指南可跳过并在设置重新查看；退出仅真实成功后由上层协调器先覆盖欢迎页，再归位旧路由栈，返回不能重新进入退出前页面；等待时禁用重复操作，失败保留会话并允许重试。两类账号控制器继续独立持有凭证，酷狗、Mesting 与游客的数据归属延续。
+- 装扮 → 启动页延续 Beta.12 的用户给定短片“音乐伙伴”“唱片派对”及珊瑚红/白色 M 经典页；新装及缺少偏好的升级默认第一段。选择写入成功才更新勾选，静态海报与独立预览操作分开，浏览/选择不自动播放。Beta.13 的选择行有局部圆角按压反馈，预览以 48dp 圆形独立 premium 玻璃按钮关闭。偏好与图标别名、主题、自定义背景视频、播放器样式及加密账号存储独立。短片主体按原比例完整显示，空余区域用同一个视频控制器的实时模糊纹理延展，状态栏与导航栏请求透明；这不证明设备上的系统栏或解码器表现。短片保留原声，每个冷进程只播放一次；依赖就绪且视频结束后才挂载业务应用与账号/播放恢复。后台暂停、回前台接续未完成片段，已完成不重播；有界初始化/停滞失败回退经典页，重试依赖不会重播短片。预览单独持有并释放控制器，不改变冷启动门控。
+- Beta.13 的 retainedSecureStorage 为 Mesting 与酷狗两个账号存储关闭 Android flutter_secure_storage 的 resetOnError；安装的 10.3.1 插件原本会在存储异常时调用 deleteAll。保留现有 namespace/cipher，避免原生读取异常触发插件级清库。SecurePlatformSessionStore 对暂态平台异常和空读最多读取三次（间隔 100/200ms），格式错误直接暴露且不删除该凭证；写入经原值回读后才发布登录成功。platformAccountProvider 关闭 Riverpod 自动 build 重试，使永久恢复错误能够结束为可见错误，用户可“重试恢复”或“重新登录”；后者保留旧加密内容，直到真实平台认证结果经串行 accept 保存并回读成功后替换。Mesting SessionStore 原有 JSON 无效时清理自身键的规则不在这项修正中改写。此处确认的是源码与软件回归边界，尚未由设备日志证明此前冷启动丢失登录态的具体触发原因。
+- 首次未完成进入且无恢复会话时显示欢迎页；Beta.13 为位于 Router 上方的欢迎 Navigator 注入 ChildBackButtonDispatcher 并取得优先级，登录/法规页面返回实际所属 Navigator，正文与不透明 surface 成对进退。每次新的交互式登录成功，以宽 214dp、上移至 Alignment(0,-.28) 的成功卡和 900ms 绘制标记覆盖同一棵已挂载八页指南；初始遮挡不透明，1800ms 后卡片与遮挡一起反向淡出，指南在反馈期间排除焦点、语义和指针操作，结束后开放。原创 0.48 秒提示音仅随该交互成功事件调用一次，Android SoundPool 使用媒体音量、遵循静音/振动且不请求音乐焦点，不新建播放队列或音频服务 owner。恢复凭证、刷新 token 与重复扫码回调不触发成功流程。游客直接进入应用；指南“跳过”仅将当前页与第八页做局部淡变/微移，不经过中间页，仍需明确“开始使用”，设置可重看。退出仅真实成功后由上层协调器先覆盖欢迎页，再归位旧路由栈，返回不能重新进入退出前页面；等待时禁用重复操作，失败保留会话并允许重试。两类账号控制器和数据归属继续独立。
 - 欢迎页优先手机号和微信扫码，其他方式提供酷狗/QQ 扫码；Mesting 账号登录/注册明确标为“暂不可用”并禁用 Beta 新入口，已有会话与数据保留。手机号页只承载手机号验证码，所选扫码通过 initialMethod 进入独立方式页；我的与设置使用同一个 BetaAccountCard，游客及受保护操作通过 openBetaLogin 进入欢迎页。协议小圆形状态与文字/链接整组居中、同基线，链接可独立访问，小屏和大字允许换行。
-- Beta.11 手机号表单按用户确认的 Raycast 简洁布局适配 Mesting 浅深色：圆形返回、简洁标题、宽输入、一个登录主操作。验证码操作仍位于输入框内右侧，字段与操作为 Stack 内独立兄弟 premium 玻璃层。用户确认 R1 partial 后继续修复：私有 _InlineCodeField 仅负责布局，保留系统 TextScaler，按六位数字及普通/倒计时标签测量可用宽度；窄屏大字将“验证码”标签移到框外，右侧操作分为两行并增加字段/按钮高度，保持完整数字输入空间，状态仍由原页面持有。responsive-code-tests.log 2/2 通过：320dp/1.6 浅深色输入六位 863432，maxScrollExtent<1，外标签与键盘主登录均 hitTestable；reviewer 已看 approved 原图并确认 R1 resolved。发送先注册设备，单次用户操作仅发送一次；原生 captcha_options 保留 KUGOU_API_MID/dfid 签名上下文、删除账号凭证，平台 status=1 才倒计时。20015 仍如实显示业务拒绝；这项客户端/原生修复不证明真实短信已送达。
+- 手机号表单沿用 Beta.11 经确认的 Raycast 简洁布局和窄屏大字六位验证码布局；_InlineCodeField 仅负责测量，框内右侧操作与字段为独立兄弟 premium 层，TextScaler 与业务状态仍由原框架/页面持有。Beta.13 常驻 +86 前缀，手机号方式显示手机图标；验证码按钮只在发码请求时显示 spinner，蓝色玻璃登录按钮只在登录请求时显示 spinner，共享 busy 仍禁止重复请求。发码平台成功后才显示“验证码已发送”成功 HUD 并进入 60 秒倒计时，失败如实保留原因。历史 Beta.11 的 responsive-code-tests.log 2/2、approved 原图与 R1 resolved 仅属于该版冻结实现。发送先注册设备，单次操作仅发送一次；原生 captcha_options 保留 KUGOU_API_MID/dfid 签名上下文、删除账号凭证，平台 status=1 才倒计时，20015 仍是业务拒绝；这些客户端/原生行为不证明真实短信送达。
 - 用户确认所有登录类页面移除“开源许可与致谢”；共享 showLicensePage 入口位于 Beta 设置的应用分组（settings-open-source），协议/隐私同意入口继续按其真实用途呈现。原先源码没有独立设置许可入口，本轮将其移入设置；settings-capture-final.log 1 通过，fixture 改为真实 /music/settings，正确截图为 settings-final.png。
 - 八页指南根据实际发现/搜索、歌词、灰条收起与底部操作、账号适用的推荐/收藏、手动队列优先与续播/历史、外观、五种播放器、开始使用组织；不承诺桌面歌词、Zen 或 AI 等未实现能力。五张动态预览共用真实 playerVisualStyleProvider，选择会保存到装扮/播放器相同偏好；外观模式也读取真实主题偏好。演示不发起播放、云写入或第二个音频 owner。
 - Beta.11 游客可浏览公开内容、五类搜索、进入真实公开详情并播放平台提供的可播放资源；当前播放队列与临时待播继续开放。收藏/取消收藏、创建/修改个人歌单等账号写入在组件和仓库边界拦截并引导统一登录；不删除或迁移已有本机游客数据，也不把播放历史和当前队列误当成个人写入。
@@ -52,9 +53,14 @@ Mesting 是一款 Flutter 音乐应用，帮助用户快速发现、播放和管
 - 五样式完整播放器仅顶部灰色 handle 下拉收起，封面/歌词状态共用提交与回弹。Beta.12 的 PlayerDismissMotion 直接驱动当前播放器路由的动画控制器；完成手势从当前进度退出剩余距离，取消连续回弹，只退出当前一层，避免局部退场后重新播放路由退出。迟到回调/快速重复与系统返回由路由归属及提交标记防护；封面、歌词与滑块不竞争灰条手势。持续挂载的胶囊随同一进度显露，音乐由原 owner 持续播放。胶囊仅订阅播放布尔值并使用共享实时播放/暂停操作，88/24dp 收拢滞回保留。
 - Beta.11 建立局部 ValueNotifier 与同帧滚动通知合并，历史同 120 帧刺激的 shell 重建由 120 降至 0、底栏仍 120；Beta.12 同样刺激仍为 shell/胶囊/首页 0、底栏 120，未取得新的帧率改善证据。持续挂载、88/24dp 滞回和完整收展动画继续。指定玻璃固定 premium/full，应用级 adaptiveQuality=false；浅色共享材质与关闭底部滚动白罩保留内容通透度。本地 MIT 依赖覆写可复现地去除 fallback shader 深色恒定周圈和最小边缘项，保留方向性高光、折射、色散、弯月面及按压动态；各 GPU 渲染分支仍须真机验证。
 - 收藏统一裸心形、48×48dp 透明目标、局部主题对比与按压缩放；成功状态以局部 420ms 动画表达喜欢/取消喜欢，可中断并尊重减少动画。Replay 年份使用 Cupertino 透明度反馈与圆角菜单，不产生矩形按压底；首页实心图标。经典唱机使用无黑描边的几何白色唱臂、唱头落在外圈沟槽，保留播放/暂停旋转区别；更多菜单带图标、分组、分隔线与当前样式对勾。
-- 详情标题使用 21dp 单行文字，仅实际溢出时裁切跑马灯；测量与渲染共用继承字体和 TextScaler。
+- 详情标题使用 21dp 单行文字，仅实际溢出时裁切跑马灯；测量与渲染共用继承字体和 TextScaler。Beta.13 的共享 EditorialHeader 与平台页头都在返回圆钮和标题之间保留 16dp。
 - 评论排序/范围各为一个下拉菜单并排一行；浮动输入和蓝色 48dp 3D 发送按钮是独立的真实 Liquid Glass 兄弟表面，使用 liquid_glass_widgets premium 渲染，不能嵌套或以位图替代。KeyboardVisibilityBuilder 观察当前原生 View 的键盘指标：键盘显示最多 2 行，否则最多 4 行。评论优先录音专属 ID，有界旧 ID 修复/设备注册恢复只针对读取；发送/回复/删除均需明确操作且不自动重试。特色歌单解析 special_list/plist，排行解析 songlist；平台账号页使用实际 coral Mesting 应用图标。
 - Beta.12 的评论发送与新建/编辑歌单确认共用 betaBlueActionGlass 的 clear body 蓝色材质，保留白色 glyph、独立 premium 层、折射/高光与按压反馈，避免浅色滚动背景的亮度归一化将正常蓝色漂白。歌单关闭为共享 BetaGlassAction 的中性玻璃 X，随浅深色调整图标对比；确认/保存为蓝色白对勾。业务页面保留名称校验、保存中禁用返回/重复操作、加载进度及失败草稿/封面，材质组件不持有保存与导航业务。
+- Beta.13 的播放器进入阶段将 chrome reveal 保持为零，避免底栏在进入动画中闪现；灰条拖动、取消回弹和反向退出仍按同一路由进度显露已挂载胶囊。进度小新宽 56dp，Kitty/库洛米为透明背景的 28×28dp 头部，绘制中心严格跟随实际 Slider 轨道进度；控件上方预留真实布局空间，避免仅缩小图像后仍覆盖歌手/时间。
+- Beta.13 首页首次可用时显示按时段及真实昵称生成的问候，五秒后收起；非 autoDispose 的进程标记避免后台切回、路由卸载/重挂再次播放。
+- 评论真实发送成功显示“已发送”，共享圆环/对勾绘制 900ms；Beta 成功 HUD 在 2600ms 后反向退出，普通 HUD 仍为 1900ms。验证码发送成功复用同一反馈；通知及其图标不替代服务器的业务结果。
+- Beta.13 将共享文本编辑菜单接入已存在的账号、搜索、评论、歌单、个人资料、社交/聊天等字段，以及 vendored 搜索配置。横条通过 > 展开，只提供可用的粘贴、选择、全选、带 hints 的系统自动填充；展开后非数字字段可插入 #，多行非数字字段可换行。密码/只读/数字字段按其条件隐藏相关动作；可用性继续读取 EditableText。菜单、扩展框与播放菜单复用 betaMusicPillGlass 的 premium 独立层。浅/深蓝色细光标、22% 蓝选区与 Cupertino 细杆圆点手柄共用编辑色，输入格式化、最大长度、IME/自动填充仍由框架和原字段持有，不能把主机测试当作真实 Android IME 验收。
+- 长按已有播放胶囊打开锚定菜单，源胶囊保留原位置；局部菜单向上展开、反向向下收回，受安全区/键盘和可用空间约束。只列既有喜欢、添加歌单、队列、歌词、平台评论/音质及可用播放模式；“不喜欢这首”仅实际 FM 归属时提供。选择返回 intent，等待弹层 route.completed 后再调用现有业务，切歌后拒绝旧菜单动作，不增加另一套音频或账号状态。
 
 ## Brand Commitments
 
@@ -62,20 +68,25 @@ Mesting 是一款 Flutter 音乐应用，帮助用户快速发现、播放和管
 - 需要降低常见 AI 生成界面的模板感，避免紫粉渐变、泛滥玻璃拟态、重复大圆角卡片和无意义装饰。
 - Beta 以用户提供的 Apple Music 参考图为视觉依据：封面、大标题、横向内容组和悬浮控件；界面保留中文 Mesting 品牌与自身账号、播放能力。
 - Beta 使用参考图采样红色统一导航选中态、个人页图标和相关选择；Beta.9 经典浅色面板改为中性白灰（#F2F2F7），保留红色强调、既有深色与封面播放器氛围。显式 IP 图案与角色继续拥有自身配色，选中标签保持主要文字对比。
-- Beta 底部直接使用 liquid_glass_widgets 1.15.0 官方 Apple Music 示例的组件、布局与交互动态，Beta.12 的本地 MIT 源码覆写及变更说明随项目保留，不依赖本机 Pub 缓存补丁。Beta.10 经用户确认将同一 premium 材质扩展至欢迎/登录/验证码/退出等指定账号操作、账号输入、圆形返回及当时的开源许可入口；许可登录页按钮属于历史实现，Beta.11 已移至设置应用分组。当前指定玻璃表面独立拥有层，评论输入/蓝色发送继续为兄弟表面，新建/编辑歌单复用中性关闭与蓝色确认；内容列表、阅读正文及表单所在页面背景保持稳定。该范围按 Beta 调用点接入，不构成正式渠道的全局改版。局部音质弹层/HUD 按自身规范处理。
+- Beta 底部直接使用 liquid_glass_widgets 1.15.0 官方 Apple Music 示例的组件、布局与交互动态，本地 MIT 源码覆写及变更说明随项目保留，不依赖本机 Pub 缓存补丁。Beta.10 经确认扩展至指定账号操作/字段/圆形返回的 premium 材质继续使用；许可入口从 Beta.11 起位于设置。当前指定表面独立拥有层，评论输入/蓝色发送仍为兄弟表面，新建/编辑歌单复用中性关闭与蓝色确认，Beta.13 蓝色登录复用同一局部确认材质；编辑条、扩展框及播放菜单复用胶囊光学参数。内容列表、阅读正文和页面背景保持稳定。Beta 调用点不构成正式渠道全局改版，局部音质弹层/HUD 保持自身规范。
 - Beta.10 的欢迎与指南采用用户选定的珊瑚红原创音符/唱片矢量双角色，具有四肢、表情、轻摆、眨眼和轻点问候；沿用既有 Mesting 世界、所给参考构图及随后确认的完整文字方案。没有另外生成或批准的 ImageGen comp、approval sidecar 或随机 FORM seed，不能事后补造来源记录。
 - 默认封面播放器可切换左对齐同步歌词；歌词当前基准为 24dp 并支持 TextScaler。迷你 accessory 仅保留播放/暂停和下一首两个裸图标，点击/左右滑动与官方玻璃交互继续适用。
 - 酷狗、Mesting、游客各自拥有收藏和历史；Mesting 社交入口不会显示给酷狗账号。云端写入失败不伪装成本地成功，不能把平台来源当成会员授权。
 
 ## Evidence on Hand
 
-- 当前 Beta.12 是已确认方案的实现与软件证据快照；外部 work/beta12/implementation-status.md 记录用户已明确确认，方案文件名中的“待确认”是历史文件名。当前记录没有新 ImageGen 批准 comp、QUALITY BAR card 或 FORM seed，也不补造这些记录。
+- Beta.13 是用户于 2026-10-26 明确确认的十五项方案在既有视觉世界内的修正；具体表面行为见 .impeccable/surfaces/beta13-interactions.md。没有新增 ImageGen 批准 comp、approval sidecar、QUALITY BAR card 或 FORM seed。
+- work/beta13/review-final.md 的有界独立结论为 disposition: ship，R1–R4 resolved、remaining clear。review-fixes-functional-final.log 记录 23 项通过（9 session、14 entry），包括永久恢复错误后的新认证结果替换、零 delete、同一指南状态/语义屏蔽与一次声音调用；此前 12 项软件 UI 证据和未变的九张进度角色、两张成功反馈复核捕获继续适用。它们是合成软件环境中的断言与捕获；声音调用次数不证明可听响度或设备混音，存储修正不证明此前设备丢失登录态的根因。
+- Beta.13 最终常规回归 657 通过/78 条件跳过/0 失败，Beta 196 通过/0 失败，当前软件 UI 53 通过；analyze 为 No issues found，各组重叠不相加。assembleBetaRelease 成功，work/beta13/release-verification/artifact-verification.json 核验 Mesting Music / com.mesting.music.beta / 1.0.37-beta.13 / 13，APK 为 90,180,180 bytes，SHA256 A5C6018FF7354552D8CECF37E01B4028DE93DAEBA1DEB61EE77840E2AAF6EBB6。同一 Beta 证书、16KiB ZIP 与五个 ARM64 原生库 LOAD 对齐、原生库对应链/FFI、兼容视频和修正 shader 已检查；原创提示音经资源优化位于 res/L_.wav，与源音频字节 hash 一致。发布包内容与软件检查不认证真机声音、GPU、输入法、系统返回或线上服务。源码 ZIP 身份由文档冻结后的外部交付清单记录，避免自引用。
+
+以下 Beta.12 的测试、发布及媒体核验均为历史证据，只适用于该版冻结构建，不构成 Beta.13 的完整回归、包身份或真机验收。外部 work/beta12/implementation-status.md 保存该版明确确认，“待确认”只是历史方案文件名。
+
 - Beta.12 的 work/beta12/ui-final.log 为 47 项重叠软件 UI 检查通过，captures-final/existing 使用实际生产控件、合成 fixture 与 Windows QA 中文字体，覆盖启动选择、小屏/大字、浅深玻璃纯色/内容背景、收拢/展开/形变、宽屏、新建/编辑及路由拖动。蓝色滚动前/变化中/稳定后采样：浅色三帧均 [13,107,218]，深色依次 [1,95,206] / [13,107,218] / [1,95,206]；该结果只证明主机软件渲染中的正常蓝色未漂白，不认证原生玻璃保真。
 - Beta.12 targeted-navigation.log 两项生产路由回归通过；targeted-startup-cleanup.log 三项启动偏好/生命周期/超时检查通过。live-duration-probe.json 的主机嵌入服务真实只读 search 与三次 /audio 均 status=1，搜索 261/257/279 秒与同 hash 元数据 261276/257252/279196 毫秒对应；不据此宣称短信、账号或 CDN 播放可用。
 - Beta.12 test-summary.json 记录最终常规 651 通过/63 条件跳过/0 失败、Beta 175 通过/0 跳过/0 失败、软件 UI 47 通过/0 跳过/0 失败；analyze-approved.log 为 No issues found。常规首轮一项脆弱静态源码位置断言失败属于早期阶段，修正后完整重跑已通过。media-verification.json 记录用户原文件未改，兼容副本为 H.264 Main / yuv420p / 608×1280 / 30fps，原 AAC ADTS 流 hash 一致；两段转码 PSNR 均值为 49.825196 / 51.435274 dB。各回归/截图组有重叠，不相加；转码与测试通过不证明实际设备解码/声音。adb 设备为空，原生 GPU/折射/FPS、真实系统边缘返回、媒体焦点/音量、解码器生命周期与 TalkBack 仍未认证。
 - Beta.12 assembleBetaRelease 与最终检查成功，release-verification/artifact-verification.json 已核验 Mesting Music / com.mesting.music.beta / 1.0.37-beta.12 / 12；APK 为 90,136,848 bytes，SHA256 AC098F96C92839CD3B8830D1662826C8427EA09852BA34F5DE0B2AF8084CD74E。同一 Beta 证书、16KiB ZIP 与 ARM64 LOAD 对齐、两种 ARM 服务库的源码→merged→stripped→APK 对应链及与 Beta.11 一致性已验证；打包的修正 shader 与 Beta.11 不同，两段 APK 视频与仓库兼容副本逐字节一致。源码 ZIP 精确字节/哈希留文档冻结后的外部交付清单，不将尚未生成的归档身份写成完成。
 
-以下 Beta.11 与更早版本的发布、测试与评审结果均为历史证据，只适用于对应冻结构建，不构成 Beta.12 发布或真机验收。
+以下 Beta.11 与更早版本的发布、测试与评审结果同样为历史证据，只适用于对应冻结构建，不构成 Beta.13 发布或真机验收。
 
 - 历史 Beta.11 已验证发布 APK 为 Mesting Music / com.mesting.music.beta / 1.0.37-beta.11 / 11；assembleBetaRelease 成功。test-summary.json 记录该版最终常规 644 通过/58 条件跳过/0 失败、Beta 163 通过/0 跳过/0 失败，ui-captures-approved.log 43 通过；后补设置捕获 1 通过，analyze-approved.log 为 No issues found。组间重叠不可相加。APK 为 89,244,110 bytes，SHA256 64B761F855B4E44F26979375C04CAE266D608A18DB954D500494B4334D3DC4F3，同一 Beta 测试证书、16KiB ZIP 对齐、ARM64 ELF 16KiB 和打包 ARM 原生对应链已验证。精确记录在 docs/MD3MUSIC_BETA.md；源码 ZIP 字节/哈希留该版冻结后的外部 manifest。
 - Beta.11 首轮 review-first 为 fix，后续 R1 曾 partial；经用户确认继续修复、responsive-code-tests.log 2/2 和 approved 原图复核，reviewer 已确认 R1、R2 均 resolved。R2 的 search-session-regression.log 1 通过，生产路由验证同词新会话 offset=0、同次类别/详情往返保留 offset=50。新 review-final.md 的独立有界结论为 disposition: ship，R1/R2 resolved、许可迁移 match，无剩余 material fix；结论仅覆盖所记录的软件/发布证据范围。
@@ -96,7 +107,7 @@ Mesting 是一款 Flutter 音乐应用，帮助用户快速发现、播放和管
 - 较早正式推荐入口：`lib/features/recommendation/presentation/recommendation_page.dart`；不应作为 Beta.7 平台推荐排序来源。
 - 历史 Beta.9（2026-10-25）有界独立复核为 ship，R1–R5 全部闭合。普通回归 619 通过/52 条件跳过/0 失败，Beta 定向组 132 通过/0 跳过/0 失败，软件 UI 23 通过，命令与交互 21 通过；组间重叠不可相加。analyze 无问题。该版发布 APK 已构建并验证 com.mesting.music.beta / Mesting Music / 1.0.37-beta.9 / 9，同一 Beta 测试证书、16KiB ZIP 对齐和 ARM 服务库与 Beta.7 字节一致。该版源 ZIP 字节与哈希由其归档清单记录；这些结果仅适用于 Beta.9。
 - work/beta9/pill-benchmark.json 对同一组 100 次播放位置事件的观测为 Beta.8 胶囊重建 99 次、Beta.9 为 0 次；这是 Flutter debug 构建工作量比较，不是帧率或真机流畅度证据。
-- 当前没有连接的 Android 设备；软件捕获使用合成数据、Flutter 软件渲染和 Windows QA 中文字体。硬件音量、TalkBack、预测返回/硬件手势、真实 IME、原生 GPU 玻璃/动画/帧率、冷启动/升级迁移、线上 CDN/音质/权限及真实账号/评论写入仍待验收。历史 Beta.7/Beta.8 计数、结论和包身份仅描述各自构建，保留在 docs/MD3MUSIC_BETA.md。
+- 本轮纳入的是源码与主机软件证据，捕获使用合成数据、Flutter 软件渲染和 Windows QA 中文字体；没有纳入 Android 设备验收记录。硬件音量/提示音响度与焦点、TalkBack、预测返回/硬件手势、真实 IME/自动填充、GPU 玻璃/动画/帧率、冷启动/升级迁移及账号恢复根因、线上 CDN/音质/权限与真实账号/评论写入仍待设备或线上验收。历史 Beta.7/Beta.8 计数、结论和包身份仅描述各自构建，保留在 docs/MD3MUSIC_BETA.md。
 
 ## Product Principles
 

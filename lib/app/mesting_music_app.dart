@@ -107,6 +107,7 @@ class MestingMusicApp extends ConsumerWidget {
       routerConfig: appRouter,
       builder: (context, child) => FirstLaunchDisclaimerCoordinator(
         child: FirstLaunchAuthCoordinator(
+          betaBackDispatcher: appRouter.backButtonDispatcher,
           onBetaLogout: () => appRouter.go('/music/recommend'),
           child: AppUpdateCoordinator(
             child: SocialAttentionCoordinator(

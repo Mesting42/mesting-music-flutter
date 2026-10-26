@@ -1,5 +1,6 @@
 import '../../shared/widgets/beta_page_motion.dart';
 import '../../features/experience/presentation/player_dismiss_motion.dart';
+import '../../features/experience/presentation/playback_pill_menu.dart';
 import '../../features/music_platform/data/platform_category_search.dart';
 import '../../features/music_platform/presentation/platform_catalog_detail_page.dart';
 import 'dart:ui';
@@ -330,6 +331,7 @@ final appRouter = GoRouter(
           pageBuilder: (context, state) => _NowPlayingTransitionPage(
             key: state.pageKey,
             child: NowPlayingPage(
+              showLyricsInitially: state.extra is PlaybackPillLyricsIntent,
               vinylOrigin: state.extra is NowPlayingTransitionIntent
                   ? (state.extra! as NowPlayingTransitionIntent).vinylOrigin
                   : null,

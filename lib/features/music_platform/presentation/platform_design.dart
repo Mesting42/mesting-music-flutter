@@ -146,7 +146,7 @@ class PlatformPageFrame extends StatelessWidget {
                     BetaGlassBackButton(
                       onPressed: () => Navigator.of(context).maybePop(),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

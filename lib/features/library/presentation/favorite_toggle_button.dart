@@ -111,6 +111,7 @@ class _FavoriteGlyphState extends State<_FavoriteGlyph>
   void didUpdateWidget(covariant _FavoriteGlyph oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.favorite != widget.favorite) {
+      _motion.duration = Duration(milliseconds: widget.favorite ? 420 : 760);
       _from =
           _from +
           ((oldWidget.favorite ? 1.0 : 0.0) - _from) *
@@ -156,15 +157,22 @@ class _FavoriteGlyphState extends State<_FavoriteGlyph>
             dimension: widget.size,
             child: Stack(
               children: [
+                if (!widget.favorite && _motion.value < .78)
+                  Opacity(
+                    opacity: (1 - _motion.value / .78).clamp(0.0, 1.0),
+                    child: Icon(Icons.heart_broken_outlined, size: widget.size),
+                  ),
                 if (_fill < 1)
                   Opacity(
-                    opacity: 1 - _fill,
+                    opacity: !widget.favorite && _motion.value < .78
+                        ? 0
+                        : 1 - _fill,
                     child: Icon(
                       Icons.favorite_border_rounded,
                       size: widget.size,
                     ),
                   ),
-                if (_fill > 0)
+                if (_fill > 0 && (widget.favorite || _motion.value >= .78))
                   Opacity(
                     opacity: _fill,
                     child: Icon(Icons.favorite_rounded, size: widget.size),

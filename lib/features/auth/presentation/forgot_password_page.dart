@@ -1,3 +1,4 @@
+import '../../../shared/widgets/beta_text_editing.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -137,6 +138,9 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
         ),
         const SizedBox(height: 18),
         TextField(
+          contextMenuBuilder: buildBetaEditingMenu,
+          selectionControls: mestingTextSelectionControls,
+          cursorRadius: const Radius.circular(1),
           key: const ValueKey('password-recovery-account'),
           controller: _accountController,
           enabled: !_busy && _challenge == null,
@@ -158,6 +162,9 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
         if (_challenge != null) ...[
           const SizedBox(height: 13),
           TextField(
+            contextMenuBuilder: buildBetaEditingMenu,
+            selectionControls: mestingTextSelectionControls,
+            cursorRadius: const Radius.circular(1),
             key: const ValueKey('password-recovery-code'),
             controller: _codeController,
             keyboardType: TextInputType.number,
@@ -199,6 +206,9 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         TextField(
+          contextMenuBuilder: buildBetaEditingMenu,
+          selectionControls: mestingTextSelectionControls,
+          cursorRadius: const Radius.circular(1),
           key: const ValueKey('password-recovery-password'),
           controller: _passwordController,
           obscureText: _obscurePassword,
@@ -218,6 +228,9 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
         ),
         const SizedBox(height: 13),
         TextField(
+          contextMenuBuilder: buildBetaEditingMenu,
+          selectionControls: mestingTextSelectionControls,
+          cursorRadius: const Radius.circular(1),
           key: const ValueKey('password-recovery-confirm'),
           controller: _confirmController,
           obscureText: _obscureConfirm,

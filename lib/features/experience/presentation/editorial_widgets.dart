@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'cold_start_greeting.dart';
 import '../../../shared/widgets/beta_glass_controls.dart';
 import '../../player/presentation/beta_playback_actions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -77,16 +78,25 @@ class EditorialHeader extends ConsumerWidget {
                   ? context.pop()
                   : context.go('/music/library'),
             ),
+          if (back) const SizedBox(width: 16),
           Expanded(
-            child: Text(
-              title,
-              style: TextStyle(
-                color: context.musicThemeTokens.textPrimary,
-                fontSize: 34,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -.9,
-                height: 1.2,
-              ),
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      color: context.musicThemeTokens.textPrimary,
+                      fontSize: 34,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -.9,
+                      height: 1.2,
+                    ),
+                  ),
+                ),
+                if (!back && title == '首页')
+                  const Flexible(child: ColdStartGreeting()),
+              ],
             ),
           ),
           trailing ??

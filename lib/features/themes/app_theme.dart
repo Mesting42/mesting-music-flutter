@@ -1,5 +1,6 @@
 import '../../shared/widgets/beta_page_motion.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 import '../../core/platform/distribution_channel.dart';
 import 'beta_appearance.dart';
@@ -47,6 +48,31 @@ ThemeData buildMestingTheme(MusicThemePreset preset) {
           )
         : const PageTransitionsTheme(),
     colorScheme: scheme,
+    textSelectionTheme: DistributionChannel.isBeta
+        ? TextSelectionThemeData(
+            cursorColor: preset.dark
+                ? const Color(0xFF0A84FF)
+                : const Color(0xFF007AFF),
+            selectionHandleColor: preset.dark
+                ? const Color(0xFF0A84FF)
+                : const Color(0xFF007AFF),
+            selectionColor:
+                (preset.dark
+                        ? const Color(0xFF0A84FF)
+                        : const Color(0xFF007AFF))
+                    .withValues(alpha: .22),
+          )
+        : null,
+    cupertinoOverrideTheme: DistributionChannel.isBeta
+        ? CupertinoThemeData(
+            primaryColor: preset.dark
+                ? const Color(0xFF0A84FF)
+                : const Color(0xFF007AFF),
+            selectionHandleColor: preset.dark
+                ? const Color(0xFF0A84FF)
+                : const Color(0xFF007AFF),
+          )
+        : null,
     extensions: [tokens],
     scaffoldBackgroundColor: Colors.transparent,
     fontFamilyFallback: const ['Noto Sans SC', 'Microsoft YaHei', 'sans-serif'],

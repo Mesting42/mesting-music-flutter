@@ -1,4 +1,16 @@
-# Mesting Beta.12 optical correction
+# Mesting Beta.12 optical correction and Beta.13 editing hooks
+
+## Beta.13 host-owned text editing
+
+`widgets/surfaces/shared/glass_search_bar_config.dart` adds nullable
+`contextMenuBuilder` and `selectionControls` hooks. The searchable tab's
+`src/widgets/surfaces/tab_bar_searchable_internal.dart` passes them to its
+CupertinoTextField. When absent, upstream Cupertino toolbar/handle defaults
+remain. The application supplies the same editing menu and blue controls as
+its other fields without importing application business code into this vendor.
+This does not modify the Beta.12 shader or lower optical quality.
+
+## Beta.12 optical correction (preserved)
 
 The `package/` folder vendors liquid_glass_widgets 1.15.0, under its MIT license.
 The application's dependency override uses this directory so the APK and source

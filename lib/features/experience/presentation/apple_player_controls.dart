@@ -68,7 +68,14 @@ class _ApplePlayerControlsState extends ConsumerState<ApplePlayerControls> {
     final volume = ref.watch(mediaVolumeProvider);
     return Padding(
       key: const ValueKey('apple-player-controls'),
-      padding: const EdgeInsets.fromLTRB(26, 6, 26, 8),
+      // Reserve real layout space above the thumb. Shrinking artwork alone
+      // cannot stop a negative-positioned companion from covering artist text.
+      padding: EdgeInsets.fromLTRB(
+        26,
+        characterIp == MusicThemeIp.classic ? 6 : 30,
+        26,
+        8,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -137,12 +144,13 @@ class _ApplePlayerControlsState extends ConsumerState<ApplePlayerControls> {
                         left: progressCompanionLeft(
                           progress: value / maximum,
                           availableWidth: box.maxWidth,
-                          companionWidth: 104,
+                          companionWidth: 56,
                         ),
-                        top: -61,
+                        top: -24,
                         child: IgnorePointer(
                           child: ShinchanProgressWalker(
                             presetId: preset.id,
+                            width: 56,
                             playing: playing,
                           ),
                         ),
@@ -157,7 +165,7 @@ class _ApplePlayerControlsState extends ConsumerState<ApplePlayerControls> {
                             characterIp,
                           ).width,
                         ),
-                        top: progressCompanionTop(characterIp) - 3,
+                        top: -7,
                         child: IgnorePointer(
                           child: IpProgressCompanion(
                             ip: characterIp,

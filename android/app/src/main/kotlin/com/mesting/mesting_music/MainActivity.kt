@@ -52,12 +52,15 @@ import kotlin.math.roundToInt
 
 open class MainActivity : AudioServiceActivity() {
     private var mediaVolumeBridge: MediaVolumeBridge? = null
+    private var loginSuccessSoundBridge: LoginSuccessSoundBridge? = null
     private lateinit var lyricsChannel: MethodChannel
     private var secureScreenRequests = 0
     private var pendingImageSave: PendingImageSave? = null
     private var pendingPhoneNumberResult: MethodChannel.Result? = null
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        loginSuccessSoundBridge?.dispose()
+        loginSuccessSoundBridge = null
         mediaVolumeBridge?.dispose()
         mediaVolumeBridge = null
         super.cleanUpFlutterEngine(flutterEngine)
@@ -75,6 +78,8 @@ open class MainActivity : AudioServiceActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        loginSuccessSoundBridge?.dispose()
+        loginSuccessSoundBridge = LoginSuccessSoundBridge(this, flutterEngine.dartExecutor.binaryMessenger)
         mediaVolumeBridge?.dispose()
         mediaVolumeBridge = MediaVolumeBridge(this, flutterEngine.dartExecutor.binaryMessenger)
         lyricsChannel = MethodChannel(

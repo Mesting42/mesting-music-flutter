@@ -72,15 +72,10 @@ void main() {
     final leadingDot = find.byKey(
       const ValueKey('ip-progress-leading-dot-helloKitty'),
     );
-    expect(leadingDot, findsOneWidget);
-    expect(
-      tester.getSize(leadingDot).width,
-      greaterThan(sliderTheme.data.trackHeight!),
-    );
-    expect(
-      tester.getCenter(leadingDot).dy,
-      closeTo(tester.getCenter(slider).dy, .01),
-    );
+    expect(leadingDot, findsNothing);
+    final head = find.byKey(const ValueKey('hello-kitty-progress-character'));
+    expect(tester.getSize(head), const Size(28, 28));
+    expect(tester.getRect(head).bottom, closeTo(tester.getCenter(slider).dy, .01));
   });
 
   testWidgets('shared seek bar has a 48dp hit target and keeps local scrub', (

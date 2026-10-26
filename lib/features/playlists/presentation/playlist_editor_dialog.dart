@@ -1,3 +1,4 @@
+import '../../../shared/widgets/beta_text_editing.dart';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -381,6 +382,9 @@ class _PlaylistEditorState extends State<_PlaylistEditor> {
                               ),
                               const SizedBox(height: 20),
                               TextField(
+                                contextMenuBuilder: buildBetaEditingMenu,
+                                selectionControls: mestingTextSelectionControls,
+                                cursorRadius: const Radius.circular(1),
                                 key: const ValueKey(
                                   'playlist-editor-name-field',
                                 ),
@@ -401,6 +405,9 @@ class _PlaylistEditorState extends State<_PlaylistEditor> {
                               ),
                               const SizedBox(height: 14),
                               TextField(
+                                contextMenuBuilder: buildBetaEditingMenu,
+                                selectionControls: mestingTextSelectionControls,
+                                cursorRadius: const Radius.circular(1),
                                 key: const ValueKey(
                                   'playlist-editor-description-field',
                                 ),

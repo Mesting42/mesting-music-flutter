@@ -1,3 +1,4 @@
+import '../../../shared/widgets/beta_text_editing.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -8,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../../shared/widgets/beta_glass_controls.dart';
+import '../../../shared/widgets/music_notice.dart';
 import '../data/music_platform_api.dart';
 import '../music_platform_providers.dart';
 import '../../auth/auth_providers.dart';
@@ -76,7 +78,9 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
     });
     if (method == PlatformLoginMethod.phone) return;
     try {
-      await ref.read(platformAccountProvider.future);
+      await ref
+          .read(platformAccountProvider.notifier)
+          .readyForInteractiveLogin();
       final challenge = await _login.createQr(method);
       if (!mounted || generation != _generation) return;
       setState(() {
@@ -145,13 +149,21 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
       _message = null;
     });
     try {
-      await ref.read(platformAccountProvider.future);
+      await ref
+          .read(platformAccountProvider.notifier)
+          .readyForInteractiveLogin();
       await _login.sendCode(_phone.text.trim());
       if (!mounted || generation != _generation) return;
       setState(() {
         _countdown = 60;
-        _message = '验证码已发送';
+        _message = null;
       });
+      showMusicNotice(
+        context,
+        icon: Icons.check_rounded,
+        title: '验证码已发送',
+        message: '',
+      );
       _countdownTimer?.cancel();
       _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
         if (!mounted || _countdown <= 1) {
@@ -186,7 +198,9 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
       _message = null;
     });
     try {
-      await ref.read(platformAccountProvider.future);
+      await ref
+          .read(platformAccountProvider.notifier)
+          .readyForInteractiveLogin();
       var result = await _login.phoneLogin(phone, code);
       if (!mounted || generation != _generation) return;
       var data = MusicPlatformApi.objectMap(result['data']);
@@ -363,6 +377,10 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
                             children: [
                               BetaGlassField(
                                 child: TextField(
+                                  contextMenuBuilder: buildBetaEditingMenu,
+                                  selectionControls:
+                                      mestingTextSelectionControls,
+                                  cursorRadius: const Radius.circular(1),
                                   key: const ValueKey('beta11-phone-field'),
                                   controller: _phone,
                                   keyboardType: TextInputType.phone,
@@ -377,7 +395,19 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
                                   style: const TextStyle(fontSize: 18),
                                   decoration: const InputDecoration(
                                     hintText: '手机号码',
-                                    prefixText: '+86  ',
+                                    prefixIcon: Padding(
+                                      padding: EdgeInsets.only(
+                                        left: 18,
+                                        right: 12,
+                                      ),
+                                      child: Text(
+                                        '+86',
+                                        style: TextStyle(fontSize: 17),
+                                      ),
+                                    ),
+                                    prefixIconConstraints: BoxConstraints(
+                                      minWidth: 66,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -398,7 +428,7 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
                         const SizedBox(height: 18),
                         BetaGlassButton(
                           key: const ValueKey('beta11-phone-submit'),
-                          accent: true,
+                          blue: true,
                           loading: _busy && _busyAction == 'login',
                           onPressed: _busy ? null : _phoneLogin,
                           child: const Text('登录'),
@@ -569,6 +599,9 @@ class _InlineCodeField extends StatelessWidget {
                     child: Semantics(
                       label: compact ? '验证码' : null,
                       child: TextField(
+                        contextMenuBuilder: buildBetaEditingMenu,
+                        selectionControls: mestingTextSelectionControls,
+                        cursorRadius: const Radius.circular(1),
                         key: const ValueKey('beta11-code-field'),
                         controller: controller,
                         keyboardType: TextInputType.number,

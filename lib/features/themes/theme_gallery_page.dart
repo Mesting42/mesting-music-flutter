@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../shared/widgets/music_notice.dart';
+import '../../shared/widgets/beta_glass_action.dart';
 import '../../shared/widgets/liquid_glass_sheet.dart';
 import '../../core/platform/distribution_channel.dart';
 import '../player/presentation/player_visual_stages.dart';
@@ -499,33 +500,11 @@ class _FixedCloseButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = context.musicThemeTokens;
-    return Tooltip(
-      message: '关闭装扮',
-      child: Material(
-        color: tokens.glassStrong,
-        elevation: 8,
-        shadowColor: tokens.shadow,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            width: 48,
-            height: 48,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: tokens.borderStrong),
-            ),
-            child: Icon(
-              Icons.close_rounded,
-              color: tokens.textPrimary,
-              size: 27,
-            ),
-          ),
-        ),
-      ),
+    return BetaGlassAction(
+      label: '关闭装扮',
+      icon: Icons.close_rounded,
+      blue: false,
+      onPressed: onTap,
     );
   }
 }

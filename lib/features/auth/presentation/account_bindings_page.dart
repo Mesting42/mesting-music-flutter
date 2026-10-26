@@ -1,3 +1,4 @@
+import '../../../shared/widgets/beta_text_editing.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -307,6 +308,9 @@ class _BindingFlowSheetState extends ConsumerState<_BindingFlowSheet> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         TextField(
+          contextMenuBuilder: buildBetaEditingMenu,
+          selectionControls: mestingTextSelectionControls,
+          cursorRadius: const Radius.circular(1),
           controller: _accountController,
           enabled: !_busy,
           keyboardType: widget.method == AuthMethod.email
@@ -702,6 +706,9 @@ class _CodeField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextField(
+      contextMenuBuilder: buildBetaEditingMenu,
+      selectionControls: mestingTextSelectionControls,
+      cursorRadius: const Radius.circular(1),
       controller: controller,
       keyboardType: TextInputType.number,
       maxLength: 6,

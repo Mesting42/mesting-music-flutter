@@ -70,7 +70,9 @@ class _MusicNoticeOverlayState extends State<_MusicNoticeOverlay>
           if (status == AnimationStatus.dismissed) widget.onDismissed();
         });
     _animation.forward();
-    _timer = Timer(const Duration(milliseconds: 1900), _animation.reverse);
+    final success = DistributionChannel.isBeta &&
+        (widget.icon == Icons.check_rounded || widget.icon == Icons.check);
+    _timer = Timer(Duration(milliseconds: success ? 2600 : 1900), _animation.reverse);
   }
 
   @override

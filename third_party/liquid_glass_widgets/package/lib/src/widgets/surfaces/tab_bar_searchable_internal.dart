@@ -1266,6 +1266,8 @@ class SearchPillState extends State<SearchPill> {
               // pre-0.13.0 "cursor matches textColor" behaviour pass
               // `cursorColor: textColor` explicitly via [config].
               cursorColor: config.cursorColor,
+              contextMenuBuilder: config.contextMenuBuilder ?? (context, editable) => CupertinoAdaptiveTextSelectionToolbar.editableText(editableTextState: editable),
+              selectionControls: config.selectionControls,
               placeholder: config.hintText,
               placeholderStyle: effectivePlaceholderStyle,
               padding: EdgeInsets.zero,

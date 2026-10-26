@@ -8,14 +8,21 @@ import '../beta_entry_flow.dart';
 import '../../music_platform/music_platform_providers.dart';
 import 'beta_welcome_page.dart';
 import 'beta_onboarding_page.dart';
+import '../../../core/audio/login_success_sound.dart';
 
 /// Owns entry presentation above the router, so a session publication cannot
 /// unmount the login before its success HUD and tour have finished. Credentials
 /// remain in their existing controllers; restoration never emits login events.
 class BetaEntryCoordinator extends ConsumerStatefulWidget {
-  const BetaEntryCoordinator({required this.child, this.onLogout, super.key});
+  const BetaEntryCoordinator({
+    required this.child,
+    this.onLogout,
+    this.backDispatcher,
+    super.key,
+  });
   final Widget child;
   final VoidCallback? onLogout;
+  final BackButtonDispatcher? backDispatcher;
   @override
   ConsumerState<BetaEntryCoordinator> createState() =>
       _BetaEntryCoordinatorState();
@@ -23,9 +30,46 @@ class BetaEntryCoordinator extends ConsumerStatefulWidget {
 
 class _BetaEntryCoordinatorState extends ConsumerState<BetaEntryCoordinator> {
   final _navigator = GlobalKey<NavigatorState>();
+  final _guide = GlobalKey<BetaOnboardingPageState>();
+  ChildBackButtonDispatcher? _back;
+
+  @override
+  void initState() {
+    super.initState();
+    // This entry navigator lives above Router, so BackButtonListener cannot
+    // discover its dispatcher. Inject a child dispatcher from the app boundary.
+    _back = widget.backDispatcher?.createChildBackButtonDispatcher();
+    _back?.addCallback(_handleBack);
+    _back?.takePriority();
+  }
+
+  Future<bool> _handleBack() async {
+    final stage = ref.read(betaEntryFlowProvider);
+    if (stage == BetaEntryStage.success) return true;
+    if (stage == BetaEntryStage.guide) {
+      _guide.currentState?.goBack();
+      return true;
+    }
+    final navigator = _navigator.currentState;
+    if (navigator != null && navigator.canPop()) return navigator.maybePop();
+    return false;
+  }
+
+  @override
+  void dispose() {
+    _back?.removeCallback(_handleBack);
+    if (_back != null) widget.backDispatcher?.forget(_back!);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen(betaEntryFlowProvider, (previous, next) {
+      if (next == BetaEntryStage.success && previous != next) {
+        // An explicit authentication event owns the one-shot UI sound.
+        // Restoration/refresh never enters this stage.
+        LoginSuccessSound.play();
+      }
       if (next == BetaEntryStage.welcome && previous != next) {
         // Let the welcome surface cover the old route before its stack resets.
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -42,7 +86,11 @@ class _BetaEntryCoordinatorState extends ConsumerState<BetaEntryCoordinator> {
             .getBool(BetaEntryFlow.completedKey) ==
         true;
     final restored = auth.value?.user != null || platform.value != null;
-    final first = stage == BetaEntryStage.idle && !completed && !restored;
+    final first =
+        stage == BetaEntryStage.idle &&
+        !completed &&
+        !restored &&
+        !platform.hasError;
     Widget overlay = const SizedBox.shrink(key: ValueKey('entry-app'));
     if (stage == BetaEntryStage.welcome || first) {
       // Music login and guest entry remain available if CloudBase restoration
@@ -57,22 +105,71 @@ class _BetaEntryCoordinatorState extends ConsumerState<BetaEntryCoordinator> {
               onGenerateRoute: (_) =>
                   betaEntryRoute<void>(const BetaWelcomePage()),
             );
-    } else if (stage == BetaEntryStage.success) {
-      overlay = BetaLoginSuccess(
-        key: const ValueKey('entry-success'),
-        onComplete: () => ref.read(betaEntryFlowProvider.notifier).showGuide(),
+    } else if (stage == BetaEntryStage.success ||
+        stage == BetaEntryStage.guide) {
+      // A single stable subtree owns success + guide. No outgoing/incoming
+      // transparent cross-fade can expose the routed home for even one frame.
+      overlay = Stack(
+        fit: StackFit.expand,
+        children: [
+          ExcludeFocus(
+            excluding: stage == BetaEntryStage.success,
+            child: ExcludeSemantics(
+              excluding: stage == BetaEntryStage.success,
+              child: IgnorePointer(
+                ignoring: stage == BetaEntryStage.success,
+                child: BetaOnboardingPage(
+                  key: _guide,
+                  onFinish: () =>
+                      ref.read(betaEntryFlowProvider.notifier).finish(),
+                ),
+              ),
+            ),
+          ),
+          if (stage == BetaEntryStage.success)
+            Positioned.fill(
+              child: AbsorbPointer(
+                child: BetaLoginSuccess(
+                  key: const ValueKey('entry-success'),
+                  onComplete: () =>
+                      ref.read(betaEntryFlowProvider.notifier).showGuide(),
+                ),
+              ),
+            ),
+        ],
       );
-    } else if (stage == BetaEntryStage.guide) {
-      overlay = BetaOnboardingPage(
-        key: const ValueKey('entry-guide'),
-        onFinish: () => ref.read(betaEntryFlowProvider.notifier).finish(),
+    } else if (platform.isLoading || platform.hasError) {
+      // An unreadable credential is not a guest account. Keep the music app
+      // mounted, but expose an honest, retryable restoration state.
+      overlay = Center(
+        child: platform.isLoading
+            ? const BetaActivityIndicator(label: '正在恢复账号')
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('账号暂未恢复，登录信息已保留'),
+                  const SizedBox(height: 16),
+                  BetaGlassButton(
+                    onPressed: () => ref.invalidate(platformAccountProvider),
+                    child: const Text('重试恢复'),
+                  ),
+                  const SizedBox(height: 12),
+                  BetaGlassButton(
+                    onPressed: () =>
+                        ref.read(betaEntryFlowProvider.notifier).welcome(),
+                    child: const Text('重新登录'),
+                  ),
+                ],
+              ),
       );
     }
     final active =
         stage == BetaEntryStage.welcome ||
         first ||
         stage == BetaEntryStage.success ||
-        stage == BetaEntryStage.guide;
+        stage == BetaEntryStage.guide ||
+        platform.isLoading ||
+        platform.hasError;
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -89,21 +186,20 @@ class _BetaEntryCoordinatorState extends ConsumerState<BetaEntryCoordinator> {
         Positioned.fill(
           child: IgnorePointer(
             ignoring: !active,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 320),
-              reverseDuration: const Duration(milliseconds: 240),
-              transitionBuilder: (child, animation) =>
-                  FadeTransition(opacity: animation, child: child),
-              child: active
-                  ? ColoredBox(
-                      key: ValueKey(
-                        stage == BetaEntryStage.idle ? 'first' : stage.name,
-                      ),
-                      color: Theme.of(context).colorScheme.surface,
-                      child: overlay,
-                    )
-                  : overlay,
-            ),
+            child: active
+                ? ColoredBox(
+                    key: ValueKey(
+                      stage == BetaEntryStage.success ||
+                              stage == BetaEntryStage.guide
+                          ? 'tour'
+                          : stage == BetaEntryStage.idle
+                          ? 'first'
+                          : stage.name,
+                    ),
+                    color: Theme.of(context).colorScheme.surface,
+                    child: overlay,
+                  )
+                : overlay,
           ),
         ),
       ],

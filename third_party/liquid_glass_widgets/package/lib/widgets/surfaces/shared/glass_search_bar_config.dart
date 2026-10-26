@@ -38,6 +38,8 @@ class GlassSearchBarConfig {
     this.onMicTap,
     this.textColor,
     this.cursorColor,
+    this.contextMenuBuilder,
+    this.selectionControls,
     this.trailingBuilder,
     this.textInputAction,
     this.keyboardType,
@@ -191,6 +193,10 @@ class GlassSearchBarConfig {
   /// )
   /// ```
   final Color? cursorColor;
+
+  /// Host-owned text editing menu and handles. Null preserves upstream defaults.
+  final EditableTextContextMenuBuilder? contextMenuBuilder;
+  final TextSelectionControls? selectionControls;
 
   // ── SearchBar parity ────────────────────────────────────────────────────────
 

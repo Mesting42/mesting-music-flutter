@@ -1,3 +1,4 @@
+import '../../../shared/widgets/beta_text_editing.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
@@ -63,6 +64,9 @@ class PlatformCommentComposer extends StatelessWidget {
                   settings: betaMusicPillGlass(context),
                   shape: const LiquidRoundedRectangle(borderRadius: 24),
                   child: TextField(
+                    contextMenuBuilder: buildBetaEditingMenu,
+                    selectionControls: mestingTextSelectionControls,
+                    cursorRadius: const Radius.circular(1),
                     controller: controller,
                     enabled: !sending,
                     maxLength: 1000,

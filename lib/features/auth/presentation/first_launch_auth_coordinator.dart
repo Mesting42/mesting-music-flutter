@@ -17,11 +17,13 @@ class FirstLaunchAuthCoordinator extends ConsumerStatefulWidget {
   const FirstLaunchAuthCoordinator({
     required this.child,
     this.onBetaLogout,
+    this.betaBackDispatcher,
     super.key,
   });
 
   final Widget child;
   final VoidCallback? onBetaLogout;
+  final BackButtonDispatcher? betaBackDispatcher;
 
   @override
   ConsumerState<FirstLaunchAuthCoordinator> createState() =>
@@ -48,6 +50,7 @@ class _FirstLaunchAuthCoordinatorState
   Widget build(BuildContext context) {
     if (DistributionChannel.isBeta) {
       return BetaEntryCoordinator(
+        backDispatcher: widget.betaBackDispatcher,
         onLogout: widget.onBetaLogout,
         child: widget.child,
       );

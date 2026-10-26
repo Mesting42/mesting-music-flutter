@@ -286,8 +286,11 @@ class _LegalDocumentLink extends StatelessWidget {
 }
 
 void _goBack(BuildContext context) {
-  if (context.canPop()) {
-    context.pop();
+  // Legal pages can belong to the entry Navigator, outside GoRouter's stack.
+  // Pop the actual owning navigator before considering a deep-link fallback.
+  final navigator = Navigator.of(context);
+  if (navigator.canPop()) {
+    navigator.pop();
   } else {
     context.go('/music/settings');
   }

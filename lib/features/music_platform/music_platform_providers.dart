@@ -29,6 +29,10 @@ final musicPlatformApiProvider = Provider<MusicPlatformApi>((ref) {
 final platformAccountProvider =
     AsyncNotifierProvider<PlatformAccountController, PlatformSession?>(
       PlatformAccountController.new,
+      // Recovery is user-driven after the bounded storage retries. Riverpod's
+      // default build retry keeps .future pending on a permanent format error
+      // and prevents the explicit fresh-login replacement from proceeding.
+      retry: (retryCount, error) => null,
     );
 
 /// A separate controller deliberately never reads authControllerProvider.
@@ -60,7 +64,10 @@ class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
         return null;
       }
     }
-    final session = await ref.watch(platformSessionStoreProvider).read();
+    final session = await ref
+        .watch(platformSessionStoreProvider)
+        .read()
+        .timeout(const Duration(seconds: 5));
     if (session != null && DistributionChannel.isBeta) {
       // On upgrade, prefer the existing platform identity when no choice was
       // saved by Beta.1. No CloudBase request is needed to make that decision.
@@ -77,9 +84,21 @@ class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
     return session;
   }
 
+  /// Only explicit login UI calls this boundary. A restoration failure is
+  /// retryable and must not prevent a new, platform-confirmed authentication.
+  /// Old encrypted bytes remain untouched until accept durably writes new ones.
+  Future<void> readyForInteractiveLogin() async {
+    if (state.hasError) return;
+    try {
+      await future;
+    } on Object {
+      if (!ref.mounted || !state.hasError) rethrow;
+    }
+  }
+
   Future<void> accept(Map<String, dynamic> result) => _serialize(() async {
     // Initialization must settle before a fresh login may replace its state.
-    await future;
+    await readyForInteractiveLogin();
     if (DistributionChannel.isBeta &&
         ref.read(betaAccountChoiceProvider) == BetaAccountChoice.mesting) {
       throw const MusicPlatformException('请先退出当前 Mesting 账号');

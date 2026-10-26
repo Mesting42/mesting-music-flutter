@@ -1,3 +1,4 @@
+import '../../../shared/widgets/beta_text_editing.dart';
 import 'beta_category_search_results.dart';
 import '../../../shared/widgets/beta_edge_back.dart';
 import 'package:flutter/material.dart';
@@ -40,6 +41,7 @@ class MusicSearchPage extends ConsumerStatefulWidget {
 }
 
 class _MusicSearchPageState extends ConsumerState<MusicSearchPage> {
+  final _resultsKey = GlobalKey<MusicSearchResultsBodyState>();
   final _textController = TextEditingController();
   final _focusNode = FocusNode();
   bool _inputIsEmpty = true;
@@ -78,13 +80,19 @@ class _MusicSearchPageState extends ConsumerState<MusicSearchPage> {
 
   void _closeSearch() {
     if (DistributionChannel.isBeta && !_inputIsEmpty) {
-      _textController.clear();
-      _focusNode.unfocus();
-      ref.read(musicSearchControllerProvider.notifier).setQuery('');
-      setState(() {
-        _inputIsEmpty = true;
-        _hasSubmitted = false;
-      });
+      void clear() {
+        if (!mounted) return;
+        _textController.clear();
+        _focusNode.unfocus();
+        ref.read(musicSearchControllerProvider.notifier).setQuery('');
+        setState(() {
+          _inputIsEmpty = true;
+          _hasSubmitted = false;
+        });
+      }
+
+      final results = _resultsKey.currentState;
+      results == null ? clear() : results.returnToLanding(clear);
       return;
     }
     if (context.canPop()) {
@@ -150,6 +158,10 @@ class _MusicSearchPageState extends ConsumerState<MusicSearchPage> {
                               const SizedBox(width: 7),
                               Expanded(
                                 child: TextField(
+                                  contextMenuBuilder: buildBetaEditingMenu,
+                                  selectionControls:
+                                      mestingTextSelectionControls,
+                                  cursorRadius: const Radius.circular(1),
                                   controller: _textController,
                                   focusNode: _focusNode,
                                   textInputAction: TextInputAction.search,
@@ -196,7 +208,12 @@ class _MusicSearchPageState extends ConsumerState<MusicSearchPage> {
                 ),
               ),
               Expanded(
-                child: _inputIsEmpty
+                child: DistributionChannel.isBeta
+                    ? MusicSearchResultsBody(
+                        key: _resultsKey,
+                        onSearch: _submit,
+                      )
+                    : _inputIsEmpty
                     ? _SearchLanding(onSearch: _submit)
                     : (_hasSubmitted
                           ? AnimatedSwitcher(
@@ -241,23 +258,106 @@ class _MusicSearchPageState extends ConsumerState<MusicSearchPage> {
 
 /// Search results reused by the official bottom search field. It consumes the
 /// same paged controller, so there is no second search implementation/state.
-class MusicSearchResultsBody extends ConsumerWidget {
+class MusicSearchResultsBody extends ConsumerStatefulWidget {
   const MusicSearchResultsBody({required this.onSearch, super.key});
   final ValueChanged<String> onSearch;
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MusicSearchResultsBody> createState() =>
+      MusicSearchResultsBodyState();
+}
+
+/// Keep the real result pane and its providers alive until the return motion
+/// ends. Clearing query first would reset five categories in the outgoing frame.
+class MusicSearchResultsBodyState extends ConsumerState<MusicSearchResultsBody>
+    with SingleTickerProviderStateMixin {
+  late final _motion = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 300),
+    reverseDuration: const Duration(milliseconds: 280),
+    value: 1,
+  );
+  bool _returning = false;
+  @override
+  void initState() {
+    super.initState();
+    // A landing-only visit has no AnimatedBuilder; initialize before disposal.
+    _motion;
+  }
+  Future<void> returnToLanding(VoidCallback clear) async {
+    if (_returning) return;
+    final query = ref.read(musicSearchControllerProvider).query;
+    if (query.isEmpty) {
+      clear();
+      return;
+    }
+    setState(() => _returning = true);
+    try {
+      if (MediaQuery.disableAnimationsOf(context)) {
+        _motion.value = 0;
+      } else {
+        await _motion.reverse().orCancel;
+      }
+      if (mounted && ref.read(musicSearchControllerProvider).query == query) {
+        clear();
+      }
+    } on TickerCanceled {
+      // A newer query/navigation owns the presentation now.
+    } finally {
+      if (mounted) setState(() => _returning = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _motion.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(musicSearchControllerProvider);
-    return Material(
-      color: Colors.transparent,
-      child: state.query.isEmpty
-          ? (DistributionChannel.isBeta
-                ? PlatformSearchLanding(onSearch: onSearch)
-                : _SearchLanding(onSearch: onSearch))
-          : DistributionChannel.isBeta
-          ? const BetaCategorySearchResults()
+    ref.listen(musicSearchControllerProvider.select((s) => s.query), (
+      before,
+      after,
+    ) {
+      if (after.isNotEmpty && (before == null || before.isEmpty)) {
+        _motion.forward(from: MediaQuery.disableAnimationsOf(context) ? 1 : 0);
+      }
+    });
+    if (!DistributionChannel.isBeta) {
+      return state.query.isEmpty
+          ? _SearchLanding(onSearch: widget.onSearch)
           : state.isLoading
           ? _SearchLoading(query: state.query)
-          : _SearchResults(state: state, onSearch: onSearch),
+          : _SearchResults(state: state, onSearch: widget.onSearch);
+    }
+    return ClipRect(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (state.query.isEmpty || _returning)
+            PlatformSearchLanding(onSearch: widget.onSearch),
+          if (state.query.isNotEmpty)
+            AnimatedBuilder(
+              animation: _motion,
+              child: const BetaCategorySearchResults(),
+              builder: (context, child) => IgnorePointer(
+                ignoring: _returning,
+                child: FractionalTranslation(
+                  translation: Offset(
+                    1 - Curves.easeInOutCubic.transform(_motion.value),
+                    0,
+                  ),
+                  child: ColoredBox(
+                    key: const ValueKey('beta13-search-results-surface'),
+                    color: Theme.of(context).colorScheme.surface,
+                    child: child,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

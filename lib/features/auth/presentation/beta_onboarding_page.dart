@@ -54,14 +54,50 @@ class BetaOnboardingPage extends ConsumerStatefulWidget {
   const BetaOnboardingPage({required this.onFinish, super.key});
   final VoidCallback onFinish;
   @override
-  ConsumerState<BetaOnboardingPage> createState() => _BetaOnboardingPageState();
+  ConsumerState<BetaOnboardingPage> createState() => BetaOnboardingPageState();
 }
 
-class _BetaOnboardingPageState extends ConsumerState<BetaOnboardingPage> {
+class BetaOnboardingPageState extends ConsumerState<BetaOnboardingPage>
+    with SingleTickerProviderStateMixin {
   final _pager = PageController();
   int _index = 0;
+  int? _skipFrom;
+  late final _skip = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 340),
+    value: 1,
+  );
+
+  Future<void> _skipToLast() async {
+    if (_index == 7 || _skipFrom != null) return;
+    final from = _index;
+    // Jump the actual pager once; only the outgoing/incoming pages animate.
+    // animateToPage(7) would sweep past six unrelated guide illustrations.
+    setState(() {
+      _skipFrom = from;
+      _skip.value = 0;
+    });
+    _pager.jumpToPage(7);
+    try {
+      if (MediaQuery.disableAnimationsOf(context)) {
+        _skip.value = 1;
+      } else {
+        await _skip.forward().orCancel;
+      }
+    } on TickerCanceled {
+      return;
+    }
+    if (mounted) setState(() => _skipFrom = null);
+  }
+
+  /// The app-level entry dispatcher owns Android back while this overlay is up.
+  void goBack() {
+    if (_index > 0) _page(_index - 1);
+  }
+
   @override
   void dispose() {
+    _skip.dispose();
     _pager.dispose();
     super.dispose();
   }
@@ -121,21 +157,56 @@ class _BetaOnboardingPageState extends ConsumerState<BetaOnboardingPage> {
                           ),
                           BetaGlassButton(
                             height: 42,
-                            onPressed: widget.onFinish,
+                            onPressed: _index == betaGuidePages.length - 1
+                                ? null
+                                : _skipToLast,
                             child: const Text('跳过'),
                           ),
                         ],
                       ),
                     ),
                     Expanded(
-                      child: PageView.builder(
-                        controller: _pager,
-                        itemCount: betaGuidePages.length,
-                        onPageChanged: (value) =>
-                            setState(() => _index = value),
-                        itemBuilder: (_, index) => TickerMode(
-                          enabled: index == _index,
-                          child: _GuideContent(index: index),
+                      child: AnimatedBuilder(
+                        animation: _skip,
+                        builder: (context, child) {
+                          final p = Curves.easeInOutCubic.transform(
+                            _skip.value,
+                          );
+                          return Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Opacity(
+                                opacity: _skipFrom == null ? 1 : p,
+                                child: FractionalTranslation(
+                                  translation: Offset(
+                                    _skipFrom == null ? 0 : .12 * (1 - p),
+                                    0,
+                                  ),
+                                  child: child,
+                                ),
+                              ),
+                              if (_skipFrom != null)
+                                IgnorePointer(
+                                  child: Opacity(
+                                    opacity: 1 - p,
+                                    child: FractionalTranslation(
+                                      translation: Offset(-.12 * p, 0),
+                                      child: _GuideContent(index: _skipFrom!),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                        child: PageView.builder(
+                          controller: _pager,
+                          itemCount: betaGuidePages.length,
+                          onPageChanged: (value) =>
+                              setState(() => _index = value),
+                          itemBuilder: (_, index) => TickerMode(
+                            enabled: index == _index,
+                            child: _GuideContent(index: index),
+                          ),
                         ),
                       ),
                     ),
