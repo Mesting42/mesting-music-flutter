@@ -7,6 +7,8 @@ import 'data/embedded_music_server.dart';
 import 'data/music_platform_api.dart';
 import 'data/platform_session_store.dart';
 import 'domain/platform_session.dart';
+import '../../core/platform/distribution_channel.dart';
+import '../auth/beta_account_choice.dart';
 
 final musicServerProvider = Provider<MusicServer>(
   (ref) => EmbeddedMusicServer(),
@@ -43,7 +45,33 @@ class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
 
   @override
   Future<PlatformSession?> build() async {
+    if (DistributionChannel.isBeta) {
+      ref.listen(betaAccountChoiceProvider, (previous, choice) {
+        if (choice == BetaAccountChoice.mesting ||
+            choice == BetaAccountChoice.guest) {
+          ref.read(musicPlatformApiProvider).session = null;
+          state = const AsyncData(null);
+        }
+      });
+      final choice = ref.read(betaAccountChoiceProvider);
+      if (choice == BetaAccountChoice.mesting ||
+          choice == BetaAccountChoice.guest) {
+        return null;
+      }
+    }
     final session = await ref.watch(platformSessionStoreProvider).read();
+    if (session != null && DistributionChannel.isBeta) {
+      // On upgrade, prefer the existing platform identity when no choice was
+      // saved by Beta.1. No CloudBase request is needed to make that decision.
+      final choice = ref.read(betaAccountChoiceProvider);
+      if (choice == BetaAccountChoice.mesting ||
+          choice == BetaAccountChoice.guest) {
+        return null;
+      }
+      await ref
+          .read(betaAccountChoiceProvider.notifier)
+          .select(BetaAccountChoice.kugou);
+    }
     ref.read(musicPlatformApiProvider).session = session;
     return session;
   }
@@ -51,8 +79,20 @@ class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
   Future<void> accept(Map<String, dynamic> result) => _serialize(() async {
     // Initialization must settle before a fresh login may replace its state.
     await future;
+    if (DistributionChannel.isBeta &&
+        ref.read(betaAccountChoiceProvider) == BetaAccountChoice.mesting) {
+      throw const MusicPlatformException('请先退出当前 Mesting 账号');
+    }
     final session = PlatformSession.fromJson(result);
     await ref.read(platformSessionStoreProvider).write(session);
+    if (DistributionChannel.isBeta) {
+      if (ref.read(betaAccountChoiceProvider) == BetaAccountChoice.mesting) {
+        throw const MusicPlatformException('当前已切换为 Mesting 账号，请先退出');
+      }
+      await ref
+          .read(betaAccountChoiceProvider.notifier)
+          .select(BetaAccountChoice.kugou);
+    }
     ref.read(musicPlatformApiProvider).session = session;
     state = AsyncData(session);
   });
@@ -62,6 +102,11 @@ class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
     // Remove the credential before publishing guest state; failure remains
     // visible so the UI never falsely promises the credential was removed.
     await ref.read(platformSessionStoreProvider).clear();
+    if (DistributionChannel.isBeta) {
+      await ref
+          .read(betaAccountChoiceProvider.notifier)
+          .select(BetaAccountChoice.guest);
+    }
     ref.read(musicPlatformApiProvider).session = null;
     state = const AsyncData(null);
   });

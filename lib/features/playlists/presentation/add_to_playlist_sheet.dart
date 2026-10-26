@@ -11,6 +11,8 @@ import '../../library/presentation/library_access.dart';
 import '../../library/data/library_repository.dart';
 import '../../library/library_providers.dart';
 import '../../themes/music_theme_tokens.dart';
+import '../../music_platform/data/platform_library_repository.dart';
+import '../../music_platform/presentation/platform_feedback.dart';
 
 const _openProfileAction = '__open_profile__';
 
@@ -27,7 +29,15 @@ Future<void> showAddToPlaylistSheet(
   );
   if (!allowed || !context.mounted) return;
   final repository = ref.read(libraryRepositoryProvider);
-  final isFavorite = await repository.isFavorite(track.id);
+  bool isFavorite;
+  try {
+    isFavorite =
+        repository is PlatformLibraryRepository ||
+        await repository.isFavorite(track.id);
+  } catch (error) {
+    if (context.mounted) showPlatformFailure(context, error);
+    return;
+  }
   if (!context.mounted) return;
   if (!isFavorite) {
     showMusicNotice(
@@ -65,6 +75,8 @@ class _AddToPlaylistSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = context.musicThemeTokens;
     final playlists = ref.watch(playlistsProvider);
+    final repository = ref.watch(libraryRepositoryProvider);
+    final cloud = repository is PlatformLibraryRepository;
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -100,7 +112,12 @@ class _AddToPlaylistSheet extends ConsumerWidget {
                 padding: EdgeInsets.symmetric(vertical: 24),
                 child: Center(child: Text('歌单读取失败')),
               ),
-              data: (items) {
+              data: (allItems) {
+                final items = cloud
+                    ? allItems
+                          .where((item) => repository.canManage(item.id))
+                          .toList()
+                    : allItems;
                 if (items.isEmpty) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 18),
@@ -138,11 +155,12 @@ class _AddToPlaylistSheet extends ConsumerWidget {
                         const SizedBox(height: 6),
                     itemBuilder: (context, index) {
                       final playlist = items[index];
-                      final tracks =
-                          ref
-                              .watch(playlistTracksProvider(playlist.id))
-                              .value ??
-                          const <Track>[];
+                      final tracks = cloud
+                          ? const <Track>[]
+                          : ref
+                                    .watch(playlistTracksProvider(playlist.id))
+                                    .value ??
+                                const <Track>[];
                       final cover =
                           playlist.coverAsset ??
                           (tracks.isEmpty ? '' : tracks.first.coverAsset);
@@ -163,7 +181,9 @@ class _AddToPlaylistSheet extends ConsumerWidget {
                           playlist.name,
                           style: const TextStyle(fontWeight: FontWeight.w800),
                         ),
-                        subtitle: Text('${tracks.length} 首歌曲'),
+                        subtitle: Text(
+                          cloud ? '酷狗云端歌单' : '${tracks.length} 首歌曲',
+                        ),
                         trailing: const Icon(Icons.add_rounded),
                         onTap: () async {
                           try {
@@ -181,6 +201,10 @@ class _AddToPlaylistSheet extends ConsumerWidget {
                               title: '请先收藏这首歌',
                               message: '收藏状态已变化，请返回后重试',
                             );
+                          } on Object catch (error) {
+                            if (context.mounted) {
+                              showPlatformFailure(context, error);
+                            }
                           }
                         },
                       );

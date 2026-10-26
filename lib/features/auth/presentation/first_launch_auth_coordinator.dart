@@ -7,6 +7,7 @@ import '../../../core/platform/distribution_channel.dart';
 import '../../../shared/widgets/mesting_loading_indicator.dart';
 import '../auth_providers.dart';
 import 'auth_page.dart';
+import '../../music_platform/music_platform_providers.dart';
 
 const firstLaunchAuthCompletedPreferenceKey =
     'mesting_first_launch_auth_completed_v1';
@@ -40,12 +41,19 @@ class _FirstLaunchAuthCoordinatorState
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authControllerProvider);
-    if (!_completed && auth.value?.user != null && !_saving) {
+    final platformLoggedIn =
+        DistributionChannel.isBeta &&
+        ref.watch(platformAccountProvider).value != null;
+    if (!_completed &&
+        (auth.value?.user != null || platformLoggedIn) &&
+        !_saving) {
       _saving = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => _complete());
     }
 
-    if (_completed || auth.value?.user != null) return widget.child;
+    if (_completed || auth.value?.user != null || platformLoggedIn) {
+      return widget.child;
+    }
 
     return PopScope(
       canPop: false,

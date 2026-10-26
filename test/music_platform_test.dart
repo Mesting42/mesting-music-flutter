@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mesting_music/core/persistence/app_preferences.dart';
 import 'package:mesting_music/features/music_platform/data/embedded_music_server.dart';
 import 'package:mesting_music/features/music_platform/data/embedded_kugou_music_source.dart';
 import 'package:mesting_music/features/music_platform/data/music_platform_api.dart';
@@ -39,6 +41,11 @@ class _Store implements PlatformSessionStore {
 }
 
 void main() {
+  late SharedPreferences preferences;
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    preferences = await SharedPreferences.getInstance();
+  });
   test(
     'playback refresh uses the current account and rejects non-HTTP audio',
     () async {
@@ -83,6 +90,7 @@ void main() {
       );
       final container = ProviderContainer(
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(preferences),
           platformSessionStoreProvider.overrideWithValue(store),
           musicPlatformApiProvider.overrideWithValue(api),
         ],
@@ -253,6 +261,7 @@ void main() {
       );
       final container = ProviderContainer(
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(preferences),
           platformSessionStoreProvider.overrideWithValue(store),
           musicPlatformApiProvider.overrideWithValue(api),
         ],

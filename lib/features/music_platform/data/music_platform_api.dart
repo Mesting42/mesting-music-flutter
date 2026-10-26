@@ -24,6 +24,7 @@ class MusicPlatformApi {
     Map<String, String> query = const {},
     bool allowBusinessError = false,
     Future<void>? abortTrigger,
+    PlatformSession? expectedSession,
   }) async {
     // Enforce the boundary even if a future caller passes a malformed path.
     if (!path.startsWith('/') || path.startsWith('//') || path.contains('?')) {
@@ -34,6 +35,11 @@ class MusicPlatformApi {
       throw StateError('音乐接口必须使用本机回环地址');
     }
     final identity = session;
+    if (expectedSession != null &&
+        (identity?.userId != expectedSession.userId ||
+            identity?.token != expectedSession.token)) {
+      throw const MusicPlatformException('账号已变化，请返回后重新操作');
+    }
     final request = http.AbortableRequest(
       'GET',
       base.replace(
@@ -47,6 +53,7 @@ class MusicPlatformApi {
       ),
       abortTrigger: abortTrigger,
     );
+    request.followRedirects = false;
     request.headers['Accept'] = 'application/json';
     request.headers['x-apicache-bypass'] = '1';
     request.headers['Cache-Control'] = 'no-cache';
@@ -70,6 +77,11 @@ class MusicPlatformApi {
               decoded['status']?.toString() == '0')) {
         // Raw responses/URLs can contain credentials. Never log or expose them.
         throw const MusicPlatformException('音乐平台暂时未能完成请求，请稍后重试');
+      }
+      if (expectedSession != null &&
+          (session?.userId != expectedSession.userId ||
+              session?.token != expectedSession.token)) {
+        throw const MusicPlatformException('账号已变化，请返回后重新操作');
       }
       return decoded;
     } on http.RequestAbortedException {

@@ -35,6 +35,9 @@ final kugouMusicSourceProvider = Provider<KugouMusicSource>((ref) {
 });
 
 final onlineMusicSourcesProvider = Provider<List<MusicSource>>((ref) {
+  // Beta has one platform transport for every account/guest mode. Other
+  // distributions retain their existing independent sources.
+  if (DistributionChannel.isBeta) return [ref.watch(kugouMusicSourceProvider)];
   final client = ref.watch(musicSearchHttpClientProvider);
   return List<MusicSource>.unmodifiable([
     ref.watch(kugouMusicSourceProvider),

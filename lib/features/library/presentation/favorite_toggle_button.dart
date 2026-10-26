@@ -6,6 +6,7 @@ import 'library_access.dart';
 import '../../themes/mesting_palette.dart';
 import '../../themes/music_theme_tokens.dart';
 import '../library_providers.dart';
+import '../../music_platform/presentation/platform_feedback.dart';
 
 const _favoriteAccent = MestingPalette.favorite;
 
@@ -80,7 +81,11 @@ class FavoriteToggleButton extends ConsumerWidget {
               redirect: '/music',
             );
             if (!allowed || !context.mounted) return;
-            await ref.read(libraryRepositoryProvider).toggleFavorite(track);
+            try {
+              await ref.read(libraryRepositoryProvider).toggleFavorite(track);
+            } catch (error) {
+              if (context.mounted) showPlatformFailure(context, error);
+            }
           },
           icon: AnimatedSwitcher(
             duration: const Duration(milliseconds: 180),

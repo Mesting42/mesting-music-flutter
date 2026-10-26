@@ -9,6 +9,8 @@ import '../../core/platform/distribution_channel.dart';
 import '../../shared/models/track.dart';
 import '../auth/auth_providers.dart';
 import '../auth/data/auth_repository.dart';
+import '../music_platform/music_platform_providers.dart';
+import '../music_platform/data/platform_library_repository.dart';
 import 'data/library_repository.dart';
 import 'data/library_sync_api.dart';
 
@@ -86,6 +88,18 @@ final librarySyncApiProvider = Provider<LibrarySyncApi?>((ref) {
 });
 
 final libraryRepositoryProvider = Provider<LibraryRepository>((ref) {
+  if (DistributionChannel.isBeta) {
+    final platform = ref.watch(platformAccountProvider).value;
+    if (platform != null) {
+      final repository = PlatformLibraryRepository(
+        ref.watch(appDatabaseProvider),
+        api: ref.watch(musicPlatformApiProvider),
+        identity: platform,
+      );
+      ref.onDispose(repository.dispose);
+      return repository;
+    }
+  }
   final user = ref.watch(currentUserProvider);
   final ownerId = user?.uid ?? legacyLibraryOwnerId;
   final database = ref.watch(appDatabaseProvider);
@@ -110,6 +124,16 @@ final libraryRepositoryProvider = Provider<LibraryRepository>((ref) {
     );
   }
   return repository;
+});
+
+/// Playback history belongs to the active account without inventing a Mesting
+/// user for a platform login. Guests keep their existing local owner.
+final activeLibraryOwnerProvider = Provider<String>((ref) {
+  if (DistributionChannel.isBeta) {
+    final platform = ref.watch(platformAccountProvider).value;
+    if (platform != null) return 'kugou:${platform.userId}';
+  }
+  return ref.watch(currentUserProvider)?.uid ?? legacyLibraryOwnerId;
 });
 
 final favoriteTracksProvider = StreamProvider<List<Track>>((ref) {

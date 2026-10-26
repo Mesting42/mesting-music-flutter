@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/audio/playback_providers.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../music_platform/presentation/platform_discovery_page.dart';
 import '../../../shared/layout/adaptive_layout.dart';
 import '../../../shared/models/track.dart';
 import '../../../shared/widgets/artwork_image.dart';
@@ -65,6 +67,7 @@ class _RecommendationPageState extends ConsumerState<RecommendationPage>
 
   @override
   Widget build(BuildContext context) {
+    if (DistributionChannel.isBeta) return const PlatformDiscoveryPage();
     final now = _now;
     final theme = ref.watch(effectiveMusicThemeProvider);
     final hotSnapshot = ref.watch(hotMusicControllerProvider).value;

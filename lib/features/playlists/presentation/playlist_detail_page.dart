@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/audio/playback_providers.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../music_platform/presentation/platform_library_page.dart';
 import '../../../core/database/app_database.dart';
 import '../../../shared/models/track.dart';
 import '../../../shared/utils/duration_format.dart';
@@ -36,6 +38,9 @@ class PlaylistDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (DistributionChannel.isBeta && playlistId.startsWith('kg:')) {
+      return PlatformCloudPlaylistPage(id: playlistId);
+    }
     final playlist = ref.watch(playlistProvider(playlistId));
     final tracks = ref.watch(playlistTracksProvider(playlistId));
     final favoriteTracks =

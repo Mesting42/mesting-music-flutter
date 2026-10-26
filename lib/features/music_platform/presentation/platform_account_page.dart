@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../data/music_platform_api.dart';
 import '../music_platform_providers.dart';
+import '../../auth/auth_providers.dart';
 
 /// Uses Mesting's inherited theme, with account state owned entirely outside
 /// CloudBase. Closing this route cancels scans without affecting either login.
@@ -215,6 +216,17 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (ref.watch(currentUserProvider) != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('当前账号')),
+        body: const Center(
+          child: Text(
+            '当前已登录 Mesting 账号\n退出后可选择其他登录方式',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
     final account = ref.watch(platformAccountProvider);
     final session = account.value;
     return Scaffold(
@@ -229,7 +241,9 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
                 Text('酷狗音乐', style: Theme.of(context).textTheme.headlineSmall),
                 const SizedBox(height: 8),
                 Text(
-                  '与 Mesting 账号分别登录。Mesting 云服务暂不可用时，你仍可使用音乐平台功能。',
+                  session == null
+                      ? '选择酷狗账号登录。登录后可使用云端歌单、收藏和个性化推荐。'
+                      : '当前使用酷狗账号，退出后可以重新选择登录方式。',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 24),

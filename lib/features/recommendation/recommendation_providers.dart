@@ -4,8 +4,6 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/models/track.dart';
-import '../../core/database/app_database.dart';
-import '../auth/auth_providers.dart';
 import '../library/library_providers.dart';
 import '../search/search_providers.dart';
 import 'data/endless_radio_repository.dart';
@@ -13,7 +11,7 @@ import 'domain/endless_radio.dart';
 import 'domain/personalized_recommendation.dart';
 
 final listeningSignalsProvider = StreamProvider<List<ListeningSignal>>((ref) {
-  final ownerId = ref.watch(currentUserProvider)?.uid ?? legacyLibraryOwnerId;
+  final ownerId = ref.watch(activeLibraryOwnerProvider);
   return ref.watch(appDatabaseProvider).watchPlaybackHistory(ownerId).map((
     rows,
   ) {
@@ -39,8 +37,7 @@ final listeningSignalsProvider = StreamProvider<List<ListeningSignal>>((ref) {
 
 final listeningSignalsForDayProvider =
     StreamProvider.family<List<ListeningSignal>, DateTime>((ref, day) {
-      final ownerId =
-          ref.watch(currentUserProvider)?.uid ?? legacyLibraryOwnerId;
+      final ownerId = ref.watch(activeLibraryOwnerProvider);
       return ref
           .watch(appDatabaseProvider)
           .watchPlaybackHistoryForDay(ownerId, day)

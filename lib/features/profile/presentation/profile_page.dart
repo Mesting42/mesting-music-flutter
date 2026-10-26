@@ -9,6 +9,8 @@ import '../../../core/errors/user_facing_error.dart';
 import '../../../core/persistence/app_preferences.dart';
 import '../../../core/platform/distribution_channel.dart';
 import '../../music_platform/presentation/platform_account_page.dart';
+import '../../music_platform/presentation/platform_profile.dart';
+import '../../music_platform/music_platform_providers.dart';
 import '../../../shared/layout/adaptive_layout.dart';
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../../shared/widgets/mesting_loading_indicator.dart';
@@ -50,6 +52,13 @@ class ProfilePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (DistributionChannel.isBeta) {
+      final platform = ref.watch(platformAccountProvider);
+      if (platform.value != null) return const PlatformProfile();
+      if (platform.isLoading) {
+        return const Center(child: MestingLoadingIndicator());
+      }
+    }
     final auth = ref.watch(authControllerProvider);
     final user = auth.value?.user;
     final topInset = MediaQuery.paddingOf(context).top;
@@ -208,8 +217,6 @@ class ProfilePage extends ConsumerWidget {
                       background: profileBackground,
                       onEditTap: () => context.push('/profile/edit'),
                     ),
-                    if (DistributionChannel.isBeta)
-                      _musicPlatformEntry(context),
                     Padding(
                       padding: EdgeInsets.fromLTRB(14, 20, 14, bottomClearance),
                       child: _ProfileDashboard(

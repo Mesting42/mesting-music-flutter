@@ -20,6 +20,9 @@ import '../../discover/domain/curated_playlist.dart';
 import '../../auth/auth_providers.dart';
 import '../../../core/platform/distribution_channel.dart';
 import 'library_access.dart';
+import '../../music_platform/presentation/platform_discovery_page.dart';
+import '../../music_platform/presentation/platform_library_page.dart';
+import '../../music_platform/music_platform_providers.dart';
 import '../../player/presentation/music_hub_top_bar.dart';
 import '../../player/presentation/music_page_transition.dart';
 import '../../player/presentation/persistent_mini_player.dart'
@@ -75,6 +78,17 @@ class _MusicHomePageState extends ConsumerState<MusicHomePage>
 
   @override
   Widget build(BuildContext context) {
+    final betaView = GoRouterState.of(context).uri.queryParameters['view'];
+    if (DistributionChannel.isBeta &&
+        ref.watch(platformAccountProvider).value != null &&
+        (betaView == 'favorites' || betaView == 'playlists')) {
+      return PlatformLibraryPage(favorites: betaView == 'favorites');
+    }
+    if (DistributionChannel.isBeta &&
+        betaView != 'favorites' &&
+        betaView != 'playlists') {
+      return PlatformDiscoveryPage(dailyOnly: betaView == 'daily');
+    }
     final selectedTheme = ref.watch(effectiveMusicThemeProvider);
     final favorites =
         ref.watch(favoriteTracksProvider).value ?? const <Track>[];

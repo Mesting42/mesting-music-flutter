@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/themes/app_theme.dart';
 import '../features/themes/theme_controller.dart';
-import '../features/auth/auth_providers.dart';
 import '../features/auth/presentation/first_launch_auth_coordinator.dart';
 import '../features/legal/presentation/disclaimer_dialog.dart';
 import '../features/lyrics/presentation/lyrics_overlay_coordinator.dart';
@@ -15,7 +14,6 @@ import '../core/platform/distribution_channel.dart';
 import '../features/music_platform/data/embedded_kugou_music_source.dart';
 import '../features/music_platform/music_platform_providers.dart';
 import '../shared/models/track.dart';
-import '../core/database/app_database.dart';
 import '../core/persistence/playback_persistence_controller.dart';
 import '../features/library/library_providers.dart';
 import '../features/recommendation/recommendation_providers.dart';
@@ -53,14 +51,8 @@ class MestingMusicApp extends ConsumerWidget {
     audioHandler.configureRadioTrackLoader(radioController.loadMore);
     // Start secure local account restoration with the app rather than waiting
     // until the user opens the profile tab or side panel.
-    ref.listen(authControllerProvider, (previous, next) {
-      next.whenData((session) {
-        unawaited(
-          playbackPersistence.activateOwner(
-            session?.user.uid ?? legacyLibraryOwnerId,
-          ),
-        );
-      });
+    ref.listen(activeLibraryOwnerProvider, (previous, ownerId) {
+      unawaited(playbackPersistence.activateOwner(ownerId));
     });
     ref.listen(hotMusicControllerProvider, (previous, next) {
       next.whenData((snapshot) {

@@ -10,6 +10,8 @@ import '../../../core/errors/user_facing_error.dart';
 import '../../../core/persistence/app_preferences.dart';
 import '../../../core/platform/distribution_channel.dart';
 import '../../music_platform/presentation/platform_account_page.dart';
+import '../../music_platform/music_platform_providers.dart';
+import '../beta_account_choice.dart';
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../legal/presentation/disclaimer_dialog.dart';
 import '../../library/library_providers.dart';
@@ -109,6 +111,10 @@ class _AuthPageState extends ConsumerState<AuthPage>
 
   @override
   Widget build(BuildContext context) {
+    if (DistributionChannel.isBeta &&
+        ref.watch(platformAccountProvider).value != null) {
+      return const PlatformAccountPage();
+    }
     final platformBrightness = MediaQuery.platformBrightnessOf(context);
     final dark = platformBrightness == Brightness.dark;
     final palette = _AuthPalette.forBrightness(platformBrightness);
@@ -176,7 +182,8 @@ class _AuthPageState extends ConsumerState<AuthPage>
                             ),
                             SizedBox(height: widget.firstLaunch ? 54 : 24),
                             const _AuthBrand(),
-                            if (DistributionChannel.isBeta) ...[
+                            if (DistributionChannel.isBeta &&
+                                authState.value == null) ...[
                               const SizedBox(height: 24),
                               OutlinedButton.icon(
                                 key: const ValueKey('music-platform-login'),
@@ -972,7 +979,15 @@ class _AuthPageState extends ConsumerState<AuthPage>
     }
   }
 
-  void _experienceNow() {
+  Future<void> _experienceNow() async {
+    if (DistributionChannel.isBeta &&
+        ref.read(platformAccountProvider).value == null &&
+        ref.read(authControllerProvider).value == null) {
+      await ref
+          .read(betaAccountChoiceProvider.notifier)
+          .select(BetaAccountChoice.guest);
+    }
+    if (!mounted) return;
     widget.onExperience?.call();
     if (!widget.firstLaunch) context.go('/music/recommend');
   }

@@ -120,6 +120,20 @@ class EmbeddedKugouMusicSource extends KugouMusicSource {
   /// Response shapes differ by endpoint; preserve provider IDs for later
   /// account/playlist adapters and strip highlight markup from search results.
   static Track? platformTrack(Map<String, dynamic> row) {
+    // Cloud lists and discovery responses put metadata into nested records.
+    // Top-level fields win, matching the upstream model contract.
+    row = {
+      for (final key in [
+        'album_info',
+        'audio_info',
+        'song_info',
+        'base',
+        'audio',
+        'rec_song_info',
+      ])
+        ...MusicPlatformApi.objectMap(row[key]),
+      ...row,
+    };
     String text(List<String> keys) {
       for (final key in keys) {
         final value = '${row[key] ?? ''}'
@@ -130,15 +144,50 @@ class EmbeddedKugouMusicSource extends KugouMusicSource {
       return '';
     }
 
-    final hash = text(['hash', 'FileHash', 'filehash', 'audio_hash']);
+    final hash = text([
+      'hash',
+      'FileHash',
+      'filehash',
+      'audio_hash',
+      'hash_128',
+      'Hash128',
+      'sd_hash',
+    ]);
     if (hash.isEmpty) return null;
+    final singers = row['singerinfo'] ?? row['authors'] ?? row['singers'];
+    final singerNames = singers is List
+        ? singers
+              .whereType<Map>()
+              .map(
+                (item) =>
+                    '${item['name'] ?? item['author_name'] ?? item['singername'] ?? ''}',
+              )
+              .where((name) => name.isNotEmpty)
+              .join(' / ')
+        : '';
     var duration =
         int.tryParse(text(['duration', 'Duration', 'timelength'])) ?? 0;
     if (duration > 10000) duration ~/= 1000;
     return Track(
       id: 'kugou_$hash',
-      title: text(['songname', 'SongName', 'audio_name', 'name', 'filename']),
-      artist: text(['singername', 'SingerName', 'author_name', 'singer']),
+      title: text([
+        'songname',
+        'SongName',
+        'audio_name',
+        'name',
+        'filename',
+        'ori_audio_name',
+        'FileName',
+      ]),
+      artist: singerNames.isNotEmpty
+          ? singerNames
+          : text([
+              'singername',
+              'SingerName',
+              'author_name',
+              'singer',
+              'author',
+            ]),
       album: text(['album_name', 'AlbumName', 'albumname']),
       duration: Duration(seconds: duration),
       audioAsset: '',

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../music_platform/music_platform_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -268,8 +270,11 @@ class _MusicHubPanelState extends ConsumerState<_MusicHubPanel> {
   Widget build(BuildContext context) {
     final tokens = context.musicThemeTokens;
     final auth = ref.watch(authControllerProvider);
+    final platform = DistributionChannel.isBeta
+        ? ref.watch(platformAccountProvider).value
+        : null;
     final user = auth.value?.user;
-    final accountState = user != null
+    final accountState = user != null || platform != null
         ? _PanelAccountState.signedIn
         : auth.isLoading
         ? _PanelAccountState.restoring
@@ -331,14 +336,23 @@ class _MusicHubPanelState extends ConsumerState<_MusicHubPanel> {
                       _PanelAccountState.restoring => '正在恢复账号',
                       _PanelAccountState.unavailable => '账号状态暂不可用',
                       _PanelAccountState.signedOut => '登录后收藏你的音乐',
-                      _PanelAccountState.signedIn => user!.nickname,
+                      _PanelAccountState.signedIn =>
+                        platform != null
+                            ? (platform.nickname.isEmpty
+                                  ? '酷狗账号'
+                                  : platform.nickname)
+                            : user!.nickname,
                     },
                     caption: switch (accountState) {
                       _PanelAccountState.restoring => '正在读取本机登录状态',
                       _PanelAccountState.unavailable => '请稍后重新打开侧边菜单',
                       _PanelAccountState.signedOut => '同步收藏、歌单和个人资料',
                       _PanelAccountState.signedIn =>
-                        user!.bio.trim().isNotEmpty ? user.bio : '欢迎回到你的音乐空间',
+                        platform != null
+                            ? '酷狗账号 · 云端收藏与歌单'
+                            : user!.bio.trim().isNotEmpty
+                            ? user.bio
+                            : '欢迎回到你的音乐空间',
                     },
                     avatarUrl: user?.avatarUrl,
                     fallbackIcon: switch (accountState) {

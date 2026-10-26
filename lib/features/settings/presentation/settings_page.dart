@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../auth/auth_providers.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../music_platform/music_platform_providers.dart';
+import '../../music_platform/presentation/platform_profile.dart';
 import '../../auth/domain/auth_models.dart';
 import '../../app_update/app_update_providers.dart';
 import '../../app_update/domain/app_update_models.dart';
@@ -19,6 +22,9 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authControllerProvider);
+    final platform = DistributionChannel.isBeta
+        ? ref.watch(platformAccountProvider).value
+        : null;
     final user = auth.value?.user;
     final backend = ref.watch(authBackendKindProvider);
     final appVersion = ref.watch(appVersionProvider);
@@ -50,7 +56,9 @@ class SettingsPage extends ConsumerWidget {
               const SizedBox(height: 18),
               const _SettingsSectionLabel('账号'),
               _SettingsSurface(
-                child: auth.isLoading && user == null
+                child: platform != null
+                    ? const PlatformAccountTile()
+                    : auth.isLoading && user == null
                     ? const _SettingsLoadingTile()
                     : user == null
                     ? _SettingsTile(

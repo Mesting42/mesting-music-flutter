@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../themes/music_theme_tokens.dart';
 import '../auth_providers.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../music_platform/music_platform_providers.dart';
 
 Future<bool> ensureAuthenticated(
   BuildContext context,
@@ -12,6 +14,13 @@ Future<bool> ensureAuthenticated(
   required String reason,
   String redirect = '/music',
 }) async {
+  if (DistributionChannel.isBeta &&
+      ref.read(platformAccountProvider).value != null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('此功能属于 Mesting 账号，退出当前酷狗账号后可选择其他登录方式')),
+    );
+    return false;
+  }
   var session = ref.read(authControllerProvider).value;
   if (ref.read(authControllerProvider).isLoading) {
     try {
