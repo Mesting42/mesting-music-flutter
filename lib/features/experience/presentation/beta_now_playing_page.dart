@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +19,7 @@ import 'immersive_lyrics.dart';
 import 'player_pull_to_dismiss.dart';
 import 'player_more_menu.dart';
 import 'player_chrome_reveal.dart';
+import 'player_content_transition.dart';
 
 /// THESIS: Artwork and lyrics lead; shared Apple transport recedes below them.
 /// PALETTE: Cover-derived blur, a dark readability veil, white transport, red
@@ -34,6 +36,12 @@ class BetaNowPlayingPage extends ConsumerStatefulWidget {
 
 class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
   late bool _lyrics = widget.lyricsInitially;
+  double _direction = 1;
+  StreamSubscription<String>? _commands;
+  void _showLyrics(bool show) => setState(() {
+    _direction = show ? 1 : -1;
+    _lyrics = show;
+  });
   void _dismissPlayer() {
     context.canPop() ? context.pop() : context.go('/music/recommend');
   }
@@ -41,14 +49,26 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
   @override
   void initState() {
     super.initState();
+    _commands = ref.read(audioHandlerProvider).userCommandStream.listen((
+      command,
+    ) {
+      if (command == 'skipNext') _direction = 1;
+      if (command == 'skipPrevious') _direction = -1;
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) ref.read(playerChromeRevealProvider).value = 0;
     });
   }
 
+  @override
+  void dispose() {
+    _commands?.cancel();
+    super.dispose();
+  }
+
   void _close() {
     if (_lyrics) {
-      setState(() => _lyrics = false);
+      _showLyrics(false);
       return;
     }
     context.canPop() ? context.pop() : context.go('/music/recommend');
@@ -87,7 +107,7 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
           child: PopScope(
             canPop: !_lyrics,
             onPopInvokedWithResult: (didPop, _) {
-              if (!didPop && _lyrics) setState(() => _lyrics = false);
+              if (!didPop && _lyrics) _showLyrics(false);
             },
             child: Scaffold(
               backgroundColor: const Color(0xFF17191F),
@@ -171,57 +191,67 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
                                     ],
                                   ),
                                 ),
-                                if (_lyrics)
-                                  Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                      26,
-                                      7,
-                                      26,
-                                      4,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Semantics(
-                                          button: true,
-                                          label: '返回封面',
-                                          child: GestureDetector(
-                                            onTap: () =>
-                                                setState(() => _lyrics = false),
-                                            child: ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              child: TrackArtwork(
-                                                track: track,
-                                                width: 58,
-                                                height: 58,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 14),
-                                        Expanded(
-                                          child: _Identity(
-                                            title: track.title,
-                                            artist: track.artist,
-                                            small: true,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                AnimatedSize(
+                                  duration: const Duration(milliseconds: 320),
+                                  reverseDuration: const Duration(
+                                    milliseconds: 260,
                                   ),
+                                  curve: Curves.easeInOutCubic,
+                                  child: !_lyrics
+                                      ? const SizedBox.shrink()
+                                      : Padding(
+                                          padding: const EdgeInsets.fromLTRB(
+                                            26,
+                                            7,
+                                            26,
+                                            4,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Semantics(
+                                                button: true,
+                                                label: '返回封面',
+                                                child: GestureDetector(
+                                                  onTap: () =>
+                                                      _showLyrics(false),
+                                                  child: ClipRRect(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          10,
+                                                        ),
+                                                    child: TrackArtwork(
+                                                      track: track,
+                                                      width: 58,
+                                                      height: 58,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 14),
+                                              Expanded(
+                                                child: _Identity(
+                                                  title: track.title,
+                                                  artist: track.artist,
+                                                  direction: _direction,
+                                                  small: true,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                ),
                                 Expanded(
-                                  child: AnimatedSwitcher(
-                                    duration:
-                                        MediaQuery.disableAnimationsOf(context)
-                                        ? Duration.zero
-                                        : const Duration(milliseconds: 300),
+                                  child: PlayerContentTransition(
+                                    direction: _direction,
                                     child: _lyrics
-                                        ? const ImmersiveLyrics(
-                                            key: ValueKey('immersive-lyrics'),
+                                        ? ImmersiveLyrics(
+                                            key: ValueKey(
+                                              'immersive-lyrics-${track.id}',
+                                            ),
                                           )
                                         : Padding(
-                                            key: const ValueKey(
-                                              'immersive-cover',
+                                            key: ValueKey(
+                                              'immersive-cover-${track.id}-${style.id}',
                                             ),
                                             padding: const EdgeInsets.fromLTRB(
                                               26,
@@ -233,9 +263,7 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
                                               button: true,
                                               label: '查看歌词',
                                               child: GestureDetector(
-                                                onTap: () => setState(
-                                                  () => _lyrics = true,
-                                                ),
+                                                onTap: () => _showLyrics(true),
                                                 child: PlayerArtworkStage(
                                                   style: style,
                                                   track: track,
@@ -246,27 +274,38 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
                                           ),
                                   ),
                                 ),
-                                if (!_lyrics)
-                                  Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                      26,
-                                      0,
-                                      26,
-                                      5,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: _Identity(
-                                            title: track.title,
-                                            artist: track.artist,
+                                AnimatedSize(
+                                  duration: const Duration(milliseconds: 320),
+                                  reverseDuration: const Duration(
+                                    milliseconds: 260,
+                                  ),
+                                  curve: Curves.easeInOutCubic,
+                                  child: _lyrics
+                                      ? const SizedBox.shrink()
+                                      : Padding(
+                                          padding: const EdgeInsets.fromLTRB(
+                                            26,
+                                            0,
+                                            26,
+                                            5,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: _Identity(
+                                                  title: track.title,
+                                                  artist: track.artist,
+                                                  direction: _direction,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              FavoriteToggleButton(
+                                                track: track,
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                        const SizedBox(width: 12),
-                                        FavoriteToggleButton(track: track),
-                                      ],
-                                    ),
-                                  ),
+                                ),
                                 const ApplePlayerControls(),
                               ],
                             ),
@@ -305,7 +344,7 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
           return;
         }
         if (value == 'lyrics') {
-          setState(() => _lyrics = !_lyrics);
+          _showLyrics(!_lyrics);
           return;
         }
         if (value == 'playlist') {
@@ -331,6 +370,7 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
         final style = PlayerVisualStyle.values.firstWhere(
           (style) => style.name == value,
         );
+        _direction = style.index < current.index ? -1 : 1;
         await ref.read(playerVisualStyleProvider.notifier).select(style);
         if (context.mounted) {
           showMusicNotice(
@@ -389,32 +429,38 @@ class _Identity extends StatelessWidget {
     required this.title,
     required this.artist,
     this.small = false,
+    this.direction = 1,
   });
   final String title, artist;
   final bool small;
+  final double direction;
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        title,
-        maxLines: small ? 1 : 2,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: small ? 18 : 26,
-          height: 1.16,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -.4,
+  Widget build(BuildContext context) => PlayerContentTransition(
+    direction: direction,
+    child: Column(
+      key: ValueKey('$title/$artist/$small'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          maxLines: small ? 1 : 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: small ? 18 : 26,
+            height: 1.16,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -.4,
+          ),
         ),
-      ),
-      const SizedBox(height: 5),
-      Text(
-        artist,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(color: Colors.white, fontSize: small ? 14 : 17),
-      ),
-    ],
+        const SizedBox(height: 5),
+        Text(
+          artist,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: Colors.white, fontSize: small ? 14 : 17),
+        ),
+      ],
+    ),
   );
 }

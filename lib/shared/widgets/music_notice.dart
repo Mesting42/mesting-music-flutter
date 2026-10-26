@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../../core/platform/distribution_channel.dart';
 import '../../features/themes/beta_appearance.dart';
+import 'beta_success_feedback.dart';
 
 OverlayEntry? _activeMusicNotice;
 // Kept for callers compiled against older releases; HUDs now use the top inset.
@@ -142,15 +144,20 @@ class _MusicNoticeOverlayState extends State<_MusicNoticeOverlay>
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               if (widget.icon != null) ...[
-                                Icon(
-                                  widget.icon,
-                                  color: error
-                                      ? foreground
-                                      : BetaAppearance.accent(
-                                          Theme.of(context).brightness,
-                                        ),
-                                  size: 22,
-                                ),
+                                if (DistributionChannel.isBeta &&
+                                    (widget.icon == Icons.check_rounded ||
+                                        widget.icon == Icons.check))
+                                  const BetaSuccessMark(size: 25)
+                                else
+                                  Icon(
+                                    widget.icon,
+                                    color: error
+                                        ? foreground
+                                        : BetaAppearance.accent(
+                                            Theme.of(context).brightness,
+                                          ),
+                                    size: 22,
+                                  ),
                                 const SizedBox(width: 10),
                               ],
                               Flexible(

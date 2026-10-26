@@ -1,3 +1,4 @@
+import '../../../shared/widgets/beta_anchored_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -372,126 +373,34 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
                     children: [
                       Row(
                         children: [
-                          PopupMenuButton<PlatformCommentSort>(
+                          BetaAnchoredMenu<PlatformCommentSort>(
                             tooltip: '评论排序',
-                            style: ButtonStyle(
-                              minimumSize: const WidgetStatePropertyAll(
-                                Size(90, 44),
-                              ),
-                              backgroundColor: WidgetStatePropertyAll(
-                                Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerLow,
-                              ),
-                              shape: const WidgetStatePropertyAll(
-                                StadiumBorder(),
-                              ),
-                            ),
-                            icon: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  switch (_sort) {
-                                    PlatformCommentSort.hottest => '最热',
-                                    PlatformCommentSort.newest => '最新',
-                                    PlatformCommentSort.oldest => '最早',
-                                  },
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                const Icon(Icons.expand_more_rounded, size: 18),
-                              ],
-                            ),
+                            value: _sort,
+                            values: PlatformCommentSort.values,
+                            label: (sort) => switch (sort) {
+                              PlatformCommentSort.hottest => '最热',
+                              PlatformCommentSort.newest => '最新',
+                              PlatformCommentSort.oldest => '最早',
+                            },
                             onSelected: (sort) {
                               if (_sort != sort) {
                                 setState(() => _sort = sort);
                                 _load(reset: true);
                               }
                             },
-                            itemBuilder: (_) => [
-                              for (final sort in PlatformCommentSort.values)
-                                PopupMenuItem(
-                                  value: sort,
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        _sort == sort
-                                            ? Icons.check_rounded
-                                            : null,
-                                        size: 18,
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Text(switch (sort) {
-                                        PlatformCommentSort.hottest => '最热',
-                                        PlatformCommentSort.newest => '最新',
-                                        PlatformCommentSort.oldest => '最早',
-                                      }),
-                                    ],
-                                  ),
-                                ),
-                            ],
                           ),
                           const SizedBox(width: 8),
-                          PopupMenuButton<PlatformCommentScope>(
+                          BetaAnchoredMenu<PlatformCommentScope>(
                             tooltip: '评论范围',
-                            style: ButtonStyle(
-                              minimumSize: const WidgetStatePropertyAll(
-                                Size(90, 44),
-                              ),
-                              backgroundColor: WidgetStatePropertyAll(
-                                Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerLow,
-                              ),
-                              shape: const WidgetStatePropertyAll(
-                                StadiumBorder(),
-                              ),
-                            ),
-                            icon: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  switch (_scope) {
-                                    PlatformCommentScope.all => '全部',
-                                    PlatformCommentScope.singer => '歌手',
-                                    PlatformCommentScope.mine => '我的',
-                                  },
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                const Icon(Icons.expand_more_rounded, size: 18),
-                              ],
-                            ),
+                            value: _scope,
+                            values: PlatformCommentScope.values,
+                            label: (scope) => switch (scope) {
+                              PlatformCommentScope.all => '全部',
+                              PlatformCommentScope.singer => '歌手',
+                              PlatformCommentScope.mine => '我的',
+                            },
                             onSelected: (scope) =>
                                 setState(() => _scope = scope),
-                            itemBuilder: (_) => [
-                              for (final scope in PlatformCommentScope.values)
-                                PopupMenuItem(
-                                  value: scope,
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        _scope == scope
-                                            ? Icons.check_rounded
-                                            : null,
-                                        size: 18,
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Text(switch (scope) {
-                                        PlatformCommentScope.all => '全部',
-                                        PlatformCommentScope.singer => '歌手',
-                                        PlatformCommentScope.mine => '我的',
-                                      }),
-                                    ],
-                                  ),
-                                ),
-                            ],
                           ),
                         ],
                       ),

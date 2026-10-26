@@ -349,7 +349,7 @@ class _NowPlayingTransitionPage extends Page<void> {
       // the mini player's exact global bounds without route snapshot artifacts.
       // Snapshot static page bodies while the route itself slides/fades. The
       // shell player and navigation stay outside this route and remain live.
-      allowSnapshotting: true,
+      allowSnapshotting: !DistributionChannel.isBeta,
       opaque: false,
       transitionDuration: nowPlayingTransitionDuration,
       reverseTransitionDuration: nowPlayingReverseTransitionDuration,
@@ -389,6 +389,10 @@ class _NowPlayingRoute extends PageRouteBuilder<void> {
   DelegatedTransitionBuilder get delegatedTransition =>
       (context, animation, secondaryAnimation, allowSnapshotting, child) {
         if (child == null) return null;
+        // The Beta player is a real sliding surface. Its underlay must stay
+        // painted throughout both route pop and handle dismissal. The formal
+        // vinyl flight uses its original two-phase choreography below.
+        if (DistributionChannel.isBeta) return child;
         return AnimatedBuilder(
           animation: secondaryAnimation,
           child: child,
@@ -437,14 +441,21 @@ Page<void> _musicSlidePage({
           curve: Curves.easeOutCubic,
           reverseCurve: Curves.easeInCubic,
         );
-        return FadeTransition(
-          opacity: Tween(begin: .88, end: 1.0).animate(motion),
-          child: SlideTransition(
-            position: Tween(
-              begin: const Offset(.12, 0),
-              end: Offset.zero,
-            ).animate(motion),
-            child: RepaintBoundary(child: child),
+        return ColoredBox(
+          key: const ValueKey('beta10-route-surface'),
+          color: Theme.of(context).colorScheme.surface,
+          child: FadeTransition(
+            opacity: Tween(begin: .88, end: 1.0).animate(motion),
+            child: SlideTransition(
+              position: Tween(
+                begin: const Offset(.12, 0),
+                end: Offset.zero,
+              ).animate(motion),
+              child: ColoredBox(
+                color: Theme.of(context).colorScheme.surface,
+                child: RepaintBoundary(child: child),
+              ),
+            ),
           ),
         );
       },

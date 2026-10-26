@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../shared/widgets/beta_edge_back.dart';
 import '../../../shared/widgets/overflow_marquee.dart';
 import '../../../shared/widgets/mesting_loading_indicator.dart';
+import '../../../shared/widgets/beta_glass_controls.dart';
 import '../../themes/music_theme_tokens.dart';
 
 /// Shared visual adapter for all imported platform surfaces. Business widgets
@@ -142,13 +143,8 @@ class PlatformPageFrame extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                 child: Row(
                   children: [
-                    IconButton(
-                      tooltip: '返回',
+                    BetaGlassBackButton(
                       onPressed: () => Navigator.of(context).maybePop(),
-                      icon: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        size: 22,
-                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(

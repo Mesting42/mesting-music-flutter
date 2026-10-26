@@ -1,8 +1,83 @@
-# md3Music integration Beta.9 handoff
+# md3Music integration Beta.10 handoff
 
-## Beta.9 current implementation and delivery boundary
+## Beta.10 current implementation and verified release boundary
 
-This source record targets **Mesting Music / com.mesting.music.beta / 1.0.37-beta.9 / 9**. It preserves the user's established Apple Music visual direction and North Star, **“封面主导的私人听歌空间”**; no replacement visual concept is introduced. The source is the valuable dirty integration/md3music-beta working tree spanning Beta.5–9. Do not reset or clean it. Formal-channel contracts, account ownership, pinned platform API/server and the single MestingAudioHandler remain.
+Current source/build-script target: **Mesting Music / com.mesting.music.beta / 1.0.37-beta.10 / 10**. The script selects the Beta flavor while `pubspec.yaml` retains the formal baseline version. This pass preserves the valuable dirty Beta.5–9 working tree, the fixed platform API/server, account ownership and the single MestingAudioHandler. It does not reset/clean the checkout or change branch, worktree or historical outputs. Shared improvements apply at explicit Beta call sites; they do not establish a formal-channel redesign.
+
+The user confirmed the full written Beta.10 plan after it was saved as `Beta10-完整修改方案-待确认.md`; its filename reflects the earlier draft state. Visual authority is the inherited Mesting/Apple Music world, the supplied welcome/guide reference layouts, the user's coral original vector music-note/record duo choice and that confirmed plan. There is **no independently generated/approved ImageGen comp, approval sidecar or random FORM seed**. The welcome source has a truthful THESIS / OWN-WORLD / STORY / FIRST VIEWPORT / FORM contract rather than a fabricated prior approval record. `PRODUCT.md`, `DESIGN.md`, `.impeccable/design.json` and the music/auth surface briefs describe the implemented Beta.10 state; historical versions below retain their own evidence.
+
+The initial independent review was `work/beta10/review-first.md`, disposition **fix**, R1–R8. After the fix batch and final recapture, `review-final.md` concludes **ship**, with **R1–R8 all resolved** and no partial/unresolved material finding in that bounded review. Final regression/analyze and release verification have completed as recorded below. Beta.9 evidence remains historical and is not substituted for the verified Beta.10 runs. Source archive identity belongs to the external delivery manifest generated after documentation freeze, so no self-referential archive hash is embedded here.
+
+### Entry, interactive login, success and eight-page guide
+
+- BetaEntryCoordinator owns entry above the router and blocks underlying input/focus/semantics while active, so a newly published account cannot unmount its success/guide sequence. BetaEntryFlow separates explicit login events from credential restoration/token refresh and deduplicates success/guide events from QR polling. Every new interactive login, including after logout, follows **login → central success card → eight-page guide → app**. A restored session does not re-run that sequence.
+- First entry without a completed-entry flag or restored session shows the welcome page. Phone and WeChat are the primary real platform entries; other methods retain Kugou/QQ QR and Mesting login/register. Agreement/privacy remain accessible. **Guest enters the app directly**. Guide Skip/Finish persist entry completion, and Settings → 使用指南 replays the guide without pretending another login occurred.
+- The original vector music-note and record companions have articulated limbs, expression, headphone/record details, light motion, blinking and a local tap greeting. Drawing is isolated from authentication/network/audio. External outlines adapt to dark backgrounds; facial/internal lines keep their own contrast. These are user-selected authored vectors, not image-generated or third-party character assets.
+- Guide pages teach the actual connected product: discovery/search/new music; player/lyrics; gray-handle dismissal and comments/quality/queue/menu; account-appropriate recommendations/favorites; single-song vs Play All, manual priority, continuation and actual history; light/dark/system and backgrounds/progress; five player styles; start/replay. The non-platform-account wording does not promise Kugou cloud/FM. No desktop lyrics, Zen or AI feature is claimed.
+- Five separately recognizable, selectable dynamic previews use one local repaint clock and **the real playerVisualStyleProvider**. They show cover, turntable, aurora disc, particle scene and spectrum stage vocabulary corresponding to the existing style IDs. Choosing a card saves the same preference as Dress Up and player More. Theme choices likewise use the existing theme controller. Guide scenes are local, reversible demonstrations; they do not start playback or send cloud writes. Inactive retained pages are TickerMode-gated; reduced-motion behavior is component-specific rather than a claim that all timers stop.
+
+### Shared premium glass, waiting and result feedback
+
+BetaGlassButton / BetaGlassField / BetaGlassBackButton reuse `betaMusicPillGlass(context)` with **premium, useOwnLayer and independent RepaintBoundary**. Scope includes welcome/other-login controls, platform phone/code fields and actions, Mesting's six account fields/two primary actions, the specified exit and license/thanks actions, and circular app Back controls. Stable content/list backgrounds and the formal branch retain their contracts. Glass surfaces must remain independent siblings; nested glass can suppress a child's refraction.
+
+The button default is 52dp high with 18dp horizontal padding, 15dp/700 text and capsule geometry; individual call sites deliberately vary size. Back is 48×48dp. GlassField is 24dp rounded with 20/17dp input padding plus an outer 3dp horizontal inset; existing field focus, validation and keyboard semantics remain. Loading uses the shared segmented Cupertino spinner in the operation's own area, including list/QR/code/login/logout states, with duplicate submission disabled.
+
+BetaSignOutDialog owns the pending/failed confirmation state: duplicate requests are ignored, actions and Back are disabled while busy, failure preserves the session and gives a retryable inline error, and only real sign-out success returns to welcome/reset routing. The central login card enters, draws the shared green ring/check mark, exits, then advances to guide; comments reuse the success mark only for actual successful results. Existing replaceable top HUD and actionable errors remain. Software/HTML previews cannot verify Android premium optics.
+
+### Transition continuity, menu dimensions and exact icons
+
+- Search and ordinary route motion cover the old content with the current theme's **opaque colorScheme.surface**, rather than the app's transparent scaffold background. The source remains mounted for scroll/navigation state; completed search hides its old paint. The player still reveals its actual mounted underlay/capsule during dismissal rather than inserting a blank color screen.
+- PlayerContentTransition provides paired fade/slide/scale entry and exit (default 360ms in, 280ms out). Cover/lyrics, identity and visual-style changes remain local, preserving transport/audio ownership. Real `userCommandStream` skipNext/skipPrevious supplies motion direction; cover/lyrics and enum-ordered style selection also set direction. Interruptions retain the existing bounded switcher behavior and component reduced-motion branch.
+- BetaAnchoredMenu measures each trigger's actual RenderBox at open time and uses that exact width for the 22dp rounded menu. Its 90×44dp trigger minimum is not treated as a fixed menu width; the checkmark and Expanded label are laid out inside the measured width at normal and enlarged text.
+- PlayerCommentGlyph is a shared authored **circular quotation bubble** used in the player and matching guide scene; quality uses the middle-speaker Cupertino glyph. Comments retain two one-row menus, reply/delete/account guards and independent premium input / blue 48dp Send siblings, with native keyboard visibility controlling 2/4 maximum lines.
+- Tapping the current destination icon while the bar is contracted expands it while preserving that page/scroll. Existing mounted-shell ownership, 32dp edge/system Back, automatic paging, pure-heart feedback, real queue/history and fixed recommendation provenance remain.
+
+### Same-ID media updates and truthful delivered quality
+
+`currentMediaRevisionProvider` increments for each actual media-item publication because audio_service's MediaItem equality is ID-based. `currentTrackProvider` observes that revision, allowing a same-recording source/quality update to refresh its visible metadata without subscribing to playback-position ticks.
+
+Strict tier switching retains the existing per-tier encoding hash, actual source replacement, saved-preference agreement and failure rollback. The resolver normalizes a supplied positive bitrate in kbps/bps; a measured lossy bitrate up to 400000 bps takes precedence over a possibly requested-label `quality` field, with >220000 bps considered high and lower lossy bitrate standard. Other cases use explicit platform quality metadata; strict unknown/mismatch is rejected. This prevents a 320kbps delivery stamped as a 128kbps request from becoming false success. The same audio owner retains position, pause/playing state, queue and mode; later commands/account generation still prevent stale replacement. Fixture verification does not certify real CDN or membership behavior.
+
+### Beta.10 evidence and remaining validation
+
+Evidence root: `C:/Users/Mest/Documents/Codex/2026-10-25/mesting-beta7-handoff-20261025/work/beta10`.
+
+| Evidence | Scope/status at documentation handoff |
+| --- | --- |
+| targeted-first.log | 27 passing first-pass targeted tests; not final regression |
+| entry-captures-first.log | 7 passing entry/capture tests; overlaps other groups |
+| R1–R7 fix batch targeted feedback tests | Earlier 16 passing checks including measured menus, logout waiting/failure and reverse direction; overlaps final groups |
+| design-detector.json | Root ran once, result `[]`; Dart coverage is bounded and this is not visual approval |
+| captures-first, entry-contact.png, guide-contact.png | Historical first-pass software fixtures with recorded defects; final captures and R1–R8 scoring supersede them |
+| review-first.md / review-final.md | Initial **fix** → bounded final **ship**, R1–R8 all **resolved**, remaining product-defect findings clear |
+| normal-tests-clean.jsonl | **635 passed / 54 conditional skips / 0 failures** |
+| beta-tests-clean.jsonl | **150 passed / 0 skipped / 0 failed** |
+| ui-final-clean.log | Final software UI/interaction group: **34 passed / 0 failed** |
+| motion-export.log | **4 passed**; reused software fixtures export welcome-light/dark-motion.gif and styles-light/dark-motion.gif, **36 frames each / 80ms per frame**; not Android FPS evidence |
+| analyze-clean.log | **No issues found** |
+| build-release.log / release-verification/artifact-verification.json | Release built; **Mesting Music / com.mesting.music.beta / 1.0.37-beta.10 / 10** verified; same Beta test certificate; **16KiB ZIP alignment passed**; armeabi-v7a and arm64-v8a server libraries **byte-identical to Beta.9** |
+| Beta.10 APK | **89,227,526 bytes**; SHA256 **BEA94A3411EA23E9970AA32AE57EA772937D2ACE4337721E18B00A88A537776A** |
+| Beta.10 source ZIP / exact bytes / SHA256 | Owned by external **outputs/beta-1.0.37-beta.10/delivery-manifest.json**, generated after final documentation readback/freeze; this document does not claim that archive was already created or embed its own archive hash |
+
+The groups overlap and must not be summed; the four motion-export checks are additional software fixture evidence and not a new aggregate total. Captures and GIFs use synthetic fixtures, Flutter software rendering and Windows QA CJK fonts. No Android device is attached. Native Android GPU glass/motion/FPS, hardware volume/TalkBack, physical/predictive Back, real IME, cold/upgrade startup, every real login/QR/token/exit path, live CDN quality/permissions and real account/comment/cloud writes remain unverified. General Android compatibility is the scope; no device-specific tuning or reduction of effects/functions is claimed. Preserve Beta.7, Beta.8 and Beta.9 outputs. No installation, publication, commit/push or real user cloud mutation is implied.
+
+The generic notice check icon is gated to Beta; pre-existing formal-channel notice expectations are retained and the final normal regression above passes. This does not change the previously documented channel boundary or establish a global formal-channel redesign.
+
+### Beta.10 implementation entry points
+
+| Entry | Responsibility |
+| --- | --- |
+| lib/features/auth/beta_entry_flow.dart; presentation/beta_entry_coordinator.dart | Explicit-login stages, restore distinction, deduplication and above-router entry ownership |
+| lib/features/auth/presentation/beta_welcome_page.dart; mesting_music_companions.dart | Truthful direction contract, real account/guest/legal entry and original articulated duo |
+| lib/features/auth/presentation/beta_onboarding_page.dart; beta_player_style_previews.dart | Eight real-feature pages, skip/replay, interactive demonstrations and shared persistent preferences |
+| lib/features/auth/presentation/beta_sign_out_dialog.dart; auth_page.dart; lib/features/settings/presentation/settings_page.dart | Beta account fields/actions, operation waiting/failure, confirmed sign-out and guide replay |
+| lib/shared/widgets/beta_glass_controls.dart; beta_anchored_menu.dart; beta_success_feedback.dart; player_comment_glyph.dart | Independent premium controls, measured menus, shared spinner/mark and circular quotation bubble |
+| lib/features/experience/presentation/beta_music_shell.dart; beta_now_playing_page.dart; player_content_transition.dart; lib/app/router/app_router.dart | Opaque transition coverage, paired local motion, real direction intent and retained playback/chrome |
+| lib/core/audio/playback_providers.dart; lib/features/music_platform/data/platform_playback_resolver.dart | Same-ID media revision and delivered-bitrate truth |
+
+## Historical Beta.9 implementation and delivery boundary
+
+This historical source record targets **Mesting Music / com.mesting.music.beta / 1.0.37-beta.9 / 9**. Its counts, disposition and artifact hashes apply only to Beta.9. It preserves the user's established Apple Music visual direction and North Star, **“封面主导的私人听歌空间”**; no replacement visual concept is introduced. The source is the valuable dirty integration/md3music-beta working tree spanning Beta.5–9. Do not reset or clean it. Formal-channel contracts, account ownership, pinned platform API/server and the single MestingAudioHandler remain.
 
 The following behavior is evidenced by current source and the verified final runs below. Bounded independent disposition is **ship**, with **R1–R5 resolved**. Final regression, analyzer and release package/signature/alignment/native-library verification have completed; source archive bytes/hash remain for the final manifest. Beta.8/Beta.7 results below describe their own historical builds and do not establish a Beta.9 pass.
 
@@ -99,7 +174,7 @@ All paths are relative to the project root.
 | lib/features/music_platform/presentation/platform_comments_page.dart; platform_comment_composer.dart; lib/shared/widgets/keyboard_visibility_builder.dart | One-row dropdowns, real sibling glass composer and native keyboard 2/4-line adaptation |
 | lib/features/themes/beta_appearance.dart; app_theme.dart; android/app/src/beta/res/values/strings.xml | Neutral classic light and visible Mesting Music identity |
 
-Build with **Flutter 3.41.9 / Dart 3.11.5** using the existing build command below. The script now defaults to **1.0.37-beta.9 / 9**, ARMv7 + ARM64, while pubspec keeps the formal baseline version. Use `flutter test --flavor beta` for Beta suites; do not replace actual appFlavor with a FLUTTER_APP_FLAVOR dart-define. A build invocation does not publish an update manifest, deploy a backend or authorize installation.
+The Beta.9 build used **Flutter 3.41.9 / Dart 3.11.5** and script target **1.0.37-beta.9 / 9**, ARMv7 + ARM64, while pubspec kept the formal baseline version. The current script target is Beta.10 above. Use `flutter test --flavor beta` for Beta suites; do not replace actual appFlavor with a FLUTTER_APP_FLAVOR dart-define. A build invocation does not publish an update manifest, deploy a backend or authorize installation.
 
 ## Historical Beta.8 accepted implementation and delivery boundary
 
@@ -248,7 +323,7 @@ This section records the historical built truth for **1.0.37-beta.7 / 7**, merge
 final finish review on 2026-10-25. The disposition is **SHIP WITH STATED
 VALIDATION LIMITS**: R1–R3 are resolved in the reviewed source/widget/capture
 scope. Earlier Beta.6/Beta.5/Beta.4 records below remain historical context;
-where behavior differs, the current Beta.9 section above takes precedence. No commit or clean
+where behavior differs, the current Beta.10 section and retained Beta.9 baseline above take precedence. No commit or clean
 working tree is implied. Preserve formal-channel decisions, existing account
 ownership, comments, paged song search, cloud library and the one audio service.
 
@@ -474,7 +549,7 @@ Background strength and performance controls are removed in Beta and fixed at
 flavor retains its existing navigation and theme behavior.
 
 Build with **Flutter 3.41.9 / Dart 3.11.5** using the command below. The build
-script now defaults to **1.0.37-beta.6 / 6**; `pubspec.yaml` keeps its formal
+script at the Beta.6 handoff defaulted to **1.0.37-beta.6 / 6**; `pubspec.yaml` keeps its formal
 baseline version. The final Beta.6 APK was built and inspected: package
 `com.mesting.music.beta`, 88,954,358 bytes, SHA256
 `B1462439D022F4947CBFD2608901C2DB3D484C49CC161DE309C20421C0670B03`.
@@ -516,7 +591,7 @@ and its SDK are unchanged. Run:
 .\tool\build_android_md3_beta_apk.ps1 -FlutterSdkRoot D:\flutter\mesting-beta5\flutter
 ```
 
-The current Beta.9 script selects version `1.0.37-beta.9` / `9`, ARMv7 + ARM64; this historical section does not imply a new Beta.5 build. `pubspec.yaml`
+The current Beta.10 script selects version `1.0.37-beta.10` / `10`, ARMv7 + ARM64; this historical section does not imply a new Beta.5 build. `pubspec.yaml`
 retains the formal baseline version; the distribution script supplies the Beta
 version. The source ZIP contains no signing private key or local SDK settings.
 
@@ -725,7 +800,7 @@ flutter test --flavor beta test/music_platform_test.dart test/beta_login_entry_t
 .\tool\build_android_md3_beta_apk.ps1
 ```
 
-The build script selects `beta`, version `1.0.37-beta.9` / `9`, ARMv7 + ARM64,
+The build script selects `beta`, version `1.0.37-beta.10` / `10`, ARMv7 + ARM64,
 CloudBase authentication retained, and automatic update checks disabled. It does
 not publish an update manifest or deploy a backend. The package is
 `com.mesting.music.beta`, separate from formal and Java/MySQL packages.

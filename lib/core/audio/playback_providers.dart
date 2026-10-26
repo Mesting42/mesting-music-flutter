@@ -24,6 +24,14 @@ final currentMediaItemProvider = StreamProvider<MediaItem?>((ref) {
   return ref.watch(audioHandlerProvider).mediaItem;
 });
 
+/// audio_service MediaItem equality compares only the recording ID. Riverpod
+/// therefore suppresses a same-song quality update unless we also observe an
+/// event revision. This stream never subscribes to playback position ticks.
+final currentMediaRevisionProvider = StreamProvider<int>((ref) {
+  var revision = 0;
+  return ref.watch(audioHandlerProvider).mediaItem.map((_) => ++revision);
+});
+
 final queueProvider = StreamProvider<List<MediaItem>>((ref) {
   return ref.watch(audioHandlerProvider).queue;
 });
@@ -45,6 +53,7 @@ final playbackModeProvider = StreamProvider<PlaybackMode>((ref) {
 });
 
 final currentTrackProvider = Provider<Track>((ref) {
+  ref.watch(currentMediaRevisionProvider);
   final item = ref.watch(currentMediaItemProvider).value;
   final handler = ref.watch(audioHandlerProvider);
   final track =

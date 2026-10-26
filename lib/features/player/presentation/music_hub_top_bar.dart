@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/platform/distribution_channel.dart';
+import '../../../shared/widgets/beta_glass_controls.dart';
 import '../../music_platform/music_platform_providers.dart';
 import '../../music_platform/platform_profile_provider.dart';
 import '../../auth/account_capabilities.dart';
@@ -39,15 +40,18 @@ class MusicHubTopBar extends StatelessWidget {
     final tokens = context.musicThemeTokens;
     return Row(
       children: [
-        _TopAction(
-          tooltip: showBack ? '返回' : '个人中心与设置',
-          icon: showBack
-              ? Icons.arrow_back_ios_new_rounded
-              : Icons.menu_rounded,
-          onTap: showBack
-              ? onBack ?? Navigator.of(context).maybePop
-              : () => showMusicHubPanel(context),
-        ),
+        if (DistributionChannel.isBeta && showBack)
+          BetaGlassBackButton(onPressed: onBack)
+        else
+          _TopAction(
+            tooltip: showBack ? '返回' : '个人中心与设置',
+            icon: showBack
+                ? Icons.arrow_back_ios_new_rounded
+                : Icons.menu_rounded,
+            onTap: showBack
+                ? onBack ?? Navigator.of(context).maybePop
+                : () => showMusicHubPanel(context),
+          ),
         const SizedBox(width: 13),
         Expanded(
           child: Column(

@@ -1,6 +1,7 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/player_comment_glyph.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/audio/media_volume_controller.dart';
 import '../../../core/audio/playback_providers.dart';
@@ -290,7 +291,8 @@ class _ApplePlayerControlsState extends ConsumerState<ApplePlayerControls> {
             children: [
               _Transport(
                 label: '歌曲评论',
-                icon: CupertinoIcons.text_bubble,
+                glyph: const PlayerCommentGlyph(),
+                icon: CupertinoIcons.text_quote,
                 size: 26,
                 onPressed: () async {
                   if (ref.read(platformAccountProvider).value == null) {
@@ -327,11 +329,13 @@ class _Transport extends StatelessWidget {
     required this.icon,
     required this.size,
     required this.onPressed,
+    this.glyph,
   });
   final String label;
   final IconData icon;
   final double size;
   final VoidCallback onPressed;
+  final Widget? glyph;
   @override
   Widget build(BuildContext context) => Semantics(
     button: true,
@@ -342,7 +346,7 @@ class _Transport extends StatelessWidget {
         padding: const EdgeInsets.all(8),
         minimumSize: const Size(48, 48),
         onPressed: onPressed,
-        child: Icon(icon, size: size, color: Colors.white),
+        child: glyph ?? Icon(icon, size: size, color: Colors.white),
       ),
     ),
   );

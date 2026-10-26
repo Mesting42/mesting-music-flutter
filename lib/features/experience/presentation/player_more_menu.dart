@@ -62,7 +62,7 @@ class _PlayerMoreMenuState extends State<PlayerMoreMenu> {
       barrierColor: Colors.black.withValues(alpha: .12),
       transitionDuration: media.disableAnimations
           ? Duration.zero
-          : const Duration(milliseconds: 180),
+          : const Duration(milliseconds: 260),
       pageBuilder: (dialogContext, _, _) => Theme(
         data: theme,
         child: Stack(
@@ -167,9 +167,13 @@ class _PlayerMoreMenuState extends State<PlayerMoreMenu> {
         ),
       ),
       transitionBuilder: (context, animation, _, child) => FadeTransition(
-        opacity: animation,
+        opacity: CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        ),
         child: ScaleTransition(
-          scale: Tween(begin: .97, end: 1.0).animate(
+          scale: Tween(begin: .88, end: 1.0).animate(
             CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
           ),
           alignment: Alignment.topRight,

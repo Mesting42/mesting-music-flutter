@@ -33,7 +33,13 @@ class BetaMusicShell extends ConsumerStatefulWidget {
   ConsumerState<BetaMusicShell> createState() => _BetaMusicShellState();
 }
 
-class _BetaMusicShellState extends ConsumerState<BetaMusicShell> {
+class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _searchMotion = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 300),
+    reverseDuration: const Duration(milliseconds: 240),
+  );
   final _searchText = TextEditingController();
   final _focus = FocusNode();
   final _positions = <String, ScrollPosition>{};
@@ -63,6 +69,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell> {
 
   @override
   void dispose() {
+    _searchMotion.dispose();
     _searchText.dispose();
     _focus.dispose();
     super.dispose();
@@ -91,15 +98,18 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell> {
         _searching = false;
       }
       _focus.unfocus();
+      _searching ? _searchMotion.forward() : _searchMotion.reverse();
     }
   }
 
   void _search(bool active) {
     setState(() {
       _searching = active;
+      if (!active) _mini = false;
       if (active) _hasOpenedSearch = true;
       if (!active) _focused = false;
     });
+    _searching ? _searchMotion.forward() : _searchMotion.reverse();
     if (!active) _focus.unfocus();
   }
 
@@ -149,39 +159,62 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell> {
           type: MaterialType.transparency,
           child: NotificationListener<ScrollNotification>(
             onNotification: _scroll,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: IgnorePointer(
-                    ignoring: _searching,
-                    child: ExcludeSemantics(
-                      excluding: _searching,
-                      child: TickerMode(
-                        enabled: !_searching,
-                        child: MestingAdaptiveContentFrame(child: widget.child),
+            child: AnimatedBuilder(
+              animation: _searchMotion,
+              builder: (context, _) => Stack(
+                children: [
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      ignoring: _searching,
+                      child: Offstage(
+                        // Keep the source mounted for its scroll state, but
+                        // stop painting once the opaque search page has landed.
+                        offstage: _searching && _searchMotion.isCompleted,
+                        child: ExcludeSemantics(
+                          excluding: _searching,
+                          child: TickerMode(
+                            enabled: !_searching,
+                            child: MestingAdaptiveContentFrame(
+                              child: widget.child,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                if (_hasOpenedSearch)
-                  Positioned.fill(
-                    child: ExcludeFocus(
-                      excluding: !_searching,
-                      child: Offstage(
-                        offstage: !_searching,
-                        child: TickerMode(
-                          enabled: _searching,
-                          child: NotificationListener<ScrollNotification>(
-                            onNotification: (_) => !_searching,
-                            child: Padding(
-                              padding: EdgeInsets.only(
-                                bottom: inset,
-                                top: MediaQuery.paddingOf(context).top,
-                              ),
-                              child: BetaEdgeBack(
-                                onBack: _backSearch,
-                                child: MusicSearchResultsBody(
-                                  onSearch: _submit,
+                  if (_hasOpenedSearch)
+                    Positioned.fill(
+                      child: ExcludeFocus(
+                        excluding: !_searching,
+                        child: Offstage(
+                          offstage: !_searching && _searchMotion.isDismissed,
+                          child: TickerMode(
+                            enabled: !_searchMotion.isDismissed,
+                            child: NotificationListener<ScrollNotification>(
+                              onNotification: (_) => !_searching,
+                              child: FractionalTranslation(
+                                translation: Offset(
+                                  1 -
+                                      Curves.easeOutCubic.transform(
+                                        _searchMotion.value,
+                                      ),
+                                  0,
+                                ),
+                                child: ColoredBox(
+                                  key: const ValueKey('beta10-search-surface'),
+                                  color: Theme.of(context).colorScheme.surface,
+                                  child: Padding(
+                                    padding: EdgeInsets.only(
+                                      bottom: inset,
+                                      top: MediaQuery.paddingOf(context).top,
+                                    ),
+                                    child: BetaEdgeBack(
+                                      onBack: _backSearch,
+                                      child: MusicSearchResultsBody(
+                                        onSearch: _submit,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -189,8 +222,8 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell> {
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -215,14 +248,6 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell> {
                       _mini &&
                       !_searching &&
                       _rootTab(widget.location) != null) {
-                    final position = _positions[widget.location];
-                    if (position?.hasPixels == true) {
-                      position!.animateTo(
-                        0,
-                        duration: const Duration(milliseconds: 400),
-                        curve: Curves.easeOutQuart,
-                      );
-                    }
                     setState(() => _mini = false);
                     return;
                   }

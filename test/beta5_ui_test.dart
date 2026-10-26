@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:mesting_music/app/router/app_router.dart' as production;
 import 'package:mesting_music/features/experience/presentation/floating_playback_pill.dart';
 import 'package:mesting_music/features/experience/presentation/beta_music_shell.dart';
 import 'package:mesting_music/features/music_platform/presentation/platform_comment_composer.dart';
@@ -10,6 +11,7 @@ import 'package:mesting_music/features/experience/presentation/music_landing_pag
 import 'package:mesting_music/features/experience/presentation/music_library_page.dart';
 import 'package:mesting_music/features/experience/presentation/beta_now_playing_page.dart';
 import 'package:mesting_music/features/experience/presentation/apple_player_controls.dart';
+import 'package:mesting_music/features/experience/presentation/player_content_transition.dart';
 import 'package:mesting_music/core/audio/media_volume_controller.dart';
 import 'package:mesting_music/features/music_platform/platform_recommendation_providers.dart';
 import 'package:mesting_music/features/music_platform/data/platform_recommendations.dart';
@@ -92,6 +94,16 @@ const _track = Track(
   lyricsAsset: '',
 );
 
+final _qaRecordingProvider = NotifierProvider<_QARecording, Track>(
+  _QARecording.new,
+);
+
+class _QARecording extends Notifier<Track> {
+  @override
+  Track build() => _track;
+  void select(Track track) => state = track;
+}
+
 class _Volume extends MediaVolumeController {
   @override
   MediaVolumeState build() =>
@@ -104,6 +116,14 @@ class _Volume extends MediaVolumeController {
 
 class _Handler extends MestingAudioHandler {
   _Handler() : super(tracks: []);
+  final presentationCommands = StreamController<String>.broadcast(sync: true);
+  @override
+  Stream<String> get userCommandStream => presentationCommands.stream;
+  @override
+  Future<void> skipToNext() async => presentationCommands.add('skipNext');
+  @override
+  Future<void> skipToPrevious() async =>
+      presentationCommands.add('skipPrevious');
   int toggles = 0;
   @override
   Future<void> togglePlayPause() async {
@@ -304,7 +324,9 @@ void main() {
         currentMediaItemProvider.overrideWith(
           (ref) => Stream.value(_track.toMediaItem()),
         ),
-        currentTrackProvider.overrideWithValue(_track),
+        currentTrackProvider.overrideWith(
+          (ref) => ref.watch(_qaRecordingProvider),
+        ),
         mediaVolumeProvider.overrideWith(_Volume.new),
         // These are parsed UI fixtures, not wire payloads. Real platform cover
         // parsing rejects asset filenames and is covered in beta6_platform_test.
@@ -358,6 +380,9 @@ void main() {
 
   Future<void> disposeFixture(WidgetTester tester) async {
     await tester.pumpWidget(const SizedBox());
+    await (container.read(audioHandlerProvider) as _Handler)
+        .presentationCommands
+        .close();
     container.dispose();
     library.dispose();
     // Drift removes cancelled watched queries on a zero-duration timer.
@@ -1352,6 +1377,156 @@ void main() {
         'beta9-title-scrolling',
         settle: Duration.zero,
       );
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta10 search and production routes keep opaque middle frames in both themes',
+    (tester) async {
+      viewport(tester);
+      for (final dark in [false, true]) {
+        await prepare();
+        await pump(tester, const MusicLandingPage(), shell: true, dark: dark);
+        await tester.tap(find.byIcon(CupertinoIcons.search).hitTestable().last);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 90));
+        final surface = tester.widget<ColoredBox>(
+          find.byKey(const ValueKey('beta10-search-surface')),
+        );
+        expect(surface.color.a, 1);
+        await captureScreenshot(
+          tester,
+          'beta10-search-enter-middle-${dark ? 'dark' : 'light'}',
+          settle: Duration.zero,
+        );
+        await tester.pump(const Duration(milliseconds: 350));
+        expect(find.byType(MusicLandingPage), findsNothing);
+        await tester.binding.handlePopRoute();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 90));
+        await captureScreenshot(
+          tester,
+          'beta10-search-exit-middle-${dark ? 'dark' : 'light'}',
+          settle: Duration.zero,
+        );
+        await tester.pump(const Duration(milliseconds: 350));
+        expect(find.byType(MusicLandingPage), findsOneWidget);
+        await disposeFixture(tester);
+      }
+      await prepare();
+      production.appRouter.go('/music/recommend');
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            routerConfig: production.appRouter,
+            theme: buildMestingTheme(musicThemePresetById('classic')),
+            builder: (context, child) => RepaintBoundary(
+              key: const ValueKey('beta5-capture'),
+              child: child!,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 450));
+      final pushed = production.appRouter.push('/music/search');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 90));
+      expect(
+        tester
+            .widget<ColoredBox>(
+              find.byKey(const ValueKey('beta10-route-surface')).last,
+            )
+            .color
+            .a,
+        1,
+      );
+      await captureScreenshot(
+        tester,
+        'beta10-route-push-middle',
+        settle: Duration.zero,
+      );
+      production.appRouter.pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 90));
+      await captureScreenshot(
+        tester,
+        'beta10-route-pop-middle',
+        settle: Duration.zero,
+      );
+      await tester.pump(const Duration(milliseconds: 450));
+      await pushed;
+      expect(tester.takeException(), isNull);
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta10 real player keeps transport through paired content transitions',
+    (tester) async {
+      viewport(tester);
+      await prepare();
+      await pump(tester, const BetaNowPlayingPage());
+      final transport = tester.element(find.byType(ApplePlayerControls));
+      Future<void> middle(String label) async {
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 90));
+        expect(
+          identical(
+            transport,
+            tester.element(find.byType(ApplePlayerControls)),
+          ),
+          true,
+        );
+        expect(tester.takeException(), isNull);
+        await captureScreenshot(tester, label, settle: Duration.zero);
+      }
+
+      await tester.tap(find.bySemanticsLabel('查看歌词'));
+      await middle('beta10-lyrics-enter-middle');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.byTooltip('返回封面'));
+      await middle('beta10-lyrics-exit-middle');
+      await tester.pump(const Duration(milliseconds: 400));
+      // Use the production menu callback, rather than replacing the page.
+      await tester.tap(find.byTooltip('更多操作'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 90));
+      await captureScreenshot(
+        tester,
+        'beta10-more-enter-middle',
+        settle: Duration.zero,
+      );
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.tap(find.text('黑胶唱片'));
+      await middle('beta10-style-switch-middle');
+      await tester.pump(const Duration(milliseconds: 450));
+      for (final next in [true, false]) {
+        await tester.tap(find.bySemanticsLabel(next ? '下一首' : '上一首'));
+        // This UI fixture replaces metadata only; playback itself is covered
+        // by deterministic audio-engine tests, without a second audio owner.
+        container
+            .read(_qaRecordingProvider.notifier)
+            .select(
+              next
+                  ? Track.fromJson({
+                      ..._track.toJson(),
+                      'id': 'next-recording',
+                      'title': '下一段旋律',
+                    })
+                  : _track,
+            );
+        await middle('beta10-song-${next ? 'next' : 'previous'}-middle');
+        final transitions = tester.widgetList<PlayerContentTransition>(
+          find.byType(PlayerContentTransition),
+        );
+        expect(transitions.every((w) => w.direction == (next ? 1 : -1)), true);
+        await tester.pump(const Duration(milliseconds: 450));
+      }
       await disposeFixture(tester);
     },
     skip: !DistributionChannel.isBeta,

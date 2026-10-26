@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/beta_glass_controls.dart';
 import '../../player/presentation/beta_playback_actions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -71,12 +72,10 @@ class EditorialHeader extends ConsumerWidget {
       child: Row(
         children: [
           if (back)
-            IconButton(
-              tooltip: '返回',
+            BetaGlassBackButton(
               onPressed: () => context.canPop()
                   ? context.pop()
                   : context.go('/music/library'),
-              icon: const Icon(Icons.arrow_back_ios_new_rounded),
             ),
           Expanded(
             child: Text(

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../../shared/widgets/mesting_loading_indicator.dart';
+import '../../../shared/widgets/beta_glass_controls.dart';
 import '../data/music_platform_api.dart';
 import '../music_platform_providers.dart';
 import '../../auth/auth_providers.dart';
@@ -17,7 +18,11 @@ import '../../themes/music_theme_tokens.dart';
 /// Uses Mesting's inherited theme, with account state owned entirely outside
 /// CloudBase. Closing this route cancels scans without affecting either login.
 class PlatformAccountPage extends ConsumerStatefulWidget {
-  const PlatformAccountPage({super.key});
+  const PlatformAccountPage({
+    this.initialMethod = PlatformLoginMethod.phone,
+    super.key,
+  });
+  final PlatformLoginMethod initialMethod;
 
   @override
   ConsumerState<PlatformAccountPage> createState() =>
@@ -31,12 +36,25 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
   PlatformQrChallenge? _challenge;
   String? _message;
   bool _busy = false;
+  String? _busyAction;
+  bool _polling = false;
   int _generation = 0;
   int _countdown = 0;
   Timer? _countdownTimer;
 
   PlatformLoginService get _login =>
       PlatformLoginService(ref.read(musicPlatformApiProvider));
+
+  @override
+  void initState() {
+    super.initState();
+    _method = widget.initialMethod;
+    if (_method != PlatformLoginMethod.phone) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _select(_method);
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -51,6 +69,8 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
     final generation = ++_generation;
     setState(() {
       _method = method;
+      _polling = false;
+      _busyAction = 'qr';
       _challenge = null;
       _message = null;
       _busy = method != PlatformLoginMethod.phone;
@@ -62,6 +82,7 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
       if (!mounted || generation != _generation) return;
       setState(() {
         _challenge = challenge;
+        _polling = true;
         _busy = false;
         _message = '请使用${_label(method)}完成扫码并确认';
       });
@@ -96,17 +117,24 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
         }
       } on Object catch (error) {
         if (mounted && generation == _generation) {
-          setState(() => _message = _error(error));
+          setState(() {
+            _message = _error(error);
+            _polling = false;
+          });
         }
         return;
       }
     }
     if (mounted && generation == _generation) {
-      setState(() => _message = '二维码已过期，请刷新');
+      setState(() {
+        _message = '二维码已过期，请刷新';
+        _polling = false;
+      });
     }
   }
 
   Future<void> _sendCode() async {
+    _busyAction = 'code';
     if (!RegExp(r'^1\d{10}$').hasMatch(_phone.text.trim())) {
       setState(() => _message = '请输入正确的 11 位手机号');
       return;
@@ -143,6 +171,7 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
   }
 
   Future<void> _phoneLogin() async {
+    _busyAction = 'login';
     final phone = _phone.text.trim();
     final code = _code.text.trim();
     if (!RegExp(r'^1\d{10}$').hasMatch(phone) ||
@@ -308,11 +337,15 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
                         ),
                         subtitle: Text('ID：${session.userId}'),
                       ),
-                      OutlinedButton(
+                      BetaGlassButton(
+                        loading: _busy && _busyAction == 'logout',
                         onPressed: _busy
                             ? null
                             : () async {
-                                setState(() => _busy = true);
+                                setState(() {
+                                  _busy = true;
+                                  _busyAction = 'logout';
+                                });
                                 try {
                                   await ref
                                       .read(platformAccountProvider.notifier)
@@ -342,36 +375,42 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
                       ),
                       const SizedBox(height: 24),
                       if (_method == PlatformLoginMethod.phone) ...[
-                        TextField(
-                          controller: _phone,
-                          keyboardType: TextInputType.phone,
-                          enabled: !_busy,
-                          maxLength: 11,
-                          autofillHints: const [
-                            AutofillHints.telephoneNumberNational,
-                          ],
-                          decoration: const InputDecoration(
-                            labelText: '酷狗账号手机号',
+                        BetaGlassField(
+                          child: TextField(
+                            controller: _phone,
+                            keyboardType: TextInputType.phone,
+                            enabled: !_busy,
+                            maxLength: 11,
+                            autofillHints: const [
+                              AutofillHints.telephoneNumberNational,
+                            ],
+                            decoration: const InputDecoration(
+                              labelText: '酷狗账号手机号',
+                            ),
                           ),
                         ),
                         const SizedBox(height: 12),
-                        TextField(
-                          controller: _code,
-                          keyboardType: TextInputType.number,
-                          enabled: !_busy,
-                          maxLength: 6,
-                          autofillHints: const [AutofillHints.oneTimeCode],
-                          decoration: const InputDecoration(labelText: '验证码'),
+                        BetaGlassField(
+                          child: TextField(
+                            controller: _code,
+                            keyboardType: TextInputType.number,
+                            enabled: !_busy,
+                            maxLength: 6,
+                            autofillHints: const [AutofillHints.oneTimeCode],
+                            decoration: const InputDecoration(labelText: '验证码'),
+                          ),
                         ),
                         const SizedBox(height: 12),
-                        OutlinedButton(
+                        BetaGlassButton(
+                          loading: _busy && _busyAction == 'code',
                           onPressed: _busy || _countdown > 0 ? null : _sendCode,
                           child: Text(
                             _countdown > 0 ? '${_countdown}s 后重试' : '获取验证码',
                           ),
                         ),
                         const SizedBox(height: 8),
-                        FilledButton(
+                        BetaGlassButton(
+                          loading: _busy && _busyAction == 'login',
                           onPressed: _busy ? null : _phoneLogin,
                           child: const Text('登录音乐平台'),
                         ),
@@ -407,7 +446,12 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
               if (_busy)
                 const Padding(
                   padding: EdgeInsets.only(top: 16),
-                  child: LinearProgressIndicator(),
+                  child: Center(child: BetaActivityIndicator()),
+                ),
+              if (_polling)
+                const Padding(
+                  padding: EdgeInsets.only(top: 16),
+                  child: Center(child: BetaActivityIndicator(label: '等待扫码确认')),
                 ),
               if (_message != null)
                 Padding(
@@ -415,7 +459,7 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
                   child: Semantics(liveRegion: true, child: Text(_message!)),
                 ),
               const SizedBox(height: 24),
-              TextButton(
+              BetaGlassButton(
                 onPressed: () => showLicensePage(
                   context: context,
                   applicationName: 'Mesting 音乐 Beta',

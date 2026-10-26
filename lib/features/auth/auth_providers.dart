@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../core/persistence/app_preferences.dart';
 import '../../core/platform/distribution_channel.dart';
 import 'beta_account_choice.dart';
+import 'beta_entry_flow.dart';
 import '../../core/security/session_store.dart';
 import '../library/library_providers.dart';
 import 'data/auth_repository.dart';
@@ -382,14 +383,23 @@ class AuthController extends AsyncNotifier<AuthSession?> {
   }
 
   Future<void> signOut() async {
+    final previous = state;
     state = const AsyncLoading();
-    await _repository.signOut();
-    if (DistributionChannel.isBeta) {
-      await ref
-          .read(betaAccountChoiceProvider.notifier)
-          .select(BetaAccountChoice.guest);
+    try {
+      await _repository.signOut();
+      if (DistributionChannel.isBeta) {
+        await ref
+            .read(betaAccountChoiceProvider.notifier)
+            .select(BetaAccountChoice.guest);
+      }
+      state = const AsyncData(null);
+      if (DistributionChannel.isBeta) {
+        await ref.read(betaEntryFlowProvider.notifier).welcome();
+      }
+    } on Object {
+      state = previous;
+      rethrow;
     }
-    state = const AsyncData(null);
   }
 
   Future<AuthSession?> rememberedAccount() {

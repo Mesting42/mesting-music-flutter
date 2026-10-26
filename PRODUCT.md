@@ -16,7 +16,7 @@ Mesting 是一款 Flutter 音乐应用，帮助用户快速发现、播放和管
 
 ## Positioning
 
-以封面主导、中文内容和连续播放组织发现与音乐库。Android Beta.9 延续固定版本 md3Music 平台来源、顺序和反馈契约，沿用用户确认的 Apple Music 视觉依据；正式渠道保留既有“当下状态驱动”的定制推荐。
+以封面主导、中文内容和连续播放组织发现与音乐库。Android Beta.10 延续固定版本 md3Music 平台来源、顺序和反馈契约，沿用用户确认的 Apple Music 视觉依据，并以原创音乐伙伴、真实登录及八页使用指南建立进入体验；正式渠道保留既有“当下状态驱动”的定制推荐。
 
 ## Operating Context
 
@@ -25,6 +25,10 @@ Mesting 是一款 Flutter 音乐应用，帮助用户快速发现、播放和管
 ## Capabilities and Constraints
 
 - 现有项目使用 Flutter。Android Beta 由 DistributionChannel.isBeta（appFlavor == beta）接入，包名 com.mesting.music.beta；正式 flavor 的页面、主题、定制推荐、导航和默认黑胶保持其原有契约。共享工具的改进按调用点生效，不构成全局渠道切换。
+- Beta.10 首次未完成进入且无恢复会话时显示欢迎页；每次新的交互式登录成功都依次显示成功卡、八页引导，再进入应用。恢复凭证与刷新 token 不算新登录，二维码轮询不能重复触发成功流程。游客直接进入应用，指南可跳过并在设置重新查看；退出仅真实成功后回欢迎页，等待时禁用重复操作，失败保留会话并允许重试。两类账号控制器继续独立持有凭证，酷狗、Mesting 与游客的数据归属延续。
+- 欢迎页优先手机号和微信扫码，其他方式保留酷狗/QQ 扫码及 Mesting 账号登录/注册，协议与隐私入口可达。八页指南根据实际发现/搜索、歌词、灰条收起与底部操作、账号适用的推荐/收藏、手动队列优先与续播/历史、外观、五种播放器、开始使用组织；不承诺桌面歌词、Zen 或 AI 等未实现能力。五张动态预览共用真实 playerVisualStyleProvider，选择会保存到装扮/播放器相同偏好；外观模式也读取真实主题偏好。演示不发起播放、云写入或第二个音频 owner。
+- Beta.10 在现有严格编码 hash 切换上，增加同 ID 的媒体修订通知，使当前曲音质/元数据跟随真实媒体发布而更新，且不订阅位置 tick。有损返回的正值实测码率优先于可能由适配器补入的请求档位标签；严格切换不符或无法确认时保留旧音源和偏好。当前软件证据不等于真实 CDN/会员权限验收。
+- Beta.10 搜索和普通路由过渡使用当前主题不透明 surface 遮挡旧内容，源页保留挂载与滚动。播放器封面/歌词、曲目身份和样式保留成对入退；上一首/下一首读取真实播放命令方向。共享 transport 与音频 owner 持续存在，快速反复操作由局部过渡接续。
 - Beta.5 新增音乐库路由、年/月 Replay 和歌单封面编辑。回顾只统计当前 owner 的真实每日记录，不反推未记录月份；云写入失败保留草稿，不显示虚假成功。
 - Beta.6 封面规范化/只读回退与音质偏好契约继续。Beta.9 音质菜单依据当前歌曲真实资源只展示已有档位，不预填标准/高品质/无损/Hi-Res 四档。资源存在与会员权限分开判断，会员提示只在尝试选择后按平台结果出现，未知元数据手动重试。切换保留档位到编码 hash 的对应关系，严格请求所选实际音源，无损降到高品质/标准也使用目标档位的 hash；勾选、提示和播放器实际来源一致后才保存偏好。复用已有音频服务并保留进度、播放状态、队列与模式；失败保留旧流和旧偏好，偏好/实际返回/试听/降档分别如实表达。
 - Beta.7 的发现呈现私人 FM、每日推荐、刷歌推荐与新歌速递，来源固定为 md3Music a69503b84e8829f888684f67c163be03c589c014 的 API/解析/刷新/续播契约；不再应用本地艺人评分和个人热榜。FM 提供红心/探索/小众/电台，保留 cur_mark、播放完成、喜欢/取消喜欢和不喜欢反馈及账号隔离。
@@ -48,13 +52,17 @@ Mesting 是一款 Flutter 音乐应用，帮助用户快速发现、播放和管
 - 需要降低常见 AI 生成界面的模板感，避免紫粉渐变、泛滥玻璃拟态、重复大圆角卡片和无意义装饰。
 - Beta 以用户提供的 Apple Music 参考图为视觉依据：封面、大标题、横向内容组和悬浮控件；界面保留中文 Mesting 品牌与自身账号、播放能力。
 - Beta 使用参考图采样红色统一导航选中态、个人页图标和相关选择；Beta.9 经典浅色面板改为中性白灰（#F2F2F7），保留红色强调、既有深色与封面播放器氛围。显式 IP 图案与角色继续拥有自身配色，选中标签保持主要文字对比。
-- Beta 底部直接使用 liquid_glass_widgets 1.15.0 官方 Apple Music 示例的组件、布局与交互动态；内容区域与账号表单保持清楚稳定。玻璃限定悬浮 chrome，包含评论底部独立输入/发送表面；正文和账号表单保持稳定表面，局部音质弹层/HUD 按各自规范处理。
+- Beta 底部直接使用 liquid_glass_widgets 1.15.0 官方 Apple Music 示例的组件、布局与交互动态。Beta.10 经用户确认将同一 premium 材质扩展至欢迎/登录/验证码/退出等指定账号操作、账号输入、圆形返回及开源许可入口；每个表面独立拥有玻璃层，评论输入/蓝色发送继续为兄弟表面。内容列表、阅读正文及表单所在页面背景保持稳定；该范围按 Beta 调用点接入，不构成正式渠道的全局改版。局部音质弹层/HUD 按自身规范处理。
+- Beta.10 的欢迎与指南采用用户选定的珊瑚红原创音符/唱片矢量双角色，具有四肢、表情、轻摆、眨眼和轻点问候；沿用既有 Mesting 世界、所给参考构图及随后确认的完整文字方案。没有另外生成或批准的 ImageGen comp、approval sidecar 或随机 FORM seed，不能事后补造来源记录。
 - 默认封面播放器可切换左对齐同步歌词；歌词当前基准为 24dp 并支持 TextScaler。迷你 accessory 仅保留播放/暂停和下一首两个裸图标，点击/左右滑动与官方玻璃交互继续适用。
 - 酷狗、Mesting、游客各自拥有收藏和历史；Mesting 社交入口不会显示给酷狗账号。云端写入失败不伪装成本地成功，不能把平台来源当成会员授权。
 
 ## Evidence on Hand
 
-- Beta.9 结构边界：保持挂载的 MusicShell / BetaMusicShell、32dp BetaEdgeBack 与系统 BackButtonListener、beta_playback_actions、AutomaticSongPaging、OverflowMarquee、PlatformCommentComposer / KeyboardVisibilityBuilder。音质由 PlatformQualityCatalog/provider/resolver 管理；播放仍由 MestingAudioHandler 唯一持有。具体源码入口见 docs/MD3MUSIC_BETA.md。
+- 当前 Beta.10 已构建并验证 Mesting Music / com.mesting.music.beta / 1.0.37-beta.10 / 10，pubspec 保留正式基线；review-final.md 的有界独立判定为 ship，R1–R8 全部 resolved。普通回归 635 通过/54 条件跳过/0 失败，Beta 定向 150 通过/0 跳过/0 失败，最终软件 UI 34 通过/0 失败；组间重叠不可相加。analyze 无问题，同一 Beta 测试证书、16KiB ZIP 对齐、两种 ARM 服务库与 Beta.9 字节一致已验证。APK 为 89,227,526 bytes，SHA256 及精确证据见 docs/MD3MUSIC_BETA.md。首轮 27/7 与修复组 16 属于早期有界证据；首轮截图缺陷由最终捕获/复核闭合。源码归档精确字节/哈希由冻结后生成的外部 outputs/beta-1.0.37-beta.10/delivery-manifest.json 记录，避免自引用。
+- motion-export.log 另有 4 通过，复用相同软件 fixture 导出浅/深欢迎与样式预览，每个 GIF 36 帧、每帧 80ms；这是软件动态演示，不是 Android FPS 或原生 GPU 流畅度证据。设备清单为空，设备/线上边界继续保留。
+- Beta.10 入口证据：beta_entry_flow.dart、BetaEntryCoordinator、BetaWelcomePage、BetaOnboardingPage、MestingMusicCompanions、BetaPlayerStylePreviews、BetaSignOutDialog；共享 BetaGlassButton/Field/BackButton、BetaAnchoredMenu、BetaSuccessMark/ActivityIndicator 和 PlayerCommentGlyph。评论菜单打开时实测各自触发器宽度；成功标记/等待状态由真实操作结果驱动。
+- 延续结构边界：保持挂载的 MusicShell / BetaMusicShell、32dp BetaEdgeBack 与系统 BackButtonListener、beta_playback_actions、AutomaticSongPaging、OverflowMarquee、PlatformCommentComposer / KeyboardVisibilityBuilder。音质由 PlatformQualityCatalog/provider/resolver 管理；播放仍由 MestingAudioHandler 唯一持有。具体源码入口见 docs/MD3MUSIC_BETA.md。
 
 - Beta 布局：`lib/features/experience/presentation/music_landing_page.dart`、`beta_music_shell.dart`、`beta_bottom_bar.dart`、`floating_playback_pill.dart`。
 - 播放与歌词：`lib/features/experience/presentation/beta_now_playing_page.dart`、`apple_player_controls.dart`、`immersive_lyrics.dart`；复用 `lib/core/audio/mesting_audio_handler.dart`。
@@ -62,7 +70,7 @@ Mesting 是一款 Flutter 音乐应用，帮助用户快速发现、播放和管
 - 推荐：`lib/features/music_platform/data/platform_recommendations.dart`、`data/platform_explore.dart`、`platform_recommendation_providers.dart` 和对应 `platform_recommendations_page.dart` / `platform_search_landing.dart`。
 - 视觉和迁移：`lib/features/themes/beta_appearance.dart`、`app_theme.dart`、`theme_controller.dart`、`app_brand_style.dart`、`theme_gallery_page.dart`；反馈入口为 `lib/shared/widgets/music_notice.dart`。
 - 较早正式推荐入口：`lib/features/recommendation/presentation/recommendation_page.dart`；不应作为 Beta.7 平台推荐排序来源。
-- 2026-10-25 Beta.9 有界独立复核为 ship，R1–R5 全部闭合。普通回归 619 通过/52 条件跳过/0 失败，Beta 定向组 132 通过/0 跳过/0 失败，软件 UI 23 通过，命令与交互 21 通过；组间重叠不可相加。analyze 无问题。发布 APK 已构建并验证 com.mesting.music.beta / Mesting Music / 1.0.37-beta.9 / 9，同一 Beta 测试证书、16KiB ZIP 对齐和 ARM 服务库与 Beta.7 字节一致。源 ZIP 字节与哈希待最终归档清单记录。
+- 历史 Beta.9（2026-10-25）有界独立复核为 ship，R1–R5 全部闭合。普通回归 619 通过/52 条件跳过/0 失败，Beta 定向组 132 通过/0 跳过/0 失败，软件 UI 23 通过，命令与交互 21 通过；组间重叠不可相加。analyze 无问题。该版发布 APK 已构建并验证 com.mesting.music.beta / Mesting Music / 1.0.37-beta.9 / 9，同一 Beta 测试证书、16KiB ZIP 对齐和 ARM 服务库与 Beta.7 字节一致。该版源 ZIP 字节与哈希由其归档清单记录；这些结果仅适用于 Beta.9。
 - work/beta9/pill-benchmark.json 对同一组 100 次播放位置事件的观测为 Beta.8 胶囊重建 99 次、Beta.9 为 0 次；这是 Flutter debug 构建工作量比较，不是帧率或真机流畅度证据。
 - 当前没有连接的 Android 设备；软件捕获使用合成数据、Flutter 软件渲染和 Windows QA 中文字体。硬件音量、TalkBack、预测返回/硬件手势、真实 IME、原生 GPU 玻璃/动画/帧率、冷启动/升级迁移、线上 CDN/音质/权限及真实账号/评论写入仍待验收。历史 Beta.7/Beta.8 计数、结论和包身份仅描述各自构建，保留在 docs/MD3MUSIC_BETA.md。
 

@@ -16,6 +16,10 @@ import '../../themes/music_theme_tokens.dart';
 import '../../themes/theme_gallery_page.dart';
 import '../../../shared/widgets/mesting_loading_indicator.dart';
 import '../../../shared/widgets/music_notice.dart';
+import '../../../shared/widgets/beta_glass_controls.dart';
+import '../../auth/presentation/beta_onboarding_page.dart';
+import '../../auth/presentation/beta_welcome_page.dart';
+import '../../auth/presentation/beta_sign_out_dialog.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -49,7 +53,9 @@ class SettingsPage extends ConsumerWidget {
                   icon: Icons.palette_outlined,
                   iconColor: const Color(0xFF745CC7),
                   title: '装扮',
-                  subtitle: '皮肤、IP 主题、图标与启动页',
+                  subtitle: DistributionChannel.isBeta
+                      ? '外观模式、自定义背景与进度条'
+                      : '皮肤、IP 主题、图标与启动页',
                   highlighted: true,
                   onTap: () => showDressUpCenterSheet(context),
                 ),
@@ -113,6 +119,24 @@ class SettingsPage extends ConsumerWidget {
                           : () => _checkForUpdates(context, ref),
                     ),
                     const _SettingsDivider(),
+                    if (DistributionChannel.isBeta)
+                      _SettingsTile(
+                        key: const ValueKey('settings-guide'),
+                        icon: Icons.auto_stories_outlined,
+                        iconColor: const Color(0xFFDE5757),
+                        title: '使用指南',
+                        subtitle: '重新探索 Mesting Music 的操作与外观',
+                        onTap: () => Navigator.of(context).push(
+                          betaEntryRoute(
+                            Builder(
+                              builder: (guideContext) => BetaOnboardingPage(
+                                onFinish: () =>
+                                    Navigator.of(guideContext).pop(),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     if (ref.watch(showMestingFeaturesProvider))
                       _SettingsTile(
                         key: const ValueKey('settings-java-mysql-test-channel'),
@@ -129,15 +153,29 @@ class SettingsPage extends ConsumerWidget {
                 const SizedBox(height: 18),
                 const _SettingsSectionLabel('登录与安全'),
                 _SettingsSurface(
-                  child: _SettingsTile(
-                    key: const ValueKey('settings-sign-out'),
-                    icon: Icons.logout_rounded,
-                    iconColor: const Color(0xFFC24A34),
-                    title: '退出登录',
-                    subtitle: '退出当前状态，并在本机保留快捷登录账号',
-                    destructive: true,
-                    onTap: () => _confirmSignOut(context, ref),
-                  ),
+                  child: DistributionChannel.isBeta
+                      ? BetaGlassButton(
+                          key: const ValueKey('settings-sign-out'),
+                          height: 60,
+                          onPressed: () => _confirmSignOut(context, ref),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.logout_rounded, size: 20),
+                              SizedBox(width: 10),
+                              Text('退出登录'),
+                            ],
+                          ),
+                        )
+                      : _SettingsTile(
+                          key: const ValueKey('settings-sign-out'),
+                          icon: Icons.logout_rounded,
+                          iconColor: const Color(0xFFC24A34),
+                          title: '退出登录',
+                          subtitle: '退出当前状态，并在本机保留快捷登录账号',
+                          destructive: true,
+                          onTap: () => _confirmSignOut(context, ref),
+                        ),
                 ),
                 const SizedBox(height: 10),
                 _SettingsSurface(
@@ -222,6 +260,16 @@ class SettingsPage extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
   ) async {
+    if (DistributionChannel.isBeta) {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => BetaSignOutDialog(
+          onConfirm: () => ref.read(authControllerProvider.notifier).signOut(),
+        ),
+      );
+      return;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => const _SignOutDialog(),
@@ -247,38 +295,46 @@ class _SettingsHeader extends StatelessWidget {
     final tokens = context.musicThemeTokens;
     return Row(
       children: [
-        Tooltip(
-          message: '返回',
-          child: Material(
-            color: tokens.glassStrong,
-            borderRadius: BorderRadius.circular(17),
-            child: InkWell(
-              key: const ValueKey('settings-back'),
-              onTap: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go('/music/recommend');
-                }
-              },
+        if (DistributionChannel.isBeta)
+          BetaGlassBackButton(
+            key: const ValueKey('settings-back'),
+            onPressed: () {
+              context.canPop() ? context.pop() : context.go('/music/recommend');
+            },
+          )
+        else
+          Tooltip(
+            message: '返回',
+            child: Material(
+              color: tokens.glassStrong,
               borderRadius: BorderRadius.circular(17),
-              child: Container(
-                width: 48,
-                height: 48,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(17),
-                  border: Border.all(color: tokens.borderStrong),
-                ),
-                child: Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  color: tokens.textPrimary,
-                  size: 21,
+              child: InkWell(
+                key: const ValueKey('settings-back'),
+                onTap: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/music/recommend');
+                  }
+                },
+                borderRadius: BorderRadius.circular(17),
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(17),
+                    border: Border.all(color: tokens.borderStrong),
+                  ),
+                  child: Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: tokens.textPrimary,
+                    size: 21,
+                  ),
                 ),
               ),
             ),
           ),
-        ),
         const SizedBox(width: 14),
         Expanded(
           child: Column(

@@ -9,6 +9,7 @@ import 'data/platform_session_store.dart';
 import 'domain/platform_session.dart';
 import '../../core/platform/distribution_channel.dart';
 import '../auth/beta_account_choice.dart';
+import '../auth/beta_entry_flow.dart';
 
 final musicServerProvider = Provider<MusicServer>(
   (ref) => EmbeddedMusicServer(),
@@ -95,6 +96,9 @@ class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
     }
     ref.read(musicPlatformApiProvider).session = session;
     state = AsyncData(session);
+    if (DistributionChannel.isBeta) {
+      ref.read(betaEntryFlowProvider.notifier).authenticated();
+    }
   });
 
   Future<void> signOut() => _serialize(() async {
@@ -109,6 +113,9 @@ class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
     }
     ref.read(musicPlatformApiProvider).session = null;
     state = const AsyncData(null);
+    if (DistributionChannel.isBeta) {
+      await ref.read(betaEntryFlowProvider.notifier).welcome();
+    }
   });
 }
 

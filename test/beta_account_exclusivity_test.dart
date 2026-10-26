@@ -14,6 +14,7 @@ import 'package:mesting_music/core/persistence/app_preferences.dart';
 import 'package:mesting_music/core/platform/distribution_channel.dart';
 import 'package:mesting_music/features/auth/auth_providers.dart';
 import 'package:mesting_music/features/auth/beta_account_choice.dart';
+import 'package:mesting_music/features/auth/beta_entry_flow.dart';
 import 'package:mesting_music/features/auth/data/auth_repository.dart';
 import 'package:mesting_music/features/auth/domain/auth_models.dart';
 import 'package:mesting_music/features/auth/presentation/auth_page.dart';
@@ -171,7 +172,7 @@ void main() {
   );
 
   testWidgets(
-    'Kugou profile hides old login; logout restores both choices',
+    'Kugou profile hides old login; logout restores welcome and all choices',
     (tester) async {
       store.value = const PlatformSession(
         userId: '7',
@@ -204,8 +205,14 @@ void main() {
       expect(find.text('退出音乐平台账号'), findsOneWidget);
       await container.read(platformAccountProvider.notifier).signOut();
       await tester.pump();
+      expect(find.text('手机号登录'), findsOneWidget);
+      expect(find.text('微信扫码登录'), findsOneWidget);
+      await tester.tap(find.text('其他登录方式'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('Mesting 账号登录 / 注册'), findsOneWidget);
-      expect(find.text('使用音乐平台账号登录'), findsOneWidget);
+      expect(find.text('酷狗扫码登录'), findsOneWidget);
+      expect(find.text('QQ 扫码登录'), findsOneWidget);
     },
     skip: !DistributionChannel.isBeta,
   );
@@ -279,7 +286,7 @@ void main() {
   );
 
   testWidgets(
-    'restored platform login completes onboarding without a Mesting identity',
+    'restored platform session enters app without replaying login success or tour',
     (tester) async {
       store.value = const PlatformSession(userId: '7', token: 'test');
       final container = ProviderContainer(overrides: overrides());
@@ -297,7 +304,11 @@ void main() {
       );
       await tester.pump();
       expect(find.text('已进入首页'), findsOneWidget);
-      expect(preferences.getBool(firstLaunchAuthCompletedPreferenceKey), true);
+      // Restoration is not a new interactive login and must not emit a success
+      // event or mark an unseen guide as completed on the user's behalf.
+      expect(container.read(betaEntryFlowProvider), BetaEntryStage.idle);
+      expect(find.byKey(const ValueKey('entry-success')), findsNothing);
+      expect(find.byKey(const ValueKey('entry-guide')), findsNothing);
       expect(container.read(currentUserProvider), null);
     },
     skip: !DistributionChannel.isBeta,

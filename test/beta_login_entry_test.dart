@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:mesting_music/core/persistence/app_preferences.dart';
 import 'package:mesting_music/core/platform/distribution_channel.dart';
 import 'package:mesting_music/features/auth/auth_providers.dart';
@@ -31,10 +32,14 @@ class _EmptyPlatformStore implements PlatformSessionStore {
 }
 
 void main() {
+  setUpAll(LiquidGlassWidgets.initialize);
   testWidgets(
     'Beta first install exposes two logins and guest while CloudBase is pending',
     (tester) async {
-      SharedPreferences.setMockInitialValues({});
+      SharedPreferences.setMockInitialValues({
+        'mesting_user_agreement_accepted_v1': true,
+        'mesting_privacy_policy_accepted_v1': true,
+      });
       final preferences = await SharedPreferences.getInstance();
       final legacy = _PendingLegacyAuth();
       await tester.pumpWidget(
@@ -55,11 +60,11 @@ void main() {
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.text('使用音乐平台账号登录'), findsOneWidget);
-      expect(find.text('Mesting 账号登录 / 注册'), findsOneWidget);
-      expect(find.text('暂不登录，先体验'), findsOneWidget);
+      expect(find.text('手机号登录'), findsOneWidget);
+      expect(find.text('微信扫码登录'), findsOneWidget);
+      expect(find.text('游客体验'), findsOneWidget);
 
-      await tester.tap(find.text('使用音乐平台账号登录'));
+      await tester.tap(find.text('手机号登录'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('音乐平台账号'), findsOneWidget);
@@ -71,7 +76,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('音乐平台账号'), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('experience-now')));
+      await tester.tap(find.text('游客体验'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('推荐页面'), findsOneWidget);

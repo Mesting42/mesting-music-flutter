@@ -39,6 +39,25 @@ class PlatformPlaybackResolver {
     return '';
   }
 
+  /// Prefer measured lossy bitrate over a native adapter's requested label.
+  /// Explicit lossless labels remain meaningful when bitrate is unavailable.
+  static PlatformAudioQuality? deliveredQuality(Map<String, dynamic> data) {
+    final raw = num.tryParse(
+      '${data['bitRate'] ?? data['bit_rate'] ?? data['bitrate'] ?? ''}',
+    );
+    final bitrate = raw == null
+        ? null
+        : raw < 1000
+        ? raw * 1000
+        : raw;
+    if (bitrate != null && bitrate > 0 && bitrate <= 400000) {
+      return bitrate > 220000
+          ? PlatformAudioQuality.high
+          : PlatformAudioQuality.standard;
+    }
+    return PlatformAudioQuality.fromCode(data['quality']);
+  }
+
   bool _sameAccount(PlatformSession? expected) =>
       api.session?.userId == expected?.userId &&
       api.session?.token == expected?.token;
@@ -117,7 +136,10 @@ class PlatformPlaybackResolver {
         if (preview || (fail is List && fail.contains('buy'))) {
           throw const MusicPlatformException('需要会员／相应权限');
         }
-        final delivered = PlatformAudioQuality.fromCode(data['quality']);
+        // Some native adapters stamp the requested tier into `quality` when
+        // upstream omits it. A supplied measured bitrate must take precedence
+        // for lossy sources; otherwise a 320kbps stream can claim 128 success.
+        final delivered = deliveredQuality(data);
         if (delivered == null) {
           throw const MusicPlatformException('平台未确认所选音质，已保留原音源');
         }
@@ -132,8 +154,7 @@ class PlatformPlaybackResolver {
         coverAsset: PlatformArtwork.fromPayload(data).isEmpty
             ? track.coverAsset
             : PlatformArtwork.fromPayload(data),
-        playbackQuality:
-            PlatformAudioQuality.fromCode(data['quality'])?.code ?? '',
+        playbackQuality: deliveredQuality(data)?.code ?? '',
         platformSongId: PlatformSongIdentity.fromPayload(data).isEmpty
             ? track.platformSongId
             : PlatformSongIdentity.fromPayload(data),

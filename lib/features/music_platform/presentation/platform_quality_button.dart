@@ -218,7 +218,7 @@ class PlatformQualityButton extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(
-                  CupertinoIcons.waveform,
+                  CupertinoIcons.hifispeaker_fill,
                   size: 25,
                   color: Colors.white70,
                 ),

@@ -7,15 +7,21 @@ import '../../../core/platform/distribution_channel.dart';
 import '../../../shared/widgets/mesting_loading_indicator.dart';
 import '../auth_providers.dart';
 import 'auth_page.dart';
+import 'beta_entry_coordinator.dart';
 import '../../music_platform/music_platform_providers.dart';
 
 const firstLaunchAuthCompletedPreferenceKey =
     'mesting_first_launch_auth_completed_v1';
 
 class FirstLaunchAuthCoordinator extends ConsumerStatefulWidget {
-  const FirstLaunchAuthCoordinator({required this.child, super.key});
+  const FirstLaunchAuthCoordinator({
+    required this.child,
+    this.onBetaLogout,
+    super.key,
+  });
 
   final Widget child;
+  final VoidCallback? onBetaLogout;
 
   @override
   ConsumerState<FirstLaunchAuthCoordinator> createState() =>
@@ -40,6 +46,12 @@ class _FirstLaunchAuthCoordinatorState
 
   @override
   Widget build(BuildContext context) {
+    if (DistributionChannel.isBeta) {
+      return BetaEntryCoordinator(
+        onLogout: widget.onBetaLogout,
+        child: widget.child,
+      );
+    }
     final auth = ref.watch(authControllerProvider);
     final platformLoggedIn =
         DistributionChannel.isBeta &&

@@ -1,5 +1,6 @@
 import '../../../shared/widgets/beta_edge_back.dart';
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/beta_glass_controls.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'apple_search_results.dart';
@@ -267,6 +268,9 @@ class _CircleBack extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.musicThemeTokens;
+    if (DistributionChannel.isBeta) {
+      return BetaGlassBackButton(onPressed: onTap);
+    }
     return Material(
       color: tokens.glass,
       shape: const CircleBorder(),
