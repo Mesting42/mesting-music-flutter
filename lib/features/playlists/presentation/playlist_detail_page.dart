@@ -19,6 +19,7 @@ import '../../library/presentation/favorite_toggle_button.dart';
 import '../../themes/mesting_palette.dart';
 import '../../themes/music_theme_tokens.dart';
 import 'playlist_editor_dialog.dart';
+import '../../player/presentation/beta_playback_actions.dart';
 
 bool _canPopPlaylistRoute(BuildContext context) =>
     Navigator.maybeOf(context)?.canPop() ?? false;
@@ -80,7 +81,14 @@ class PlaylistDetailPage extends ConsumerWidget {
             onManage: () => _showPlaylistActions(context, ref, item),
             onPlayAll: trackList.isEmpty
                 ? null
-                : () => ref.read(audioHandlerProvider).replaceQueue(trackList),
+                : () => DistributionChannel.isBeta
+                      ? playBetaSelection(
+                          context,
+                          ref,
+                          trackList.first,
+                          playAll: trackList,
+                        )
+                      : ref.read(audioHandlerProvider).replaceQueue(trackList),
             onAddTracks: () =>
                 _showTrackPicker(context, ref, trackList, favoriteTracks),
             onReorder: (items, oldIndex, newIndex) {
@@ -95,9 +103,11 @@ class PlaylistDetailPage extends ConsumerWidget {
                     reordered.map((track) => track.id).toList(),
                   );
             },
-            onPlayTrack: (track) => ref
-                .read(audioHandlerProvider)
-                .playSingleTrack(track, playbackContext: trackList),
+            onPlayTrack: (track) => DistributionChannel.isBeta
+                ? playBetaSelection(context, ref, track)
+                : ref
+                      .read(audioHandlerProvider)
+                      .playSingleTrack(track, playbackContext: trackList),
             onAddTrack: (track) => _appendTrack(context, ref, track),
             onRemoveTrack: (track) async {
               await ref

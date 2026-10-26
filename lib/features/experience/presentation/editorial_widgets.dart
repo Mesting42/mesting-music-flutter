@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../player/presentation/beta_playback_actions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/audio/playback_providers.dart';
 import '../../../shared/models/track.dart';
 import '../../../shared/widgets/artwork_image.dart';
 import '../../../shared/widgets/track_artwork.dart';
@@ -402,9 +402,7 @@ Future<void> playEditorialTrack(
   List<Track> tracks,
 ) async {
   try {
-    await ref
-        .read(audioHandlerProvider)
-        .playSingleTrack(track, playbackContext: tracks);
+    await playBetaSelection(context, ref, track);
   } catch (error) {
     if (context.mounted) showPlatformFailure(context, error);
   }
@@ -484,7 +482,12 @@ class EditorialCollectionHero extends ConsumerWidget {
         FilledButton.icon(
           onPressed: tracks.isEmpty
               ? null
-              : () => playEditorialTrack(context, ref, tracks.first, tracks),
+              : () => playBetaSelection(
+                  context,
+                  ref,
+                  tracks.first,
+                  playAll: tracks,
+                ),
           icon: const Icon(Icons.play_arrow_rounded),
           label: const Text('播放全部'),
         ),

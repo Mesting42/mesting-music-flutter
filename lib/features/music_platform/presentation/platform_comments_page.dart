@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/models/track.dart';
 import '../../../shared/widgets/music_notice.dart';
+import '../../../shared/widgets/keyboard_visibility_builder.dart';
 import '../data/platform_comments_repository.dart';
 import '../data/music_platform_api.dart';
 import '../music_platform_providers.dart';
@@ -10,6 +11,7 @@ import '../../auth/account_capabilities.dart';
 import 'platform_comment_card.dart';
 import 'platform_feedback.dart';
 import 'platform_design.dart';
+import 'platform_comment_composer.dart';
 import '../../themes/music_theme_tokens.dart';
 
 Future<void> openPlatformSongComments(
@@ -368,41 +370,132 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 4,
+                      Row(
                         children: [
-                          for (final sort in PlatformCommentSort.values)
-                            ChoiceChip(
-                              label: Text(switch (sort) {
-                                PlatformCommentSort.hottest => '最热',
-                                PlatformCommentSort.newest => '最新',
-                                PlatformCommentSort.oldest => '最早',
-                              }),
-                              selected: _sort == sort,
-                              onSelected: (_) {
-                                if (_sort == sort) return;
+                          PopupMenuButton<PlatformCommentSort>(
+                            tooltip: '评论排序',
+                            style: ButtonStyle(
+                              minimumSize: const WidgetStatePropertyAll(
+                                Size(90, 44),
+                              ),
+                              backgroundColor: WidgetStatePropertyAll(
+                                Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerLow,
+                              ),
+                              shape: const WidgetStatePropertyAll(
+                                StadiumBorder(),
+                              ),
+                            ),
+                            icon: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  switch (_sort) {
+                                    PlatformCommentSort.hottest => '最热',
+                                    PlatformCommentSort.newest => '最新',
+                                    PlatformCommentSort.oldest => '最早',
+                                  },
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Icon(Icons.expand_more_rounded, size: 18),
+                              ],
+                            ),
+                            onSelected: (sort) {
+                              if (_sort != sort) {
                                 setState(() => _sort = sort);
                                 _load(reset: true);
-                              },
+                              }
+                            },
+                            itemBuilder: (_) => [
+                              for (final sort in PlatformCommentSort.values)
+                                PopupMenuItem(
+                                  value: sort,
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        _sort == sort
+                                            ? Icons.check_rounded
+                                            : null,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(switch (sort) {
+                                        PlatformCommentSort.hottest => '最热',
+                                        PlatformCommentSort.newest => '最新',
+                                        PlatformCommentSort.oldest => '最早',
+                                      }),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(width: 8),
+                          PopupMenuButton<PlatformCommentScope>(
+                            tooltip: '评论范围',
+                            style: ButtonStyle(
+                              minimumSize: const WidgetStatePropertyAll(
+                                Size(90, 44),
+                              ),
+                              backgroundColor: WidgetStatePropertyAll(
+                                Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerLow,
+                              ),
+                              shape: const WidgetStatePropertyAll(
+                                StadiumBorder(),
+                              ),
                             ),
+                            icon: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  switch (_scope) {
+                                    PlatformCommentScope.all => '全部',
+                                    PlatformCommentScope.singer => '歌手',
+                                    PlatformCommentScope.mine => '我的',
+                                  },
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Icon(Icons.expand_more_rounded, size: 18),
+                              ],
+                            ),
+                            onSelected: (scope) =>
+                                setState(() => _scope = scope),
+                            itemBuilder: (_) => [
+                              for (final scope in PlatformCommentScope.values)
+                                PopupMenuItem(
+                                  value: scope,
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        _scope == scope
+                                            ? Icons.check_rounded
+                                            : null,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(switch (scope) {
+                                        PlatformCommentScope.all => '全部',
+                                        PlatformCommentScope.singer => '歌手',
+                                        PlatformCommentScope.mine => '我的',
+                                      }),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
                         ],
                       ),
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          for (final scope in PlatformCommentScope.values)
-                            FilterChip(
-                              label: Text(switch (scope) {
-                                PlatformCommentScope.all => '全部',
-                                PlatformCommentScope.singer => '歌手',
-                                PlatformCommentScope.mine => '我的',
-                              }),
-                              selected: _scope == scope,
-                              onSelected: (_) => setState(() => _scope = scope),
-                            ),
-                        ],
-                      ),
+                      const SizedBox(height: 4),
                       Text(
                         _sortNotice ??
                             (_sort != PlatformCommentSort.hottest ||
@@ -412,139 +505,108 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
                                 : '按平台最热评论排序'),
                         style: TextStyle(
                           fontSize: 11,
-                          color: context.musicThemeTokens.textMuted,
+                          color: context.musicThemeTokens.textSecondary,
                         ),
                       ),
                     ],
                   ),
                 ),
                 Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: () => _load(reset: true),
-                    child: ListView(
-                      controller: _scroll,
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(18, 8, 18, 20),
-                      children: [
-                        if (widget.thread != null)
-                          PlatformPanel(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.thread!.nickname,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: RefreshIndicator(
+                          onRefresh: () => _load(reset: true),
+                          child: ListView(
+                            controller: _scroll,
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.fromLTRB(18, 8, 18, 170),
+                            children: [
+                              if (widget.thread != null)
+                                PlatformPanel(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        widget.thread!.nickname,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(widget.thread!.content),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(height: 8),
-                                Text(widget.thread!.content),
-                              ],
-                            ),
-                          ),
-                        if (_loading)
-                          const PlatformFeedbackState(loading: true),
-                        if (_error != null)
-                          PlatformFeedbackState(
-                            message: _error!,
-                            retry: () => _load(reset: _page == 0),
-                          ),
-                        if (!_loading && _error == null && entries.isEmpty)
-                          PlatformFeedbackState(
-                            message: _scope == PlatformCommentScope.all
-                                ? '暂时没有评论，来写下你的感受'
-                                : '已加载评论中暂无此类内容',
-                          ),
-                        for (final comment in entries)
-                          PlatformCommentCard(
-                            comment: comment,
-                            onReply: _writing
-                                ? null
-                                : () => setState(() => _reply = comment),
-                            onDelete:
-                                !_writing &&
-                                    comment.userId ==
-                                        widget.repository.identity.userId
-                                ? () => _delete(comment)
-                                : null,
-                            onThread: widget.thread == null
-                                ? () => Navigator.of(context).push(
-                                    MaterialPageRoute<void>(
-                                      builder: (_) => PlatformCommentsPage(
-                                        resource: widget.resource,
-                                        repository: widget.repository,
-                                        thread: comment,
-                                      ),
-                                    ),
-                                  )
-                                : null,
-                          ),
-                        if (_hasMore && !_loading)
-                          TextButton.icon(
-                            onPressed: _load,
-                            icon: const Icon(Icons.expand_more_rounded),
-                            label: const Text('加载更多'),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
-                  child: PlatformPanel(
-                    padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_reply != null)
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  '回复 ${_reply!.nickname}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                              if (_loading)
+                                const PlatformFeedbackState(loading: true),
+                              if (_error != null)
+                                PlatformFeedbackState(
+                                  message: _error!,
+                                  retry: () => _load(reset: _page == 0),
                                 ),
-                              ),
-                              IconButton(
-                                tooltip: '取消回复',
-                                onPressed: () => setState(() => _reply = null),
-                                icon: const Icon(Icons.close_rounded, size: 18),
-                              ),
+                              if (!_loading &&
+                                  _error == null &&
+                                  entries.isEmpty)
+                                PlatformFeedbackState(
+                                  message: _scope == PlatformCommentScope.all
+                                      ? '暂时没有评论，来写下你的感受'
+                                      : '已加载评论中暂无此类内容',
+                                ),
+                              for (final comment in entries)
+                                PlatformCommentCard(
+                                  comment: comment,
+                                  onReply: _writing
+                                      ? null
+                                      : () => setState(() => _reply = comment),
+                                  onDelete:
+                                      !_writing &&
+                                          comment.userId ==
+                                              widget.repository.identity.userId
+                                      ? () => _delete(comment)
+                                      : null,
+                                  onThread: widget.thread == null
+                                      ? () => Navigator.of(context).push(
+                                          MaterialPageRoute<void>(
+                                            builder: (_) =>
+                                                PlatformCommentsPage(
+                                                  resource: widget.resource,
+                                                  repository: widget.repository,
+                                                  thread: comment,
+                                                ),
+                                          ),
+                                        )
+                                      : null,
+                                ),
+                              if (_hasMore && !_loading)
+                                TextButton.icon(
+                                  onPressed: _load,
+                                  icon: const Icon(Icons.expand_more_rounded),
+                                  label: const Text('加载更多'),
+                                ),
                             ],
                           ),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _text,
-                                maxLength: 1000,
-                                minLines: 1,
-                                maxLines: 4,
-                                enabled: !_writing,
-                                decoration: InputDecoration(
-                                  labelText:
-                                      widget.thread == null && _reply == null
-                                      ? '发表酷狗评论'
-                                      : '回复评论',
-                                  counterText: '',
-                                  filled: false,
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            FilledButton(
-                              onPressed: _writing ? null : _send,
-                              child: Text(_writing ? '提交中' : '发送'),
-                            ),
-                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: KeyboardVisibilityBuilder(
+                          builder: (context, keyboardVisible) =>
+                              PlatformCommentComposer(
+                                keyboardVisible: keyboardVisible,
+                                controller: _text,
+                                sending: _writing,
+                                onSend: _send,
+                                reply: _reply?.nickname,
+                                onCancelReply: () =>
+                                    setState(() => _reply = null),
+                              ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

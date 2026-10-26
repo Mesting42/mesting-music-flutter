@@ -2,135 +2,82 @@
 version: 1
 slug: "es-experience-presentation-music-landing-page-dart"
 primary_target: "lib/features/experience/presentation/music_landing_page.dart"
-related_targets: ["lib/features/experience/presentation/beta_music_shell.dart","lib/features/experience/presentation/beta_bottom_bar.dart","lib/features/experience/presentation/floating_playback_pill.dart","lib/features/experience/presentation/music_library_page.dart","lib/features/experience/presentation/beta_now_playing_page.dart","lib/features/experience/presentation/apple_player_controls.dart","lib/features/experience/presentation/immersive_lyrics.dart","lib/features/music_platform/presentation/platform_recommendations_page.dart","lib/features/music_platform/presentation/platform_search_landing.dart","lib/features/playlists/presentation/playlist_editor_dialog.dart","lib/features/player/presentation/music_shell.dart","lib/shared/widgets/beta_edge_back.dart","lib/features/experience/presentation/player_pull_to_dismiss.dart","lib/features/experience/presentation/player_more_menu.dart","lib/features/search/presentation/apple_search_results.dart","lib/features/music_platform/presentation/apple_hot_search.dart","lib/features/music_platform/data/platform_quality_catalog.dart","lib/features/music_platform/platform_quality_providers.dart","lib/core/audio/media_volume_controller.dart","lib/core/audio/mesting_audio_handler.dart"]
+related_targets: ["lib/features/experience/presentation/beta_music_shell.dart","lib/features/experience/presentation/beta_bottom_bar.dart","lib/features/experience/presentation/floating_playback_pill.dart","lib/features/experience/presentation/music_library_page.dart","lib/features/experience/presentation/beta_now_playing_page.dart","lib/features/experience/presentation/apple_player_controls.dart","lib/features/experience/presentation/immersive_lyrics.dart","lib/features/music_platform/presentation/platform_recommendations_page.dart","lib/features/music_platform/presentation/platform_search_landing.dart","lib/features/playlists/presentation/playlist_editor_dialog.dart","lib/features/player/presentation/music_shell.dart","lib/shared/widgets/beta_edge_back.dart","lib/features/experience/presentation/player_pull_to_dismiss.dart","lib/features/experience/presentation/player_more_menu.dart","lib/features/search/presentation/apple_search_results.dart","lib/features/music_platform/presentation/apple_hot_search.dart","lib/features/music_platform/data/platform_quality_catalog.dart","lib/features/music_platform/platform_quality_providers.dart","lib/core/audio/media_volume_controller.dart","lib/core/audio/mesting_audio_handler.dart","lib/features/player/presentation/beta_playback_actions.dart","lib/features/experience/presentation/player_chrome_reveal.dart","lib/shared/widgets/automatic_song_paging.dart","lib/shared/widgets/overflow_marquee.dart","lib/shared/widgets/keyboard_visibility_builder.dart","lib/features/music_platform/presentation/platform_comment_composer.dart","lib/features/music_platform/presentation/platform_comments_page.dart","lib/features/music_platform/presentation/platform_design.dart","lib/features/library/presentation/favorite_toggle_button.dart","lib/features/music_platform/platform_recommendation_providers.dart","lib/features/music_platform/data/platform_playback_resolver.dart"]
 ---
 
-# Mesting Beta.8 music surfaces
+# Mesting Music Beta.9 music surfaces
 
-Mode: Operate, with cover art leading the listening experience. This record merges Beta.8 into the earlier Beta.5/Beta.6/Beta.7 surface. Preserve the established Apple Music authority and North Star; the Beta.8 section below takes precedence. The prior theme-owned Beta accent, round transport backgrounds, width-dependent mini queue action and followTheme selection descriptions are superseded below.
+Mode: Operate, with cover art leading the listening experience. This record updates the current surface from implementation source, preserving the user's established Apple Music authority and the North Star **“封面主导的私人听歌空间”**. It introduces no new visual concept. The current Beta.9 sections take precedence over the explicitly historical records below.
 
-Approved visual authority: the user's Apple Music screenshots for home, discovery, glass navigation, lyrics, playlist editing and month/year Replay, plus the later pinned red-navigation, lyric/transport and two-action mini-player references. Keep Mesting naming and Chinese UI. These references establish composition and glyph direction; widget screenshots cannot promise exact native Apple GPU optics or performance.
+Approved visual authority: the user's Apple Music screenshots for home, discovery, glass navigation, lyrics, playlist editing and month/year Replay, followed by the pinned red-navigation, lyric/transport and two-action mini-player references. Visible Beta branding is **Mesting Music**, with Chinese UI. The added blue 3D Liquid Glass Send is a user-confirmed local action material; the global accent remains reference red.
 
-The physical scene is one-handed Android use during commuting and quiet evening listening. Beta.7 unifies selected navigation icons/text and related choices using the sampled reference red, with a brighter dark-mode accent. Profile icons follow that accent and panels adapt pale red to dark red. Text remains a semantic neutral; the selected progress/character labels retain primary text contrast while explicit IP artwork keeps its own colors. Formal flavor theme, navigation, default vinyl and custom recommender behavior remain separate.
+The physical scene is one-handed Android use during commuting and quiet evening listening. Classic light content uses neutral white/gray panels rather than pale pink: BetaAppearance.panel(light) is #F2F2F7, while red selected icons/text, existing dark mode and cover-led player atmospheres remain. Explicit IP progress/character artwork keeps its colors and readable primary labels. Formal flavor navigation, themes, default vinyl and custom recommender remain separate.
 
-## Floating chrome and search
+## Floating chrome and navigation
 
-Beta uses the actual liquid_glass_widgets 1.15.0 official Apple Music example composition: GlassScaffold, GlassTabBar.searchable and GlassButton.custom, with package-owned press/drag springs and accessory morphing. Preserve Mesting routes, Chinese search and audio actions. Source snapshot: third_party/liquid_glass_widgets/.
+Beta uses the actual liquid_glass_widgets 1.15.0 official Apple Music composition: GlassScaffold, GlassTabBar.searchable and GlassButton.custom, with package-owned press/drag springs and accessory morphing. Source snapshot remains third_party/liquid_glass_widgets/. Phone and wide Beta windows share the bottom navigation without an expanded rail or its 88dp spacer; adaptive content caps remain.
 
-Phone and wide Beta windows share one bottom navigation without an expanded rail or its 88dp spacer; adaptive content caps remain. The official bar owns safe area and keyboard lift. Search content extends behind glass, with internal bottom clearance and shell keyboard avoidance only for content. The old full-width opaque white search background strip is removed. A transparent Material supplies normal text defaults. Scrolling past 50dp compacts the accessory inline; tapping the current destination returns to the top.
+MusicShell retains the source tab and scroll state. BetaMusicShell and its real glass stay mounted behind player/settings; chrome changes opacity and reveal rather than remounting on return. The scroll accessory contracts only above 88dp and expands again at 24dp, preventing boundary oscillation. Repeating the current destination returns to the top. Player handle drag shares a small ValueNotifier with chrome to reveal the mounted capsule during dismissal.
 
-The mini accessory shows cover/title/artist and exactly two bare icon controls: play/pause and next. Tapping opens the player; horizontal swipe changes track. A narrow layout can omit artist text but does not add a queue action. Use official premium/full chrome optics (blur 2, thickness 30, lightIntensity .2; play pill .18), separately from older MestingGlass settings and fallback claims.
+The mini accessory shows cover/title/artist and exactly two bare icon controls: play/pause and next. It subscribes to the playing boolean rather than each playback-position event, and uses the shared live toggle so another tap can cancel a pause fade. Tapping opens the player; horizontal swipe changes track. Narrow/large text can omit artist text without adding a queue action. Official premium/full optics remain (blur 2, thickness 30, lightIntensity .2; pill .18); older MestingGlass settings/fallback claims remain separate.
 
-## Player and lyrics
+Both 32dp inward edge strips and actual system Back execute embedded/standalone search in order: **results → search landing → originating page**. BackButtonListener handles the embedded search state before the nested route navigator. Interior shelves/sliders retain their gestures. Home uses the filled glyph. The official bar owns safe area and keyboard lift; search body alone avoids keyboard insets, extends behind the glass and retains internal bottom clearance.
 
-Default player is the square cover. All five styles—cover, classic, aurora, cassette, lyricStage—retain their upper visual identity/motion and share ApplePlayerControls below. Both cover and lyric modes show progress/time, bare white Cupertino previous/play-pause/next, Android system-media-volume rail, then comments / quality / current queue. Do not restore the older large white play circle or smaller filled transport circles.
+## Search, details and paging
 
-Classic keeps its grey turntable, with local dark translucent fills behind top collapse/more actions, stronger lower veil, and opaque white artist text. These close the reviewed contrast finding without replacing the style identity. The lyric view uses small top artwork and song identity, a blurred-cover backdrop, left-aligned synchronized lines, bright active text, dim inactive text and fading edges. Current base type is 24dp with TextScaler and measured line heights; tapping a synchronized line seeks. Short windows scroll and retain all controls.
+Search uses actual /search/hot boards, history and connected theme/scene/playlist/rank/album exploration. A keyword triggers a real search and is never a fabricated playable song. Scene chips remain display-only and theme rows have no playback action; upstream endpoint existence is not a completed flow. Legacy curated Beta routes redirect to discovery; formal search retains its prior implementation.
 
-Seek and volume expose separate merged semantic nodes: 播放进度 with elapsed/total time, and 系统媒体音量 with a percentage. Native adjustable actions remain. MediaVolumeController and Android MediaVolumeBridge control STREAM_MUSIC, accept volume events and refresh when resumed; unsupported hosts leave the rail disabled. Unit/widget evidence covers names, values, actions and read/set/event/missing-host behavior; hardware keys and Android TalkBack remain unverified.
+AppleSearchResults uses one lazy CustomScrollView/SliverList with compact identity, 52dp covers, bare hearts and more actions. Its only count is **共 N 首**. AutomaticSongPaging uses freshly laid-out scroll metrics to prefetch at extentAfter ≤480dp and fill a short viewport; hidden TickerMode pages do not request more. Search, explore, recommendation, favorite, cloud and public-playlist song lists keep lazy rows and repository-owned server order, errors and account generations. Normal loading has no explicit “load more” action; errors retain a manual retry. AppleHotSearchBoards keeps ranks, board choice and ten-word pages, two columns or three at 650dp.
 
-All styles retain one persisted quality preference; the earlier fixed standard/high/lossless/Hi-Res menu is superseded by the Beta.8 per-song resource chooser below. Existing audio-handler source refresh preserves position, playing/paused state, logical queue and mode, rejecting stale commands. Preferred and delivered tiers remain separate; unknown metadata, permitted trials and downgrades are disclosed.
+PlatformPageFrame detail headings use 21dp/700/1.2 with -.5 letter spacing on one line. OverflowMarquee resolves the same inherited font and TextScaler for measurement and rendering, clips only actual overflow, and translates a stable child rather than relaying out every animation frame. Reduced motion leaves it static.
 
-## Discovery and search provenance
+## Player, deliberate queue and history
 
-Discovery exposes upstream private FM, daily, home-discover and new-song modules in the approved Mesting composition. Contracts are pinned to md3Music a69503b84e8829f888684f67c163be03c589c014. FM stations are heart/explore/niche/radio (红心/探索/小众/电台), retaining station mode/pool, cur_mark, completion/playtime and like/dislike feedback with account isolation. Pull-to-refresh reloads platform modules. No Beta artist scoring or personal hot list is inserted.
+The default player is square cover. All five styles—cover, classic, aurora, cassette, lyricStage—retain their upper scene/motion and share ApplePlayerControls below. Both cover and lyrics show progress/time, bare white Cupertino previous/play-pause/next, Android media volume and comments / quality / current queue. Classic retains the grey turntable, local dark fills behind top actions, lower veil, white artist text and a white geometric tonearm contacting black grooves outside the label.
 
-FM/home-discover provenance belongs to an explicitly started recommendation queue, not a preview fetch. At ≤3 remaining upcoming items, continuation appends server-ordered results to the actual visible queue; no local-library/random fallback pool participates. Explicit non-recommendation playback ends provenance even for the same recording. Account/session and generation guards reject stale responses and feedback ownership stays with the originating stream.
+Only the top gray PlayerDismissHandle starts dismissal. Its 112×36dp tap/downward-drag region shares commit/rebound and reduced-motion completion across five styles and cover/lyrics state. Covers, lyric scrolling and rails do not start it. PlayerMoreMenu is an anchored 22dp rounded popover with grouped action icons, dividers, current-style checkmark, maximum 280dp width and at least 16dp side clearance; narrow/large text wraps and scrolls. Replay year uses Cupertino opacity feedback with a neutral/light rounded popover, avoiding a rectangular press overlay.
 
-Search uses actual /search/hot keyword boards, history and theme/scene/playlist/rank/album exploration. A hot keyword starts a real search; it is never rendered as a fabricated playable track. Both shell and standalone Beta search use the platform landing; legacy curated routes redirect Beta to discovery. Keep the currently connected capability scope: scene chips are display-only, and theme rows have no playback action; do not imply every upstream endpoint is a completed flow. The formal channel retains its prior recommendation/search implementation.
+A single tap plays only its chosen song; it never imports the page as a hidden queue. Only explicit Play All imports the collection. Existing manual upcoming items offer Keep/Replace when applicable; Play All + Keep plays the selected collection then the deduplicated old manual tail. Manual items are chosen before automatically generated items, which have a separate visible queue heading.
 
-## Appearance and status feedback
+When an ordinary explicit queue runs out, playback completion or Next can request platform continuation. Previous uses actual playback history; with no history it restarts the current recording. Later Pause/Stop/Seek invalidate a slow Next through request-generation guards, so delayed recommendation work cannot restart playback. MestingAudioHandler remains the only audio owner; native currentIndex=0 does not replace logical history.
 
-Beta dress-up removes the brand picker, redundant Skin heading/description/classic card, DRESS UP eyebrow and followTheme choices. Keep light/dark/system appearance, custom image/video, player styles, explicit progress palettes/characters. Beta.8 removes the IP-decoration switch, superseding the Beta.6/Beta.7 retention description. Coral launcher/splash is fixed and old brand choices migrate. Residual followTheme aliases become classic in Beta.7; previously migrated explicit IP values remain. Full IP skins still retire to classic, background strength remains .58 and performance automatic. Formal theme behavior remains.
+Explicit FM/home-discover sessions retain server order, cur_mark, completion/like/dislike feedback and owner checks. At ≤3 remaining items the service may prefetch into the actual visible queue. A preview fetch never starts FM ownership, and ordinary automatic continuation does not impersonate FM provenance. Explicit non-FM playback ends the old source even for the same recording. Discovery stays pinned to md3Music a69503b84e8829f888684f67c163be03c589c014 and inserts no local artist scoring/random fallback pool.
 
-Lightweight feedback uses one replaceable top-safe-area translucent HUD with a short title and glyph, dark/light adaptation, motion and live-region semantics. Ordinary subtitles are omitted; actionable warning/error detail remains. This is a presentation of the existing operation's outcome, not a new business success state.
+## Truthful quality, favorite and media volume
 
-## Retained library and editing contracts
+PlatformQualityCatalog exposes only per-song supported resources and retains each tier's encoding hash. Unsupported tiers are hidden; existing locked resources remain selectable and permissions are explained only after an actual attempt/platform response. Strict switching asks for the selected encoding hash, including lossless→high/standard, rather than requesting a lower quality against a FLAC hash. Selection check, notice/footer and delivered engine source agree before saving the preference. Position, pause/playing state, logical queue and mode remain; failure preserves the working source and old preference. Unknown metadata has manual retry, and trial/downgrade/unknown delivery remain explicit.
 
-Home combines cover-led top picks, recent listening, discoveries and Replay. Library unifies favorites, playlists, recent listening and Replay for the active owner. Glass is reserved for floating chrome; content and account forms use stable theme surfaces.
+Favorites are pure hearts in transparent 48×48dp targets; compact changes glyph size only. Idle color reads local onSurfaceVariant and selected reads brightness-adapted Beta red. Pointer feedback is .88/120ms. Actual successful changes drive a local, interruptible 420ms fill/outline/scale animation (like peak 1.24, unlike .8, then settle); reduced motion reaches the final state directly, and failed cloud writes do not trigger a false celebration.
 
-Artwork parsing and read-only metadata recovery serve recommendation/search/playlist/player covers, coalesce requests, limit concurrency to 3 and cache 256 successes without permanently caching failures. Playlist editing remains a rounded sheet with templates/gallery, name, description, cancel and confirm. Normalize a selected image to 640px PNG; an owned cloud list uses the embedded upstream upload/update contract. Cloud failure retains drafts; no automatic mutation retry or cross-account write.
+Seek and volume keep separate named adjustable semantics: 播放进度 reads elapsed/total, 系统媒体音量 reads percent. Volume retains a fine rail with 48dp high response and immediate drag feedback. MediaVolumeController/Bridge own STREAM_MUSIC, latest-only serialized native writes, duplicate suppression, foreground refresh and unsupported-host disabling. Hardware keys and TalkBack still require Android acceptance.
 
-Replay uses real daily records for the active owner; missing historical months are never reconstructed. Preserve comments, real search pagination, account/library ownership and quality-state preservation from earlier Beta work. Track reordering and comment reaction writes remain separately deferred.
+## Comments and retained ownership
 
-## Beta.8 current interactions and validation
+Comment sort (最热/最新/最早) and scope (全部/歌手/我的) are two dropdowns in one row, preserving each selection and the loaded-data/global-hot explanation. Dates, like counts and sort notes use local textSecondary for light/dark contrast. The comment route remains a stable opaque surface; only the floating composer uses glass.
 
-MusicShell persists the originating tab while player/settings/search layouts
-unmount the visible glass shell; BetaMusicShell receives navigationOwner. Explicit
-roots update the owner; detail routes retain it. Home has a filled glyph.
-BetaEdgeBack uses only left/right 20dp strips for secondary routes and embedded/
-standalone search steps, retaining interior slider and shelf gestures.
+PlatformCommentComposer renders an input GlassContainer and blue 48×48dp GlassButton.custom as siblings, each premium/useOwnLayer with a separate RepaintBoundary. The send surface uses the actual liquid_glass_widgets renderer, not a raster imitation; it must not be nested inside input glass. Its white upward arrow and busy state retain the explicit Send action. Input is 24dp rounded, 16dp/1.4, maximum 1000 characters. KeyboardVisibilityBuilder observes the current native View.viewInsets through metrics changes: at most 2 lines with the keyboard and 4 otherwise, without relying on Scaffold-consumed body insets. The blue material is local to Send; it does not recolor navigation.
 
-AppleSearchResults owns one lazy CustomScrollView/SliverList with real paging,
-server order, total/loaded counts, 52dp artwork, compact song identity, bare hearts
-and more actions. AppleHotSearchBoards retains board selection, ranks and ten-word
-pages, using two columns or three at 650dp available width. Keywords remain search
-actions. A 480-row phone fixture instantiates ten artwork widgets; this is a
-construction boundary observation, not FPS.
+Recording-specific comment IDs, bounded stale-ID/device-registration recovery for reads, explicit reply/delete/send, account guards and no automatic write retries remain. Comment reaction writes and track reordering stay deferred. Featured playlist envelopes special_list/plist, rank songlist and actual coral app icon continue.
 
-Only the top grey PlayerDismissHandle starts PlayerPullToDismiss. Its 112×36dp
-interaction region supports tap/downward drag; all five styles in cover/lyrics
-mode share smooth commit/rebound and reduced-motion completion. Cover, lyric
-scrolling and rails do not compete for dismissal. PlayerMoreMenu anchors to the
-top button with action icons, grouped separators and a current-style checkmark:
-22dp rounding, maximum width 280dp, at least 16dp side clearance, wrapping and
-internal scrolling for narrow/large-text layouts.
+## Appearance, library, editing and feedback
 
-Favorites use bare heart glyphs with transparent 48×48dp targets, including
-compact uses. Idle reads the local onSurfaceVariant, selected reads the
-brightness-aware Beta accent; pointer feedback scales to .88 over 120ms.
-Activation and real cloud outcomes retain their existing owner. The white
-geometric tonearm has no black outline, contacts black outer grooves beyond the
-cover label and retains playing/paused rotation. Replay year feedback and popup
-both use clipped 20dp rounding.
+The existing theme migrations and simplified dress-up remain: light/dark/system, image/video, five players and explicit progress palettes/characters; no brand picker, duplicate Skin/classic description, DRESS UP, followTheme or IP-decoration switch. Coral launcher/splash stays fixed; old aliases migrate, explicit IP selections survive, full IP themes retire, background strength .58 and performance automatic remain.
 
-Media volume retains a fine visual rail, 48dp high hit region and immediate local
-drag feedback. Dart serializes native writes and keeps the latest pending value;
-unchanged Dart state, duplicate native events and equal system volume steps are
-suppressed. The same 100 rapid samples changed from 100 writes before to two
-after, final value 1.0. This bounds channel traffic, not hardware smoothness.
+Home/library remain cover-led and owner-bound. Artwork recovery coalesces reads, permits 3 concurrent lookups and retains 256 successes without permanently caching failures. Playlist editing retains templates/gallery, rounded sheet, explicit save and 640px PNG normalization. Cloud failure keeps the draft; real daily Replay never fabricates missing months. Status feedback is one replaceable top-safe-area translucent HUD reflecting the actual operation outcome, with actionable error information and live-region semantics.
 
-Global Previous/Next separates explicit playback context from FM history/server
-order. Previous then Next returns to the original recording without consuming
-the next recommendation. MestingAudioHandler remains the sole audio owner;
-recommendation provenance is unchanged.
+## Beta.9 verification boundary
 
-PlatformQualityCatalog offers only current-song tiers supported by positive
-resource hashes/explicit records; membership flags do not manufacture resources.
-Unknown/failed metadata offers manual reload, with no automatic retry loop.
-The 30dp light/dark translucent dialog follows song changes and binds choices to
-a recording ID. Membership guidance appears only after attempted selection and
-the platform result. Failure preserves the stream and saved preference; actual,
-preferred, trial, downgrade and unknown delivery remain separate.
+Current release: **Mesting Music / com.mesting.music.beta / 1.0.37-beta.9 / 9**. The bounded independent work/beta9/beta9-finish-verdict.md concludes **ship**, R1–R5 resolved. Normal regression: **619 passed / 52 conditional skips / 0 failed**; Beta targeted: **132 passed / 0 skipped / 0 failed**; software UI: **23 passed**; command/interaction: **21 passed**. Groups overlap and must not be summed. Analyze reports No issues found. Release package/name/version, same Beta certificate, 16KiB ZIP alignment and byte-identical ARM services versus Beta.7 are verified. The APK is **88,964,062 bytes**, SHA256 **F37AE0B53A2BD57D9EB40A340B1665CB2B5109F2CC4C7C9C1DA4623585B892E4**. Exact source archive bytes/hash remain for the final delivery manifest; no historical Beta.8 result is substituted for Beta.9 evidence.
 
-Comments search structured recording-specific IDs before generic audio aliases.
-Bounded stale-ID metadata repair or device-registration retry applies to reads
-only; explicit comment writes retain account guards and no automatic retry.
-Featured playlists parse special_list/plist; rank songs parse songlist. Platform
-account entry uses the actual coral Mesting application-icon asset.
+work/beta9/pill-benchmark.json compares the same 100 playback-position events: Beta.8 rebuilt the glass control 99 times and Beta.9 zero times. This measures Flutter debug rebuild work, not FPS, frame time or native smoothness.
 
-Current Beta.8 disposition is SHIP WITH STATED VALIDATION LIMITS; R1/R2/R3 closed.
-Evidence root is work/beta8: ui-verdict.jsonl has a combined 33 passed (14 UI plus
-19 transport/gesture/API/volume checks), normal regression-shipped.jsonl has
-602 passed / 47 conditional skips, and Beta targeted-shipped.jsonl has 110 passed
-/ zero skips; all have zero failures and overlap, so never sum them. Analyzer:
-No issues found. Release build, com.mesting.music.beta / 1.0.37-beta.8 / 8, same
-test certificate, 16KiB alignment and byte-identical embedded ARM server
-libraries versus Beta.7 are verified. Hashes/source archive belong to the final
-manifest. Current screenshots are work/beta8/screenshots-verdict.
+There is no attached Android device. Software captures use synthetic local data, Flutter software rendering and Windows QA Chinese fonts. A flat software-glass appearance cannot establish or disprove native GPU optics. Hardware volume, TalkBack, predictive/physical Back arbitration, real IME, native GPU glass/motion/frame-rate, cold/upgrade migration, live CDN/quality/entitlement and account/comment/cloud writes remain unverified. General Android compatibility is the scope; no device-model-specific tuning or reduction of effects/functions is canonized.
 
-No Android device is attached. Captures use synthetic data, software rendering
-and Windows QA CJK fonts. Hardware volume, TalkBack, predictive Back/physical
-gesture arbitration, real IME, GPU/motion/frame-rate, cold/upgrade migration,
-live CDN/quality/entitlement and account/comment writes remain unverified.
-Boundary measurements do not establish FPS. General Android compatibility is
-the scope; effects/animation/function are retained, with no model-specific tuning.
+Current paths are listed in related_targets above and the Beta.9 entry table in docs/MD3MUSIC_BETA.md. The final delivery manifest owns artifact byte hashes and exact verified run dispositions.
 
-Current entry points: MusicShell / BetaMusicShell.navigationOwner; BetaEdgeBack;
-PlayerPullToDismiss; AppleSearchResults; AppleHotSearchBoards; PlayerMoreMenu;
-PlatformQualityCatalog/provider/resolver; MediaVolumeController/Bridge;
-MestingAudioHandler; PlatformCatalog/comments/song identity. Full paths and
-historical facts are retained in docs/MD3MUSIC_BETA.md.
+## Historical Beta.8 evidence
+
+The Beta.8 build, **1.0.37-beta.8 / 8**, was recorded as SHIP WITH STATED VALIDATION LIMITS with R1/R2/R3 closed. work/beta8/ui-verdict.jsonl recorded 33 passed (14 UI plus 19 transport/gesture/API/volume), normal regression-shipped.jsonl 602 passed / 47 conditional skips, and targeted-shipped.jsonl 110 passed / zero skips; the groups overlap and must not be added. Analyzer, release identity, same test certificate, 16KiB alignment and ARM-library consistency were recorded for Beta.8 only. Full evidence and historical behavior remain in docs/MD3MUSIC_BETA.md. The old 20dp edges, 50dp accessory threshold, unmounted shell, loaded-count wording and context-based previous behavior are superseded by the current Beta.9 sections.
 
 ## Historical Beta.7 evidence and retained validation boundaries
 

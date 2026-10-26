@@ -6,7 +6,15 @@ import 'music_platform_api.dart';
 /// manufacture one. Missing metadata stays unknown and is retryable.
 class PlatformQualityCatalog {
   static Set<PlatformAudioQuality> parse(Object? payload) {
-    final result = <PlatformAudioQuality>{};
+    final result = resources(payload).keys.toSet();
+    if (result.isEmpty) throw const MusicPlatformException('暂未获取到歌曲音质信息，请重试');
+    return Set.unmodifiable(result);
+  }
+
+  /// Preserve each tier's resource identity. Asking for 128 kbps with a FLAC
+  /// hash can legitimately return that same FLAC, despite the quality argument.
+  static Map<PlatformAudioQuality, String> resources(Object? payload) {
+    final result = <PlatformAudioQuality, String>{};
     const keys = {
       PlatformAudioQuality.standard: [
         'hash_128',
@@ -54,15 +62,20 @@ class PlatformQualityCatalog {
         if (positive(node['hash']) &&
             (explicitTier == null ||
                 explicitTier == PlatformAudioQuality.standard)) {
-          result.add(PlatformAudioQuality.standard);
+          result.putIfAbsent(
+            PlatformAudioQuality.standard,
+            () => '${node['hash']}',
+          );
         }
         for (final tier in keys.entries) {
-          if (tier.value.any((key) => positive(node[key]))) {
-            result.add(tier.key);
+          for (final key in tier.value) {
+            if (positive(node[key])) result[tier.key] = '${node[key]}';
           }
         }
         final tier = PlatformAudioQuality.fromCode(node['quality']);
-        if (tier != null && positive(node['hash'])) result.add(tier);
+        if (tier != null && positive(node['hash'])) {
+          result[tier] = '${node['hash']}';
+        }
         for (final key in [
           'data',
           'audio_info',
@@ -79,7 +92,6 @@ class PlatformQualityCatalog {
     }
 
     visit(payload, 0);
-    if (result.isEmpty) throw const MusicPlatformException('暂未获取到歌曲音质信息，请重试');
-    return Set.unmodifiable(result);
+    return Map.unmodifiable(result);
   }
 }

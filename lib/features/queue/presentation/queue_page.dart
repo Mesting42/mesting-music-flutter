@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/audio/playback_mode.dart';
 import '../../../core/audio/playback_providers.dart';
+import '../../../core/platform/distribution_channel.dart';
 import '../../../shared/utils/duration_format.dart';
 import '../../../shared/widgets/artwork_image.dart';
 import '../../../shared/widgets/liquid_glass_sheet.dart';
@@ -97,6 +98,14 @@ class QueuePage extends ConsumerWidget {
     final queue = ref.watch(upcomingQueueProvider).value ?? const [];
     final mode = ref.watch(playbackModeProvider).value ?? PlaybackMode.list;
     final handler = ref.watch(audioHandlerProvider);
+    final manual = queue
+        .where((item) => !handler.isAutomaticallyQueued(item.id))
+        .toList();
+    final automatic = queue
+        .where((item) => handler.isAutomaticallyQueued(item.id))
+        .toList();
+    final grouped = DistributionChannel.isBeta && automatic.isNotEmpty;
+    final rows = grouped ? [...manual, ...automatic] : queue;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     final content = SafeArea(
@@ -132,12 +141,28 @@ class QueuePage extends ConsumerWidget {
                       padding: const EdgeInsets.fromLTRB(4, 8, 4, 10),
                       physics: const BouncingScrollPhysics(),
                       cacheExtent: playbackQueueRowHeight * 4,
-                      itemCount: queue.length,
+                      itemCount: rows.length + (grouped ? 1 : 0),
                       itemBuilder: (context, index) {
-                        final item = queue[index];
+                        if (grouped && index == manual.length) {
+                          return Padding(
+                            padding: const EdgeInsets.fromLTRB(8, 14, 8, 10),
+                            child: Text(
+                              '自动推荐',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: tokens.textSecondary,
+                              ),
+                            ),
+                          );
+                        }
+                        final rowIndex = grouped && index > manual.length
+                            ? index - 1
+                            : index;
+                        final item = rows[rowIndex];
                         final track = handler.trackForId(item.id);
                         return _QueueSongRow(
-                          index: index,
+                          index: rowIndex,
                           coverUri:
                               track?.coverAsset ??
                               item.artUri?.toString() ??
@@ -146,7 +171,7 @@ class QueuePage extends ConsumerWidget {
                           artist: item.artist ?? '未知歌手',
                           duration:
                               item.duration ?? track?.duration ?? Duration.zero,
-                          isNext: index == 0,
+                          isNext: rowIndex == 0,
                           onPlay: () => handler.playTrack(item.id),
                           onRemove: () =>
                               handler.removeFromUpcomingQueue(item.id),

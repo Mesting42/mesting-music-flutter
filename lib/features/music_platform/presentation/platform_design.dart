@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../shared/widgets/beta_edge_back.dart';
+import '../../../shared/widgets/overflow_marquee.dart';
 import '../../../shared/widgets/mesting_loading_indicator.dart';
 import '../../themes/music_theme_tokens.dart';
 
@@ -68,7 +69,9 @@ class PlatformStyle extends StatelessWidget {
         ),
         chipTheme: theme.chipTheme.copyWith(
           backgroundColor: theme.colorScheme.surfaceContainerLow,
-          selectedColor: theme.colorScheme.primary.withValues(alpha: .16),
+          selectedColor: theme.brightness == Brightness.dark
+              ? theme.colorScheme.primary.withValues(alpha: .16)
+              : theme.colorScheme.onSurface.withValues(alpha: .1),
           side: BorderSide.none,
           shape: const StadiumBorder(),
           labelStyle: theme.textTheme.labelLarge?.copyWith(
@@ -152,13 +155,11 @@ class PlatformPageFrame extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          OverflowMarquee(
                             title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 25,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 21,
+                              fontWeight: FontWeight.w700,
                               height: 1.2,
                               color: context.musicThemeTokens.textPrimary,
                               letterSpacing: -.5,

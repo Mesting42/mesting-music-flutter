@@ -37,13 +37,15 @@ Future<void> showPlatformQualityPicker(
         .read(platformQualityProvider.notifier)
         .select(selected.tier);
     if (!context.mounted) return;
-    final updated = ref.read(currentTrackProvider);
+    final handler = ref.read(audioHandlerProvider);
+    final updated = handler.trackForId(handler.mediaItem.value?.id ?? '');
+    if (updated == null) return;
     final actual = PlatformAudioQuality.fromCode(updated.playbackQuality);
     showMusicNotice(
       context,
       icon: CupertinoIcons.waveform,
       title: !applied
-          ? '已保存音质偏好'
+          ? '本次切换已取消，请重试'
           : updated.isPreview
           ? '平台当前提供试听片段'
           : actual == null

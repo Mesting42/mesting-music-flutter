@@ -7,10 +7,12 @@ class PlayerPullToDismiss extends StatefulWidget {
   const PlayerPullToDismiss({
     required this.child,
     required this.onDismiss,
+    this.onProgress,
     super.key,
   });
   final Widget child;
   final VoidCallback onDismiss;
+  final ValueChanged<double>? onProgress;
   @override
   State<PlayerPullToDismiss> createState() => _PlayerPullToDismissState();
 }
@@ -21,6 +23,19 @@ class _PlayerPullToDismissState extends State<PlayerPullToDismiss>
     vsync: this,
   );
   bool _closing = false;
+  @override
+  void initState() {
+    super.initState();
+    _offset.addListener(
+      () => widget.onProgress?.call(
+        (_offset.value / (MediaQuery.sizeOf(context).height * .55)).clamp(
+          0.0,
+          1.0,
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _offset.dispose();

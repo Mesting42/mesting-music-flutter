@@ -1,3 +1,4 @@
+import '../../player/presentation/beta_playback_actions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -68,12 +69,14 @@ class PlatformLibraryPage extends ConsumerWidget {
                           false,
                       onPlayAll: tracks.isEmpty
                           ? null
-                          : () => ref
-                                .read(audioHandlerProvider)
-                                .replaceQueue(tracks),
-                      onPlayTrack: (track) => ref
-                          .read(audioHandlerProvider)
-                          .playSingleTrack(track, playbackContext: tracks),
+                          : () => playBetaSelection(
+                              context,
+                              ref,
+                              tracks.first,
+                              playAll: tracks,
+                            ),
+                      onPlayTrack: (track) =>
+                          playBetaSelection(context, ref, track),
                       onAddTrack: (track) => ref
                           .read(audioHandlerProvider)
                           .appendToUpcomingQueue(track),
@@ -166,20 +169,26 @@ class PlatformCloudPlaylistPage extends ConsumerWidget {
           await repository.synchronize(forcePull: true);
           ref.invalidate(playlistProvider(id));
         },
-        child: ListView(
+        child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.only(bottom: editorialBottomClearance),
-          children: [
+          slivers: [
             if (playlist.hasValue)
-              EditorialCollectionHero(
-                cover: playlist.value?.coverAsset ?? '',
-                description: playlist.value?.description ?? '',
-                tracks: ref.watch(playlistTracksProvider(id)).value ?? const [],
+              SliverToBoxAdapter(
+                child: EditorialCollectionHero(
+                  cover: playlist.value?.coverAsset ?? '',
+                  description: playlist.value?.description ?? '',
+                  tracks:
+                      ref.watch(playlistTracksProvider(id)).value ?? const [],
+                ),
               ),
             PlatformSongs(
+              sliver: true,
               value: ref.watch(playlistTracksProvider(id)),
               retry: () => repository.synchronize(forcePull: true),
               playlistId: repository.canManage(id) ? id : null,
+            ),
+            const SliverToBoxAdapter(
+              child: SizedBox(height: editorialBottomClearance),
             ),
           ],
         ),

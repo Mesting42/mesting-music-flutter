@@ -63,10 +63,11 @@ class _MusicShellState extends ConsumerState<MusicShell> {
         !settingsOverlay &&
         !conversationOverlay &&
         !profileMediaOverlay;
-    if (DistributionChannel.isBeta && showNavigation) {
+    if (DistributionChannel.isBeta) {
       return BetaMusicShell(
         location: location,
         navigationOwner: _owner,
+        chromeVisible: showNavigation,
         child: child,
       );
     }

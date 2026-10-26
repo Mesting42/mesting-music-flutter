@@ -169,8 +169,11 @@ void main() {
           ),
         ),
       );
-      expect(requests, hasLength(1));
-      expect(requests.single.url.queryParameters['quality'], 'high');
+      expect(requests.map((request) => request.url.path), [
+        '/audio',
+        '/song/url',
+      ]);
+      expect(requests.last.url.queryParameters['quality'], 'high');
     },
   );
   test(

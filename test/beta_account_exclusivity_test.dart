@@ -509,7 +509,7 @@ void main() {
       expect(find.byTooltip('删除自己的评论'), findsOneWidget);
       expect(writes, isEmpty);
       await tester.enterText(find.byType(TextField), '仅测试提交');
-      await tester.tap(find.text('发送'));
+      await tester.tap(find.byKey(const ValueKey('comment-blue-glass-send')));
       await tester.pump();
       await tester.pump();
       expect(writes.length, 1);

@@ -22,10 +22,16 @@ class PlayerMoreMenu extends StatefulWidget {
   const PlayerMoreMenu({
     required this.groups,
     required this.onSelected,
+    this.trigger,
+    this.tooltip = '更多操作',
+    this.menuWidth = 280,
     super.key,
   });
   final List<List<PlayerMenuAction>> groups;
   final ValueChanged<String> onSelected;
+  final Widget? trigger;
+  final String tooltip;
+  final double menuWidth;
   @override
   State<PlayerMoreMenu> createState() => _PlayerMoreMenuState();
 }
@@ -36,8 +42,10 @@ class _PlayerMoreMenuState extends State<PlayerMoreMenu> {
     final box = _anchor.currentContext!.findRenderObject()! as RenderBox;
     final origin = box.localToGlobal(Offset.zero);
     final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    final ink = dark ? Colors.white : const Color(0xFF202024);
     final media = MediaQuery.of(context);
-    final width = math.min(280.0, media.size.width - 32);
+    final width = math.min(widget.menuWidth, media.size.width - 32);
     final top = math.min(
       origin.dy + box.size.height + 8,
       media.size.height * .3,
@@ -68,7 +76,9 @@ class _PlayerMoreMenuState extends State<PlayerMoreMenu> {
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
                   child: Material(
-                    color: const Color(0xE829292D),
+                    color: dark
+                        ? const Color(0xE829292D)
+                        : const Color(0xF2F7F7FA),
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
                         maxHeight: math.max(
@@ -111,30 +121,31 @@ class _PlayerMoreMenuState extends State<PlayerMoreMenu> {
                                           children: [
                                             Icon(
                                               action.icon,
-                                              color: Colors.white,
+                                              color: ink,
                                               size: 20,
                                             ),
                                             const SizedBox(width: 13),
                                             Expanded(
                                               child: Text(
                                                 action.label,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
+                                                style: TextStyle(
+                                                  color: ink,
                                                   fontSize: 15,
                                                   fontWeight: FontWeight.w500,
                                                 ),
                                               ),
                                             ),
                                             if (action.selected)
-                                              const Padding(
-                                                padding: EdgeInsets.only(
+                                              Padding(
+                                                padding: const EdgeInsets.only(
                                                   left: 8,
                                                 ),
                                                 child: Icon(
                                                   CupertinoIcons.check_mark,
                                                   size: 18,
-                                                  color:
-                                                      BetaAppearance.redOnDark,
+                                                  color: BetaAppearance.accent(
+                                                    theme.brightness,
+                                                  ),
                                                 ),
                                               ),
                                           ],
@@ -170,10 +181,24 @@ class _PlayerMoreMenuState extends State<PlayerMoreMenu> {
   }
 
   @override
-  Widget build(BuildContext context) => IconButton(
-    key: _anchor,
-    tooltip: '更多操作',
-    onPressed: _open,
-    icon: const Icon(CupertinoIcons.ellipsis, color: Colors.white),
-  );
+  Widget build(BuildContext context) => widget.trigger != null
+      ? Tooltip(
+          message: widget.tooltip,
+          child: CupertinoButton(
+            key: _anchor,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            minimumSize: const Size(44, 44),
+            onPressed: _open,
+            child: DefaultTextStyle(
+              style: Theme.of(context).textTheme.titleMedium!,
+              child: widget.trigger!,
+            ),
+          ),
+        )
+      : IconButton(
+          key: _anchor,
+          tooltip: widget.tooltip,
+          onPressed: _open,
+          icon: const Icon(CupertinoIcons.ellipsis, color: Colors.white),
+        );
 }

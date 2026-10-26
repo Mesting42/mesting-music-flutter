@@ -54,7 +54,8 @@ class MestingMusicApp extends ConsumerWidget {
         final resolved = await source.resolveTrack(
           track,
           quality: ref.read(platformQualityProvider).preferred,
-          requireRequestedQuality: ref.read(platformQualityProvider).switching &&
+          requireRequestedQuality:
+              ref.read(platformQualityProvider).switching &&
               ref.read(platformQualityProvider).switchingTrackId == track.id,
         );
         if (!resolved.isPlayable) {
@@ -100,7 +101,7 @@ class MestingMusicApp extends ConsumerWidget {
       });
     }
     final application = MaterialApp.router(
-      title: 'Mesting 音乐',
+      title: DistributionChannel.isBeta ? 'Mesting Music' : 'Mesting 音乐',
       debugShowCheckedModeBanner: false,
       theme: buildMestingTheme(musicTheme),
       routerConfig: appRouter,

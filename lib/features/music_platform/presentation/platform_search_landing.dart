@@ -1,3 +1,4 @@
+import '../../../shared/widgets/automatic_song_paging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/models/track.dart';
@@ -232,7 +233,7 @@ class _ExploreSongsPageState extends ConsumerState<_ExploreSongsPage> {
         final additions = fresh.where((e) => ids.add(e.id)).toList();
         _tracks.addAll(additions);
         _page++;
-        _more = fresh.length >= 30 && additions.isNotEmpty;
+        _more = fresh.isNotEmpty && additions.isNotEmpty;
         _owner = owner;
       });
     } catch (_) {
@@ -253,20 +254,29 @@ class _ExploreSongsPageState extends ConsumerState<_ExploreSongsPage> {
     }
     return PlatformPageFrame(
       title: widget.item.title,
-      child: ListView(
-        padding: const EdgeInsets.only(bottom: 190),
-        children: [
-          for (final track in _tracks)
-            EditorialTrackRow(track: track, contextTracks: _tracks),
-          if (_busy) const PlatformFeedbackState(loading: true),
-          if (_error != null || _more)
-            TextButton(
-              onPressed: _busy ? null : _load,
-              child: Text(_error ?? '加载更多'),
-            ),
-          if (!_busy && !_more && _tracks.isEmpty)
-            const EditorialEmpty('平台暂未返回歌曲'),
-        ],
+      child: AutomaticSongPaging(
+        enabled: _more && !_busy && _error == null,
+        onLoadMore: _load,
+        child: ListView.builder(
+          padding: const EdgeInsets.only(bottom: 190),
+          itemCount: _tracks.length + 1,
+          itemBuilder: (context, index) {
+            if (index < _tracks.length) {
+              return EditorialTrackRow(
+                track: _tracks[index],
+                contextTracks: _tracks,
+              );
+            }
+            if (_busy) return const PlatformFeedbackState(loading: true);
+            if (_error != null) {
+              return TextButton(onPressed: _load, child: Text(_error!));
+            }
+            if (_tracks.isEmpty && !_more) {
+              return const EditorialEmpty('平台暂未返回歌曲');
+            }
+            return const SizedBox(height: 24);
+          },
+        ),
       ),
     );
   }

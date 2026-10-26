@@ -357,7 +357,19 @@ class _NowPlayingTransitionPage extends Page<void> {
           DistributionChannel.isBeta ? BetaEdgeBack(child: child) : child,
       // The player animates its vinyl and chrome from the route animation.
       transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          child,
+          DistributionChannel.isBeta
+          ? SlideTransition(
+              position: Tween(begin: const Offset(0, 1), end: Offset.zero)
+                  .animate(
+                    CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutCubic,
+                      reverseCurve: Curves.easeInCubic,
+                    ),
+                  ),
+              child: RepaintBoundary(child: child),
+            )
+          : child,
     );
   }
 }
@@ -412,7 +424,32 @@ Page<void> _musicSlidePage({
   required GoRouterState state,
   required Widget child,
 }) {
-  if (DistributionChannel.isBeta) child = BetaEdgeBack(child: child);
+  if (DistributionChannel.isBeta) {
+    return CustomTransitionPage<void>(
+      key: state.pageKey,
+      transitionDuration: const Duration(milliseconds: 320),
+      reverseTransitionDuration: const Duration(milliseconds: 260),
+      child: child is MusicSearchPage ? child : BetaEdgeBack(child: child),
+      transitionsBuilder: (context, animation, secondary, child) {
+        if (MediaQuery.disableAnimationsOf(context)) return child;
+        final motion = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return FadeTransition(
+          opacity: Tween(begin: .88, end: 1.0).animate(motion),
+          child: SlideTransition(
+            position: Tween(
+              begin: const Offset(.12, 0),
+              end: Offset.zero,
+            ).animate(motion),
+            child: RepaintBoundary(child: child),
+          ),
+        );
+      },
+    );
+  }
   final intent = state.extra is MusicPageTransitionIntent
       ? state.extra! as MusicPageTransitionIntent
       : const MusicPageTransitionIntent.forward();

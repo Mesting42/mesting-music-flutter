@@ -85,9 +85,11 @@ class _MestingBootstrapState extends State<_MestingBootstrap> {
       );
       final audioHandler = await AudioService.init<MestingAudioHandler>(
         builder: () => MestingAudioHandler(tracks: const <Track>[]),
-        config: const AudioServiceConfig(
+        config: AudioServiceConfig(
           androidNotificationChannelId: 'com.mesting.music.playback',
-          androidNotificationChannelName: 'Mesting 音乐播放',
+          androidNotificationChannelName: DistributionChannel.isBeta
+              ? 'Mesting Music'
+              : 'Mesting 音乐播放',
           androidNotificationChannelDescription: '显示正在播放的歌曲与媒体控制',
           androidStopForegroundOnPause: false,
         ),

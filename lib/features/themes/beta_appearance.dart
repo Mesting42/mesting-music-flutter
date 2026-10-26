@@ -10,5 +10,5 @@ abstract final class BetaAppearance {
 
   static Color panel(Brightness brightness) => brightness == Brightness.dark
       ? const Color(0xFF291D20)
-      : const Color(0xFFFCF0F0);
+      : const Color(0xFFF2F2F7);
 }

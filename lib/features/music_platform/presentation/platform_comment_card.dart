@@ -68,7 +68,7 @@ class PlatformCommentCard extends StatelessWidget {
                         child: Text(
                           date,
                           style: TextStyle(
-                            color: tokens.textMuted,
+                            color: tokens.textSecondary,
                             fontSize: 11,
                           ),
                         ),
@@ -98,13 +98,13 @@ class PlatformCommentCard extends StatelessWidget {
                             Icon(
                               Icons.thumb_up_outlined,
                               size: 15,
-                              color: tokens.textMuted,
+                              color: tokens.textSecondary,
                             ),
                             const SizedBox(width: 5),
                             Text(
                               '${comment.likes}',
                               style: TextStyle(
-                                color: tokens.textMuted,
+                                color: tokens.textSecondary,
                                 fontSize: 12,
                               ),
                             ),
@@ -138,7 +138,7 @@ class PlatformCommentCard extends StatelessWidget {
                         onPressed: onDelete,
                         icon: Icon(
                           Icons.delete_outline_rounded,
-                          color: tokens.textMuted,
+                          color: tokens.textSecondary,
                           size: 19,
                         ),
                       ),

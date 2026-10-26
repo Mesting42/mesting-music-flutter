@@ -7,6 +7,8 @@ import '../../../shared/widgets/artwork_image.dart';
 import '../../../shared/widgets/mesting_loading_indicator.dart';
 import '../../themes/music_theme_tokens.dart';
 import '../listening_history_providers.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../player/presentation/beta_playback_actions.dart';
 
 const double listeningHistoryPrimaryShadowBlurRadius = 10;
 const double listeningHistoryAccentShadowBlurRadius = 14;
@@ -213,12 +215,14 @@ class _HistoryList extends ConsumerWidget {
         return _HistoryTrackRow(
           item: item,
           rank: ranking ? index + 1 : null,
-          onTap: () => ref
-              .read(audioHandlerProvider)
-              .playSingleTrack(
-                item.track,
-                playbackContext: items.map((item) => item.track),
-              ),
+          onTap: () => DistributionChannel.isBeta
+              ? playBetaSelection(context, ref, item.track)
+              : ref
+                    .read(audioHandlerProvider)
+                    .playSingleTrack(
+                      item.track,
+                      playbackContext: items.map((item) => item.track),
+                    ),
         );
       },
     );

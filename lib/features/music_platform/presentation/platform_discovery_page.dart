@@ -1,8 +1,8 @@
+import '../../player/presentation/beta_playback_actions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/audio/playback_providers.dart';
 import '../../../shared/models/track.dart';
 import '../../../shared/widgets/artwork_image.dart';
 import '../../../shared/widgets/track_artwork.dart';
@@ -126,115 +126,121 @@ class PlatformSongs extends StatelessWidget {
     required this.value,
     required this.retry,
     this.playlistId,
+    this.sliver = false,
     super.key,
   });
   final AsyncValue<List<Track>> value;
   final VoidCallback retry;
   final String? playlistId;
+  final bool sliver;
+  Widget wrap(Widget child) =>
+      sliver ? SliverToBoxAdapter(child: child) : child;
   @override
   Widget build(BuildContext context) => value.when(
-    loading: () => const PlatformFeedbackState(loading: true),
-    error: (error, stack) => _Retry(retry: retry),
+    loading: () => wrap(const PlatformFeedbackState(loading: true)),
+    error: (error, stack) => wrap(_Retry(retry: retry)),
     data: (tracks) => tracks.isEmpty
-        ? _Retry(retry: retry, empty: true)
-        : _TrackList(tracks: tracks, playlistId: playlistId),
+        ? wrap(_Retry(retry: retry, empty: true))
+        : _TrackList(tracks: tracks, playlistId: playlistId, sliver: sliver),
   );
 }
 
+/// A sliver variant keeps complete cloud/public collections lazy while reusing
+/// the exact same row actions, ownership and comments as compact preview lists.
 class _TrackList extends ConsumerWidget {
-  const _TrackList({required this.tracks, this.playlistId});
+  const _TrackList({
+    required this.tracks,
+    this.playlistId,
+    this.sliver = false,
+  });
   final List<Track> tracks;
   final String? playlistId;
+  final bool sliver;
   @override
-  Widget build(BuildContext context, WidgetRef ref) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 4),
-    child: Column(
-      children: [
-        for (final track in tracks)
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(vertical: 6),
-            titleTextStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: context.musicThemeTokens.textPrimary,
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-            ),
-            subtitleTextStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: context.musicThemeTokens.textSecondary,
-              fontSize: 12,
-              height: 1.6,
-            ),
-            leading: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: TrackArtwork(track: track, width: 48, height: 48),
-            ),
-            title: Text(
-              track.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            subtitle: Text(
-              track.artist,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FavoriteToggleButton(track: track, compact: true),
-                PopupMenuButton<String>(
-                  tooltip: '歌曲操作',
-                  icon: const Icon(Icons.more_horiz),
-                  itemBuilder: (_) => [
-                    const PopupMenuItem(value: 'add', child: Text('加入歌单')),
-                    if (ref.read(showPlatformFeaturesProvider))
-                      const PopupMenuItem(
-                        value: 'comments',
-                        child: Text('酷狗歌曲评论'),
-                      ),
-                    if (playlistId != null)
-                      const PopupMenuItem(
-                        value: 'remove',
-                        child: Text('从云端歌单移除'),
-                      ),
-                  ],
-                  onSelected: (action) async {
-                    if (!context.mounted) return;
-                    if (action == 'add') {
-                      await showAddToPlaylistSheet(context, ref, track);
-                    }
-                    if (action == 'comments' && context.mounted) {
-                      await openPlatformSongComments(context, ref, track);
-                    }
-                    if (action == 'remove' && playlistId != null) {
-                      try {
-                        await ref
-                            .read(libraryRepositoryProvider)
-                            .removeTrackFromPlaylist(playlistId!, track.id);
-                      } catch (error) {
-                        if (context.mounted) {
-                          showPlatformFailure(context, error);
-                        }
-                      }
-                    }
-                  },
-                ),
-              ],
-            ),
-            onTap: () async {
-              try {
-                await ref
-                    .read(audioHandlerProvider)
-                    .playSingleTrack(track, playbackContext: tracks);
-              } catch (error) {
-                if (context.mounted) {
-                  showPlatformFailure(context, error);
+  Widget build(BuildContext context, WidgetRef ref) {
+    Widget row(Track track) => ListTile(
+      contentPadding: const EdgeInsets.symmetric(vertical: 6),
+      titleTextStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
+        color: context.musicThemeTokens.textPrimary,
+        fontSize: 15,
+        fontWeight: FontWeight.w800,
+      ),
+      subtitleTextStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+        color: context.musicThemeTokens.textSecondary,
+        fontSize: 12,
+        height: 1.6,
+      ),
+      leading: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: TrackArtwork(track: track, width: 48, height: 48),
+      ),
+      title: Text(track.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: Text(
+        track.artist,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FavoriteToggleButton(track: track, compact: true),
+          PopupMenuButton<String>(
+            tooltip: '歌曲操作',
+            icon: const Icon(Icons.more_horiz),
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: 'add', child: Text('加入歌单')),
+              if (ref.read(showPlatformFeaturesProvider))
+                const PopupMenuItem(value: 'comments', child: Text('酷狗歌曲评论')),
+              if (playlistId != null)
+                const PopupMenuItem(value: 'remove', child: Text('从云端歌单移除')),
+            ],
+            onSelected: (action) async {
+              if (!context.mounted) return;
+              if (action == 'add') {
+                await showAddToPlaylistSheet(context, ref, track);
+              }
+              if (action == 'comments' && context.mounted) {
+                await openPlatformSongComments(context, ref, track);
+              }
+              if (action == 'remove' && playlistId != null) {
+                try {
+                  await ref
+                      .read(libraryRepositoryProvider)
+                      .removeTrackFromPlaylist(playlistId!, track.id);
+                } catch (error) {
+                  if (context.mounted) {
+                    showPlatformFailure(context, error);
+                  }
                 }
               }
             },
           ),
-      ],
-    ),
-  );
+        ],
+      ),
+      onTap: () async {
+        try {
+          await playBetaSelection(context, ref, track);
+        } catch (error) {
+          if (context.mounted) {
+            showPlatformFailure(context, error);
+          }
+        }
+      },
+    );
+    const padding = EdgeInsets.symmetric(horizontal: 22, vertical: 4);
+    return sliver
+        ? SliverPadding(
+            padding: padding,
+            sliver: SliverList.builder(
+              itemCount: tracks.length,
+              itemBuilder: (_, index) => row(tracks[index]),
+            ),
+          )
+        : Padding(
+            padding: padding,
+            child: Column(children: tracks.map(row).toList()),
+          );
+  }
 }
 
 class _FeaturedPlaylists extends ConsumerWidget {
@@ -318,21 +324,24 @@ class PlatformPublicPlaylistPage extends ConsumerWidget {
               openPlatformPlaylistComments(context, ref, id: id, name: name),
         ),
     ],
-    child: ListView(
-      padding: const EdgeInsets.only(bottom: 210),
-      children: [
-        ref
-            .watch(platformPublicPlaylistProvider(id))
-            .when(
-              loading: () => const SizedBox.shrink(),
-              error: (_, _) => const SizedBox.shrink(),
-              data: (tracks) =>
-                  EditorialCollectionHero(cover: cover, tracks: tracks),
-            ),
+    child: CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: ref
+              .watch(platformPublicPlaylistProvider(id))
+              .when(
+                loading: () => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
+                data: (tracks) =>
+                    EditorialCollectionHero(cover: cover, tracks: tracks),
+              ),
+        ),
         PlatformSongs(
+          sliver: true,
           value: ref.watch(platformPublicPlaylistProvider(id)),
           retry: () => ref.invalidate(platformPublicPlaylistProvider(id)),
         ),
+        const SliverToBoxAdapter(child: SizedBox(height: 210)),
       ],
     ),
   );

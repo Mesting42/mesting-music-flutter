@@ -6,6 +6,7 @@ import '../../../shared/models/track.dart';
 import '../domain/platform_session.dart';
 import 'music_platform_api.dart';
 import 'platform_song_identity.dart';
+import 'platform_quality_catalog.dart';
 import 'platform_artwork.dart';
 import '../domain/platform_audio_quality.dart';
 
@@ -117,7 +118,10 @@ class PlatformPlaybackResolver {
           throw const MusicPlatformException('需要会员／相应权限');
         }
         final delivered = PlatformAudioQuality.fromCode(data['quality']);
-        if (delivered != null && delivered != quality) {
+        if (delivered == null) {
+          throw const MusicPlatformException('平台未确认所选音质，已保留原音源');
+        }
+        if (delivered != quality) {
           throw const MusicPlatformException('平台暂未提供所选音质，已保留原音源');
         }
       }
@@ -142,6 +146,14 @@ class PlatformPlaybackResolver {
     }
 
     try {
+      if (requireRequestedQuality) {
+        // Metadata describes resources independently of membership. Use the
+        // selected encoding's hash instead of reusing the current FLAC hash.
+        final metadata = await request('/audio');
+        final resources = PlatformQualityCatalog.resources(metadata);
+        final hash = resources[quality];
+        if (hash != null) query['hash'] = hash.toLowerCase();
+      }
       final vip = identity?.vipToken.isNotEmpty == true;
       for (final tier
           in requireRequestedQuality ? [quality] : quality.fallbackChain) {
@@ -151,7 +163,9 @@ class PlatformPlaybackResolver {
           final fail = data['fail_process'];
           if (mediaUrl(data).isNotEmpty &&
               '${data['priv_status']}' == '1' &&
-              (fail is! List || fail.isEmpty)) {
+              (fail is! List || fail.isEmpty) &&
+              (!requireRequestedQuality ||
+                  PlatformAudioQuality.fromCode(data['quality']) == quality)) {
             return resolved(data);
           }
         }

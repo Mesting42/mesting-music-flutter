@@ -22,7 +22,9 @@ class FloatingPlaybackPill extends ConsumerWidget {
       return const SizedBox.shrink();
     }
     final track = ref.watch(currentTrackProvider);
-    final playing = ref.watch(playbackStateProvider).value?.playing ?? false;
+    final playing = ref.watch(
+      playbackStateProvider.select((value) => value.value?.playing ?? false),
+    );
     final handler = ref.watch(audioHandlerProvider);
     final foreground = Theme.of(context).colorScheme.onSurface;
     Future<void> action(Future<void> Function() operation) async {
@@ -54,66 +56,70 @@ class FloatingPlaybackPill extends ConsumerWidget {
         return MiniPlayerSwipeRegion(
           onPrevious: () => action(handler.skipToPrevious),
           onNext: () => action(handler.skipToNext),
-          child: GlassButton.custom(
-            key: const ValueKey('beta6-official-play-pill'),
-            onTap: () => context.push('/player'),
-            quality: GlassQuality.premium,
-            useOwnLayer: true,
-            width: double.infinity,
-            height: 64,
-            shape: const LiquidRoundedRectangle(borderRadius: 32),
-            settings: betaMusicPillGlass(context),
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 16),
-              child: Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: TrackArtwork(track: track, width: 32, height: 32),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          track.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: foreground,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                        if (!compact ||
-                            MediaQuery.textScalerOf(context).scale(12) <= 16)
+          child: RepaintBoundary(
+            child: GlassButton.custom(
+              key: const ValueKey('beta6-official-play-pill'),
+              onTap: () => context.push('/player'),
+              quality: GlassQuality.premium,
+              useOwnLayer: true,
+              width: double.infinity,
+              height: 64,
+              shape: const LiquidRoundedRectangle(borderRadius: 32),
+              settings: betaMusicPillGlass(context),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 16),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: TrackArtwork(track: track, width: 32, height: 32),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            track.artist,
+                            track.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: foreground.withValues(alpha: .7),
-                              fontSize: 12,
+                              color: foreground,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
                             ),
                           ),
-                      ],
+                          if (!compact ||
+                              MediaQuery.textScalerOf(context).scale(12) <= 16)
+                            Text(
+                              track.artist,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: foreground.withValues(alpha: .7),
+                                fontSize: 12,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                  control(
-                    label: playing ? '暂停' : '播放',
-                    icon: playing
-                        ? CupertinoIcons.pause_fill
-                        : CupertinoIcons.play_fill,
-                    onTap: () => action(playing ? handler.pause : handler.play),
-                  ),
-                  control(
-                    label: '下一首',
-                    icon: CupertinoIcons.forward_end_fill,
-                    onTap: () => action(handler.skipToNext),
-                  ),
-                ],
+                    control(
+                      label: playing ? '暂停' : '播放',
+                      icon: playing
+                          ? CupertinoIcons.pause_fill
+                          : CupertinoIcons.play_fill,
+                      // Consult the live fade state so another tap can cancel
+                      // Pause before the shared transport finishes its fade.
+                      onTap: () => action(handler.togglePlayPause),
+                    ),
+                    control(
+                      label: '下一首',
+                      icon: CupertinoIcons.forward_end_fill,
+                      onTap: () => action(handler.skipToNext),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

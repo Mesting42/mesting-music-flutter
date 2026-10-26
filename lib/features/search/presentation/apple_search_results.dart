@@ -2,9 +2,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/audio/playback_providers.dart';
+import '../../player/presentation/beta_playback_actions.dart';
 import '../../../shared/models/track.dart';
 import '../../../shared/widgets/track_artwork.dart';
 import '../../../shared/widgets/music_notice.dart';
+import '../../../shared/widgets/automatic_song_paging.dart';
 import '../../auth/account_capabilities.dart';
 import '../../library/presentation/favorite_toggle_button.dart';
 import '../../music_platform/presentation/platform_comments_page.dart';
@@ -37,103 +39,106 @@ class AppleSearchResults extends ConsumerWidget {
             ),
           ),
           const Spacer(),
-          Text(
-            '$count 首${state.total == null ? '' : ' · 共 ${state.total} 首'}',
-            style: theme.textTheme.bodySmall,
-          ),
+          Text('共 ${state.total ?? count} 首', style: theme.textTheme.bodySmall),
         ],
       ),
     );
-    return CustomScrollView(
-      key: const ValueKey('search-results-scroll'),
-      controller: controller,
-      physics: const BouncingScrollPhysics(),
-      slivers: [
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(22, 22, 22, 2),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '搜索结果',
-                  style: theme.textTheme.headlineLarge?.copyWith(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -.6,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '“${state.query}”',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (state.errorMessage != null)
+    return AutomaticSongPaging(
+      enabled: state.hasMore && !state.isLoadingMore && state.moreError == null,
+      onLoadMore: ref.read(musicSearchControllerProvider.notifier).loadMore,
+      child: CustomScrollView(
+        key: PageStorageKey('search-results-${state.query}'),
+        controller: controller,
+        physics: const BouncingScrollPhysics(),
+        slivers: [
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(22),
+              padding: const EdgeInsets.fromLTRB(22, 22, 22, 2),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(state.errorMessage!),
-                  TextButton(
-                    onPressed: ref
-                        .read(musicSearchControllerProvider.notifier)
-                        .retry,
-                    child: const Text('重新搜索'),
+                  Text(
+                    '搜索结果',
+                    style: theme.textTheme.headlineLarge?.copyWith(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -.6,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '“${state.query}”',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-        for (final group in [
-          (name: '本地音乐', tracks: state.localTracks),
-          (name: '歌曲', tracks: state.onlineTracks),
-        ])
-          if (group.tracks.isNotEmpty) ...[
-            SliverToBoxAdapter(child: section(group.name, group.tracks.length)),
-            SliverList.builder(
-              itemCount: group.tracks.length,
-              itemBuilder: (_, index) => _SearchSongRow(
-                track: group.tracks[index],
-                contextTracks: group.tracks,
+          if (state.errorMessage != null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(22),
+                child: Column(
+                  children: [
+                    Text(state.errorMessage!),
+                    TextButton(
+                      onPressed: ref
+                          .read(musicSearchControllerProvider.notifier)
+                          .retry,
+                      child: const Text('重新搜索'),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
-        if (!state.hasResults && state.errorMessage == null)
-          const SliverToBoxAdapter(
+          for (final group in [
+            (name: '本地音乐', tracks: state.localTracks),
+            (name: '歌曲', tracks: state.onlineTracks),
+          ])
+            if (group.tracks.isNotEmpty) ...[
+              SliverToBoxAdapter(
+                child: section(group.name, group.tracks.length),
+              ),
+              SliverList.builder(
+                itemCount: group.tracks.length,
+                itemBuilder: (_, index) => _SearchSongRow(
+                  track: group.tracks[index],
+                  contextTracks: group.tracks,
+                ),
+              ),
+            ],
+          if (!state.hasResults && state.errorMessage == null)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: Text('没有找到相关歌曲，试试其他关键词。'),
+              ),
+            ),
+          SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.all(32),
-              child: Text('没有找到相关歌曲，试试其他关键词。'),
+              padding: const EdgeInsets.fromLTRB(22, 16, 22, 190),
+              child: state.isLoadingMore
+                  ? const Center(child: CupertinoActivityIndicator())
+                  : state.moreError != null
+                  ? TextButton(
+                      onPressed: ref
+                          .read(musicSearchControllerProvider.notifier)
+                          .loadMore,
+                      child: Text(state.moreError ?? '重新加载'),
+                    )
+                  : state.onlineTracks.isEmpty || state.hasMore
+                  ? const SizedBox.shrink()
+                  : const Center(
+                      child: Text('已显示全部搜索结果', style: TextStyle(fontSize: 12)),
+                    ),
             ),
           ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(22, 16, 22, 190),
-            child: state.isLoadingMore
-                ? const Center(child: CupertinoActivityIndicator())
-                : state.moreError != null || state.hasMore
-                ? TextButton(
-                    onPressed: ref
-                        .read(musicSearchControllerProvider.notifier)
-                        .loadMore,
-                    child: Text(state.moreError ?? '继续加载歌曲'),
-                  )
-                : state.onlineTracks.isEmpty
-                ? const SizedBox.shrink()
-                : const Center(
-                    child: Text('已显示全部搜索结果', style: TextStyle(fontSize: 12)),
-                  ),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -153,9 +158,7 @@ class _SearchSongRow extends ConsumerWidget {
       child: InkWell(
         onTap: () async {
           try {
-            await ref
-                .read(audioHandlerProvider)
-                .playSingleTrack(track, playbackContext: contextTracks);
+            await playBetaSelection(context, ref, track);
           } catch (error) {
             if (context.mounted) showPlatformFailure(context, error);
           }

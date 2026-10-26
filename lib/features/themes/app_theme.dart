@@ -20,12 +20,31 @@ ThemeData buildMestingTheme(MusicThemePreset preset) {
           primary: BetaAppearance.accent(generated.brightness),
           primaryContainer: BetaAppearance.panel(generated.brightness),
           surfaceContainerLow: BetaAppearance.panel(generated.brightness),
+          surface: preset.dark ? generated.surface : const Color(0xFFFFFFFF),
+          surfaceContainer: preset.dark
+              ? generated.surfaceContainer
+              : const Color(0xFFF2F2F7),
+          surfaceContainerHigh: preset.dark
+              ? generated.surfaceContainerHigh
+              : const Color(0xFFE8E8ED),
+          surfaceContainerHighest: preset.dark
+              ? generated.surfaceContainerHighest
+              : const Color(0xFFE3E3E8),
         )
       : generated;
   final tokens = MusicThemeTokens.forBrightness(scheme.brightness);
 
   return ThemeData(
     useMaterial3: true,
+    pageTransitionsTheme: DistributionChannel.isBeta
+        ? const PageTransitionsTheme(
+            builders: {
+              TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.windows: CupertinoPageTransitionsBuilder(),
+            },
+          )
+        : const PageTransitionsTheme(),
     colorScheme: scheme,
     extensions: [tokens],
     scaffoldBackgroundColor: Colors.transparent,

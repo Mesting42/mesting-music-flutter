@@ -354,6 +354,8 @@ void main() {
         ),
       );
       expect(paths, contains('/comment/music/topliked'));
+      await tester.tap(find.text('最热'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('最新'));
       await tester.pump();
       await tester.pump();
@@ -361,6 +363,8 @@ void main() {
         tester.getTopLeft(find.text('今天也在认真听歌。')).dy,
         lessThan(tester.getTopLeft(find.text('一首歌，留住一段记忆。')).dy),
       );
+      await tester.tap(find.text('全部'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('我的'));
       await tester.pump();
       expect(find.text('一首歌，留住一段记忆。'), findsNothing);
@@ -427,7 +431,14 @@ void main() {
       tester.view.viewInsets = const FakeViewPadding(bottom: 250);
       await tester.showKeyboard(find.byType(TextField));
       await tester.pump();
-      expect(tester.getBottomRight(find.text('发送')).dy, lessThan(450));
+      expect(
+        tester
+            .getBottomRight(
+              find.byKey(const ValueKey('comment-blue-glass-send')),
+            )
+            .dy,
+        lessThan(450),
+      );
       expect(tester.takeException(), null);
       await disposeFixture(tester);
     },

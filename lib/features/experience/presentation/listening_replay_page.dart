@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
+import 'player_more_menu.dart';
 import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../history/listening_replay.dart';
@@ -56,33 +58,33 @@ class _ListeningReplayPageState extends ConsumerState<ListeningReplayPage> {
             EditorialHeader(
               '听歌回顾',
               back: true,
-              trailing: PopupMenuButton<int>(
+              trailing: PlayerMoreMenu(
                 tooltip: '选择年份',
-                clipBehavior: Clip.antiAlias,
-                borderRadius: BorderRadius.circular(20),
-                surfaceTintColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                onSelected: (value) => setState(() => _year = value),
-                itemBuilder: (_) => [
-                  for (final year in years)
-                    PopupMenuItem(value: year, child: Text('$year 年')),
-                ],
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      Text(
-                        '$_year',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                        ),
+                menuWidth: 168,
+                groups: [
+                  [
+                    for (final year in years)
+                      PlayerMenuAction(
+                        '$year',
+                        '$year 年',
+                        CupertinoIcons.calendar,
+                        selected: year == _year,
                       ),
-                      const Icon(Icons.keyboard_arrow_down_rounded),
-                    ],
-                  ),
+                  ],
+                ],
+                onSelected: (value) => setState(() => _year = int.parse(value)),
+                trigger: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '$_year',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Icon(Icons.keyboard_arrow_down_rounded),
+                  ],
                 ),
               ),
             ),

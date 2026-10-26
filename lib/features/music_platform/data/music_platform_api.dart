@@ -111,12 +111,15 @@ class MusicPlatformApi {
               (decoded['error_code'] != null &&
                   decoded['error_code'].toString() != '0'))) {
         // Raw responses/URLs can contain credentials. Never log or expose them.
-        final rawCode = '${decoded['error_code'] ?? decoded['err_code'] ?? decoded['errcode'] ?? ''}';
+        final rawCode =
+            '${decoded['error_code'] ?? decoded['err_code'] ?? decoded['errcode'] ?? ''}';
         final code = RegExp(r'^\d+$').hasMatch(rawCode) ? rawCode : '';
         throw MusicPlatformException(
-          code == '20017' || code == '20018' ? '音乐平台登录已失效，请重新登录后重试' :
-          code == '60045' ? '请先在酷狗客户端完成安全验证后重试' :
-          '音乐平台暂时未能完成请求${code.isEmpty || code == '0' ? '' : '（错误码 $code）'}，请稍后重试',
+          code == '20017' || code == '20018'
+              ? '音乐平台登录已失效，请重新登录后重试'
+              : code == '60045'
+              ? '请先在酷狗客户端完成安全验证后重试'
+              : '音乐平台暂时未能完成请求${code.isEmpty || code == '0' ? '' : '（错误码 $code）'}，请稍后重试',
           code: code,
         );
       }

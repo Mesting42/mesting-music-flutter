@@ -123,10 +123,16 @@ class PlatformRecommendationSession {
   }
 
   Future<List<Track>> loadMore(Set<String> excluded) async {
-    if (kind == null || _disposed) return const [];
+    if (_disposed) return const [];
     final source = kind;
     final generation = _generation;
-    final tracks = source == PlatformRecommendationKind.fm
+    final tracks = source == null
+        ? await repository.personalFm(
+            PlatformFmStation.heart,
+            first: false,
+            anchor: ref.read(currentTrackProvider),
+          )
+        : source == PlatformRecommendationKind.fm
         ? await repository.personalFm(station, first: false, anchor: _lastTrack)
         : await repository.discover(more: true);
     if (_disposed || source != kind || generation != _generation) {
@@ -141,6 +147,26 @@ class PlatformRecommendationSession {
     return fresh;
   }
 
+  /// The single-song UI action has already preserved/replaced the user's tail.
+  /// Attach FM provenance without adding the rest of the preview page's songs.
+  void adoptCurrent(PlatformRecommendationKind source, Track track) {
+    if (_disposed) return;
+    _flush();
+    _generation++;
+    kind = source;
+    station = ref.read(platformFmStationProvider);
+    _owned
+      ..clear()
+      ..add(track.id);
+    _reported.clear();
+    _lastTrack = track;
+    _lastId = track.id;
+    _seconds = 0;
+    final handler = ref.read(audioHandlerProvider);
+    handler.invalidateRadioRecommendations();
+    unawaited(handler.prefetchRadioTracks(force: true));
+  }
+
   void observe(Track? track, Duration position, {bool completed = false}) {
     if (_disposed) return;
     if (track?.id != _lastId) {
@@ -149,7 +175,7 @@ class PlatformRecommendationSession {
       _lastId = track?.id;
       _seconds = 0;
       // Explicitly playing a song outside the owned batch ends the FM stream.
-      if (track != null && !_owned.contains(track.id)) {
+      if (kind != null && track != null && !_owned.contains(track.id)) {
         end();
       }
     }
@@ -233,6 +259,7 @@ final platformRecommendationBindingProvider = Provider<void>((ref) {
     session.loadMore,
     preserveServerOrder: true,
     onExplicitPlayback: session.end,
+    continueAfterExplicitQueue: true,
   );
   ref.listen(currentMediaItemProvider, (_, item) {
     final track = item.value == null

@@ -10,6 +10,7 @@ import '../../../shared/models/track.dart';
 import '../../../shared/widgets/track_artwork.dart';
 import '../../themes/music_theme_tokens.dart';
 import 'editorial_widgets.dart';
+import '../../player/presentation/beta_playback_actions.dart';
 
 /// One collection shell for Kugou, Mesting and guest. Ownership is supplied by
 /// libraryRepositoryProvider, and no UI branch copies data between accounts.
@@ -23,6 +24,61 @@ class MusicLibraryPage extends ConsumerWidget {
     final favorites = ref.watch(favoriteTracksProvider);
     final playlists = ref.watch(playlistsProvider);
     final recent = ref.watch(recentPlaybackProvider);
+    if (view == 'favorites' || view == 'recent') {
+      final value = view == 'favorites'
+          ? favorites
+          : recent.whenData(
+              (items) => items.map((item) => item.track).toList(),
+            );
+      return PlatformStyle(
+        child: value.when(
+          loading: () => const PlatformFeedbackState(loading: true),
+          error: (_, _) => EditorialEmpty(
+            '歌曲暂时无法读取',
+            onRetry: () => repository.synchronize(forcePull: true),
+          ),
+          data: (tracks) => RefreshIndicator(
+            onRefresh: () => repository.synchronize(forcePull: true),
+            child: ListView.builder(
+              padding: EdgeInsets.only(
+                top: MediaQuery.paddingOf(context).top + 14,
+                bottom: editorialBottomClearance,
+              ),
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              itemCount: tracks.length + 2,
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return EditorialHeader(
+                    view == 'favorites' ? '我的喜欢' : '最近播放',
+                    back: true,
+                    trailing: IconButton(
+                      tooltip: '新建歌单',
+                      onPressed: () => createEditorialPlaylist(context, ref),
+                      icon: const Icon(Icons.add_circle_outline_rounded),
+                    ),
+                  );
+                }
+                if (index == 1) {
+                  return _CollectionTracks(
+                    tracks: tracks,
+                    headerOnly: true,
+                    empty: view == 'favorites'
+                        ? '还没有收藏，点亮爱心留住喜欢的歌。'
+                        : '播放一首歌后，在这里继续聆听。',
+                  );
+                }
+                return EditorialTrackRow(
+                  track: tracks[index - 2],
+                  contextTracks: tracks,
+                );
+              },
+            ),
+          ),
+        ),
+      );
+    }
     return PlatformStyle(
       child: EditorialScroll(
         onRefresh: () async {
@@ -73,65 +129,42 @@ class MusicLibraryPage extends ConsumerWidget {
               onTap: () => context.push('/music?view=playlists'),
             ),
           ],
-          if (view == 'favorites' || view == 'recent') ...[
-            if (view == 'favorites')
-              favorites.when(
-                loading: () => const PlatformFeedbackState(loading: true),
-                error: (_, _) => EditorialEmpty(
-                  '收藏暂时无法加载',
-                  onRetry: () => ref.invalidate(favoriteTracksProvider),
-                ),
-                data: (tracks) => _CollectionTracks(
-                  tracks: tracks,
-                  empty: cloud ? '还没有酷狗云端收藏，点亮歌曲旁的爱心即可收藏。' : '喜欢的歌，点亮爱心留在这里。',
-                ),
-              )
-            else
-              recent.when(
-                loading: () => const PlatformFeedbackState(loading: true),
-                error: (_, _) => const EditorialEmpty('最近播放暂时无法读取'),
-                data: (items) => _CollectionTracks(
-                  tracks: items.map((e) => e.track).toList(),
-                  empty: '播放一首歌后，在这里继续聆听。',
-                ),
-              ),
-          ] else
-            playlists.when(
-              loading: () => const PlatformFeedbackState(loading: true),
-              error: (_, _) => EditorialEmpty(
-                '歌单暂时无法加载',
-                onRetry: () => ref.invalidate(playlistsProvider),
-              ),
-              data: (items) => items.isEmpty
-                  ? const EditorialEmpty('还没有歌单。\n点右上角的加号，为一段心情取个名字。')
-                  : Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 22),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final columns = constraints.maxWidth >= 650 ? 4 : 2;
-                          final width =
-                              (constraints.maxWidth - (columns - 1) * 16) /
-                              columns;
-                          return Wrap(
-                            spacing: 16,
-                            runSpacing: 24,
-                            children: [
-                              for (final list in items)
-                                EditorialCover(
-                                  cover: list.coverAsset ?? '',
-                                  title: list.name,
-                                  subtitle: cloud ? '酷狗云端歌单' : '我的歌单',
-                                  width: width,
-                                  onTap: () => context.push(
-                                    '/music/playlists/${Uri.encodeComponent(list.id)}',
-                                  ),
-                                ),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
+          playlists.when(
+            loading: () => const PlatformFeedbackState(loading: true),
+            error: (_, _) => EditorialEmpty(
+              '歌单暂时无法加载',
+              onRetry: () => ref.invalidate(playlistsProvider),
             ),
+            data: (items) => items.isEmpty
+                ? const EditorialEmpty('还没有歌单。\n点右上角的加号，为一段心情取个名字。')
+                : Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 22),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final columns = constraints.maxWidth >= 650 ? 4 : 2;
+                        final width =
+                            (constraints.maxWidth - (columns - 1) * 16) /
+                            columns;
+                        return Wrap(
+                          spacing: 16,
+                          runSpacing: 24,
+                          children: [
+                            for (final list in items)
+                              EditorialCover(
+                                cover: list.coverAsset ?? '',
+                                title: list.name,
+                                subtitle: cloud ? '酷狗云端歌单' : '我的歌单',
+                                width: width,
+                                onTap: () => context.push(
+                                  '/music/playlists/${Uri.encodeComponent(list.id)}',
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+          ),
         ],
       ),
     );
@@ -192,9 +225,14 @@ class _LibraryLink extends StatelessWidget {
 }
 
 class _CollectionTracks extends ConsumerWidget {
-  const _CollectionTracks({required this.tracks, required this.empty});
+  const _CollectionTracks({
+    required this.tracks,
+    required this.empty,
+    this.headerOnly = false,
+  });
   final List<Track> tracks;
   final String empty;
+  final bool headerOnly;
   @override
   Widget build(BuildContext context, WidgetRef ref) => tracks.isEmpty
       ? EditorialEmpty(empty)
@@ -226,11 +264,11 @@ class _CollectionTracks extends ConsumerWidget {
                         ),
                         const SizedBox(height: 12),
                         FilledButton.icon(
-                          onPressed: () => playEditorialTrack(
+                          onPressed: () => playBetaSelection(
                             context,
                             ref,
                             tracks.first,
-                            tracks,
+                            playAll: tracks,
                           ),
                           icon: const Icon(Icons.play_arrow_rounded),
                           label: const Text('播放全部'),
@@ -241,8 +279,9 @@ class _CollectionTracks extends ConsumerWidget {
                 ],
               ),
             ),
-            for (final track in tracks)
-              EditorialTrackRow(track: track, contextTracks: tracks),
+            if (!headerOnly)
+              for (final track in tracks)
+                EditorialTrackRow(track: track, contextTracks: tracks),
           ],
         );
 }

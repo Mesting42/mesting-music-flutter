@@ -17,6 +17,7 @@ import 'apple_player_controls.dart';
 import 'immersive_lyrics.dart';
 import 'player_pull_to_dismiss.dart';
 import 'player_more_menu.dart';
+import 'player_chrome_reveal.dart';
 
 /// THESIS: Artwork and lyrics lead; shared Apple transport recedes below them.
 /// PALETTE: Cover-derived blur, a dark readability veil, white transport, red
@@ -33,8 +34,18 @@ class BetaNowPlayingPage extends ConsumerStatefulWidget {
 
 class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
   late bool _lyrics = widget.lyricsInitially;
-  void _dismissPlayer() =>
-      context.canPop() ? context.pop() : context.go('/music/recommend');
+  void _dismissPlayer() {
+    context.canPop() ? context.pop() : context.go('/music/recommend');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(playerChromeRevealProvider).value = 0;
+    });
+  }
+
   void _close() {
     if (_lyrics) {
       setState(() => _lyrics = false);
@@ -71,6 +82,8 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
       child: Builder(
         builder: (context) => PlayerPullToDismiss(
           onDismiss: _dismissPlayer,
+          onProgress: (value) =>
+              ref.read(playerChromeRevealProvider).value = value,
           child: PopScope(
             canPop: !_lyrics,
             onPopInvokedWithResult: (didPop, _) {

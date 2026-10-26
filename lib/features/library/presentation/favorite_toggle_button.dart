@@ -77,27 +77,105 @@ class FavoriteToggleButton extends ConsumerWidget {
                 if (context.mounted) showPlatformFailure(context, error);
               }
             },
-            icon: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
-              switchInCurve: Curves.easeOutBack,
-              switchOutCurve: Curves.easeInCubic,
-              transitionBuilder: (child, animation) => FadeTransition(
-                opacity: animation,
-                child: ScaleTransition(scale: animation, child: child),
-              ),
-              child: Icon(
-                favorite
-                    ? Icons.favorite_rounded
-                    : Icons.favorite_border_rounded,
-                key: ValueKey(favorite),
-                size: compact ? 21 : 23,
-              ),
-            ),
+            icon: _FavoriteGlyph(favorite: favorite, size: compact ? 21 : 23),
           ),
         ),
       ),
     );
   }
+}
+
+/// Successful state changes animate locally; a failed cloud write never plays
+/// a misleading filled-heart celebration. Both directions interrupt smoothly.
+class _FavoriteGlyph extends StatefulWidget {
+  const _FavoriteGlyph({required this.favorite, required this.size});
+  final bool favorite;
+  final double size;
+  @override
+  State<_FavoriteGlyph> createState() => _FavoriteGlyphState();
+}
+
+class _FavoriteGlyphState extends State<_FavoriteGlyph>
+    with SingleTickerProviderStateMixin {
+  late final _motion = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 420),
+    value: 1,
+  );
+  late double _from = widget.favorite ? 1 : 0;
+  double get _fill =>
+      _from +
+      ((widget.favorite ? 1 : 0) - _from) *
+          Curves.easeOutCubic.transform(_motion.value);
+  @override
+  void didUpdateWidget(covariant _FavoriteGlyph oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.favorite != widget.favorite) {
+      _from =
+          _from +
+          ((oldWidget.favorite ? 1.0 : 0.0) - _from) *
+              Curves.easeOutCubic.transform(_motion.value);
+      if (MediaQuery.disableAnimationsOf(context)) {
+        _motion.value = 1;
+      } else {
+        _motion.forward(from: 0);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _motion.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => RepaintBoundary(
+    child: AnimatedBuilder(
+      animation: _motion,
+      builder: (_, _) {
+        final pulse = TweenSequence<double>([
+          TweenSequenceItem(
+            tween: Tween(
+              begin: 1.0,
+              end: widget.favorite ? 1.24 : .8,
+            ).chain(CurveTween(curve: Curves.easeOutCubic)),
+            weight: 35,
+          ),
+          TweenSequenceItem(
+            tween: Tween(
+              begin: widget.favorite ? 1.24 : .8,
+              end: 1.0,
+            ).chain(CurveTween(curve: Curves.easeOutBack)),
+            weight: 65,
+          ),
+        ]).transform(_motion.value);
+        return Transform.scale(
+          scale: pulse,
+          child: SizedBox.square(
+            dimension: widget.size,
+            child: Stack(
+              children: [
+                if (_fill < 1)
+                  Opacity(
+                    opacity: 1 - _fill,
+                    child: Icon(
+                      Icons.favorite_border_rounded,
+                      size: widget.size,
+                    ),
+                  ),
+                if (_fill > 0)
+                  Opacity(
+                    opacity: _fill,
+                    child: Icon(Icons.favorite_rounded, size: widget.size),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    ),
+  );
 }
 
 /// Bare glyphs still acknowledge the pointer immediately, while the existing

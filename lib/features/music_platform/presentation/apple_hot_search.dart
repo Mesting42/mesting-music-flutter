@@ -44,7 +44,7 @@ class _AppleHotSearchBoardsState extends State<AppleHotSearchBoards> {
                       ),
                       minimumSize: const Size(44, 44),
                       color: index == i
-                          ? theme.colorScheme.primary.withValues(alpha: .14)
+                          ? theme.colorScheme.surfaceContainerHigh
                           : theme.colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(12),
                       onPressed: () => setState(() {

@@ -350,15 +350,16 @@ class _ThemeSettingsPanelState extends ConsumerState<_ThemeSettingsPanel> {
                             .setProgressCharacter(value),
                       ),
                       const SizedBox(height: 22),
-                      if (!DistributionChannel.isBeta) _VisualControls(
-                        visual: visual,
-                        onStrengthChanged: (value) => ref
-                            .read(themeVisualSettingsProvider.notifier)
-                            .setBackgroundStrength(value),
-                        onDecorationChanged: (value) => ref
-                            .read(themeVisualSettingsProvider.notifier)
-                            .setIpDecoration(value),
-                      ),
+                      if (!DistributionChannel.isBeta)
+                        _VisualControls(
+                          visual: visual,
+                          onStrengthChanged: (value) => ref
+                              .read(themeVisualSettingsProvider.notifier)
+                              .setBackgroundStrength(value),
+                          onDecorationChanged: (value) => ref
+                              .read(themeVisualSettingsProvider.notifier)
+                              .setIpDecoration(value),
+                        ),
                       if (!DistributionChannel.isBeta) ...[
                         const SizedBox(height: 14),
                         _PerformancePicker(

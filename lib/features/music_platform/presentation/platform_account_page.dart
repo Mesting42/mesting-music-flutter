@@ -254,9 +254,7 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primary.withValues(alpha: .10),
+                    color: Theme.of(context).colorScheme.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: ClipRRect(
@@ -272,7 +270,7 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
               ),
               const SizedBox(height: 24),
               Text(
-                '酷狗音乐',
+                'Mesting Music',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 30,

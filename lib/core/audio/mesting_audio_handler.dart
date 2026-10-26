@@ -115,6 +115,9 @@ class MestingAudioHandler extends BaseAudioHandler
   // user-selected queue or restored session.
   int _queueLoadEpoch = 0;
   int _userCommandEpoch = 0;
+  // Separate transport intent from serialized Next taps and queue edits. A
+  // delayed source lookup must never undo a later Pause, Stop or Seek command.
+  int _transportIntentEpoch = 0;
   Timer? _consumptionTimer;
   Timer? _playbackStartTimer;
   String? _confirmedConsumedMediaId;
@@ -128,6 +131,16 @@ class MestingAudioHandler extends BaseAudioHandler
   RadioTrackLoader? _radioTrackLoader;
   bool _preserveServerOrder = false;
   bool _explicitPlaybackContext = false;
+  bool _continueAfterExplicitQueue = false;
+  final Set<String> _recommendedUpcomingIds = {};
+
+  /// Generated continuation must not trigger a destructive-queue confirmation.
+  List<MediaItem> get manuallyQueuedItems => List.unmodifiable(
+    _upcomingMediaItems.where(
+      (item) => !_recommendedUpcomingIds.contains(item.id),
+    ),
+  );
+  bool isAutomaticallyQueued(String id) => _recommendedUpcomingIds.contains(id);
   void Function()? _onExplicitPlayback;
   TrackPlaybackResolver? _trackPlaybackResolver;
   bool _refreshingSource = false;
@@ -304,8 +317,17 @@ class MestingAudioHandler extends BaseAudioHandler
     Duration initialPosition = Duration.zero,
     bool preload = true,
     int? requiredUserCommandEpoch,
+    int? requiredTransportIntentEpoch,
   }) async {
     final loadEpoch = ++_queueLoadEpoch;
+    final transportEpoch =
+        requiredTransportIntentEpoch ?? _transportIntentEpoch;
+    bool isCurrent() =>
+        loadEpoch == _queueLoadEpoch &&
+        transportEpoch == _transportIntentEpoch &&
+        (requiredUserCommandEpoch == null ||
+            requiredUserCommandEpoch == _userCommandEpoch);
+    if (!isCurrent()) return false;
     _cancelPlaybackStartGuard();
     for (final track in tracks) {
       _knownTracks[track.id] = track;
@@ -332,53 +354,50 @@ class MestingAudioHandler extends BaseAudioHandler
     final resolver = _trackPlaybackResolver;
     if (resolver != null) {
       final active = await resolver(orderedTracks.first);
-      if (loadEpoch != _queueLoadEpoch ||
-          (requiredUserCommandEpoch != null &&
-              requiredUserCommandEpoch != _userCommandEpoch)) {
+      if (!isCurrent()) {
         return false;
       }
       orderedTracks[0] = active;
       _knownTracks[active.id] = active;
     }
     final mediaItems = await Future.wait(orderedTracks.map(_mediaItemFor));
-    if (loadEpoch != _queueLoadEpoch ||
-        (requiredUserCommandEpoch != null &&
-            requiredUserCommandEpoch != _userCommandEpoch)) {
+    if (!isCurrent()) {
       _trace('load-stale-before-source epoch=$loadEpoch');
       return false;
     }
 
+    final activeSource = await _audioSourceFor(
+      orderedTracks.first,
+      mediaItems.first,
+    );
+    if (!isCurrent()) {
+      _trace('load-stale-after-source-resolution epoch=$loadEpoch');
+      return false;
+    }
+    // Commit metadata only after all asynchronous source preparation succeeds.
     _tracks = orderedTracks;
     queue.add(mediaItems);
     _upcomingMediaItems = mediaItems.skip(1).toList(growable: false);
     mediaItem.add(mediaItems.first);
     _resetConsumptionConfirmation();
-    // A restored mid-track position is intentionally ineligible. Starting at
-    // the beginning through play() arms the session once playback begins.
     _completionGate.reset();
-    final activeSource = await _audioSourceFor(
-      orderedTracks.first,
-      mediaItems.first,
-    );
-    if (loadEpoch != _queueLoadEpoch ||
-        (requiredUserCommandEpoch != null &&
-            requiredUserCommandEpoch != _userCommandEpoch)) {
-      _trace('load-stale-after-source-resolution epoch=$loadEpoch');
-      return false;
-    }
     await _player.setAudioSources(
       <AudioSource>[activeSource],
       preload: preload,
       initialIndex: 0,
       initialPosition: initialPosition,
     );
-    if (loadEpoch != _queueLoadEpoch ||
-        (requiredUserCommandEpoch != null &&
-            requiredUserCommandEpoch != _userCommandEpoch)) {
+    if (!isCurrent()) {
       _trace('load-stale-after-source epoch=$loadEpoch');
       return false;
     }
     _publishUpcomingQueue();
+    // The native engine has one active source. Its index often stays at zero,
+    // so distinct currentIndex events cannot own the logical playback history.
+    if (_continueAfterExplicitQueue) {
+      _recordPlaybackHistory(orderedTracks.first);
+    }
+    _scheduleConsumptionConfirmation();
     _trace(
       'load-current id=${mediaItems.first.id} '
       'upcoming=${_upcomingMediaItems.length} sourceCount=${_player.sequence.length}',
@@ -457,21 +476,27 @@ class MestingAudioHandler extends BaseAudioHandler
   }
 
   void _handleCurrentIndex(int? index) {
+    if (_refreshingSource) return;
     final items = queue.value;
     if (index == null || index < 0 || index >= items.length) return;
     final current = items[index];
     mediaItem.add(current);
-    final currentTrack = trackForId(current.id);
+    if (!_continueAfterExplicitQueue) {
+      final track = trackForId(current.id);
+      if (track != null) _recordPlaybackHistory(track);
+    }
+    _scheduleConsumptionConfirmation();
+    _broadcastState(_player.playbackEvent);
+  }
+
+  void _recordPlaybackHistory(Track currentTrack) {
     if (!_historyNavigation &&
-        currentTrack != null &&
         (_playbackHistory.isEmpty ||
             _playbackHistory.last.id != currentTrack.id)) {
       _playbackHistory.add(currentTrack);
       if (_playbackHistory.length > 100) _playbackHistory.removeAt(0);
     }
     _historyNavigation = false;
-    _scheduleConsumptionConfirmation();
-    _broadcastState(_player.playbackEvent);
   }
 
   void _resetConsumptionConfirmation() {
@@ -906,7 +931,15 @@ class MestingAudioHandler extends BaseAudioHandler
     await _ready;
     _consecutiveLoadFailures = 0;
     await _pauseFadeController.cancel();
-    await _advancePlayback(forward: forward);
+    if (!_continueAfterExplicitQueue) {
+      await _advancePlayback(forward: forward);
+      return;
+    }
+    final completion = Completer<void>();
+    // Keep the user's command alive while recommendation discovery runs. Its
+    // eventual failure must reach the same visible control that initiated it.
+    unawaited(_advancePlayback(forward: forward, completion: completion));
+    await completion.future;
   }
 
   /// Serializes next/previous/auto-advance decisions into one transition.
@@ -917,11 +950,13 @@ class MestingAudioHandler extends BaseAudioHandler
     required bool forward,
     bool automatic = false,
     bool bypassSingleRepeat = false,
+    Completer<void>? completion,
   }) async {
     final request = _PendingAdvanceRequest(
       forward: forward,
       automatic: automatic,
       bypassSingleRepeat: bypassSingleRepeat,
+      completion: completion,
     );
     if (_completionInFlight) {
       _deferAdvance(request);
@@ -929,6 +964,7 @@ class MestingAudioHandler extends BaseAudioHandler
     }
     _completionInFlight = true;
     var advanced = false;
+    var deferred = false;
     try {
       if (automatic && _mode == PlaybackMode.single && !bypassSingleRepeat) {
         await seek(Duration.zero);
@@ -938,19 +974,24 @@ class MestingAudioHandler extends BaseAudioHandler
 
       if (!forward && _playbackHistory.length > 1) {
         final current = trackForId(mediaItem.value?.id ?? '');
-        final removed = _playbackHistory.removeLast();
-        try {
-          await playSingleTrack(
-            _playbackHistory.last,
-            fromHistory: true,
-            preservePendingAdvance: true,
-            returnToUpcoming: current,
-          );
-        } catch (_) {
-          _playbackHistory.add(removed);
-          rethrow;
+        final previous = _playbackHistory[_playbackHistory.length - 2];
+        await playSingleTrack(
+          previous,
+          fromHistory: true,
+          preservePendingAdvance: true,
+          returnToUpcoming: current,
+        );
+        // Commit the history cursor only after the recording changes. A Pause
+        // during lookup leaves both the live source and its history intact.
+        advanced = mediaItem.value?.id == previous.id;
+        if (advanced && _playbackHistory.last.id == current?.id) {
+          _playbackHistory.removeLast();
         }
-        advanced = true;
+        return;
+      }
+
+      if (!forward && _continueAfterExplicitQueue) {
+        await seek(Duration.zero);
         return;
       }
 
@@ -982,12 +1023,16 @@ class MestingAudioHandler extends BaseAudioHandler
       }
 
       if (_upcomingMediaItems.isNotEmpty) {
+        final manual = manuallyQueuedItems;
+        final candidates = _continueAfterExplicitQueue && manual.isNotEmpty
+            ? manual
+            : _upcomingMediaItems;
         final targetIndex = QueueEngine.resolveUpcomingIndex(
-          length: _upcomingMediaItems.length,
+          length: candidates.length,
           mode: _mode,
           random: _random,
         );
-        final target = trackForId(_upcomingMediaItems[targetIndex].id);
+        final target = trackForId(candidates[targetIndex].id);
         if (target != null) {
           await playSingleTrack(target, preservePendingAdvance: true);
           advanced = true;
@@ -1014,6 +1059,7 @@ class MestingAudioHandler extends BaseAudioHandler
         // discovery round can take several seconds. Holding the lock here
         // used to drop previous/next taps and the natural-completion request.
         _deferAdvance(request);
+        deferred = true;
         if (_player.processingState == ProcessingState.completed) {
           await _player.pause();
         }
@@ -1025,8 +1071,19 @@ class MestingAudioHandler extends BaseAudioHandler
           'fallback=${_fallbackPool.length} misses=$_consecutiveRadioRefillMisses',
         );
       }
+    } catch (error, stack) {
+      if (completion != null && !completion.isCompleted) {
+        completion.completeError(error, stack);
+      } else if (!_continueAfterExplicitQueue) {
+        rethrow;
+      } else {
+        _trace('advance-failed error=$error');
+      }
     } finally {
       _completionInFlight = false;
+      if (!deferred && completion != null && !completion.isCompleted) {
+        completion.complete();
+      }
       // A failed/aborted source must not strand a newer deliberate tap.
       if (advanced || _pendingAdvanceRequest != null) _resumePendingAdvance();
     }
@@ -1037,6 +1094,10 @@ class MestingAudioHandler extends BaseAudioHandler
     // A deliberate previous/next tap takes precedence over an automatic
     // completion that happened while another source was being loaded.
     if (!request.automatic || pending == null) {
+      if (pending?.completion != request.completion &&
+          pending?.completion?.isCompleted == false) {
+        pending!.completion!.complete();
+      }
       _pendingAdvanceRequest = request;
     }
   }
@@ -1045,21 +1106,39 @@ class MestingAudioHandler extends BaseAudioHandler
     if (_completionInFlight) return;
     final pending = _pendingAdvanceRequest;
     if (pending == null) return;
+    // A pending Next waiting for the network is not runnable yet. Resuming it
+    // synchronously here caused a recursive defer/resume loop on empty queues.
+    if (pending.forward &&
+        _upcomingMediaItems.isEmpty &&
+        _fallbackTrack(avoidRecent: pending.automatic, forward: true) == null) {
+      return;
+    }
     _pendingAdvanceRequest = null;
     unawaited(
       _advancePlayback(
         forward: pending.forward,
         automatic: pending.automatic,
         bypassSingleRepeat: pending.bypassSingleRepeat,
+        completion: pending.completion,
       ),
     );
+  }
+
+  void _cancelPendingAdvance() {
+    final pending = _pendingAdvanceRequest;
+    _pendingAdvanceRequest = null;
+    if (pending?.completion?.isCompleted == false) {
+      pending!.completion!.complete();
+    }
   }
 
   Track? _fallbackTrack({required bool avoidRecent, required bool forward}) {
     // Beta's radio loader is installed for the whole app. Ordinary search and
     // library playback still need their own ordered context when Up Next is
     // empty; a radio-only fallback previously made both skip buttons no-ops.
-    if (_preserveServerOrder && _explicitPlaybackContext) {
+    if (_preserveServerOrder &&
+        _explicitPlaybackContext &&
+        !_continueAfterExplicitQueue) {
       final context = _playbackContextTracks;
       if (context.isEmpty) return null;
       final current = context.indexWhere((t) => t.id == mediaItem.value?.id);
@@ -1181,7 +1260,9 @@ class MestingAudioHandler extends BaseAudioHandler
     RadioTrackLoader loader, {
     bool preserveServerOrder = false,
     void Function()? onExplicitPlayback,
+    bool continueAfterExplicitQueue = false,
   }) {
+    _continueAfterExplicitQueue = continueAfterExplicitQueue;
     _preserveServerOrder = preserveServerOrder;
     _onExplicitPlayback = onExplicitPlayback;
     _radioTrackLoader = loader;
@@ -1203,6 +1284,7 @@ class MestingAudioHandler extends BaseAudioHandler
   }
 
   Future<void> _ensureRadioFallbackTracks({bool force = false}) async {
+    if (_continueAfterExplicitQueue && mediaItem.value == null) return;
     final loader = _radioTrackLoader;
     if (loader == null) return;
     final threshold = _preserveServerOrder ? 4 : _radioPrefetchThreshold;
@@ -1248,7 +1330,7 @@ class MestingAudioHandler extends BaseAudioHandler
           _radioLoadInFlight = null;
         }
         if (generation != _radioRecommendationGeneration &&
-            _pendingAdvanceRequest != null) {
+            (_pendingAdvanceRequest != null || _continueAfterExplicitQueue)) {
           unawaited(_ensureRadioFallbackTracks(force: true));
         }
         final pending = _pendingAdvanceRequest;
@@ -1257,8 +1339,13 @@ class MestingAudioHandler extends BaseAudioHandler
             avoidRecent: pending.automatic || _mode == PlaybackMode.random,
             forward: pending.forward,
           );
-          if (fallback == null) {
+          if (fallback == null && _upcomingMediaItems.isEmpty) {
             _pendingAdvanceRequest = null;
+            if (pending.completion?.isCompleted == false) {
+              pending.completion!.completeError(
+                const PlaybackContinuationException('暂未获取到可播放的推荐歌曲，请稍后重试'),
+              );
+            }
             _trace(
               'radio-refill-exhausted direction='
               '${pending.forward ? 'next' : 'previous'} '
@@ -1291,6 +1378,7 @@ class MestingAudioHandler extends BaseAudioHandler
     if (generation != _radioRecommendationGeneration) return 0;
     for (final track in fresh) {
       _knownTracks[track.id] = track;
+      _recommendedUpcomingIds.add(track.id);
     }
     _tracks = [..._tracks, ...fresh];
     queue.add([...queue.value, ...items]);
@@ -1314,7 +1402,9 @@ class MestingAudioHandler extends BaseAudioHandler
 
   bool get _canDiscoverRadioFallback =>
       _radioTrackLoader != null &&
-      !(_preserveServerOrder && _explicitPlaybackContext);
+      mediaItem.value != null &&
+      (_continueAfterExplicitQueue ||
+          !(_preserveServerOrder && _explicitPlaybackContext));
 
   int _mergeRadioFallbackTracks(Iterable<Track> tracks) {
     final next = <Track>[];
@@ -1379,9 +1469,13 @@ class MestingAudioHandler extends BaseAudioHandler
     Iterable<Track>? playbackContext,
     bool preservePendingAdvance = false,
     Track? returnToUpcoming,
+    bool replaceUpcoming = false,
+    bool discardRecommendations = false,
   }) async {
     _markUserCommand('playSingleTrack');
-    if (!preservePendingAdvance) _pendingAdvanceRequest = null;
+    if (!preservePendingAdvance) _transportIntentEpoch++;
+    final transportEpoch = _transportIntentEpoch;
+    if (!preservePendingAdvance) _cancelPendingAdvance();
     if (!preservePendingAdvance) _consecutiveLoadFailures = 0;
     if (_mode == PlaybackMode.random) _rememberAutoplaySelection(track);
     if (playbackContext != null) {
@@ -1399,6 +1493,11 @@ class MestingAudioHandler extends BaseAudioHandler
         returnToUpcoming,
     ];
     for (final item in _upcomingMediaItems) {
+      if (replaceUpcoming ||
+          (discardRecommendations &&
+              _recommendedUpcomingIds.contains(item.id))) {
+        continue;
+      }
       final candidate = trackForId(item.id);
       if (candidate != null &&
           candidate.id != track.id &&
@@ -1407,10 +1506,18 @@ class MestingAudioHandler extends BaseAudioHandler
       }
     }
     _historyNavigation = fromHistory;
-    final applied = await _loadQueue(<Track>[track, ...pending]);
-    if (!applied) return;
+    final applied = await _loadQueue(<Track>[
+      track,
+      ...pending,
+    ], requiredTransportIntentEpoch: transportEpoch);
+    if (!applied) {
+      _historyNavigation = false;
+      return;
+    }
     await setPlaybackMode(_mode);
+    if (transportEpoch != _transportIntentEpoch) return;
     if (autoplay) _startPlayer();
+    if (_continueAfterExplicitQueue) unawaited(_ensureRadioFallbackTracks());
   }
 
   Future<bool> appendToUpcomingQueue(Track track) async {
@@ -1421,7 +1528,11 @@ class MestingAudioHandler extends BaseAudioHandler
       currentId: mediaItem.value?.id,
       upcomingIds: _upcomingMediaItems.map((item) => item.id),
     );
-    if (!canAppend) return false;
+    if (!canAppend) {
+      if (_recommendedUpcomingIds.remove(track.id)) _publishUpcomingQueue();
+      return false;
+    }
+    _recommendedUpcomingIds.remove(track.id);
 
     _knownTracks[track.id] = track;
     final item = await _mediaItemFor(track);
@@ -1524,6 +1635,13 @@ class MestingAudioHandler extends BaseAudioHandler
     bool recommendationContext = false,
   }) async {
     if (!recommendationContext) _onExplicitPlayback?.call();
+    _recommendedUpcomingIds
+      ..clear()
+      ..addAll(
+        recommendationContext
+            ? tracks.map((track) => track.id)
+            : const <String>[],
+      );
     _explicitPlaybackContext = !recommendationContext;
     _markUserCommand('replaceQueue');
     _consecutiveLoadFailures = 0;
@@ -1577,6 +1695,7 @@ class MestingAudioHandler extends BaseAudioHandler
     _pendingAdvanceRequest = null;
     _replacePlaybackContext(const <Track>[]);
     _playbackHistory.clear();
+    _recommendedUpcomingIds.clear();
     _autoplaySessionTrackKeys.clear();
     invalidateRadioRecommendations();
     await _ready;
@@ -1620,6 +1739,24 @@ class MestingAudioHandler extends BaseAudioHandler
   }
 
   void _markUserCommand(String command) {
+    if (const {
+      'play',
+      'pause',
+      'stop',
+      'seek',
+      'skipToQueueItem',
+      'replaceQueue',
+      'clearSession',
+      'changeQuality',
+      'cancelPauseFade',
+    }.contains(command)) {
+      _transportIntentEpoch++;
+    }
+    if (command != 'skipNext' &&
+        command != 'skipPrevious' &&
+        command != 'playSingleTrack') {
+      _cancelPendingAdvance();
+    }
     _userCommandEpoch += 1;
     if (!_userCommandController.isClosed) {
       _userCommandController.add(command);
@@ -1637,9 +1774,16 @@ class _PendingAdvanceRequest {
     required this.forward,
     required this.automatic,
     required this.bypassSingleRepeat,
+    this.completion,
   });
 
   final bool forward;
   final bool automatic;
   final bool bypassSingleRepeat;
+  final Completer<void>? completion;
+}
+
+class PlaybackContinuationException implements Exception {
+  const PlaybackContinuationException(this.message);
+  final String message;
 }

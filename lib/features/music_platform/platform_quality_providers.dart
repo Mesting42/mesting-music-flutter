@@ -5,6 +5,7 @@ import '../../core/persistence/app_preferences.dart';
 import 'domain/platform_audio_quality.dart';
 import 'data/platform_quality_catalog.dart';
 import 'music_platform_providers.dart';
+import 'data/music_platform_api.dart';
 
 final platformSongQualitiesProvider = FutureProvider.autoDispose
     .family<Set<PlatformAudioQuality>, String>((ref, id) async {
@@ -55,11 +56,19 @@ class PlatformQualityController extends Notifier<PlatformQualityState> {
       final applied = await ref
           .read(audioHandlerProvider)
           .refreshCurrentSource();
+      // A cancelled/stale request is not an applied choice. Read the audio owner
+      // synchronously: the StreamProvider may still hold the previous item.
+      if (!applied) return false;
+      final handler = ref.read(audioHandlerProvider);
+      final actual = handler.trackForId(handler.mediaItem.value?.id ?? '');
+      if (actual?.playbackQuality != quality.code) {
+        throw const MusicPlatformException('未能切换到所选音质，已保留原音源');
+      }
       await ref
           .read(sharedPreferencesProvider)
           .setString(preferenceKey, quality.code);
       saved = quality;
-      return applied;
+      return true;
     } finally {
       if (ref.mounted) state = PlatformQualityState(saved);
     }

@@ -9,6 +9,8 @@ import '../platform_recommendation_providers.dart';
 import 'platform_account_page.dart';
 import 'platform_design.dart';
 import 'platform_feedback.dart';
+import '../../../shared/widgets/automatic_song_paging.dart';
+import '../../player/presentation/beta_playback_actions.dart';
 
 /// Original md3Music's four discovery modules, rendered in the approved Mesting
 /// visual language. Platform providers own ordering and provenance, not widgets.
@@ -178,9 +180,11 @@ Future<void> _play(
 ) async {
   try {
     if (kind != null) {
-      await ref
-          .read(platformRecommendationSessionProvider)
-          .start(kind, tracks, index);
+      if (await playBetaSelection(context, ref, tracks[index])) {
+        ref
+            .read(platformRecommendationSessionProvider)
+            .adoptCurrent(kind, tracks[index]);
+      }
     } else {
       await playEditorialTrack(context, ref, tracks[index], tracks);
     }
@@ -210,8 +214,11 @@ class _PlatformRecommendationDetailState
   bool _loading = false, _more = true;
   String? _error;
   String? _baseSignature;
+  int _generation = 0;
+  Set<String> _baseIds = {};
   Future<void> _load() async {
     if (_loading || !_more) return;
+    final generation = _generation;
     setState(() {
       _loading = true;
       _error = null;
@@ -225,16 +232,21 @@ class _PlatformRecommendationDetailState
               anchor: _extra.lastOrNull,
             )
           : await repository.discover(more: true);
-      if (!mounted) return;
+      if (!mounted || generation != _generation) return;
       setState(() {
-        final ids = _extra.map((e) => e.id).toSet();
-        _extra.addAll(fresh.where((e) => ids.add(e.id)));
-        _more = fresh.isNotEmpty;
+        final ids = {..._baseIds, ..._extra.map((e) => e.id)};
+        final additions = fresh.where((e) => ids.add(e.id)).toList();
+        _extra.addAll(additions);
+        _more = additions.isNotEmpty;
       });
     } catch (_) {
-      if (mounted) setState(() => _error = '加载失败，点击重试');
+      if (mounted && generation == _generation) {
+        setState(() => _error = '加载失败，点击重试');
+      }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && generation == _generation) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -252,6 +264,8 @@ class _PlatformRecommendationDetailState
         '${ref.watch(platformAccountProvider).value?.userId}:${ref.watch(platformFmStationProvider).name}';
     if (_baseSignature != signature) {
       _baseSignature = signature;
+      _generation++;
+      _loading = false;
       _extra.clear();
       _more = true;
     }
@@ -266,38 +280,44 @@ class _PlatformRecommendationDetailState
             for (final t in [...base, ..._extra]) t.id: t,
           };
           final tracks = merged.values.toList();
+          _baseIds = base.map((track) => track.id).toSet();
           return RefreshIndicator(
             onRefresh: () async {
               setState(() {
+                _generation++;
+                _loading = false;
                 _extra.clear();
                 _more = true;
               });
               ref.invalidate(provider);
               await ref.read(provider.future);
             },
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 180),
-              children: [
-                if (tracks.isEmpty) const EditorialEmpty('平台暂未返回歌曲'),
-                for (var i = 0; i < tracks.length; i++)
-                  EditorialTrackRow(
-                    track: tracks[i],
-                    contextTracks: tracks,
-                    onPlay: () => _play(context, ref, tracks, i, widget.kind),
-                  ),
-                if (widget.kind != null)
-                  Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: TextButton(
-                      onPressed: _loading || !_more ? null : _load,
-                      child: Text(
-                        _loading
-                            ? '正在获取下一批…'
-                            : _error ?? (_more ? '加载更多' : '暂时没有更多歌曲'),
-                      ),
-                    ),
-                  ),
-              ],
+            child: AutomaticSongPaging(
+              enabled:
+                  widget.kind != null && _more && !_loading && _error == null,
+              onLoadMore: _load,
+              child: ListView.builder(
+                padding: const EdgeInsets.only(bottom: 180),
+                itemCount: tracks.length + 1,
+                itemBuilder: (context, index) {
+                  if (index < tracks.length) {
+                    return EditorialTrackRow(
+                      track: tracks[index],
+                      contextTracks: tracks,
+                      onPlay: () =>
+                          _play(context, ref, tracks, index, widget.kind),
+                    );
+                  }
+                  if (_loading) {
+                    return const PlatformFeedbackState(loading: true);
+                  }
+                  if (_error != null) {
+                    return TextButton(onPressed: _load, child: Text(_error!));
+                  }
+                  if (tracks.isEmpty) return const EditorialEmpty('平台暂未返回歌曲');
+                  return const SizedBox(height: 24);
+                },
+              ),
             ),
           );
         },

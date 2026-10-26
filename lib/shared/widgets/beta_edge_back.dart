@@ -6,15 +6,22 @@ import 'package:flutter/material.dart';
 /// system Back continues through PopScope; this recognizer only owns a narrow
 /// edge strip, leaving sliders and horizontal shelves inside the page alone.
 class BetaEdgeBack extends StatelessWidget {
-  const BetaEdgeBack({required this.child, this.onBack, super.key});
+  const BetaEdgeBack({
+    required this.child,
+    this.onBack,
+    this.enabled = true,
+    super.key,
+  });
   final Widget child;
   final VoidCallback? onBack;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     final navigator = Navigator.maybeOf(context);
-    final enabled = onBack != null || (navigator?.canPop() ?? false);
-    if (!enabled) return child;
+    final active =
+        enabled && (onBack != null || (navigator?.canPop() ?? false));
+    if (!active) return child;
     return LayoutBuilder(
       builder: (context, constraints) {
         return Stack(
@@ -27,7 +34,7 @@ class BetaEdgeBack extends StatelessWidget {
                 right: left ? null : 0,
                 top: 0,
                 bottom: 0,
-                width: 20,
+                width: 32,
                 child: _EdgeRecognizer(
                   left: left,
                   onBack: () {

@@ -1,3 +1,8 @@
+import 'dart:async';
+import 'package:mesting_music/features/experience/presentation/floating_playback_pill.dart';
+import 'package:mesting_music/features/experience/presentation/beta_music_shell.dart';
+import 'package:mesting_music/features/music_platform/presentation/platform_comment_composer.dart';
+import 'package:mesting_music/features/music_platform/presentation/platform_design.dart';
 import 'dart:convert';
 import 'package:go_router/go_router.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
@@ -99,6 +104,11 @@ class _Volume extends MediaVolumeController {
 
 class _Handler extends MestingAudioHandler {
   _Handler() : super(tracks: []);
+  int toggles = 0;
+  @override
+  Future<void> togglePlayPause() async {
+    toggles++;
+  }
 }
 
 class _Server implements MusicServer {
@@ -173,6 +183,7 @@ void main() {
     bool standardOnly = false,
     bool qualityUnknown = false,
     bool playing = false,
+    Stream<PlaybackState>? playbackEvents,
   }) async {
     metadataReady = false;
     paths = [];
@@ -331,12 +342,14 @@ void main() {
           ),
         ),
         playbackStateProvider.overrideWith(
-          (ref) => Stream.value(
-            PlaybackState(
-              playing: playing,
-              processingState: AudioProcessingState.ready,
-            ),
-          ),
+          (ref) =>
+              playbackEvents ??
+              Stream.value(
+                PlaybackState(
+                  playing: playing,
+                  processingState: AudioProcessingState.ready,
+                ),
+              ),
         ),
       ],
     );
@@ -354,7 +367,11 @@ void main() {
     // Flutter runs addTearDown on the real loop after draining fake-time streams.
   }
 
-  Future<void> captureScreenshot(WidgetTester tester, String capture) async {
+  Future<void> captureScreenshot(
+    WidgetTester tester,
+    String capture, {
+    Duration settle = const Duration(milliseconds: 500),
+  }) async {
     if (const bool.fromEnvironment('EXPORT_BETA_SCREENSHOTS')) {
       // Asset decoding uses real I/O. Wait for all visible artwork before QA.
       final context = tester.element(find.byType(MaterialApp).first);
@@ -364,7 +381,7 @@ void main() {
           images.map((image) => precacheImage(image.image, context)),
         );
       });
-      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(settle);
       final boundary = tester.renderObject<RenderRepaintBoundary>(
         find.byKey(const ValueKey('beta5-capture')),
       );
@@ -376,7 +393,7 @@ void main() {
         );
         await directory.create(recursive: true);
         await File(
-          '${directory.path}/${capture.replaceFirst('beta7-', 'beta8-')}.png',
+          '${directory.path}/${capture.replaceFirst('beta7-', 'beta9-').replaceFirst('beta8-', 'beta9-')}.png',
         ).writeAsBytes(png!.buffer.asUint8List());
         picture.dispose();
       });
@@ -1055,7 +1072,13 @@ void main() {
       for (final overlay in ['/music/settings', '/player']) {
         router.push(overlay);
         await settle();
-        expect(find.byType(BetaMusicBottomBar), findsNothing);
+        expect(
+          tester
+              .widget<BetaMusicShell>(find.byType(BetaMusicShell))
+              .chromeVisible,
+          false,
+        );
+        expect(find.byType(BetaMusicBottomBar), findsOneWidget);
         router.pop();
         await settle();
         expect(selected(), 3);
@@ -1071,7 +1094,13 @@ void main() {
       expect(selected(), 2);
       router.push('/music/settings');
       await settle();
-      expect(find.byType(BetaMusicBottomBar), findsNothing);
+      expect(
+        tester
+            .widget<BetaMusicShell>(find.byType(BetaMusicShell))
+            .chromeVisible,
+        false,
+      );
+      expect(find.byType(BetaMusicBottomBar), findsOneWidget);
       router.pop();
       await settle();
       expect(selected(), 2);
@@ -1100,6 +1129,247 @@ void main() {
       }
       expect(find.text('${DateTime.now().year} 年'), findsOneWidget);
       await captureScreenshot(tester, 'beta8-replay-year-menu');
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta9 both search edges and Router system Back follow result, landing, origin',
+    (tester) async {
+      viewport(tester);
+      await prepare();
+      final router = GoRouter(
+        initialLocation: '/profile',
+        routes: [
+          ShellRoute(
+            builder: (context, state, child) =>
+                MusicShell(location: state.uri.toString(), child: child),
+            routes: [
+              GoRoute(
+                path: '/profile',
+                builder: (_, _) => const MusicLandingPage(),
+              ),
+            ],
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: LiquidGlassWidgets.wrap(
+            brightnessResolver: Theme.maybeBrightnessOf,
+            child: MaterialApp.router(
+              theme: buildMestingTheme(musicThemePresetById('classic')),
+              routerConfig: router,
+            ),
+          ),
+        ),
+      );
+      Future<void> frames() async {
+        for (var i = 0; i < 6; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+      }
+
+      Future<void> openResults() async {
+        await tester.tap(find.byIcon(CupertinoIcons.search).hitTestable().last);
+        await frames();
+        await tester.enterText(find.byType(CupertinoTextField).last, '薛之谦');
+        await tester.testTextInput.receiveAction(TextInputAction.search);
+        await frames();
+        expect(find.text('搜索结果'), findsOneWidget);
+      }
+
+      await frames();
+      final bar = tester.element(find.byType(BetaMusicBottomBar));
+      await openResults();
+      await tester.dragFrom(const Offset(5, 240), const Offset(140, 0));
+      await frames();
+      expect(find.byType(PlatformSearchLanding), findsOneWidget);
+      await tester.dragFrom(const Offset(385, 240), const Offset(-140, 0));
+      await frames();
+      expect(find.byType(PlatformSearchLanding), findsNothing);
+      expect(
+        tester
+            .widget<BetaMusicBottomBar>(find.byType(BetaMusicBottomBar))
+            .selectedIndex,
+        3,
+      );
+      expect(
+        identical(tester.element(find.byType(BetaMusicBottomBar)), bar),
+        true,
+      );
+      await openResults();
+      await tester.binding.handlePopRoute();
+      await frames();
+      expect(find.byType(PlatformSearchLanding), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await frames();
+      expect(find.byType(PlatformSearchLanding), findsNothing);
+      expect(router.routeInformationProvider.value.uri.path, '/profile');
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta9 comment filters share one row and composer uses sibling liquid glass',
+    (tester) async {
+      viewport(tester);
+      await prepare();
+      for (final dark in [false, true]) {
+        await pump(
+          tester,
+          PlatformCommentsPage(
+            resource: _resource,
+            repository: PlatformCommentsRepository(api, _identity),
+          ),
+          dark: dark,
+          capture: 'beta9-comments-${dark ? 'dark' : 'light'}',
+        );
+        final sort = find.byTooltip('评论排序');
+        final scope = find.byTooltip('评论范围');
+        expect(
+          (tester.getCenter(sort).dy - tester.getCenter(scope).dy).abs(),
+          lessThan(1),
+        );
+        expect(find.byType(ChoiceChip), findsNothing);
+        expect(
+          find.byKey(const ValueKey('comment-liquid-glass-input')),
+          findsOneWidget,
+        );
+        final send = find.byKey(const ValueKey('comment-blue-glass-send'));
+        expect(tester.getSize(send), const Size(48, 48));
+        expect(tester.getSize(find.byType(TextField)).height, lessThan(60));
+        await tester.tap(sort);
+        await tester.pumpAndSettle();
+        expect(find.text('最新'), findsOneWidget);
+        await tester.tap(find.text('最新').hitTestable());
+        await tester.pumpAndSettle();
+        expect(find.text('最新'), findsOneWidget);
+        expect(find.byType(PlatformCommentComposer), findsOneWidget);
+        tester.view.viewInsets = const FakeViewPadding(bottom: 280);
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(tester.getBottomRight(send).dy, lessThan(844 - 280));
+        expect(tester.widget<TextField>(find.byType(TextField)).maxLines, 2);
+        tester.view.resetViewInsets();
+      }
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta9 playback pill position events do not rebuild the glass control',
+    (tester) async {
+      viewport(tester);
+      final events = StreamController<PlaybackState>.broadcast(sync: true);
+      await prepare(playbackEvents: events.stream);
+      await pump(tester, const MusicLandingPage(), shell: true);
+      events.add(
+        PlaybackState(
+          playing: true,
+          processingState: AudioProcessingState.ready,
+        ),
+      );
+      await tester.pump();
+      var rebuilds = 0;
+      final previous = debugOnRebuildDirtyWidget;
+      debugOnRebuildDirtyWidget = (element, builtOnce) {
+        previous?.call(element, builtOnce);
+        if (element.widget is FloatingPlaybackPill) rebuilds++;
+      };
+      try {
+        for (var i = 0; i < 100; i++) {
+          events.add(
+            PlaybackState(
+              playing: true,
+              processingState: AudioProcessingState.ready,
+              updatePosition: Duration(milliseconds: i * 100),
+            ),
+          );
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+      } finally {
+        debugOnRebuildDirtyWidget = previous;
+      }
+      // ignore: avoid_print
+      print(
+        'BETA9_PILL_BENCH positionEvents=100 glassControlRebuilds=$rebuilds',
+      );
+      if (!const bool.fromEnvironment('BETA_BENCHMARK_BASELINE')) {
+        expect(rebuilds, lessThanOrEqualTo(1));
+      }
+      await disposeFixture(tester);
+      await events.close();
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta9 narrow comment keyboard and long title remain usable',
+    (tester) async {
+      viewport(tester, const Size(320, 640));
+      await prepare();
+      await pump(
+        tester,
+        PlatformCommentsPage(
+          resource: _resource,
+          repository: PlatformCommentsRepository(api, _identity),
+        ),
+        scale: 1.6,
+        capture: 'beta9-comments-narrow-large',
+      );
+      await tester.enterText(
+        find.byType(TextField),
+        '每一段旋律，都留下自己的故事。\n今天也在认真听歌。',
+      );
+      tester.view.viewInsets = const FakeViewPadding(bottom: 280);
+      await tester.pump(const Duration(milliseconds: 300));
+      final send = find.byKey(const ValueKey('comment-blue-glass-send'));
+      expect(tester.getBottomRight(send).dy, lessThan(360));
+      expect(send.hitTestable(), findsOneWidget);
+      expect(tester.widget<TextField>(find.byType(TextField)).maxLines, 2);
+      expect(tester.takeException(), null);
+      await captureScreenshot(tester, 'beta9-comments-keyboard-large');
+      tester.view.resetViewInsets();
+      await pump(
+        tester,
+        const PlatformPageFrame(
+          title: '暖场小曲：深夜酒吧的走心时刻',
+          child: Center(child: Text('歌曲列表')),
+        ),
+        capture: 'beta9-title-start',
+      );
+      final title = find.text('暖场小曲：深夜酒吧的走心时刻');
+      final start = tester.getTopLeft(title).dx;
+      await tester.pump(const Duration(seconds: 3));
+      expect(tester.getTopLeft(title).dx, lessThan(start));
+      await captureScreenshot(
+        tester,
+        'beta9-title-scrolling',
+        settle: Duration.zero,
+      );
+      await disposeFixture(tester);
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'beta9 capsule uses the shared live toggle for rapid taps',
+    (tester) async {
+      viewport(tester);
+      await prepare(playing: true);
+      await pump(tester, const MusicLandingPage(), shell: true);
+      final handler = container.read(audioHandlerProvider) as _Handler;
+      final pause = find.bySemanticsLabel('暂停').first;
+      await tester.tap(pause);
+      await tester.pump(const Duration(milliseconds: 40));
+      await tester.tap(pause);
+      await tester.pump();
+      expect(handler.toggles, 2);
       await disposeFixture(tester);
     },
     skip: !DistributionChannel.isBeta,
