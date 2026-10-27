@@ -9,7 +9,7 @@ import 'music_theme_preset.dart';
 import 'music_theme_tokens.dart';
 
 ThemeData buildMestingTheme(MusicThemePreset preset) {
-  final seed = DistributionChannel.isBeta ? BetaAppearance.red : preset.accent;
+  final seed = DistributionChannel.isBeta ? BetaAppearance.blue : preset.accent;
   final generated = ColorScheme.fromSeed(
     seedColor: seed,
     brightness: preset.dark ? Brightness.dark : Brightness.light,
@@ -20,17 +20,30 @@ ThemeData buildMestingTheme(MusicThemePreset preset) {
   final scheme = DistributionChannel.isBeta
       ? generated.copyWith(
           primary: BetaAppearance.accent(generated.brightness),
+          // Keep functional surfaces neutral rather than inheriting a colored
+          // Material seed wash. Cover art continues to own the player backdrop.
+          onPrimary: preset.dark ? const Color(0xFF001B33) : Colors.white,
           primaryContainer: BetaAppearance.panel(generated.brightness),
+          onPrimaryContainer: preset.dark
+              ? Colors.white
+              : const Color(0xFF1C1C1E),
           surfaceContainerLow: BetaAppearance.panel(generated.brightness),
-          surface: preset.dark ? generated.surface : const Color(0xFFFFFFFF),
+          surface: preset.dark ? const Color(0xFF121316) : Colors.white,
+          surfaceTint: Colors.transparent,
+          onSurface: preset.dark
+              ? const Color(0xFFF5F5F7)
+              : const Color(0xFF1C1C1E),
+          onSurfaceVariant: preset.dark
+              ? const Color(0xFFAEAEB2)
+              : const Color(0xFF636366),
           surfaceContainer: preset.dark
-              ? generated.surfaceContainer
+              ? const Color(0xFF242426)
               : const Color(0xFFF2F2F7),
           surfaceContainerHigh: preset.dark
-              ? generated.surfaceContainerHigh
+              ? const Color(0xFF2C2C2E)
               : const Color(0xFFE8E8ED),
           surfaceContainerHighest: preset.dark
-              ? generated.surfaceContainerHighest
+              ? const Color(0xFF3A3A3C)
               : const Color(0xFFE3E3E8),
         )
       : generated;

@@ -65,3 +65,14 @@ turning its normal blue into pale cyan.
 
 Verification distinguishes software-renderer captures from actual device GPU
 evidence. A successful host capture does not certify Android native refraction.
+
+## Beta.20 keyboard hit bounds
+
+In `tab_bar_searchable_layout.dart`, the accessory wrapper includes the focused
+search pill's keyboard extent in its layout height. The inner pill already
+reserves and paints that extent; the previous shorter wrapper rejected pointers
+at the visible raised field and let the body behind it receive them. This patch
+changes the ancestor hit bounds, with no second keyboard translation and no
+change to optical quality, press/drag springs, accessory morphing or shaders.
+Host regression taps the visible field with and without an accessory across
+keyboard heights 100, 280, 180 and zero, and checks that the body receives none.

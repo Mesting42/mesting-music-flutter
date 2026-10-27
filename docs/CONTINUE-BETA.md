@@ -1,6 +1,8 @@
 # 在另一台电脑继续 Beta 开发
 
-更新日期：2026-10-27（Asia/Shanghai）。当前版本：**1.0.37-beta.19 / 19**。
+更新日期：2026-10-27（Asia/Shanghai）。本机已构建并覆盖安装 **1.0.37-beta.20 / 20**，尚未提交或推送；已归档版本仍为 **1.0.37-beta.19 / 19**。
+
+**先读 [Beta.20 接续](SESSION-HANDOFF-2026-10-27-BETA20.md) 和 [本轮修改](fixes-2026-10-27-beta20.md)。下方 GitHub 命令取得已归档的 Beta.19，不包含本机尚未推送的 Beta.20 修改。**
 仓库：[Mesting42/mesting-music-flutter](https://github.com/Mesting42/mesting-music-flutter)。
 开发分支：`beta`；固定标签：`v1.0.37-beta.19`。
 
@@ -34,7 +36,7 @@ Beta.17 → Beta.18 → Beta.19。
 
 1. [Beta.19 修改与验证边界](fixes-2026-10-27-beta19.md)。
 2. [Beta.19 详细接续记录](SESSION-HANDOFF-2026-10-27-BETA19.md)。
-3. 根目录 `AGENTS.md`、`DESIGN.md`、`PRODUCT.md`；新需求继续一次只问一个问题，
+3. 本机 Beta.20 先读 [本轮修改](fixes-2026-10-27-beta20.md) 和 [交接](SESSION-HANDOFF-2026-10-27-BETA20.md)，再读根目录 `AGENTS.md`、`DESIGN.md`、`PRODUCT.md`；新需求继续一次只问一个问题，
    理解后给出方案、经用户确认再实施。
 4. 必要时查看 [Beta.18 记录](fixes-2026-10-26-beta18.md) 和对应旧标签。
 
@@ -50,7 +52,7 @@ Beta.17 → Beta.18 → Beta.19。
 ## 新电脑环境
 
 - 独立 Flutter **3.41.9** / Dart **3.11.5**；避免改动正式项目的全局 SDK。
-- 实际交付使用 Android Studio JBR **21.0.10**；Java/Kotlin 编译目标为 17。
+- Beta.19 使用 Android Studio JBR **21.0.10**；本机 Beta.20 使用 JDK **17.0.20.1**。Java/Kotlin 编译目标为 17。
 - Android SDK compile/target **36**，NDK **28.2.13676358**，项目 minSdk **24**。
 - `pubspec.lock` 保持：
   `3F2DC18A71A59324ADF202E8EFE43E2F712B23A16E743B772AF0EC10748B4957`。
@@ -64,10 +66,10 @@ $betaFlutter = 'D:/你的Flutter目录/flutter/bin/flutter.bat'
 & $betaFlutter --version
 & $betaFlutter pub get --enforce-lockfile
 & $betaFlutter analyze --no-pub
-& $betaFlutter test --no-pub --flavor beta test/beta18_refinements_test.dart test/beta19_refinements_test.dart
+& $betaFlutter test --no-pub --flavor beta test/beta18_refinements_test.dart test/beta19_refinements_test.dart test/beta20_refinements_test.dart
 ```
 
-正式渠道素材检查必须带 `--flavor stable`。最终 Beta 回归 287 项通过；正式渠道
+正式渠道素材检查必须带 `--flavor stable`。**以下为 Beta.19 历史结果**：Beta 回归 287 项通过；正式渠道
 734 项通过、91 项跳过、3 项既有失败（文本编辑菜单间距、旧队列颜色、关注者移除
 sheet 层级），不是本次新增回归。便携证据摘要位于 `docs/version-archive/beta19-evidence/`。
 
@@ -77,12 +79,12 @@ sheet 层级），不是本次新增回归。便携证据摘要位于 `docs/vers
 ./tool/build_android_md3_beta_apk.ps1 -FlutterSdkRoot 'D:/你的Flutter目录/flutter'
 ```
 
-默认构建 `1.0.37-beta.19` / 19，单 APK 包含 ARM32 与 ARM64，关闭线上更新检查。
+当前本机脚本默认构建 `1.0.37-beta.20` / 20，单 APK 包含 ARM32 与 ARM64，关闭线上更新检查。
 脚本执行资源暂存清理、69 项正式专用素材排除检查和依赖锁校验。
 `pubspec.yaml` 中的 `1.0.37+58` 是共享正式版本配置；Beta 由构建脚本覆盖版本号，
 不要为继续 Beta 擅自改动正式版本配置。
 
-源码默认使用机器自己的 debug 签名；它不等于交付包使用的原 Beta 签名。
+源码默认使用机器自己的 debug 签名；新电脑生成的密钥不等于交付包使用的原 Beta 签名。
 后续需要覆盖现有 Beta.19 时，应通过私有方式转移原 Beta.14–19 密钥，并检查最终
 证书 SHA-256：
 `8CE2203AD821AD8D38576F9AE86350D98254AC05F2CB974E773C1973B22E0333`。

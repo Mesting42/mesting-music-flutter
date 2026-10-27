@@ -1,6 +1,6 @@
 # Mesting Music Beta 版本归档
 
-归档更新：2026-10-27（Asia/Shanghai）。当前开发版本：**1.0.37-beta.19**。
+归档更新：2026-10-27（Asia/Shanghai）。已归档最新版本：**1.0.37-beta.19**；本机 Beta.20 修改尚未提交、推送或建立标签，见 [修改记录](docs/fixes-2026-10-27-beta20.md)。
 日常开发分支：`beta`。另一台电脑从 [接续入口](docs/CONTINUE-BETA.md) 开始，
 源码和 APK 使用同名固定版本标签。正式分支 `main` 和已有标签/Release 保留原样。
 

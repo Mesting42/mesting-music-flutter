@@ -1,11 +1,11 @@
 ---
-name: Mesting Music Android Beta.19
-description: 封面主导、红色强调与共享播放控件的中文私人听歌空间
+name: Mesting Music Android Beta.20
+description: 封面主导、语义配色与共享播放控件的中文私人听歌空间
 colors:
-  beta-accent: "#DE3A3D"
-  beta-accent-dark: "#FF777A"
+  beta-accent: "#0066D9"
+  beta-accent-dark: "#0091FF"
   beta-panel-light: "#F2F2F7"
-  beta-panel-dark: "#291D20"
+  beta-panel-dark: "#1C1C1E"
   entry-coral: "#DE5757"
   action-blue: "rgba(0,99,216,0.94902)"
   editing-blue: "#007AFF"
@@ -13,6 +13,12 @@ colors:
   primary-seed: "#465CC7"
   primary-seed-dark: "#91A5FF"
   favorite: "#CC3F56"
+  beta-favorite: "#FF2D55"
+  beta-favorite-dark: "#FF375F"
+  beta-success: "#007A2B"
+  beta-success-dark: "#30D158"
+  beta-success-surface: "#E9F6ED"
+  beta-success-surface-dark: "#153523"
   canvas-light: "#FFFFFF"
   canvas-dark: "#000000"
   surface-light: "#FCFCFD"
@@ -174,9 +180,9 @@ components:
 
 **Creative North Star: "封面主导的私人听歌空间"**
 
-封面承担视觉重心，中文大标题与留白组织阅读顺序。横向内容组露出下一项，歌曲列表保持紧凑；播放与导航悬浮于内容之上。Beta 使用用户参考图采样的红色强调，经典浅色、深色和跟随系统共用布局，进度条样式与角色独立选择。
+封面承担视觉重心，中文大标题与留白组织阅读顺序。横向内容组露出下一项，歌曲列表保持紧凑；播放与导航悬浮于内容之上。Beta 使用功能蓝、收藏粉、完成绿的语义配色，经典浅色、深色和跟随系统共用布局，进度条样式与角色独立选择。
 
-本文合并用户于 2026-10-26 确认的 Beta.18 局部修正，沿用 Mesting/Apple Music 视觉依据与同一 North Star。可见名称为 Mesting Music。经典浅色使用中性白灰面板与既有红色强调，深色和封面播放器配色保留；入口与指南继续使用珊瑚红原创音乐双角色和局部暖色背景。居中同意组、Raycast 参考适配的按方式登录、统一账号模块、真实五类搜索、独立启动选择和真实队列时长继续使用。Beta.13 已确立的欢迎返回、指南跳过、播放器进退、进度角色锚点、文本编辑和播放胶囊菜单继续按各自契约运行；登录成功的尺寸与指南可用性由本轮确认覆盖。局部蓝色确认与编辑色不建立新全局配色。Beta 门限为 DistributionChannel.isBeta（Android appFlavor == beta）；正式 flavor 的页面、导航、迷你播放器、完整主题、定制推荐与默认黑胶契约保留，共享工具按调用点生效。
+本文合并用户于 2026-10-27 确认的 Beta.20 修正，沿用 Mesting/Apple Music 视觉依据与同一 North Star。可见名称为 Mesting Music。经典浅深色使用中性黑白灰面板，功能操作与选中用蓝色、收藏用粉色、签到完成用绿色；封面播放器的氛围配色保留；入口与指南继续使用珊瑚红原创音乐双角色和局部暖色背景。居中同意组、Raycast 参考适配的按方式登录、统一账号模块、真实五类搜索、独立启动选择和真实队列时长继续使用。Beta.13 已确立的欢迎返回、指南跳过、播放器进退、进度角色锚点、文本编辑和播放胶囊菜单继续按各自契约运行；登录成功的尺寸与指南可用性由本轮确认覆盖。Beta.20 经用户确认统一功能强调色，原珊瑚入口插画与显式 IP 配色继续独立。Beta 门限为 DistributionChannel.isBeta（Android appFlavor == beta）；正式 flavor 的页面、导航、迷你播放器、完整主题、定制推荐与默认黑胶契约保留，共享工具按调用点生效。
 
 Beta.18 的范围以 docs/fixes-2026-10-26-beta18.md 为准：轻量首页问候、原创输出 glyph 与对话框音量、更多/关闭的局部按压、成功音质目录的进程内有界保留、评论等待与内容到达、滚动取消后的蓝色玻璃可读性，以及可立即操作指南上方的小型登录成功 HUD。最新确认的登录 HUD 为圆角方形（104×104dp），位于 SafeArea 内顶部留白（76dp）、指南页头下方的上部中央；不再采用历史大卡片与阻断指南的遮挡。前景到达动效不包裹整块玻璃，premium/full 材质继续拥有独立层。具体音乐表面和入口构图分别见已有 surface brief；没有建立新视觉世界。
 
@@ -190,7 +196,7 @@ Beta.18 的范围以 docs/fixes-2026-10-26-beta18.md 为准：轻量首页问候
 
 - 封面主导，正文使用清楚稳定的主题表面。
 - 大标题、粗体分区、紧凑曲目元数据形成层级。
-- 中性白灰支撑经典浅色，Beta 红色统一导航和选中 chrome，显式 IP 图案与角色保留自身配色。
+- 中性白灰支撑经典浅色，Beta 蓝色统一导航和选中 chrome，显式 IP 图案与角色保留自身配色。
 - 五种播放器共用白色播放操作、进度、系统媒体音量与底部功能。
 - 真实玻璃服务持续挂载的悬浮 chrome、独立评论输入/发送、指定 Beta 账号控件和共享编辑/播放菜单；正文背景清楚稳定。
 - 原创音符/唱片双角色以可控矢量、关节动作和浅深色可辨轮廓承载入口识别；等待与成功采用共享分段 spinner 和绘制标记。
@@ -232,19 +238,19 @@ See docs/fixes-2026-10-27-beta19.md for physical-device evidence and limitations
 ## Colors
 
 ### Primary
-Beta 的 beta-accent 来自用户固定参考图；深色使用 beta-accent-dark。BetaAppearance 与 app_theme.dart 将它们接入 primary，中性浅灰/既有深红面板接入 primaryContainer 和 surfaceContainerLow。四个目的地的选中图标与文字、个人页图标和相关选择使用这组颜色。正式 flavor 仍由既有主题种子与预设决定，primary-seed / primary-seed-dark 属于该保留系统。
+Beta 的 beta-accent / beta-accent-dark 使用蓝色语义色；浅色蓝针对中性分组面板上的小字加深。BetaAppearance 与 app_theme.dart 将它们接入 primary，中性浅灰/深灰面板接入 primaryContainer 和 surfaceContainerLow。四个目的地的选中图标与文字、个人页图标和相关选择使用这组颜色。正式 flavor 仍由既有主题种子与预设决定，primary-seed / primary-seed-dark 属于该保留系统。
 
-entry-coral 是欢迎伙伴、指南选中描边/进度/插画的重复局部强调，不能替代导航的 beta-accent。入口暖色浅背景与暗色暖黑背景是该组表面的构图材料，不作为全应用页面底色。
+entry-coral 仅负责欢迎伙伴、指南插画及品牌标题；指南进度和可选控件使用功能蓝，不能以品牌插画色替代导航的 beta-accent。入口暖色浅背景与暗色暖黑背景是该组表面的构图材料，不作为全应用页面底色。
 
-action-blue 是评论发送、新建/编辑歌单确认及 Beta.13 手机号登录的局部共享材质色，白色箭头/对勾/文字形成可辨操作；clear body 保留 alpha 蓝色及高光/折射，不能将它扩成新的导航强调。歌单关闭使用中性主题玻璃与局部 onSurface 图标。editing-blue / editing-blue-dark 仅负责 Beta 浅/深色光标、Cupertino 选择手柄及其 22% 透明度选区，导航继续使用既有红色。
+action-blue 是评论发送、新建/编辑歌单确认及 Beta.13 手机号登录的局部共享材质色，白色箭头/对勾/文字形成可辨操作；clear body 保留 alpha 蓝色及高光/折射；导航使用同一蓝色语义下的独立亮度适配值。歌单关闭使用中性主题玻璃与局部 onSurface 图标。editing-blue / editing-blue-dark 仅负责 Beta 浅/深色光标、Cupertino 选择手柄及其 22% 透明度选区，导航使用 beta-accent / beta-accent-dark。
 
 ### Secondary
-favorite 保留为正式渠道收藏色；Beta 已选心形读取亮度适配的 beta-accent / beta-accent-dark，未选读取实际局部 onSurfaceVariant。显式 IP 进度图案/角色保留自身配色，选择外框用红色，标签保持 text-primary-*。
+favorite 保留为正式渠道收藏色；Beta 已选心形读取亮度适配的 beta-favorite / beta-favorite-dark，未选读取实际局部 onSurfaceVariant。显式 IP 进度图案/角色保留自身配色，选择外框用蓝色，标签保持 text-primary-*。
 
 ### Neutral
-canvas-* 是经典纯色背景，surface-* 对应基础表面。正文、说明、弱提示成组随亮度切换；深色半透明文字须结合实际背景判断。Beta 个人页与低阶内容面板使用 beta-panel-*；经典浅色的表面与分层容器为中性白灰，不能从红色 seed 自动生成粉色背景。播放器使用 player-base、白色文字、封面模糊和深色罩层；非当前歌词降亮度。
+canvas-* 是经典纯色背景，surface-* 对应基础表面。正文、说明、弱提示成组随亮度切换；深色半透明文字须结合实际背景判断。Beta 个人页与低阶内容面板使用 beta-panel-*；经典浅色的表面与分层容器为中性白灰，不从功能色 seed 自动生成彩色底层。播放器使用 player-base、白色文字、封面模糊和深色罩层；非当前歌词降亮度。
 
-**The Theme Ownership Rule.** Beta 红色拥有导航与选择 chrome，歌曲封面拥有氛围，显式 IP 图案与角色拥有自身配色；正式 flavor 继续读取原主题。
+**The Theme Ownership Rule.** Beta 蓝色拥有导航与选择 chrome，粉色拥有收藏，绿色拥有签到完成，歌曲封面拥有氛围，显式 IP 图案与角色拥有自身配色；正式 flavor 继续读取原主题。
 
 **The Local Contrast Rule.** 经典灰色唱机的顶部收起/更多操作使用局部深色半透明底，底部加强深色罩层，歌手为不透明白字；共享上一首/播放/下一首仍是裸白色图标。
 
@@ -305,14 +311,14 @@ BetaGlassMenuSurface 将同一 betaMusicPillGlass 用于编辑横条、展开菜
 - **播放选择与历史**：单点只播放一首，明确“播放全部”才导入集合；已有手动待播提供保留/替换选择，手动项优先自动项。普通队列耗尽在完成或下一首时由平台继续，自动项在当前队列中有独立标识。上一首根据实际播放历史返回，无历史则重播当前；普通自动续播不取得 FM 反馈归属。MestingAudioHandler 是唯一播放 owner；后来暂停/停止/seek 会使慢速下一首结果失效。
 - **队列时长**：手动与自动项共用 QueueTrackDuration，显示对应录音正值总时长或 --:--；试听解码片段不作为总时长，非正值媒体信息不能覆盖正值目录数据。平台秒/毫秒别名统一解析，缺失的可见行通过只读元数据独立更新；两并发、同身份合并、有界缓存/超时和账号/录音/hash 检查防止错配。不以自动播放或换歌探测时长，失败不阻塞列表，不改顺序、播放归属或进度。
 
-- **按钮与表单**：既有 PlatformStyle 填充/描边最小 48×48dp，文字按钮 44×44dp；primary/onPrimary、低阶表面或安静文字区分层级。普通输入 18dp 圆角，焦点 primary 1.5dp 描边，错误使用主题 error。Beta 指定账号操作使用 BetaGlassButton：默认高 52dp、横向内距 18dp、15dp/700，强调版本使用当前亮度 Beta 红文字；调用点可设高度，不能把所有调用都记成 52dp。BetaGlassBackButton 为 48dp 圆形和中文返回语义。BetaGlassField 为 24dp 圆角，字段内距 20/17dp、外加横向 3dp，字段自身保留焦点、校验、键盘与错误语义。Beta.11 手机号页采用简洁标题、圆形返回、宽输入与单一主操作；_InlineCodeField 仅管理布局，验证码操作默认高 44dp、13dp/700，按 TextScaler 和六位数字测量宽度。窄屏大字将 14dp 标签移至框外，suffix 分为两行并增高，输入基准由 18dp 调整为 16dp 且继续使用系统 TextScaler，字段保留完整六位数字所需空间；320dp/1.6 浅深软件验证中六位 863432 的 maxScrollExtent<1，外标签/键盘主登录 hitTestable。按钮始终位于框内右侧，结构上为 Stack 内独立兄弟 premium 玻璃；旧整行操作已被最新要求取代。Mesting 新登录/注册在 Beta 标“暂不可用”并禁用，保留实现与既有会话；正式渠道继续原控件。
+- **按钮与表单**：既有 PlatformStyle 填充/描边最小 48×48dp，文字按钮 44×44dp；primary/onPrimary、低阶表面或安静文字区分层级。普通输入 18dp 圆角，焦点 primary 1.5dp 描边，错误使用主题 error。Beta 指定账号操作使用 BetaGlassButton：默认高 52dp、横向内距 18dp、15dp/700，强调版本使用当前亮度 Beta 蓝文字；调用点可设高度，不能把所有调用都记成 52dp。BetaGlassBackButton 为 48dp 圆形和中文返回语义。BetaGlassField 为 24dp 圆角，字段内距 20/17dp、外加横向 3dp，字段自身保留焦点、校验、键盘与错误语义。Beta.11 手机号页采用简洁标题、圆形返回、宽输入与单一主操作；_InlineCodeField 仅管理布局，验证码操作默认高 44dp、13dp/700，按 TextScaler 和六位数字测量宽度。窄屏大字将 14dp 标签移至框外，suffix 分为两行并增高，输入基准由 18dp 调整为 16dp 且继续使用系统 TextScaler，字段保留完整六位数字所需空间；320dp/1.6 浅深软件验证中六位 863432 的 maxScrollExtent<1，外标签/键盘主登录 hitTestable。按钮始终位于框内右侧，结构上为 Stack 内独立兄弟 premium 玻璃；旧整行操作已被最新要求取代。Mesting 新登录/注册在 Beta 标“暂不可用”并禁用，保留实现与既有会话；正式渠道继续原控件。
 - **许可入口**：所有登录类页面移除“开源许可与致谢”；Beta 设置应用分组中的 settings-open-source 项调用共享 showLicensePage，登录表单聚焦认证与真实协议/隐私同意。Beta.10 登录页许可按钮仅作为历史实现保留在交付记录。
 - **手机号当前状态**：Beta.13 的 +86 常驻，手机号方式使用手机图标；验证码与登录共用重复提交防护，但各自仅在自身请求时显示 spinner。登录主操作为共享 action-blue 玻璃白字，验证码平台成功后才出现“验证码已发送”成功 HUD 与倒计时。上述 Beta.11 窄屏响应测试为该版历史证据，不能作为本轮设备输入法或真实收码证明。
 - **文本编辑**：Beta 的既有账号、搜索、评论、歌单、资料与社交/聊天字段及 vendored 搜索通过同一 builder/selection controls 接入。横条的 > 展开为纵向玻璃菜单；只提供可用的粘贴、选择、全选及具有 hints 的系统自动填充，展开后非数字字段可插入 #，多行非数字字段可换行。密码/只读/数字条件限制动作，不加入未接功能；由 EditableText 提供可用性、锚点、选择与格式化，插入使用 userUpdateTextEditingValue。细蓝光标、22% 蓝选区和 Cupertino 细杆圆点手柄共用编辑色。菜单入/退（230/190ms）与展开（260ms）局部配对，原字段继续拥有 IME、最大长度和校验；软件 fixture 不认证真实 Android 输入法或自动填充。
 - **账号恢复呈现**：酷狗本地凭证读取失败显示“账号暂未恢复，登录信息已保留”，分别提供“重试恢复”和“重新登录”，不把错误绘制为游客。旧加密内容的保留与新认证接受规则见 PRODUCT.md；该错误界面不是此前设备故障根因已验证的声明。
 - **统一账号与同意组**：BetaAccountCard 在我的/设置复用头像、真实昵称/来源与一个登录或管理操作，取代双账号宣传模块；游客登录进入共享欢迎页。BetaConsentRow 将 14dp 小圆标放在 44dp 语义目标中，与正文及独立协议链接整组居中，使用紧凑 Wrap 适应大字/小屏；标注红框不属于产品边框。具体入口构图留在 auth surface brief。
-- **Chip / 面板**：普通 chip 选中为 primary 轻填充。PlatformPanel 为 22dp 圆角、20dp 内距的不透明 surfaceContainerLow。Beta 进度样式/角色选择用红色轻填充、边线与轻影，标签保持主题主要文字；加载、失败、空数据及适用重试如实显示。
-- **导航**：四目的地和独立搜索延续，首页实心图标，选中图标/文字用 Beta 红色。底栏基础 64dp、搜索/accessory 50dp，随 TextScaler 最多加 28dp；内距 20/16dp、间距 8dp。滚动超过 88dp 收拢 accessory，回到 24dp 才展开，再点当前 tab 回顶部。局部 ValueNotifier 合并同帧滚动通知到帧后更新，只让底栏读取几何状态，premium/full 与完整动画保留；光学参数以当前 Elevation & Depth 为准。MusicShell 持久持有来源 tab 与滚动位置，BetaMusicShell 在播放器/设置后方保持挂载，chrome 仅改变透明度与显露。底部目的地结束本次搜索，临时路由仅暂存。内嵌搜索通过 BetaSearchBackHistory 的嵌套 LocalHistoryEntry 暴露真实返回目标，PopScope/BackButtonListener 与左右 32dp BetaEdgeBack 按“结果→搜索首页→来源页”处理；不抢占内部书架/滑块手势，实际 Android 系统边缘返回仍待真机。
+- **Chip / 面板**：普通 chip 选中为 primary 轻填充。PlatformPanel 为 22dp 圆角、20dp 内距的不透明 surfaceContainerLow。Beta 进度样式/角色选择用蓝色轻填充、边线与轻影，标签保持主题主要文字；加载、失败、空数据及适用重试如实显示。
+- **导航**：四目的地和独立搜索延续，首页实心图标，选中图标/文字用 Beta 蓝色。底栏基础 64dp、搜索/accessory 50dp，随 TextScaler 最多加 28dp；内距 20/16dp、间距 8dp。滚动超过 88dp 收拢 accessory，回到 24dp 才展开，再点当前 tab 回顶部。局部 ValueNotifier 合并同帧滚动通知到帧后更新，只让底栏读取几何状态，premium/full 与完整动画保留；光学参数以当前 Elevation & Depth 为准。MusicShell 持久持有来源 tab 与滚动位置，BetaMusicShell 在播放器/设置后方保持挂载，chrome 仅改变透明度与显露。底部目的地结束本次搜索，临时路由仅暂存。内嵌搜索通过 BetaSearchBackHistory 的嵌套 LocalHistoryEntry 暴露真实返回目标，PopScope/BackButtonListener 与左右 32dp BetaEdgeBack 按“结果→搜索首页→来源页”处理；不抢占内部书架/滑块手势，实际 Android 系统边缘返回仍待真机。
 - **播放条**：有当前媒体才显示，作为官方底栏 accessory；32dp 方封面、歌曲/歌手，仅保留播放/暂停与下一首两个裸图标。点击打开播放器、左右滑动切歌。较窄且文字放大时可省略歌手；不按宽度添加队列按钮。GlassButton.custom 基础高度 64dp，只订阅 playing 布尔值避免随进度事件重建，播放/暂停使用共享实时 toggle 操作以便快速再次点击取消淡出；复用既有音频服务。
 - **播放条长按**：测量现有胶囊锚点后打开共享玻璃菜单，源胶囊位置不变。上组为喜欢/添加歌单/当前队列，下组为歌词、平台歌曲的评论/音质及可用播放模式；仅真实 FM 归属提供“不喜欢这首”。菜单以 320ms 局部淡入/上移/缩放展开，反向下收，等待 route.completed 再调用原仓库、登录或音频操作；切歌后拒绝旧 intent。静态 sidecar 只表示菜单形态，不实现真实业务。
 - **播放器**：Beta 默认沉浸封面；cover、classic、aurora、cassette、lyricStage 五种样式保留上半区各自视觉/动态身份，下半区统一使用 ApplePlayerControls。顺序为进度与时间、裸白色 Cupertino 上一首/播放暂停/下一首、真实系统媒体音量、评论/音质/当前队列；封面和歌词两种状态都保留同一组控件。顶部小封面、歌名/歌手与模糊封面背景组织歌词页，点击同步歌词跳转进度。PlayerContentTransition 使用局部淡变、微移和缩放的成对入退，默认进入 360ms/退出 280ms；封面/歌词方向相反，上一首/下一首读取 userCommandStream，样式按枚举方向切换；共享 transport 与音频 owner 不重建，减少动画时该过渡归零。
@@ -326,7 +332,7 @@ BetaGlassMenuSurface 将同一 betaMusicPillGlass 用于编辑横条、展开菜
 - **评论等待与到达**：初次资源/评论读取只显示裸 BetaActivityIndicator，不添加等待卡片。评论行以真实 comment ID 保持稳定 key，320ms 淡入/上移只作用于新到达的前景；分页追加时已完成的行保留其到达状态。排序、范围、账号/请求守卫与真实写入结果继续由原业务持有，失败仍提供可操作原因与重试。
 - **评论菜单与 glyph**：BetaAnchoredMenu 打开时测量各自触发器的真实 RenderBox 宽度并约束菜单，最小触发器 90×44dp 不能当作固定弹层宽度；勾选/间隔/Expanded 标签在相同宽内布局。22dp 圆角菜单使用主题表面。PlayerCommentGlyph 以同一绘制函数提供圆形引号气泡并在教程复用；音质为 Cupertino 中间音箱，原操作语义和目标保留。
 - **音乐伙伴与预览**：欢迎/指南复用原创音符和唱片双角色，身体、四肢、面部与耳机由矢量分层绘制，深色外部轮廓提高对比而非全体发光。五种样式小预览共用一个局部绘制时钟与真实样式偏好，每张卡有独立可辨舞台、文字/勾选与 selected 语义，邻页通过 TickerMode 暂停；演示不新建音频服务。入口/指南的具体顺序与构图见对应 surface brief，不作为其他页面模板。
-- **装扮与启动**：保留浅/深/系统、自定义图片/视频、五种播放器与显式进度配色/角色；品牌选择器、重复皮肤说明/经典卡片、DRESS UP、followTheme 及 IP 装饰开关继续移除。图标固定 coral，启动页独立提供两张给定静态图（图一默认）、“音乐伙伴”“唱片派对”两段视频及经典 M 标识页；Beta.19 首次升级迁移到图一一次，之后保存用户选择。静态图完整 contain、同色留白、无音频及固定停留。选择行以 BetaPressSurface 局部圆角染色/缩放（.977）反馈，持久化成功才勾选；静态海报与显式预览分开，列表不自动播放。预览关闭是 48dp 圆形独立 premium 玻璃按钮。短片主体完整保持原比例，空余区域使用同一控制器的实时视频纹理模糊延展（sigma 24），请求透明状态/导航栏，保留原声。每个冷进程一次，依赖就绪和视频完成共同放行业务/恢复；未完成后台暂停后接续，完成后不重播，解码/停滞有界回退经典。预览单独持有控制器，退出释放，不重置进程门控。旧品牌迁移、显式 IP 保留、完整 IP 主题退役、背景强度 .58 与背景性能 automatic 延续；后者不降低指定 premium/full 玻璃。平台账号继续实际 coral 应用图标，正式主题契约保留。
+- **装扮与启动**：保留浅/深/系统、自定义图片/视频、五种播放器与显式进度配色/角色；品牌选择器、重复皮肤说明/经典卡片、DRESS UP、followTheme 及 IP 装饰开关继续移除。图标固定 coral，启动页独立提供两张给定静态图（图一默认）、“音乐伙伴”“唱片派对”两段视频及经典 M 标识页；Beta.19 首次升级迁移到图一一次，之后保存用户选择。静态图完整 contain、同色留白、无音频；首个完整解码帧绘制后保留约 500ms，同时等待真实依赖就绪。选择行以 BetaPressSurface 局部圆角染色/缩放（.977）反馈，持久化成功才勾选；静态海报与显式预览分开，列表不自动播放。预览关闭是 48dp 圆形独立 premium 玻璃按钮。短片主体完整保持原比例，空余区域使用同一控制器的实时视频纹理模糊延展（sigma 24），请求透明状态/导航栏，保留原声。每个冷进程一次，依赖就绪和视频完成共同放行业务/恢复；未完成后台暂停后接续，完成后不重播，解码/停滞有界回退经典。预览单独持有控制器，退出释放，不重置进程门控。旧品牌迁移、显式 IP 保留、完整 IP 主题退役、背景强度 .58 与背景性能 automatic 延续；后者不降低指定 premium/full 玻璃。平台账号继续实际 coral 应用图标，正式主题契约保留。
 - **首页问候**：冷进程首次可用的首页标题旁显示按时段与实际昵称生成的轻量文字，可见五秒后局部收起；无胶囊或音符 badge，长昵称单行省略且不挤成两行首页标题。淡入/微移与尺寸变化统一 320ms，减少动画归零；进程级非 autoDispose 标记防止后台切回和路由重挂重播，不作为其他页头的固定模板。
 - **状态反馈**：showMusicNotice 以顶部安全区下的单个半透明 HUD 替换前一个通知；短标题加图标，支持浅深色、淡入/顶部滑入/缩放与减少动画。普通提示省略旧说明，错误/警告保留可行动原因；Semantics liveRegion 读出可见信息。Beta 真实成功的 check 图标改用共享 900ms 绘制标记，2600ms 后反向退出，普通提示仍为 1900ms；评论“已发送”和验证码成功共用这一规则。不建立第二套业务成功状态，也不将软件回调等同于真实收码/云写入。
 - **等待与登录成功**：BetaActivityIndicator 统一分段 Cupertino spinner 的尺寸/语义，在所属请求区域呈现并禁用重复提交。BetaSuccessMark 圆环/对勾绘制为 900ms。登录成功使用 login-success 的 104×104dp 圆角方形，位于 SafeArea 内顶部 76dp、指南页头下方的上部中央，仅绘制自身方形；进入/退出为 300/220ms，1800ms 后反向退出。指南与成功事件同帧挂载、可见且可操作，只有 HUD 忽略指针；Next/Skip/Back 始终继续同一个指南状态，延迟完成回调不能重置页码或在完成后重开指南。减少动画时 HUD/标记直接终态且退出时长归零，反馈停留计时保留。原创 0.48 秒 SoundPool 提示音只随新交互成功事件调用一次，恢复/刷新及重复认证不触发，不请求音乐焦点或新建播放 owner；未认证真机响度。指南跳过以 340ms 当前页/第八页淡变微移，仍需“开始使用”；普通翻页仍为 380ms。欢迎 Navigator 的 child dispatcher 取得返回优先级，法规页先返回所属 Navigator。其余减少动画按实际组件分支记录；退出失败保留原会话和可恢复错误。
@@ -339,7 +345,7 @@ BetaGlassMenuSurface 将同一 betaMusicPillGlass 用于编辑横条、展开菜
 ## Do's and Don'ts
 
 ### Do:
-- **Do** 使用语义色并检查浅深色、红色选中 chrome 与装扮背景的最终对比。
+- **Do** 使用语义色并检查浅深色、蓝色选中 chrome、粉色收藏和绿色完成状态与装扮背景的最终对比。
 - **Do** 让封面、歌曲、歌手与真实平台内容承担信息层级。
 - **Do** 提供中文 tooltip/语义标签、selected 状态、文字缩放及可达操作。
 - **Do** 让加载、空状态、失败、草稿与账号归属如实可见。
@@ -362,3 +368,12 @@ BetaGlassMenuSurface 将同一 betaMusicPillGlass 用于编辑横条、展开菜
 签到页三个操作保留白底黑字及原 premium 玻璃。页面回弹的 ImageFiltered 会隔离 Scaffold 底层，因此签到正文在滚动内容内绘制同色 surface，供玻璃实际采样；禁止用禁用回弹、平面白底按钮或降低折射质量掩盖问题。所有 BetaGlassButton 在滚动赢得手势时取消按压高光，普通点击与键盘反馈保留。账号恢复覆盖层拥有独立 Material/安全区，不继承 WidgetsApp 诊断文字样式。新入口、启动和天气契约见 [Beta.19 验证记录](docs/fixes-2026-10-27-beta19.md)。
 
 原生验证采用独立 `.beta.benchmark` 身份、内存偏好和静止封面夹具。只将通过可见入口门控与胶囊展开/收起断言的场景计入性能对比；它不认证所有业务场景稳定 120fps，也不构成进程 CPU 占用下降百分比。日常 Beta 的安装与冷启动单独检查。
+
+
+## Beta.20 interaction contracts
+
+- Keyboard search: the accessory wrapper includes the inner pill's IME extent in its layout/hit bounds; it does not add another visual translation or replace premium optics. Taps on the visible field must not reach songs behind it during IME changes.
+- Song comments, playlist comments and reply threads use the root navigator. Their opaque page owns its composer and covers persistent shell controls; audio ownership and background playback remain unchanged.
+- Signed days use a pale green rounded 44×48dp cell with the date and an inset check, independent of today's blue outline. One-line dates scale down only when their calendar column cannot fit the requested glyph width. The month count and progress use completion green; the auto-sign-in switch retains the functional tint.
+- StartupImageSurface reports its first decoded painted frame. StartupVisibilityGate measures the short static-image hold from that callback, not process startup; audio/optics initialize concurrently. Videos and formal-channel timing keep their prior contracts.
+- Live listening synchronization was not credited in the isolated test: cumulative server time stayed 850 seconds and the user confirmed the official app still showed 14 minutes and no daily record. Automatic duration reporting is not integrated. Today's already-claimed member reward cannot prove new task credit.

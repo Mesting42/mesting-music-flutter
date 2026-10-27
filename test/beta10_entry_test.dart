@@ -200,6 +200,15 @@ void main() {
           dark: dark,
         );
         for (var i = 0; i < 8; i++) {
+          final progress = tester.widget<AnimatedContainer>(
+            find.byKey(ValueKey('guide-progress-$i')),
+          );
+          expect(
+            (progress.decoration! as BoxDecoration).color,
+            Theme.of(
+              tester.element(find.byType(BetaOnboardingPage)),
+            ).colorScheme.primary,
+          );
           expect(
             find.text(betaGuidePages[i].title),
             i == 3 ? findsNothing : findsOneWidget,

@@ -101,9 +101,9 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
     final darkTheme = theme.copyWith(
       brightness: Brightness.dark,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: BetaAppearance.red,
+        seedColor: BetaAppearance.blue,
         brightness: Brightness.dark,
-      ),
+      ).copyWith(primary: BetaAppearance.accent(Brightness.dark)),
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
           foregroundColor: Colors.white,

@@ -8,8 +8,8 @@ import '../domain/platform_rewards.dart';
 import '../music_platform_providers.dart';
 import '../platform_rewards_provider.dart';
 import 'platform_reward_verification.dart';
-
-const _calendarBlue = Color(0xFF0069D5);
+import 'platform_reward_day.dart';
+import '../../themes/beta_appearance.dart';
 
 /// Findable on My immediately below the unified account presentation.
 class PlatformRewardEntry extends ConsumerWidget {
@@ -24,11 +24,7 @@ class PlatformRewardEntry extends ConsumerWidget {
       child: ListTile(
         key: const ValueKey('open-platform-reward-calendar'),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        leading: const Icon(
-          CupertinoIcons.calendar,
-          color: _calendarBlue,
-          size: 28,
-        ),
+        leading: Icon(CupertinoIcons.calendar, color: scheme.primary, size: 28),
         title: const Text(
           '签到与会员',
           style: TextStyle(fontWeight: FontWeight.w600),
@@ -94,6 +90,7 @@ class PlatformRewardCalendar extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final ink = scheme.onSurface;
     final muted = scheme.onSurfaceVariant;
+    final completedInk = BetaAppearance.success(scheme.brightness);
     final day = state.snapshot?.now ?? DateTime.now();
     final days = DateTime(day.year, day.month + 1, 0).day;
     final leading = DateTime(day.year, day.month, 1).weekday - 1;
@@ -309,7 +306,7 @@ class PlatformRewardCalendar extends ConsumerWidget {
                             gridDelegate:
                                 const SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: 7,
-                                  mainAxisExtent: 52,
+                                  mainAxisExtent: 58,
                                 ),
                             itemBuilder: (context, index) {
                               final number = index - leading + 1;
@@ -326,65 +323,12 @@ class PlatformRewardCalendar extends ConsumerWidget {
                               );
                               final future = number > day.day;
                               final today = number == day.day;
-                              return Semantics(
-                                label:
-                                    '${day.month}月$number日，${checked
-                                        ? '已签到'
-                                        : future
-                                        ? '未到日期'
-                                        : today
-                                        ? '今天，未签到'
-                                        : '未签到'}',
-                                child: ExcludeSemantics(
-                                  child: Center(
-                                    child: Container(
-                                      key: ValueKey('reward-day-$number'),
-                                      width: 38,
-                                      height: 38,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: checked ? _calendarBlue : null,
-                                        border: today && !checked
-                                            ? Border.all(
-                                                color: _calendarBlue,
-                                                width: 1.5,
-                                              )
-                                            : null,
-                                      ),
-                                      child: Stack(
-                                        clipBehavior: Clip.none,
-                                        alignment: Alignment.center,
-                                        children: [
-                                          Text(
-                                            '$number',
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: today || checked
-                                                  ? FontWeight.w600
-                                                  : FontWeight.w400,
-                                              color: checked
-                                                  ? Colors.white
-                                                  : future
-                                                  ? muted.withValues(alpha: .55)
-                                                  : ink,
-                                            ),
-                                          ),
-                                          if (checked)
-                                            const Positioned(
-                                              right: -2,
-                                              bottom: -2,
-                                              child: Icon(
-                                                CupertinoIcons
-                                                    .check_mark_circled_solid,
-                                                color: _calendarBlue,
-                                                size: 14,
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                              return PlatformRewardDay(
+                                number: number,
+                                month: day.month,
+                                checked: checked,
+                                today: today,
+                                future: future,
                               );
                             },
                           ),
@@ -400,8 +344,8 @@ class PlatformRewardCalendar extends ConsumerWidget {
                               ),
                               Text(
                                 '${signed.length}',
-                                style: const TextStyle(
-                                  color: _calendarBlue,
+                                style: TextStyle(
+                                  color: completedInk,
                                   fontWeight: FontWeight.w700,
                                   fontSize: 29,
                                 ),
@@ -420,7 +364,7 @@ class PlatformRewardCalendar extends ConsumerWidget {
                             value: signed.length / days,
                             minHeight: 5,
                             borderRadius: BorderRadius.circular(4),
-                            color: _calendarBlue,
+                            color: completedInk,
                             backgroundColor: scheme.surfaceContainerHighest,
                           ),
                           const SizedBox(height: 28),
@@ -440,7 +384,7 @@ class PlatformRewardCalendar extends ConsumerWidget {
                               ),
                               trailing: CupertinoSwitch(
                                 key: const ValueKey('reward-auto-sign-in'),
-                                activeTrackColor: _calendarBlue,
+                                activeTrackColor: scheme.primary,
                                 value: state.autoSignIn,
                                 onChanged: (value) async {
                                   try {

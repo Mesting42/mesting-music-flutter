@@ -3068,4 +3068,87 @@ void main() {
     },
     skip: !DistributionChannel.isBeta,
   );
+  testWidgets(
+    'beta20 comments from a nested library cover shell chrome through replies',
+    (tester) async {
+      for (final playlist in [false, true]) {
+        viewport(tester);
+        await prepare();
+        await pump(
+          tester,
+          Navigator(
+            onGenerateRoute: (_) => MaterialPageRoute<void>(
+              builder: (_) => Consumer(
+                builder: (context, ref, _) => Center(
+                  child: TextButton(
+                    onPressed: () {
+                      if (playlist) {
+                        openPlatformPlaylistComments(
+                          context,
+                          ref,
+                          id: 'gid',
+                          name: '我的歌单',
+                        );
+                      } else {
+                        openPlatformSongComments(context, ref, _track);
+                      }
+                    },
+                    child: const Text('打开嵌套歌单评论'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          shell: true,
+          location: '/music/library',
+        );
+        expect(find.byType(BetaMusicBottomBar), findsOneWidget);
+        await tester.tap(find.text('打开嵌套歌单评论'));
+        for (var i = 0; i < 8; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+        expect(find.byType(PlatformCommentComposer), findsOneWidget);
+        expect(find.byType(BetaMusicBottomBar), findsNothing);
+        expect(find.byType(FloatingPlaybackPill), findsNothing);
+        tester.view.viewInsets = const FakeViewPadding(bottom: 280);
+        await tester.pump(const Duration(milliseconds: 350));
+        expect(find.byType(BetaMusicBottomBar).hitTestable(), findsNothing);
+        await captureScreenshot(
+          tester,
+          'beta20-${playlist ? "playlist" : "song"}-comments-keyboard',
+        );
+        tester.view.resetViewInsets();
+        if (!playlist) {
+          await tester.tap(find.textContaining('查看回复').first);
+          for (var i = 0; i < 8; i++) {
+            await tester.pump(const Duration(milliseconds: 100));
+          }
+          expect(
+            tester
+                .widget<PlatformCommentsPage>(find.byType(PlatformCommentsPage))
+                .thread,
+            isNotNull,
+          );
+          expect(find.byType(BetaMusicBottomBar), findsNothing);
+          Navigator.of(
+            tester.element(find.byType(PlatformCommentsPage)),
+            rootNavigator: true,
+          ).pop();
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 500));
+        }
+        Navigator.of(
+          tester.element(find.byType(PlatformCommentsPage)),
+          rootNavigator: true,
+        ).pop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(find.byType(BetaMusicBottomBar), findsOneWidget);
+        expect(find.text('打开嵌套歌单评论'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await disposeFixture(tester);
+      }
+    },
+    skip: !DistributionChannel.isBeta,
+  );
 }

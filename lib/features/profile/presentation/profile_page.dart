@@ -103,7 +103,7 @@ class ProfilePage extends ConsumerWidget {
         eyebrow: 'COLLECTION',
         icon: Icons.library_music_rounded,
         color: DistributionChannel.isBeta
-            ? BetaAppearance.red
+            ? BetaAppearance.accent(Theme.of(context).brightness)
             : const Color(0xFF9A7AF1),
         title: '我的歌单',
         subtitle: '$playlists 个歌单 · 收藏你的声音',
@@ -114,7 +114,7 @@ class ProfilePage extends ConsumerWidget {
         eyebrow: 'FOOTPRINT',
         icon: Icons.equalizer_rounded,
         color: DistributionChannel.isBeta
-            ? BetaAppearance.red
+            ? BetaAppearance.accent(Theme.of(context).brightness)
             : MestingPalette.amber,
         title: '听歌排行',
         subtitle: listeningHistory.isEmpty
@@ -130,7 +130,7 @@ class ProfilePage extends ConsumerWidget {
         eyebrow: 'CONNECTION',
         icon: Icons.people_alt_rounded,
         color: DistributionChannel.isBeta
-            ? BetaAppearance.red
+            ? BetaAppearance.accent(Theme.of(context).brightness)
             : const Color(0xFF67A9F5),
         title: '关注与粉丝',
         subtitle: socialSummary == null
@@ -157,7 +157,7 @@ class ProfilePage extends ConsumerWidget {
         id: 'dress-up',
         eyebrow: 'IDENTITY',
         color: DistributionChannel.isBeta
-            ? BetaAppearance.red
+            ? BetaAppearance.accent(Theme.of(context).brightness)
             : MestingPalette.teal,
         iconWidget: _DressUpGlyph(
           key: ValueKey('profile-dress-up-glyph'),

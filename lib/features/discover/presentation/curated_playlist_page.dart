@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/audio/playback_providers.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../themes/beta_appearance.dart';
 import '../../../shared/models/track.dart';
 import '../../../shared/utils/duration_format.dart';
 import '../../../shared/widgets/artwork_image.dart';
@@ -257,11 +259,17 @@ class _PlaylistHero extends ConsumerWidget {
                             .read(audioHandlerProvider)
                             .replaceQueue(tracks!),
                   style: FilledButton.styleFrom(
-                    backgroundColor: MestingPalette.heart,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: MestingPalette.heart.withValues(
-                      alpha: .42,
-                    ),
+                    backgroundColor: DistributionChannel.isBeta
+                        ? Theme.of(context).colorScheme.primary
+                        : MestingPalette.heart,
+                    foregroundColor: DistributionChannel.isBeta
+                        ? Theme.of(context).colorScheme.onPrimary
+                        : Colors.white,
+                    disabledBackgroundColor:
+                        (DistributionChannel.isBeta
+                                ? Theme.of(context).colorScheme.primary
+                                : MestingPalette.heart)
+                            .withValues(alpha: .42),
                     disabledForegroundColor: Colors.white.withValues(
                       alpha: .72,
                     ),
@@ -328,7 +336,9 @@ class _CuratedTrackList extends ConsumerWidget {
     final currentId = ref.watch(currentMediaItemProvider).value?.id;
     final playing = ref.watch(playbackStateProvider).value?.playing ?? false;
     final tokens = context.musicThemeTokens;
-    final favoriteAccent = Theme.of(context).brightness == Brightness.dark
+    final favoriteAccent = DistributionChannel.isBeta
+        ? BetaAppearance.favorite(Theme.of(context).brightness)
+        : Theme.of(context).brightness == Brightness.dark
         ? MestingPalette.heartBright
         : MestingPalette.heart;
     return GlassCard(

@@ -10,6 +10,7 @@ import 'app/branded_launch_screen.dart';
 import 'app/mesting_music_app.dart';
 import 'app/startup_video_surface.dart';
 import 'app/startup_image_surface.dart';
+import 'app/startup_visibility_gate.dart';
 import 'core/audio/mesting_audio_handler.dart';
 import 'core/audio/playback_providers.dart';
 import 'core/platform/distribution_channel.dart';
@@ -77,12 +78,20 @@ class _MestingBootstrapState extends State<_MestingBootstrap> {
   bool _startupFinished = false;
   bool _persistenceStarted = false;
   bool _videoAborted = false;
+  bool _imageAborted = false;
+  late final _staticVisibility = StartupVisibilityGate(
+    onElapsed: () {
+      if (mounted) setState(() => _startupFinished = true);
+    },
+  );
 
   @override
   void initState() {
     super.initState();
     _startupStyle = savedStartupStyle(widget.preferences);
-    _startupFinished = !DistributionChannel.isBeta || !_startupStyle.isVideo;
+    _startupFinished =
+        !DistributionChannel.isBeta ||
+        (!_startupStyle.isVideo && !_startupStyle.staticImage);
     _dependencies = _initializeDependencies();
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => StartupTimingProbe.mark('startup_frame'),
@@ -156,12 +165,19 @@ class _MestingBootstrapState extends State<_MestingBootstrap> {
   }
 
   void _retry() {
+    _staticVisibility.dispose();
     setState(() {
       // Retry dependency initialization, not the already attempted startup film.
       _startupFinished = true;
       _videoAborted = true;
       _dependencies = _initializeDependencies();
     });
+  }
+
+  @override
+  void dispose() {
+    _staticVisibility.dispose();
+    super.dispose();
   }
 
   @override
@@ -175,11 +191,24 @@ class _MestingBootstrapState extends State<_MestingBootstrap> {
           child =
               DistributionChannel.isBeta &&
                   _startupStyle.staticImage &&
+                  !_imageAborted &&
                   !snapshot.hasError
               ? MaterialApp(
                   key: const ValueKey('startup-image-app'),
                   debugShowCheckedModeBanner: false,
-                  home: StartupImageSurface(style: _startupStyle),
+                  home: StartupImageSurface(
+                    style: _startupStyle,
+                    onPresented: _staticVisibility.presented,
+                    onFailed: () {
+                      _staticVisibility.dispose();
+                      if (mounted) {
+                        setState(() {
+                          _imageAborted = true;
+                          _startupFinished = true;
+                        });
+                      }
+                    },
+                  ),
                 )
               : DistributionChannel.isBeta &&
                     _startupStyle.isVideo &&

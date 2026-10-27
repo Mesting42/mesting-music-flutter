@@ -1115,6 +1115,13 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
           accessoryH;
 
       final innerBarContent = barContent;
+      // The inner pill already adds the IME float to its own layout. Its
+      // accessory wrapper must cover that same extent for hit testing: painting
+      // an overflowing pill above this box does not make it receive pointers.
+      // This grows only the bounds, not the translation or optical animation.
+      final keyboardFloat = _controller.searchFocused
+          ? MediaQuery.viewInsetsOf(context).bottom
+          : 0.0;
 
       // Must resolve identically to GlassTabBar.preferredSize's call, or the
       // scaffold reserves a height this engine does not draw.
@@ -1154,7 +1161,8 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
           builder: (context, accessoryT, _) {
             // Outer container height follows the ACCESSORY state.
             final height =
-                ui.lerpDouble(expandedH, collapsedPillH, accessoryT)!;
+                ui.lerpDouble(expandedH, collapsedPillH, accessoryT)! +
+                keyboardFloat;
 
             // Accessory left/right: constant when expanded, narrows when inline.
             final accessoryLeft = ui.lerpDouble(

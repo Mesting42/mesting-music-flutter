@@ -29,7 +29,9 @@ Future<void> openPlatformSongComments(
     ref.read(musicPlatformApiProvider),
     session,
   );
-  await Navigator.of(context).push(
+  // The source can live inside the library's nested navigator. Comments own
+  // their composer and must cover the shell's persistent navigation/player.
+  await Navigator.of(context, rootNavigator: true).push(
     MaterialPageRoute<void>(
       builder: (_) =>
           PlatformSongCommentsPage(track: track, repository: repository),
@@ -107,7 +109,7 @@ void openPlatformPlaylistComments(
     showPlatformFailure(context, const MusicPlatformException('平台未返回歌单评论标识'));
     return;
   }
-  Navigator.of(context).push(
+  Navigator.of(context, rootNavigator: true).push(
     MaterialPageRoute<void>(
       builder: (_) => PlatformCommentsPage(
         resource: PlatformCommentResource(
@@ -495,17 +497,22 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
                                         ? () => _delete(comment)
                                         : null,
                                     onThread: widget.thread == null
-                                        ? () => Navigator.of(context).push(
-                                            MaterialPageRoute<void>(
-                                              builder: (_) =>
-                                                  PlatformCommentsPage(
-                                                    resource: widget.resource,
-                                                    repository:
-                                                        widget.repository,
-                                                    thread: comment,
-                                                  ),
-                                            ),
-                                          )
+                                        ? () =>
+                                              Navigator.of(
+                                                context,
+                                                rootNavigator: true,
+                                              ).push(
+                                                MaterialPageRoute<void>(
+                                                  builder: (_) =>
+                                                      PlatformCommentsPage(
+                                                        resource:
+                                                            widget.resource,
+                                                        repository:
+                                                            widget.repository,
+                                                        thread: comment,
+                                                      ),
+                                                ),
+                                              )
                                         : null,
                                   ),
                                 ),

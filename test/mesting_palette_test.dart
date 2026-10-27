@@ -102,11 +102,11 @@ void main() {
                     normalizedPath.endsWith(
                       'android/app/src/main/kotlin/com/mesting/mesting_music/MainActivity.kt',
                     )));
-        final isPinnedBetaRed =
+        final isPinnedBetaArtOrFavorite =
             normalizedPath.endsWith(
               'lib/features/themes/beta_appearance.dart',
             ) &&
-            const {'DE3A3D', 'FF777A', '291D20', 'FCF0F0'}.contains(rgb);
+            const {'DE3A3D', 'FF2D55', 'FF375F'}.contains(rgb);
         // User-approved Beta.10 entry artwork keeps its coral/porcelain world
         // scoped to these new surfaces. Exact roles are listed, rather than
         // allowing arbitrary rose colors throughout the application.
@@ -126,7 +126,7 @@ void main() {
         if (isRoseFamily &&
             !isAllowedCoralBrandColor &&
             !isAllowedHeartColor &&
-            !isPinnedBetaRed &&
+            !isPinnedBetaArtOrFavorite &&
             !isPinnedBetaEntryColor) {
           violations.add(
             '${file.path}: #$rgb '

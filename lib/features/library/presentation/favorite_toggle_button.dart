@@ -50,7 +50,7 @@ class FavoriteToggleButton extends ConsumerWidget {
               maximumSize: Size.square(dimension),
               foregroundColor: favorite
                   ? (DistributionChannel.isBeta
-                        ? BetaAppearance.accent(Theme.of(context).brightness)
+                        ? BetaAppearance.favorite(Theme.of(context).brightness)
                         : _favoriteAccent)
                   : Theme.of(context).colorScheme.onSurfaceVariant,
               overlayColor: Colors.transparent,

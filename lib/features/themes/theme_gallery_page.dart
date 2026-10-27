@@ -22,6 +22,11 @@ import 'theme_controller.dart';
 import 'music_theme_tokens.dart';
 import 'startup_style_picker.dart';
 
+// This shared gallery keeps the formal channel's original control tint.
+Color _galleryActionTint(BuildContext context) => DistributionChannel.isBeta
+    ? BetaAppearance.accent(Theme.of(context).brightness)
+    : BetaAppearance.artworkCoral;
+
 Future<void>? _dressUpAssetWarmup;
 
 Future<void> warmUpDressUpAssets(BuildContext context) {
@@ -982,7 +987,7 @@ class _PlayerStyleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.musicThemeTokens;
     final accent = DistributionChannel.isBeta
-        ? BetaAppearance.red
+        ? _galleryActionTint(context)
         : _playerStyleAccent(style);
     return SizedBox(
       width: 134,
@@ -1051,7 +1056,8 @@ class _PlayerStyleCard extends StatelessWidget {
 }
 
 Color _playerStyleAccent(PlayerVisualStyle style) => switch (style) {
-  PlayerVisualStyle.cover || PlayerVisualStyle.classic => BetaAppearance.red,
+  PlayerVisualStyle.cover ||
+  PlayerVisualStyle.classic => BetaAppearance.artworkCoral,
   PlayerVisualStyle.aurora => const Color(0xFF6BDCF5),
   PlayerVisualStyle.cassette => const Color(0xFFA78BFA),
   PlayerVisualStyle.lyricStage => const Color(0xFF5EEAD4),
@@ -1196,7 +1202,7 @@ class _IpCategoryCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: active ? BetaAppearance.red : tokens.border,
+              color: active ? _galleryActionTint(context) : tokens.border,
             ),
           ),
           child: Row(
@@ -1238,7 +1244,7 @@ class _IpCategoryCard extends StatelessWidget {
                 active
                     ? Icons.check_circle_rounded
                     : Icons.chevron_right_rounded,
-                color: active ? BetaAppearance.red : tokens.textMuted,
+                color: active ? _galleryActionTint(context) : tokens.textMuted,
                 size: 21,
               ),
             ],
@@ -1444,7 +1450,7 @@ class _ThemeModePresetCard extends StatelessWidget {
               border: Border.all(
                 color: active
                     ? (DistributionChannel.isBeta
-                          ? BetaAppearance.red
+                          ? _galleryActionTint(context)
                           : preset.accent)
                     : Colors.white.withValues(
                         alpha: mode == ThemeMode.light ? .74 : .2,
@@ -1494,7 +1500,9 @@ class _ThemeModePresetCard extends StatelessWidget {
                               height: 21,
                               decoration: BoxDecoration(
                                 color: DistributionChannel.isBeta
-                                    ? BetaAppearance.red
+                                    ? BetaAppearance.accent(
+                                        Theme.of(context).brightness,
+                                      )
                                     : preset.accent,
                                 shape: BoxShape.circle,
                                 border: Border.all(
@@ -1619,7 +1627,9 @@ class _IllustratedPresetCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: DistributionChannel.isBeta
-                                ? BetaAppearance.red
+                                ? BetaAppearance.accent(
+                                    Theme.of(context).brightness,
+                                  )
                                 : preset.accent,
                             width: 2,
                           ),
@@ -1770,7 +1780,7 @@ class _DecorationChoice extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.musicThemeTokens;
     final selectionAccent = DistributionChannel.isBeta
-        ? BetaAppearance.accent(Theme.of(context).brightness)
+        ? _galleryActionTint(context)
         : const Color(0xFF6C80EA);
     final label = character
         ? switch (value) {
@@ -1935,7 +1945,7 @@ class _SettingsAction extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 20, color: BetaAppearance.red),
+              Icon(icon, size: 20, color: _galleryActionTint(context)),
               const SizedBox(width: 9),
               Text(
                 label,
@@ -1992,10 +2002,12 @@ class _VisualControls extends StatelessWidget {
             const SizedBox(height: 5),
             SliderTheme(
               data: SliderTheme.of(context).copyWith(
-                activeTrackColor: BetaAppearance.red,
+                activeTrackColor: BetaAppearance.accent(
+                  Theme.of(context).brightness,
+                ),
                 inactiveTrackColor: tokens.borderStrong,
                 trackHeight: 4,
-                thumbColor: BetaAppearance.red,
+                thumbColor: _galleryActionTint(context),
                 thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
                 overlayShape: SliderComponentShape.noOverlay,
               ),
@@ -2080,7 +2092,7 @@ class _MusicToggle extends StatelessWidget {
           height: 28,
           padding: const EdgeInsets.all(3),
           decoration: BoxDecoration(
-            color: value ? BetaAppearance.red : tokens.borderStrong,
+            color: value ? _galleryActionTint(context) : tokens.borderStrong,
             borderRadius: BorderRadius.circular(999),
           ),
           child: AnimatedAlign(
@@ -2160,7 +2172,9 @@ class _PerformancePicker extends StatelessWidget {
                                       : Icons.circle_outlined,
                                   size: 17,
                                   color: mode == selected
-                                      ? BetaAppearance.red
+                                      ? BetaAppearance.accent(
+                                          Theme.of(context).brightness,
+                                        )
                                       : tokens.textMuted,
                                 ),
                                 const SizedBox(width: 7),

@@ -24,7 +24,7 @@ Mesting 是一款 Flutter 音乐应用，帮助用户快速发现、播放和管
 
 ## Capabilities and Constraints
 
-- Beta.19 adds two original user-supplied static startup images, alongside both existing videos and the classic screen. One upgrade migration selects image one; subsequent user choices persist. The full image is fitted without cropping. Static startup has no artificial delay or decoder; optics/audio initialize concurrently before business pages mount. Formal startup behavior remains.
+- Beta.19 adds two original user-supplied static startup images, alongside both existing videos and the classic screen. One upgrade migration selects image one; subsequent user choices persist. The full image is fitted without cropping. Beta.20 holds each static startup image for about 500ms after its first decoded painted frame; optics/audio still initialize concurrently before business pages mount. Formal startup behavior remains.
 - Beta.19 preserves all premium glass optics and capsule motion while reusing unchanged geometry and updating shader coordinates when an Android overscroll ImageFilter pass changes. Seven independent saved Shinchan weather choices are available beneath progress characters; offscreen and reduced-motion previews stop. Formal-only assets leave the Beta bundle and are checked in the actual APK.
 
 - 现有项目使用 Flutter。Android Beta 由 DistributionChannel.isBeta（appFlavor == beta）接入，包名 com.mesting.music.beta；正式 flavor 的页面、主题、定制推荐、导航和默认黑胶保持其原有契约。共享工具的改进按调用点生效，不构成全局渠道切换。
@@ -133,3 +133,15 @@ Mesting 是一款 Flutter 音乐应用，帮助用户快速发现、播放和管
 - 签到页三个玻璃操作保持白底黑字，滚动回弹仍保留；在离屏合成内补齐真实同色页面底层。蓝色手机登录/触感按钮继续保持蓝底白字。
 - 真机性能采用隔离身份的受控首页/胶囊场景；普通 Beta 安装与启动另验。不得把主机软件图、后台被入口覆盖的页面或未完成开合的测量作为设备优化结论。
 - 本次早期 Flutter drive 使用默认结束清理，发生了日常 Beta 卸载，原登录态/本机数据保留未通过认证；已向用户说明。后续改为隔离包并强制 keep-app-running，工具校验包名后才运行。当前交付、数字及限制见 docs/fixes-2026-10-27-beta19.md。
+
+
+## Beta.20 confirmed refinement scope
+
+Keyboard search hit geometry follows the visible IME-raised field. Comments and
+reply threads cover the whole navigation shell. Functional actions and selection
+use blue, favorites pink and saved sign-ins green, with neutral grouped surfaces
+and brightness/contrast adaptation. Cover atmosphere and branded/IP artwork keep
+their own palette. Static startup images receive a short full-image presentation
+period after decoding and painting. No automatic listening-time synchronization
+is enabled: two isolated real-playback tests did not show credited cumulative or
+daily time in server readback or the user's official-app comparison.

@@ -648,7 +648,11 @@ class _PlaylistHeroAction extends StatelessWidget {
               ),
               height: 48,
               decoration: BoxDecoration(
-                color: emphasized ? MestingPalette.heart : tokens.glassSubtle,
+                color: emphasized
+                    ? (DistributionChannel.isBeta
+                          ? Theme.of(context).colorScheme.primary
+                          : MestingPalette.heart)
+                    : tokens.glassSubtle,
                 borderRadius: BorderRadius.circular(17),
                 border: Border.all(
                   color: emphasized
@@ -662,13 +666,21 @@ class _PlaylistHeroAction extends StatelessWidget {
                   Icon(
                     icon,
                     size: 19,
-                    color: emphasized ? Colors.white : tokens.textPrimary,
+                    color: emphasized
+                        ? (DistributionChannel.isBeta
+                              ? Theme.of(context).colorScheme.onPrimary
+                              : Colors.white)
+                        : tokens.textPrimary,
                   ),
                   const SizedBox(width: 7),
                   Text(
                     label,
                     style: TextStyle(
-                      color: emphasized ? Colors.white : tokens.textPrimary,
+                      color: emphasized
+                          ? (DistributionChannel.isBeta
+                                ? Theme.of(context).colorScheme.onPrimary
+                                : Colors.white)
+                          : tokens.textPrimary,
                       fontSize: 13,
                       fontWeight: FontWeight.w900,
                     ),

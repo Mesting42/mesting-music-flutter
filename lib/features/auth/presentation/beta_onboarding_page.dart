@@ -227,13 +227,16 @@ class BetaOnboardingPageState extends ConsumerState<BetaOnboardingPage>
                                     vertical: 8,
                                   ),
                                   child: AnimatedContainer(
+                                    key: ValueKey('guide-progress-$i'),
                                     duration: const Duration(milliseconds: 240),
                                     width: i == _index ? 26 : 7,
                                     height: 7,
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(9),
                                       color: i == _index
-                                          ? const Color(0xFFDE5757)
+                                          ? Theme.of(
+                                              context,
+                                            ).colorScheme.primary
                                           : ink.withValues(alpha: .22),
                                     ),
                                   ),
