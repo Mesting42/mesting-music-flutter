@@ -1,4 +1,4 @@
-# Mesting Music 1.0.37-beta.21 的后续 Git 归档说明
+# Mesting Music 1.0.1 的后续 Git 归档说明
 
 日期：2026-10-27（Asia/Shanghai）。用户已确认补推尚未归档的交付版本。
 本树从对应原始源码 ZIP 建立，增加截至该版的来源清单与本文；原运行代码和历史文档字节保持。
@@ -9,9 +9,10 @@
 | --- | --- | --- |
 | 1.0.37-beta.20 | `v1.0.37-beta.20` | 1053 |
 | 1.0.37-beta.21 | `v1.0.37-beta.21` | 1070 |
+| 1.0.1 | `v1.0.1` | 1088 |
 
 Beta.20/21 标记历史预发布，1.0.1 起为正式发布；最新状态以 beta 分支的归档索引为准。
-当前树固定标签：`v1.0.37-beta.21`；包名 `com.mesting.music.beta`，code 21。
-来源清单：`docs/version-archive/beta.21-source-manifest.json`。原始 ZIP 附件保留全部原条目，归档文档不冒充原交付内容。
+当前树固定标签：`v1.0.1`；包名 `com.mesting.music.beta`，code 22。
+来源清单：`docs/version-archive/v1.0.1-source-manifest.json`。原始 ZIP 附件保留全部原条目，归档文档不冒充原交付内容。
 本次不访问手机、不安装、不重跑历史产品测试，原交付验收边界保持。
 此前已有标签、Release 和 main 分支保持；本次不上传私钥、账号记录、运行缓存或本机日志。

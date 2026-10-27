@@ -178,7 +178,7 @@ const betaUserAgreementDocument = LegalDocument(
 const betaPrivacyPolicyDocument = LegalDocument(
   type: LegalDocumentType.privacyPolicy,
   title: '隐私政策',
-  summary: '说明当前 Android Beta 在你使用具体功能时涉及的信息、服务提供方、本机存储及管理方式。未开通的能力不作为收集信息的理由。',
+  summary: '说明当前 Android 客户端在你使用具体功能时涉及的信息、服务提供方、本机存储及管理方式。未开通的能力不作为收集信息的理由。',
   effectiveDate: '更新及生效日期：2026 年 10 月 27 日',
   sections: [
     LegalDocumentSection(
@@ -219,7 +219,7 @@ const betaPrivacyPolicyDocument = LegalDocument(
     LegalDocumentSection(
       title: '八、服务提供方与历史账号',
       body:
-          '在线音乐、平台账号、资源和任务涉及酷狗及相应资源服务，验证页面涉及腾讯相关服务；第三方会按其自身规则处理收到的信息。本版随包的原生适配服务用于发起这些请求，不要求你另行配置 API。共享工程的历史 Mesting 会话仍可能使用腾讯云 CloudBase 的认证、资料或存储能力；当前 Beta 已移除新的 Mesting 注册/登录入口，不将其与酷狗账号混同，也不把旧版 Java + MySQL 测试渠道描述成当前账号服务。',
+          '在线音乐、平台账号、资源和任务涉及酷狗及相应资源服务，验证页面涉及腾讯相关服务；第三方会按其自身规则处理收到的信息。本版随包的原生适配服务用于发起这些请求，不要求你另行配置 API。版本检查与更新文件由 Ring Download（download.csnas.asia 及 download1.csnas.asia）提供，服务端会接收联网所需的 IP 和请求信息。你主动下载更新时，还会发送应用版本及随机生成、保存在本机的安装级下载标识，用于下载会话和续传；该标识不读取 IMEI、不使用音乐账号身份。本版使用 HTTPS 下载，不启用 P2P/P8P 或向其他用户上传分享文件。安装更新需由系统确认，可能需你主动授予此应用的安装来源权限。共享工程的历史 Mesting 会话仍可能使用腾讯云 CloudBase 的认证、资料或存储能力；当前客户端已移除新的 Mesting 注册/登录入口，不将其与酷狗账号混同，也不把旧版 Java + MySQL 测试渠道描述成当前账号服务。',
     ),
     LegalDocumentSection(
       title: '九、保留、退出与删除边界',

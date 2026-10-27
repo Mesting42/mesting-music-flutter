@@ -29,6 +29,8 @@ class AppUpdateManifest {
     required this.sha256,
     required this.sizeBytes,
     required this.publishedAt,
+    this.apkBackupUrl,
+    this.downloadEtag,
   });
 
   factory AppUpdateManifest.fromJson(Map<String, Object?> json) {
@@ -95,6 +97,11 @@ class AppUpdateManifest {
   final String sha256;
   final int sizeBytes;
   final DateTime publishedAt;
+
+  /// Optional file-identical HTTPS mirror and Range identity from one release
+  /// snapshot. The downloader must not combine metadata from different checks.
+  final Uri? apkBackupUrl;
+  final String? downloadEtag;
 
   bool isNewerThan(AppVersionInfo current) =>
       packageName == current.packageName && versionCode > current.versionCode;

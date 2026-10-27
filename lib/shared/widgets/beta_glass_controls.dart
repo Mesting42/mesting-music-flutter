@@ -41,9 +41,9 @@ class BetaGlassButton extends StatelessWidget {
     // Blocking a sibling request is an interaction state, not a new optical
     // material. Keep the same glass layer instead of inserting disabled opacity.
     child: ExcludeFocus(
-      excluding: !interactionEnabled,
+      excluding: !interactionEnabled || loading,
       child: IgnorePointer(
-        ignoring: !interactionEnabled,
+        ignoring: !interactionEnabled || loading,
         child: RepaintBoundary(
           child: GlassButton.custom(
             onTap: () {
@@ -56,7 +56,7 @@ class BetaGlassButton extends StatelessWidget {
               }
               onPressed!();
             },
-            enabled: onPressed != null && !loading,
+            enabled: onPressed != null,
             height: height,
             width: width,
             useOwnLayer: true,

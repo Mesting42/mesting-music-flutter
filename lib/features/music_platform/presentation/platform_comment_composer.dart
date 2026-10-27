@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import '../../experience/presentation/beta_bottom_bar.dart';
 import '../../../shared/widgets/beta_glass_action.dart';
+import '../../../shared/widgets/beta_activity_indicator.dart';
 
 /// Input and send are sibling glass surfaces. Nesting a glass button inside a
 /// glass container disables its refraction in the renderer. Keep both bounded
@@ -95,28 +96,43 @@ class PlatformCommentComposer extends StatelessWidget {
             const SizedBox(width: 8),
             Semantics(
               button: true,
+              enabled: !sending,
+              liveRegion: sending,
+              excludeSemantics: true,
               label: sending ? '正在发送' : '发送评论',
               child: Tooltip(
                 message: '发送',
-                child: RepaintBoundary(
-                  child: GlassButton.custom(
-                    key: const ValueKey('comment-blue-glass-send'),
-                    onTap: onSend,
-                    enabled: !sending,
-                    width: 48,
-                    height: 48,
-                    useOwnLayer: true,
-                    quality: GlassQuality.premium,
-                    stretch: .15,
-                    shape: const LiquidRoundedRectangle(borderRadius: 24),
-                    settings: betaBlueActionGlass,
-                    child: sending
-                        ? const CupertinoActivityIndicator(color: Colors.white)
-                        : const Icon(
-                            CupertinoIcons.arrow_up,
-                            color: Colors.white,
-                            size: 23,
-                          ),
+                child: ExcludeFocus(
+                  excluding: sending,
+                  child: IgnorePointer(
+                    ignoring: sending,
+                    child: RepaintBoundary(
+                      child: GlassButton.custom(
+                        key: const ValueKey('comment-blue-glass-send'),
+                        // Busy is not a faded disabled material. Block interaction
+                        // above while keeping blue glass and white spinner opaque.
+                        onTap: () {
+                          if (!sending) onSend();
+                        },
+                        width: 48,
+                        height: 48,
+                        useOwnLayer: true,
+                        quality: GlassQuality.premium,
+                        stretch: .15,
+                        shape: const LiquidRoundedRectangle(borderRadius: 24),
+                        settings: betaBlueActionGlass,
+                        child: sending
+                            ? const BetaActivityIndicator(
+                                color: Colors.white,
+                                radius: 12,
+                              )
+                            : const Icon(
+                                CupertinoIcons.arrow_up,
+                                color: Colors.white,
+                                size: 23,
+                              ),
+                      ),
+                    ),
                   ),
                 ),
               ),

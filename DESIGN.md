@@ -355,6 +355,18 @@ BetaGlassMenuSurface 将同一 betaMusicPillGlass 用于编辑横条、展开菜
 
 本节只记录当前生产代码中可复用的组件规则，没有重新生成视觉系统、批准 comp、随机 seed 或 QUALITY BAR card。31 张生产控件主机捕获使用合成 fixture 与 Windows QA 字体；它们不认证 Android GPU、IME、TalkBack、实际蓝牙转移、系统手势或性能。`.impeccable/design.json` 存有本轮之前的叙述/示例漂移，未在这次普通扩展中修复，也不作为上述退役身份或 HUD 的新权威。
 
+### Release 1.0.1 current component rules (authoritative)
+
+2026-10-27：本节是同一视觉世界内已确认的扩展，覆盖上文 Beta.21 的纯文字成功 HUD、暖色欢迎背景及旧版更新关闭说明；其他既有规则继续有效。方向见 [.impeccable/surfaces/release-1.0.1.md](.impeccable/surfaces/release-1.0.1.md)。沿用字阶、语义色、Cupertino 操作与 premium 光学，不新建 token 系统或 UI comp。
+
+- **中性入口规则**：欢迎页使用近白/近黑底，角色与品牌继续在操作上方；手机号为蓝色完整胶囊与 `CupertinoIcons.device_phone_portrait`，微信使用完整中性玻璃，游客/其他方式为一组次级操作。角色 atlas、舞台、默认 hi/三道手指线、搭肩位置与全部动作保持原字节，暖色角色本身不改色。
+- **静态成功规则**：小型成功 HUD 恢复使用现有主题成功绿的静态圆环/对勾（`BetaSuccessMark(animated: false)`），保留可读结果文字、live-region 与容器进退。不要恢复标记绘制动画，也不要将此规则套到独立登录成功 HUD。
+- **等待不降材质规则**：评论发送保持原 48dp 独立蓝色 premium 表面，通过 input/focus 守卫阻断重复操作。仅发送子控件使用 `beta_activity_indicator.dart` 的自绘 Cupertino 风格八刻度：白色、radius 12、刻度 alpha 80–255，前导刻度完全不透明；1 秒局部绘制周期，TickerMode 关闭或减少动画时暂停。它替代原 CupertinoActivityIndicator 的较低刻度透明度，同时保留 IgnorePointer、ExcludeFocus、发送语义及原光学，不改变蓝色玻璃来掩盖等待标记。共享 BetaGlassButton loading 继续保持同一光学层并阻断指针/焦点，此局部替换不成为全应用 spinner 规范。
+- **立即可见的更新规则**：手动检查先展示同一套 `BetaGlassMenuSurface`（圆角 34dp）抽屉，随后由单一控制器更新检查、当前、可用、下载/暂停、校验、权限、安装或错误内容。保留抓手、强标题、关闭、安全区和主题蓝主操作；已打开系统安装不能描述为安装成功，缺失发布说明就省略。短屏正文可以滚动，关闭和重新打开不重置已有下载。
+- **真实细进度规则**：下载使用 4dp 胶囊轨道、主题蓝填充和百分比/真实字节对，标签使用 tabular figures。首帧从已持久化进度开始，后续仅填充以 180ms `easeOutCubic` 平滑，标签始终直接报告真实数据；减少动画归零。到 100% 后使用独立校验/安装状态，进度动画不承诺校验或安装已成功。此前 6dp 捕获不作为当前尺寸规范。
+
+更新的公开源、真实 build-code 顺序、续传/校验、安装权限及隐私边界由 PRODUCT.md 与实际业务 owner 持有；展示层不引入第二个更新任务。生产控件的主机捕获仍使用合成夹具与 Windows QA 字体，不证明 Android 玻璃 GPU、系统安装或真实设备交互。既有 design.json 漂移未重写，也不将其旧叙述固化为本版规则。
+
 ## Do's and Don'ts
 
 ### Do:

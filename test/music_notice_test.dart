@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mesting_music/shared/widgets/music_notice.dart';
 import 'package:mesting_music/core/platform/distribution_channel.dart';
+import 'package:mesting_music/shared/widgets/beta_success_feedback.dart';
 
 void main() {
   testWidgets('播放模式使用自定义悬浮提示并自动淡出', (tester) async {
@@ -107,6 +108,10 @@ void main() {
     expect(positioned.bottom, isNull);
     if (DistributionChannel.isBeta) {
       expect(find.byIcon(Icons.check_rounded), findsNothing);
+      expect(
+        tester.widget<BetaSuccessMark>(find.byType(BetaSuccessMark)).animated,
+        false,
+      );
     } else {
       expect(tester.widget<Icon>(find.byIcon(Icons.check_rounded)).size, 22);
     }

@@ -269,7 +269,7 @@ void main() {
   );
 
   testWidgets(
-    'success feedback retains words and removes the animated green mark',
+    'success feedback retains words and a complete static green mark',
     (tester) async {
       await mount(
         tester,
@@ -288,7 +288,18 @@ void main() {
       await tester.tap(find.text('切换'));
       await tester.pump(const Duration(milliseconds: 260));
       expect(find.text('已切换为单曲循环'), findsOneWidget);
-      expect(find.byType(BetaSuccessMark), findsNothing);
+      expect(find.byType(BetaSuccessMark), findsOneWidget);
+      expect(
+        tester.widget<BetaSuccessMark>(find.byType(BetaSuccessMark)).animated,
+        false,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(BetaSuccessMark),
+          matching: find.byType(TweenAnimationBuilder<double>),
+        ),
+        findsNothing,
+      );
       expect(find.byIcon(Icons.check_rounded), findsNothing);
       await tester.pump(const Duration(seconds: 4));
       await tester.pumpWidget(const SizedBox());

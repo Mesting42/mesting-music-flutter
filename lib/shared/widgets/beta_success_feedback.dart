@@ -4,26 +4,41 @@ import 'package:flutter/material.dart';
 
 /// Shared drawn mark for compact comment notices and the central login HUD.
 class BetaSuccessMark extends StatelessWidget {
-  const BetaSuccessMark({this.size = 26, super.key});
+  const BetaSuccessMark({
+    this.size = 26,
+    this.animated = true,
+    this.color,
+    super.key,
+  });
   final double size;
+  final Color? color;
+
+  /// Operational notices show the complete mark immediately. The dedicated
+  /// login HUD retains its independent animation unless explicitly requested.
+  final bool animated;
   @override
-  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
-    tween: Tween(begin: 0, end: 1),
-    duration: MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : const Duration(milliseconds: 900),
-    builder: (_, value, _) =>
-        CustomPaint(size: Size.square(size), painter: _MarkPainter(value)),
-  );
+  Widget build(BuildContext context) => !animated
+      ? CustomPaint(size: Size.square(size), painter: _MarkPainter(1, color))
+      : TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: 1),
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 900),
+          builder: (_, value, _) => CustomPaint(
+            size: Size.square(size),
+            painter: _MarkPainter(value, color),
+          ),
+        );
 }
 
 class _MarkPainter extends CustomPainter {
-  _MarkPainter(this.progress);
+  _MarkPainter(this.progress, this.color);
   final double progress;
+  final Color? color;
   @override
   void paint(Canvas canvas, Size size) {
     final pen = Paint()
-      ..color = const Color(0xFF2CB780)
+      ..color = color ?? const Color(0xFF2CB780)
       ..style = PaintingStyle.stroke
       ..strokeWidth = size.width * .035
       ..strokeCap = StrokeCap.round
@@ -52,7 +67,8 @@ class _MarkPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_MarkPainter old) => old.progress != progress;
+  bool shouldRepaint(_MarkPainter old) =>
+      old.progress != progress || old.color != color;
 }
 
 class BetaLoginSuccess extends StatefulWidget {

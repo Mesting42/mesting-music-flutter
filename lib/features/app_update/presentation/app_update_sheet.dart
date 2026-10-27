@@ -1,29 +1,83 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../themes/music_theme_tokens.dart';
 import '../app_update_providers.dart';
+import '../../../core/platform/distribution_channel.dart';
+import '../../../shared/widgets/beta_glass_popover.dart';
+import 'beta_app_update_sheet.dart';
 
 const appUpdateSheetContentKey = ValueKey<String>('app-update-sheet-content');
+bool _updateSheetOpen = false;
 
-Future<void> showAppUpdateSheet(BuildContext context) {
+/// Manual entry is immediately visible, including a slow/failed first request.
+/// Reopening an active download attaches to its existing owner instead of
+/// replacing it with a second check or another download task.
+Future<void> checkForUpdatesAndShowSheet(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final state = ref.read(appUpdateControllerProvider);
+  if (!state.busy && state.downloadedPath == null && state.receivedBytes == 0) {
+    unawaited(
+      ref.read(appUpdateControllerProvider.notifier).check(manual: true),
+    );
+  }
+  await showAppUpdateSheet(context);
+}
+
+Future<void> showAppUpdateSheet(BuildContext context) async {
+  if (_updateSheetOpen) return;
   final container = ProviderScope.containerOf(context, listen: false);
   final state = container.read(appUpdateControllerProvider);
   final current = state.currentVersion;
   final manifest = state.manifest;
   final mandatory =
       current != null && manifest != null && manifest.isMandatoryFor(current);
-  return showLiquidGlassBottomSheet<void>(
-    context: context,
-    useRootNavigator: true,
-    useSafeArea: true,
-    isScrollControlled: true,
-    isDismissible: !mandatory,
-    enableDrag: !mandatory,
-    barrierColor: Colors.black.withValues(alpha: .62),
-    builder: (_) => const AppUpdateSheet(),
-  );
+  _updateSheetOpen = true;
+  try {
+    if (DistributionChannel.isBeta) {
+      await showModalBottomSheet<void>(
+        context: context,
+        useRootNavigator: true,
+        useSafeArea: true,
+        isScrollControlled: true,
+        isDismissible: !mandatory,
+        enableDrag: !mandatory,
+        showDragHandle: false,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        barrierColor: Colors.black.withValues(alpha: .32),
+        sheetAnimationStyle: AnimationStyle(
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 360),
+          reverseDuration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 240),
+        ),
+        builder: (_) => const Padding(
+          padding: EdgeInsets.fromLTRB(10, 0, 10, 10),
+          child: BetaGlassMenuSurface(radius: 34, child: BetaAppUpdateSheet()),
+        ),
+      );
+      return;
+    }
+    await showLiquidGlassBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      useSafeArea: true,
+      isScrollControlled: true,
+      isDismissible: !mandatory,
+      enableDrag: !mandatory,
+      barrierColor: Colors.black.withValues(alpha: .62),
+      builder: (_) => const AppUpdateSheet(),
+    );
+  } finally {
+    _updateSheetOpen = false;
+  }
 }
 
 class AppUpdateSheet extends ConsumerWidget {
@@ -196,6 +250,7 @@ class AppUpdateSheet extends ConsumerWidget {
                   ),
                 ),
                 if (state.phase == AppUpdatePhase.downloading ||
+                    state.phase == AppUpdatePhase.verifying ||
                     state.phase == AppUpdatePhase.paused ||
                     (state.phase == AppUpdatePhase.failed &&
                         state.receivedBytes > 0)) ...[
@@ -294,6 +349,7 @@ class AppUpdateSheet extends ConsumerWidget {
     return switch (state.phase) {
       AppUpdatePhase.downloading =>
         '暂停下载 ${((state.progress ?? 0) * 100).round()}%',
+      AppUpdatePhase.verifying => '正在校验安装包',
       AppUpdatePhase.paused => '继续下载 ${((state.progress ?? 0) * 100).round()}%',
       AppUpdatePhase.permissionRequired => '授权后继续安装',
       AppUpdatePhase.readyToInstall => '继续安装',

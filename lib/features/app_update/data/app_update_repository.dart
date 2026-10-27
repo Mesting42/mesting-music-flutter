@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
@@ -9,6 +10,7 @@ import '../../../core/platform/distribution_channel.dart';
 
 import '../domain/app_update_models.dart';
 import 'app_update_platform.dart';
+import 'app_update_release_source.dart';
 
 typedef UpdateDownloadProgress =
     void Function(int receivedBytes, int totalBytes);
@@ -62,9 +64,11 @@ class AppUpdateRepository {
     required http.Client client,
     required AppUpdatePlatform platform,
     Uri? manifestUrl,
+    AppUpdateReleaseSource? releaseSource,
     UpdateDirectoryProvider? directoryProvider,
   }) : _client = client,
        _platform = platform,
+       _releaseSource = releaseSource,
        _manifestUrl = manifestUrl ?? Uri.parse(defaultManifestUrl),
        _directoryProvider = directoryProvider ?? getApplicationSupportDirectory;
 
@@ -87,6 +91,8 @@ class AppUpdateRepository {
 
   final http.Client _client;
   final AppUpdatePlatform _platform;
+  final AppUpdateReleaseSource? _releaseSource;
+  Future<String>? _deviceIdentity;
   final Uri _manifestUrl;
   final UpdateDirectoryProvider _directoryProvider;
 
@@ -97,6 +103,17 @@ class AppUpdateRepository {
       final current = await currentVersion();
       if (current.packageName != expectedPackageName) {
         throw const AppUpdateException('当前安装包标识不受支持', code: 'package');
+      }
+      final source = _releaseSource;
+      if (source != null) {
+        final manifest = await source.latest();
+        if (manifest.packageName != expectedPackageName) {
+          throw const AppUpdateException('更新包与当前应用不匹配', code: 'package');
+        }
+        return AppUpdateCheckResult(
+          currentVersion: current,
+          manifest: manifest,
+        );
       }
       // Static hosting can cache latest.json. The timestamp only bypasses that
       // cache; package identity and integrity are still verified below.
@@ -148,6 +165,42 @@ class AppUpdateRepository {
     required UpdateDownloadProgress onProgress,
     UpdateDownloadCancellationToken? cancellationToken,
   }) async {
+    try {
+      return await _downloadFrom(
+        manifest,
+        manifest.apkUrl,
+        onProgress: onProgress,
+        cancellationToken: cancellationToken,
+      );
+    } on AppUpdateException catch (error) {
+      final backup = manifest.apkBackupUrl;
+      // A single mirror attempt is allowed only for transport/server failures.
+      // Rate limits, rejected identity and integrity failures require recovery
+      // by the user; switching mirrors must not bypass those responses.
+      if (backup == null ||
+          backup == manifest.apkUrl ||
+          !const {
+            'interrupted',
+            'download_http_transient',
+          }.contains(error.code)) {
+        rethrow;
+      }
+      _throwIfCancelled(cancellationToken);
+      return _downloadFrom(
+        manifest,
+        backup,
+        onProgress: onProgress,
+        cancellationToken: cancellationToken,
+      );
+    }
+  }
+
+  Future<String> _downloadFrom(
+    AppUpdateManifest manifest,
+    Uri source, {
+    required UpdateDownloadProgress onProgress,
+    UpdateDownloadCancellationToken? cancellationToken,
+  }) async {
     final files = await _filesFor(manifest);
     final snapshot = await inspectDownload(manifest);
     if (snapshot.completedPath case final completedPath?) {
@@ -158,14 +211,16 @@ class AppUpdateRepository {
     onProgress(receivedBytes, manifest.sizeBytes);
     _throwIfCancelled(cancellationToken);
     try {
-      final request = http.Request('GET', manifest.apkUrl)
-        ..headers['accept'] = 'application/vnd.android.package-archive';
-      if (receivedBytes > 0) {
-        request.headers['range'] = 'bytes=$receivedBytes-';
+      final response = await _sendDownloadRequest(
+        source,
+        manifest,
+        files,
+        receivedBytes,
+      );
+      if (cancellationToken?.isCancelled == true) {
+        await response.stream.drain<void>();
       }
-      final response = await _client
-          .send(request)
-          .timeout(const Duration(seconds: 20));
+      _throwIfCancelled(cancellationToken);
       var append = false;
       var verifyFullResponsePrefix = false;
       if (receivedBytes > 0 && response.statusCode == 206) {
@@ -181,8 +236,15 @@ class AppUpdateRepository {
         // Some static-hosting gateways advertise byte ranges but still return
         // the full object. Keep the persisted progress, verify the repeated
         // prefix byte-for-byte, then append only the unseen suffix.
-        append = true;
-        verifyFullResponsePrefix = true;
+        if (CsnasUpdateReleaseSource.isDownloadUrl(source)) {
+          // Ring's 200 response is a full replacement, not a Range append.
+          receivedBytes = 0;
+          await _deleteIfPresent(files.partial);
+          onProgress(0, manifest.sizeBytes);
+        } else {
+          append = true;
+          verifyFullResponsePrefix = true;
+        }
       } else if (response.statusCode == 200) {
         receivedBytes = 0;
         await _deleteIfPresent(files.partial);
@@ -196,9 +258,14 @@ class AppUpdateRepository {
           )) {
         receivedBytes = 0;
       } else {
+        await response.stream.drain<void>();
         throw AppUpdateException(
-          '安装包下载失败（${response.statusCode}）',
-          code: 'download_http',
+          response.statusCode == 429
+              ? '下载请求较多，请稍后重试'
+              : '安装包下载失败（${response.statusCode}）',
+          code: response.statusCode >= 500
+              ? 'download_http_transient'
+              : 'download_http',
         );
       }
 
@@ -299,6 +366,117 @@ class AppUpdateRepository {
     }
   }
 
+  /// Redirects are bounded and session headers are rebuilt for each origin.
+  /// A signed external CDN redirect never receives the platform's session ID.
+  Future<http.StreamedResponse> _sendDownloadRequest(
+    Uri initial,
+    AppUpdateManifest manifest,
+    _UpdateFiles files,
+    int received,
+  ) async {
+    var url = initial;
+    Map<String, dynamic> sessions = {};
+    if (await files.httpState.exists()) {
+      try {
+        final saved = jsonDecode(await files.httpState.readAsString());
+        if (saved is Map<String, dynamic>) sessions = saved;
+      } on Object {
+        /* An incomplete sidecar never authorizes a session. */
+      }
+    }
+    for (var redirects = 0; redirects <= 3; redirects++) {
+      if (url.scheme != 'https' || url.userInfo.isNotEmpty || url.hasFragment) {
+        throw const AppUpdateException('下载地址无效，请重新检查更新', code: 'download_http');
+      }
+      final request = http.Request('GET', url)
+        ..followRedirects = false
+        ..headers['accept'] = 'application/vnd.android.package-archive';
+      if (received > 0) request.headers['range'] = 'bytes=$received-';
+      if (CsnasUpdateReleaseSource.isDownloadUrl(url)) {
+        final installed = await currentVersion();
+        request.headers['x-device-id'] = await (_deviceIdentity ??=
+            _loadDeviceIdentity(files.directory));
+        request.headers['x-client-app-version'] =
+            '${installed.versionName}+${installed.versionCode}'.replaceAll(
+              RegExp(r'[\r\n]'),
+              '',
+            );
+        final session = sessions[url.origin];
+        if (session is Map) {
+          final id = session['id'];
+          final etag = session['etag'];
+          if (_safeHeader(id)) {
+            request.headers['x-download-session-id'] = id as String;
+          }
+          if (received > 0 && _safeHeader(etag)) {
+            request.headers['if-range'] = etag as String;
+          }
+        }
+        if (received > 0 &&
+            !request.headers.containsKey('if-range') &&
+            url.origin == manifest.apkUrl.origin &&
+            _safeHeader(manifest.downloadEtag)) {
+          request.headers['if-range'] = manifest.downloadEtag!;
+        }
+      }
+      final response = await _client
+          .send(request)
+          .timeout(const Duration(seconds: 20));
+      if (const {301, 302, 303, 307, 308}.contains(response.statusCode)) {
+        final location = response.headers['location'];
+        await response.stream.drain<void>();
+        if (location == null || redirects == 3) {
+          throw const AppUpdateException('下载地址跳转异常，请重试', code: 'download_http');
+        }
+        url = url.resolve(location);
+        continue;
+      }
+      if (CsnasUpdateReleaseSource.isDownloadUrl(url) &&
+          const {200, 206}.contains(response.statusCode)) {
+        final sessionId = response.headers['x-download-session-id'];
+        final etag = response.headers['etag'];
+        sessions[url.origin] = {
+          if (_safeHeader(sessionId)) 'id': sessionId,
+          if (_safeHeader(etag)) 'etag': etag,
+        };
+        await files.httpState.writeAsString(jsonEncode(sessions), flush: true);
+      }
+      return response;
+    }
+    throw const AppUpdateException('下载地址跳转异常', code: 'download_http');
+  }
+
+  bool _safeHeader(Object? value) =>
+      value is String &&
+      value.isNotEmpty &&
+      value.length <= 512 &&
+      !value.contains(RegExp(r'[\r\n]'));
+
+  Future<String> _loadDeviceIdentity(Directory directory) async {
+    final file = File(
+      '${directory.path}${Platform.pathSeparator}download-installation-id',
+    );
+    if (await file.exists()) {
+      final saved = (await file.readAsString()).trim();
+      if (RegExp(
+        r'^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$',
+      ).hasMatch(saved)) {
+        return saved;
+      }
+    }
+    final random = math.Random.secure();
+    final bytes = List.generate(16, (_) => random.nextInt(256));
+    bytes[6] = (bytes[6] & 15) | 64;
+    bytes[8] = (bytes[8] & 63) | 128;
+    final hex = bytes
+        .map((value) => value.toRadixString(16).padLeft(2, '0'))
+        .join();
+    final id =
+        '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}';
+    await file.writeAsString(id, flush: true);
+    return id;
+  }
+
   /// Inspects an existing target/partial file before a download or resume.
   ///
   /// A complete APK is reused only after verifying its digest again; a filename
@@ -309,7 +487,7 @@ class AppUpdateRepository {
     final files = await _filesFor(manifest);
     await _clearOldDownloads(
       files.directory,
-      keep: {files.target.path, files.partial.path},
+      keep: {files.target.path, files.partial.path, files.httpState.path},
     );
 
     if (await files.target.exists()) {
@@ -399,6 +577,7 @@ class AppUpdateRepository {
       directory: directory,
       target: target,
       partial: File('${target.path}.partial'),
+      httpState: File('${target.path}.http.json'),
     );
   }
 
@@ -466,7 +645,9 @@ class AppUpdateRepository {
       if (entity is File &&
           !keep.contains(entity.path) &&
           entity.uri.pathSegments.last.startsWith('mesting-music-') &&
-          (entity.path.endsWith('.apk') || entity.path.endsWith('.partial'))) {
+          (entity.path.endsWith('.apk') ||
+              entity.path.endsWith('.partial') ||
+              entity.path.endsWith('.http.json'))) {
         await _deleteIfPresent(entity);
       }
     }
@@ -482,9 +663,11 @@ class _UpdateFiles {
     required this.directory,
     required this.target,
     required this.partial,
+    required this.httpState,
   });
 
   final Directory directory;
   final File target;
   final File partial;
+  final File httpState;
 }

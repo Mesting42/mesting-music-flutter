@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../core/platform/distribution_channel.dart';
 import '../../features/themes/beta_appearance.dart';
 import '../../core/haptics/app_haptics.dart';
+import 'beta_success_feedback.dart';
 
 OverlayEntry? _activeMusicNotice;
 // Kept for callers compiled against older releases; HUDs now use the top inset.
@@ -155,22 +156,26 @@ class _MusicNoticeOverlayState extends State<_MusicNoticeOverlay>
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // Beta success notices are text-only. Keep the
-                              // real outcome, live-region and haptic semantics;
-                              // dedicated login feedback owns its own animation.
-                              if (widget.icon != null &&
-                                  !(DistributionChannel.isBeta &&
-                                      (widget.icon == Icons.check_rounded ||
-                                          widget.icon == Icons.check))) ...[
-                                Icon(
-                                  widget.icon,
-                                  color: error
-                                      ? foreground
-                                      : BetaAppearance.accent(
-                                          Theme.of(context).brightness,
-                                        ),
-                                  size: 22,
-                                ),
+                              if (widget.icon != null) ...[
+                                if (DistributionChannel.isBeta &&
+                                    (widget.icon == Icons.check_rounded ||
+                                        widget.icon == Icons.check))
+                                  BetaSuccessMark(
+                                    animated: false,
+                                    color: BetaAppearance.success(
+                                      Theme.of(context).brightness,
+                                    ),
+                                  )
+                                else
+                                  Icon(
+                                    widget.icon,
+                                    color: error
+                                        ? foreground
+                                        : BetaAppearance.accent(
+                                            Theme.of(context).brightness,
+                                          ),
+                                    size: 22,
+                                  ),
                                 const SizedBox(width: 10),
                               ],
                               Flexible(

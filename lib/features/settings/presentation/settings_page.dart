@@ -129,7 +129,9 @@ class SettingsPage extends ConsumerWidget {
                       loading: updateState.phase == AppUpdatePhase.checking,
                       highlighted:
                           updateState.phase == AppUpdatePhase.available,
-                      onTap: updateState.busy
+                      onTap: DistributionChannel.isBeta
+                          ? () => checkForUpdatesAndShowSheet(context, ref)
+                          : updateState.busy
                           ? null
                           : () => _checkForUpdates(context, ref),
                     ),
@@ -260,6 +262,7 @@ class SettingsPage extends ConsumerWidget {
     if (update.phase == AppUpdatePhase.downloading) {
       return '正在下载新版本 ${((update.progress ?? 0) * 100).round()}%';
     }
+    if (update.phase == AppUpdatePhase.verifying) return '下载完成，正在校验安装包';
     if (update.phase == AppUpdatePhase.paused ||
         (update.phase == AppUpdatePhase.failed && update.receivedBytes > 0)) {
       return '新版本已下载 ${((update.progress ?? 0) * 100).round()}%，点击继续';

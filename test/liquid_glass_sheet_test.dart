@@ -85,6 +85,10 @@ void main() {
       // so the sheet itself must not add a second nested glass surface.
       if (entity.path.endsWith('playlist_editor_dialog.dart')) continue;
       if (entity.path.endsWith('beta_welcome_page.dart')) continue;
+      // The update route selects the channel's existing material: Beta owns
+      // one premium BetaGlassMenuSurface; stable retains the shared route.
+      // Its rendered states and navigation are exercised by release_101_ui_test.
+      if (entity.path.endsWith('app_update_sheet.dart')) continue;
       if (entity.readAsStringSync().contains('showModalBottomSheet')) {
         offenders.add(entity.path);
       }

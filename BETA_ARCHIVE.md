@@ -1,12 +1,14 @@
 # Mesting Music Beta 版本归档
 
-归档更新：2026-10-27（Asia/Shanghai）。已归档最新版本：**1.0.37-beta.19**；本机 Beta.20/21 修改尚未提交、推送或建立标签。当前本地 Beta.21 见 [修改记录](docs/fixes-2026-10-27-beta21.md) 与 [接续](docs/SESSION-HANDOFF-2026-10-27-BETA21.md)。Beta.20 的冻结 APK/源码包与历史记录完整保留。
+归档更新：2026-10-27（Asia/Shanghai）。Git 已归档最新版本仍为 **1.0.37-beta.19**；本机 Beta.20/21/1.0.1 修改尚未提交、推送或建立标签。当前公开命名交付为 **1.0.1 / 22**，见 [修改记录](docs/fixes-2026-10-27-v1.0.1.md) 与 [接续](docs/SESSION-HANDOFF-2026-10-27-v1.0.1.md)。Beta.20/21 的冻结 APK、源码 ZIP 与历史记录完整保留。
 日常开发分支：`beta`。另一台电脑从 [接续入口](docs/CONTINUE-BETA.md) 开始，
 源码和 APK 使用同名固定版本标签。正式分支 `main` 和已有标签/Release 保留原样。
 
 ## 本地工作区交付
 
-Beta.21 交付 `release/Mesting-Music-v1.0.37-beta.21.apk` 与 `Mesting-Music-beta.21-source.zip`；身份、签名、资源及主机验证边界见同目录验证 JSON 和接续记录。本轮没有安装手机、Git commit/tag/push 或 GitHub Release，因此下表仍只列已归档的 Beta.1–19。
+1.0.1 交付 `release/Mesting-Music-v1.0.1.apk` 与 `Mesting-Music-v1.0.1-source.zip`；身份、原签名、资源、平台及主机验证边界见同目录验证 JSON 和接续记录。本轮没有安装手机、Git commit/tag/push 或 GitHub Release，因此下表仍只列 Git 已归档的 Beta.1–19。平台发布不等同于 Git 归档。历史 Beta.21 交付文件与原有源码快照保持。
+
+当前 [music 公开下载](https://download.csnas.asia/music/download) 已返回 1.0.1 / 22，SHA256 与本地包相符；生产下载代码的主机真实 HTTPS 暂停/续传及完整摘要核验通过。后续发布见 [操作步骤](docs/RELEASE-UPDATE-GUIDE.md)。
 
 ## Beta.1–19 版本索引
 

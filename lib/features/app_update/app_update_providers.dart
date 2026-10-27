@@ -8,6 +8,8 @@ import 'package:http/http.dart' as http;
 import '../../core/persistence/app_preferences.dart';
 import 'data/app_update_platform.dart';
 import 'data/app_update_repository.dart';
+import 'data/app_update_release_source.dart';
+import '../../core/platform/distribution_channel.dart';
 import 'data/java_mysql_test_channel_repository.dart';
 import 'domain/app_update_models.dart';
 
@@ -28,6 +30,12 @@ final appUpdateRepositoryProvider = Provider<AppUpdateRepository>((ref) {
   return AppUpdateRepository(
     client: ref.watch(appUpdateHttpClientProvider),
     platform: ref.watch(appUpdatePlatformProvider),
+    releaseSource: DistributionChannel.isBeta
+        ? CsnasUpdateReleaseSource(
+            client: ref.watch(appUpdateHttpClientProvider),
+            packageName: DistributionChannel.packageName,
+          )
+        : null,
   );
 });
 
@@ -56,6 +64,7 @@ enum AppUpdatePhase {
   upToDate,
   available,
   downloading,
+  verifying,
   paused,
   permissionRequired,
   readyToInstall,
@@ -92,6 +101,7 @@ class AppUpdateState {
   bool get busy =>
       phase == AppUpdatePhase.checking ||
       phase == AppUpdatePhase.downloading ||
+      phase == AppUpdatePhase.verifying ||
       phase == AppUpdatePhase.launchingInstaller;
 
   AppUpdateState copyWith({
@@ -134,6 +144,7 @@ class AppUpdateController extends Notifier<AppUpdateState> {
   AppUpdateRepository get _repository => ref.read(appUpdateRepositoryProvider);
   UpdateDownloadCancellationToken? _downloadCancellation;
   Future<void>? _activeDownload;
+  bool _installInFlight = false;
 
   @override
   AppUpdateState build() {
@@ -145,7 +156,7 @@ class AppUpdateController extends Notifier<AppUpdateState> {
   }
 
   Future<AppUpdateCheckResult?> check({bool manual = false}) async {
-    if (state.phase == AppUpdatePhase.checking) return null;
+    if (state.busy || _activeDownload != null) return null;
     state = state.copyWith(phase: AppUpdatePhase.checking, errorMessage: null);
     try {
       final result = await _repository.check();
@@ -181,14 +192,17 @@ class AppUpdateController extends Notifier<AppUpdateState> {
         errorMessage: error.message,
       );
       return null;
+    } on Object {
+      state = state.copyWith(
+        phase: AppUpdatePhase.failed,
+        errorMessage: '暂时无法检查更新，请稍后重试',
+      );
+      return null;
     }
   }
 
   Future<void> downloadAndInstall() async {
-    final previousDownload = _activeDownload;
-    if (previousDownload != null) {
-      await previousDownload;
-    }
+    if (_activeDownload != null || state.busy) return;
     final manifest = state.manifest;
     if (manifest == null || state.busy) return;
     final task = _runDownload(manifest);
@@ -205,32 +219,37 @@ class AppUpdateController extends Notifier<AppUpdateState> {
   Future<void> _runDownload(AppUpdateManifest manifest) async {
     final cancellation = UpdateDownloadCancellationToken();
     _downloadCancellation = cancellation;
-    final existing = await _repository.inspectDownload(manifest);
-    if (existing.completedPath case final completedPath?) {
+    try {
+      // Storage inspection belongs to the same recoverable operation as the
+      // transfer: an unavailable directory must not escape the button callback.
+      final existing = await _repository.inspectDownload(manifest);
+      if (existing.completedPath case final completedPath?) {
+        state = state.copyWith(
+          phase: AppUpdatePhase.readyToInstall,
+          receivedBytes: manifest.sizeBytes,
+          totalBytes: manifest.sizeBytes,
+          downloadedPath: completedPath,
+          errorMessage: null,
+        );
+        await continueInstall();
+        return;
+      }
       state = state.copyWith(
-        phase: AppUpdatePhase.readyToInstall,
-        receivedBytes: manifest.sizeBytes,
+        phase: AppUpdatePhase.downloading,
+        receivedBytes: existing.receivedBytes,
         totalBytes: manifest.sizeBytes,
-        downloadedPath: completedPath,
+        downloadedPath: null,
         errorMessage: null,
       );
-      await continueInstall();
-      return;
-    }
-    state = state.copyWith(
-      phase: AppUpdatePhase.downloading,
-      receivedBytes: existing.receivedBytes,
-      totalBytes: manifest.sizeBytes,
-      downloadedPath: null,
-      errorMessage: null,
-    );
-    try {
       final path = await _repository.download(
         manifest,
         cancellationToken: cancellation,
         onProgress: (receivedBytes, totalBytes) {
           if (state.phase != AppUpdatePhase.downloading) return;
           state = state.copyWith(
+            phase: totalBytes > 0 && receivedBytes == totalBytes
+                ? AppUpdatePhase.verifying
+                : AppUpdatePhase.downloading,
             receivedBytes: receivedBytes,
             totalBytes: totalBytes > 0 ? totalBytes : manifest.sizeBytes,
           );
@@ -244,7 +263,17 @@ class AppUpdateController extends Notifier<AppUpdateState> {
       );
       await continueInstall();
     } on AppUpdateException catch (error) {
-      final persisted = await _repository.inspectDownload(manifest);
+      // A transfer error can coincide with a storage error. Preserve the last
+      // known progress when the partial file cannot currently be inspected.
+      AppUpdateDownloadSnapshot persisted;
+      try {
+        persisted = await _repository.inspectDownload(manifest);
+      } on Object {
+        persisted = AppUpdateDownloadSnapshot(
+          receivedBytes: state.receivedBytes,
+          totalBytes: manifest.sizeBytes,
+        );
+      }
       if (error.code == 'paused') {
         state = state.copyWith(
           phase: persisted.isComplete
@@ -266,6 +295,11 @@ class AppUpdateController extends Notifier<AppUpdateState> {
           errorMessage: persisted.isComplete ? null : error.message,
         );
       }
+    } on Object {
+      state = state.copyWith(
+        phase: AppUpdatePhase.failed,
+        errorMessage: '无法保存更新包，请检查可用空间后重试',
+      );
     } finally {
       if (identical(_downloadCancellation, cancellation)) {
         _downloadCancellation = null;
@@ -285,9 +319,12 @@ class AppUpdateController extends Notifier<AppUpdateState> {
 
   Future<void> continueInstall() async {
     final path = state.downloadedPath;
-    if (path == null || state.phase == AppUpdatePhase.launchingInstaller) {
+    if (path == null ||
+        _installInFlight ||
+        state.phase == AppUpdatePhase.launchingInstaller) {
       return;
     }
+    _installInFlight = true;
     try {
       if (!await _repository.canRequestPackageInstalls()) {
         state = state.copyWith(phase: AppUpdatePhase.permissionRequired);
@@ -309,6 +346,8 @@ class AppUpdateController extends Notifier<AppUpdateState> {
         phase: AppUpdatePhase.failed,
         errorMessage: '无法打开系统安装页面，请稍后重试',
       );
+    } finally {
+      _installInFlight = false;
     }
   }
 

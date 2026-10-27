@@ -1,10 +1,4 @@
-// THESIS: A coral music duo welcomes users into their chosen account or guest.
-// OWN-WORLD: Existing Mesting type, coral accent, premium navigation glass.
-// STORY: Meet the companions, choose a real login, then explore eight pages.
-// FIRST VIEWPORT: Art and brand above; phone, WeChat and auxiliary actions below.
-// FORM: User-specified native reference composition; no random seed or AI comp.
-// FINISH: unreviewed and undocumented is unfinished; this build ends with the
-// finish review, the verdict, and DESIGN.md.
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/persistence/app_preferences.dart';
@@ -124,24 +118,8 @@ class _BetaWelcomePageState extends ConsumerState<BetaWelcomePage> {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       key: const ValueKey('beta10-welcome-page'),
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: dark
-                ? const [
-                    Color(0xFF291B20),
-                    Color(0xFF111216),
-                    Color(0xFF181316),
-                  ]
-                : const [
-                    Color(0xFFFFE6DE),
-                    Color(0xFFFFF6EE),
-                    Color(0xFFFFFDFB),
-                  ],
-          ),
-        ),
+      body: ColoredBox(
+        color: dark ? const Color(0xFF0C0D0F) : const Color(0xFFF5F5F7),
         child: SafeArea(
           child: LayoutBuilder(
             builder: (context, bounds) => Center(
@@ -188,14 +166,18 @@ class _BetaWelcomePageState extends ConsumerState<BetaWelcomePage> {
                           const SizedBox(height: 38),
                           BetaGlassButton(
                             key: const ValueKey('welcome-phone-login'),
-                            accent: true,
+                            blue: true,
                             onPressed: _opening
                                 ? null
                                 : () => _platform(PlatformLoginMethod.phone),
                             child: const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.smartphone_rounded, size: 23),
+                                Icon(
+                                  CupertinoIcons.device_phone_portrait,
+                                  size: 23,
+                                  color: Colors.white,
+                                ),
                                 SizedBox(width: 9),
                                 Text('手机号登录'),
                               ],
@@ -210,25 +192,37 @@ class _BetaWelcomePageState extends ConsumerState<BetaWelcomePage> {
                             child: const Text('微信扫码登录'),
                           ),
                           const SizedBox(height: 18),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: BetaGlassButton(
-                                  height: 46,
-                                  onPressed: _opening ? null : _guest,
-                                  child: const Text('游客体验'),
+                          if (MediaQuery.textScalerOf(context).scale(15) > 18 ||
+                              bounds.maxWidth < 350) ...[
+                            BetaGlassButton(
+                              onPressed: _opening ? null : _guest,
+                              child: const Text('游客体验'),
+                            ),
+                            const SizedBox(height: 12),
+                            BetaGlassButton(
+                              onPressed: _opening ? null : _other,
+                              child: const Text('其他登录方式'),
+                            ),
+                          ] else
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: BetaGlassButton(
+                                    height: 46,
+                                    onPressed: _opening ? null : _guest,
+                                    child: const Text('游客体验'),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: BetaGlassButton(
-                                  height: 46,
-                                  onPressed: _opening ? null : _other,
-                                  child: const Text('其他登录方式'),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: BetaGlassButton(
+                                    height: 46,
+                                    onPressed: _opening ? null : _other,
+                                    child: const Text('其他登录方式'),
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
+                              ],
+                            ),
                           const SizedBox(height: 24),
                           BetaConsentRow(
                             accepted: _accepted,
