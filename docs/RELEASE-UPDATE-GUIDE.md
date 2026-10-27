@@ -1,12 +1,12 @@
 # 发布下一版应用更新
 
-适用当前 Mesting Music 的常规 HTTPS 更新链。用户第一次需手动覆盖安装 1.0.1；以后客户端从 music 公开 health 检查新版本。管理后台凭据只在浏览器使用，不应写入项目或构建参数。
+适用当前 Mesting Music 的常规 HTTPS 更新链。没有更新功能的旧版需手动覆盖安装一次当前正式版（现为 1.0.2）；1.0.1 起客户端从 music 公开 health 检查新版本。管理后台凭据只在浏览器使用，不应写入项目或构建参数。
 
-1. 保持包名 `com.mesting.music.beta`、显示名 Mesting Music 和原签名证书。公开版本使用正式数字，例如下一版 `1.0.2`，Android `versionCode` 必须大于当前的 `22`。
+1. 保持包名 `com.mesting.music.beta`、显示名 Mesting Music 和原签名证书。1.0.2 的实际 code 为 `23`；后续公开版本使用正式数字，例如 `1.0.3`，实际 code 必须大于 `23`。内部 flavor 仅用于已有安装的兼容，不另发公开 Beta 版本。
 2. 在保留当前工作区的前提下完成代码和相应回归，再构建：
 
    ```powershell
-   ./tool/build_android_md3_beta_apk.ps1 -FlutterSdkRoot 'D:/你的Flutter目录/flutter' -VersionName '1.0.2' -VersionCode 23
+   ./tool/build_android_release_apk.ps1 -FlutterSdkRoot 'D:/你的Flutter目录/flutter' -VersionName '1.0.3' -VersionCode 24
    ```
 
    不加 `--no-pub`。检查构建后的版本、包名、签名、SHA-256、大小及资源排除，保存独立版本安装包与源码快照。不要覆盖已冻结的旧交付文件。

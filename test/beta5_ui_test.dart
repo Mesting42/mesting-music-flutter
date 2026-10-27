@@ -2,6 +2,8 @@ import 'package:mesting_music/shared/widgets/beta_glass_action.dart';
 import 'package:mesting_music/features/experience/presentation/player_toolbar_glyphs.dart';
 import 'package:mesting_music/features/experience/presentation/immersive_lyrics.dart';
 import 'package:mesting_music/core/audio/audio_output_controller.dart';
+import 'package:mesting_music/features/experience/presentation/music_home_catalogues.dart';
+import 'package:mesting_music/features/profile/presentation/profile_page.dart';
 import 'package:mesting_music/features/experience/presentation/player_queue_panel.dart';
 import 'package:mesting_music/features/player/presentation/shinchan_progress_walker.dart';
 import 'package:mesting_music/shared/widgets/beta_text_editing.dart';
@@ -267,6 +269,7 @@ void main() {
   late bool metadataReady;
   late List<String> paths;
   Future<void> prepare({
+    bool richHome = false,
     bool guest = false,
     bool standardOnly = false,
     bool qualityUnknown = false,
@@ -347,6 +350,17 @@ void main() {
           '/top/playlist' => [
             {'global_collection_id': 'gid', 'name': '让旋律陪你走过四季'},
           ],
+          '/scene/module' => {
+            'content': [
+              {
+                'module_type': 2,
+                'module_id': 'music-fixture',
+                'extra': [
+                  {'tag_id': 'scene-music', 'content_type': 6},
+                ],
+              },
+            ],
+          },
           _ => {
             'info': [
               for (var i = 0; i < 3; i++)
@@ -431,12 +445,48 @@ void main() {
         ),
         platformExploreProvider.overrideWith(
           (ref, kind) async => [
-            PlatformExploreItem(
-              id: '1',
-              title: kind.label,
-              cover: _track.coverAsset,
-              kind: kind,
-            ),
+            if (richHome) ...[
+              for (var index = 0; index < 3; index++)
+                PlatformExploreItem(
+                  id: '${kind.name}-$index',
+                  title: switch (kind) {
+                    PlatformExploreKind.rank => [
+                      '酷狗飙升榜',
+                      '酷狗热歌榜',
+                      '酷狗TOP500',
+                    ][index],
+                    PlatformExploreKind.album => [
+                      '此刻，慢下来',
+                      '耳边的风',
+                      '周末唱片店',
+                    ][index],
+                    PlatformExploreKind.theme => [
+                      '华语流行',
+                      '独立与民谣',
+                      '城市夜曲',
+                    ][index],
+                    PlatformExploreKind.scene => [
+                      '专注工作',
+                      '运动时刻',
+                      '夜晚放松',
+                    ][index],
+                    PlatformExploreKind.playlist => [
+                      '温柔华语',
+                      '日落与旋律',
+                      '周末的耳机',
+                    ][index],
+                  },
+                  cover:
+                      'assets/images/playlists/${['13416469337261709', '13416469354055551', '13416469356600254'][index]}.jpeg',
+                  kind: kind,
+                ),
+            ] else
+              PlatformExploreItem(
+                id: '1',
+                title: kind.label,
+                cover: _track.coverAsset,
+                kind: kind,
+              ),
           ],
         ),
         platformDailyProvider.overrideWith((ref) async => [_track]),
@@ -619,6 +669,153 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pump(const Duration(milliseconds: 400));
   }
+
+  testWidgets(
+    'music refinement home shelves and single appearance entry',
+    (tester) async {
+      viewport(tester);
+      await prepare(richHome: true);
+      var fixtureDisposed = false;
+      addTearDown(() {
+        if (!fixtureDisposed) {
+          container.dispose();
+          library.dispose();
+        }
+      });
+      for (final dark in [false, true]) {
+        final suffix = dark ? 'dark' : 'light';
+        await pump(
+          tester,
+          const MusicLandingPage(),
+          shell: true,
+          dark: dark,
+          capture: 'refinement-home-$suffix-top',
+        );
+        final scrollable = find
+            .descendant(
+              of: find.byType(MusicLandingPage),
+              matching: find.byType(Scrollable),
+            )
+            .first;
+        for (final title in ['猜你喜欢', '新歌首发', '热门榜单', '新碟上架', '主题歌单', '场景音乐']) {
+          await tester.scrollUntilVisible(
+            find.text(title),
+            330,
+            scrollable: scrollable,
+          );
+          await tester.pump(const Duration(milliseconds: 450));
+          expect(tester.takeException(), isNull);
+          if (title == '热门榜单' || title == '场景音乐') {
+            await captureScreenshot(
+              tester,
+              'refinement-home-$suffix-${title == '热门榜单' ? 'ranks' : 'scenes'}',
+            );
+          }
+        }
+        // The scene action opens real catalogue tracks, not an inert chip.
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('home-scene-scene-0')),
+        );
+        await tester.pump(const Duration(milliseconds: 450));
+        await tester.tap(find.byKey(const ValueKey('home-scene-scene-0')));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 450));
+        expect(find.text('专注工作'), findsWidgets);
+        expect(paths, contains('/scene/module'));
+        expect(paths, contains('/scene/audio/list'));
+        await pump(
+          tester,
+          const ProfilePage(),
+          shell: true,
+          location: '/profile',
+          dark: dark,
+          capture: 'refinement-profile-$suffix',
+        );
+        final profileScroll = find
+            .descendant(
+              of: find.byType(ProfilePage),
+              matching: find.byType(Scrollable),
+            )
+            .first;
+        await tester.scrollUntilVisible(
+          find.text('应用'),
+          280,
+          scrollable: profileScroll,
+        );
+        await tester.pump(const Duration(milliseconds: 450));
+        expect(find.text('装扮'), findsNothing);
+        expect(find.text('设置'), findsOneWidget);
+        await captureScreenshot(tester, 'refinement-profile-$suffix-settings');
+        await pump(
+          tester,
+          const SettingsPage(),
+          location: '/music/settings',
+          dark: dark,
+        );
+        expect(find.text('装扮'), findsOneWidget);
+      }
+      viewport(tester, const Size(320, 780));
+      await pump(
+        tester,
+        const MusicHomeCatalogueShelf(PlatformExploreKind.album),
+        scale: 1.5,
+        capture: 'refinement-albums-narrow-large',
+      );
+      expect(find.text('此刻，慢下来'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await disposeFixture(tester);
+      fixtureDisposed = true;
+    },
+    skip: !DistributionChannel.isBeta,
+  );
+
+  testWidgets(
+    'music refinement toolbar and catalogue details remain connected',
+    (tester) async {
+      viewport(tester);
+      await prepare(richHome: true, playing: true);
+      var fixtureDisposed = false;
+      addTearDown(() {
+        if (!fixtureDisposed) {
+          container.dispose();
+          library.dispose();
+        }
+      });
+      (container.read(audioOutputProvider.notifier) as _Output).connect(
+        'vivo TWS 5',
+      );
+      await pump(
+        tester,
+        const BetaNowPlayingPage(),
+        dark: true,
+        capture: 'refinement-player-headphones',
+      );
+      expect(
+        tester
+            .widget<PlayerToolbarGlyph>(
+              find.byKey(const ValueKey('player-output-glyph')),
+            )
+            .headphones,
+        isTrue,
+      );
+      viewport(tester, const Size(320, 780));
+      await pump(
+        tester,
+        const MusicHomeCataloguePage(kind: PlatformExploreKind.album),
+        scale: 1.5,
+        capture: 'refinement-catalogue-narrow-large',
+      );
+      expect(find.text('此刻，慢下来'), findsOneWidget);
+      await tester.tap(find.text('此刻，慢下来'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 450));
+      expect(paths, contains('/album/songs'));
+      expect(tester.takeException(), isNull);
+      await disposeFixture(tester);
+      fixtureDisposed = true;
+    },
+    skip: !DistributionChannel.isBeta,
+  );
 
   testWidgets(
     'beta5 cover-led pages render in both themes and wide layouts',

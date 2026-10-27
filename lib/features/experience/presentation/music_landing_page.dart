@@ -14,6 +14,9 @@ import '../../themes/music_theme_tokens.dart';
 import 'editorial_widgets.dart';
 import '../../music_platform/presentation/platform_recommendations_page.dart';
 import '../../music_platform/data/platform_recommendations.dart';
+import '../../music_platform/data/platform_explore.dart';
+import '../../music_platform/platform_explore_providers.dart';
+import 'music_home_catalogues.dart';
 
 /// Home and discovery share presentation primitives, never the same content
 /// composition. All recommendation data still comes from the concept adapter.
@@ -39,6 +42,9 @@ class MusicLandingPage extends ConsumerWidget {
           ref.invalidate(platformDiscoveryProvider);
           ref.invalidate(platformFeaturedProvider);
           ref.invalidate(hotMusicControllerProvider);
+          for (final kind in PlatformExploreKind.values) {
+            ref.invalidate(platformExploreProvider(kind));
+          }
           await ref
               .read(platformDailyProvider.future)
               .then<void>((_) {}, onError: (Object _) {});
@@ -199,7 +205,33 @@ class MusicLandingPage extends ConsumerWidget {
               retry: () => ref.invalidate(platformDiscoveryProvider),
             ),
           ],
-          EditorialSection(discovery ? '精选歌单' : '发现你的下一张歌单'),
+          if (!discovery) ...[
+            const PlatformRecommendedSection(
+              title: '猜你喜欢',
+              kind: PlatformRecommendationKind.discover,
+            ),
+            EditorialSection(
+              '新歌首发',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const PlatformRecommendationDetail(
+                    title: '新歌首发',
+                    newSongs: true,
+                  ),
+                ),
+              ),
+            ),
+            _SongGroups(
+              value: newSongs,
+              retry: () => ref.invalidate(platformNewSongsProvider),
+            ),
+            const MusicHomeCatalogueShelf(PlatformExploreKind.rank),
+          ],
+          EditorialSection(
+            discovery ? '精选歌单' : '发现你的下一张歌单',
+            onTap: () =>
+                openMusicHomeCatalogue(context, PlatformExploreKind.playlist),
+          ),
           featured.when(
             loading: () => const PlatformFeedbackState(loading: true),
             error: (_, _) => EditorialEmpty(
@@ -243,10 +275,8 @@ class MusicLandingPage extends ConsumerWidget {
           ),
           if (!discovery) ...[
             const PlatformFmSection(),
-            const PlatformRecommendedSection(
-              title: '刷歌推荐',
-              kind: PlatformRecommendationKind.discover,
-            ),
+            for (final kind in musicHomeCatalogueOrder.skip(1))
+              MusicHomeCatalogueShelf(kind),
             EditorialSection(
               '听见你的这一年',
               onTap: () => context.push('/music/replay'),

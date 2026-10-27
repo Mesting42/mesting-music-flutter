@@ -121,7 +121,7 @@ void main() {
   );
 
   testWidgets(
-    'device card follows real route events and opens native picker only on request',
+    'device card follows route events and keeps Beta selection in its glass card',
     (tester) async {
       final messenger =
           TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
@@ -198,11 +198,12 @@ void main() {
       await tester.pumpAndSettle();
       if (DistributionChannel.isBeta) {
         expect(chooses, 0);
-        expect(find.text('选择播放设备'), findsOneWidget);
-        await tester.tap(find.text('系统设备管理'));
+        expect(find.text('播放设备'), findsOneWidget);
+        expect(find.text('系统设备管理'), findsNothing);
+        await tester.tap(find.text('完成'));
         await tester.pumpAndSettle();
       }
-      expect(chooses, 1);
+      expect(chooses, DistributionChannel.isBeta ? 0 : 1);
       expect(find.byKey(const ValueKey('apple-output-picker')), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());

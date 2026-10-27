@@ -43,6 +43,9 @@ class PlatformArtwork {
         'union_cover',
         'album_img',
         'album_cover',
+        'theme_cover',
+        'theme_image',
+        'scene_cover',
       ]) {
         final result = normalize(value[key]);
         if (result.isNotEmpty) return result;

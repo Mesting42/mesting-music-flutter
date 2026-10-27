@@ -5,7 +5,8 @@ import '../../../core/audio/audio_output_controller.dart';
 import 'apple_audio_glyphs.dart';
 
 /// This is content inside the existing glass output card, not a second dialog.
-/// Selection remains native-confirmed; the system path handles unsupported routes.
+/// Active selection stays native-confirmed; paused preferences are labelled
+/// separately, without opening a system picker or inventing a successful route.
 class PlayerOutputRoutes extends ConsumerStatefulWidget {
   const PlayerOutputRoutes({super.key});
   @override
@@ -25,7 +26,7 @@ class _PlayerOutputRoutesState extends ConsumerState<PlayerOutputRoutes> {
     try {
       await ref.read(audioOutputProvider.notifier).refreshRoutes();
     } catch (_) {
-      if (mounted) _error = '设备列表暂不可用，可从下方打开系统设备管理。';
+      if (mounted) _error = '设备列表暂不可用，请关闭后重试。';
     }
     if (mounted) setState(() => _loading = false);
   }
@@ -40,9 +41,9 @@ class _PlayerOutputRoutesState extends ConsumerState<PlayerOutputRoutes> {
       final confirmed = await ref
           .read(audioOutputProvider.notifier)
           .transfer(route.id);
-      if (mounted && !confirmed) _error = '系统尚未确认切换，请重试或使用系统设备管理。';
+      if (mounted && !confirmed) _error = '系统尚未确认切换，请重试。';
     } catch (_) {
-      if (mounted) _error = '切换未完成，请重试或使用系统设备管理。';
+      if (mounted) _error = '切换未完成，请重试。';
     }
     if (mounted) setState(() => _pending = null);
   }
@@ -72,7 +73,9 @@ class _PlayerOutputRoutesState extends ConsumerState<PlayerOutputRoutes> {
                 child: Row(
                   children: [
                     AppleAudioGlyph(
-                      route.headphones
+                      route.local
+                          ? AppleAudioGlyphKind.phone
+                          : route.headphones
                           ? AppleAudioGlyphKind.earphones
                           : AppleAudioGlyphKind.speakerLoud,
                       size: 29,
@@ -94,6 +97,8 @@ class _PlayerOutputRoutesState extends ConsumerState<PlayerOutputRoutes> {
                           Text(
                             _pending == route.id
                                 ? '正在切换…'
+                                : output.pendingId == route.id
+                                ? '已选择，播放时生效'
                                 : route.selected
                                 ? '当前播放设备'
                                 : '点按切换',
@@ -113,9 +118,9 @@ class _PlayerOutputRoutesState extends ConsumerState<PlayerOutputRoutes> {
                 ),
               ),
             ),
-          if (output.routes.every((route) => !route.selectable))
+          if (output.routes.isEmpty)
             Text(
-              '其他设备的连接或切换需要通过系统设备管理完成。',
+              '暂未读取到可用输出，请检查设备连接后重试。',
               style: TextStyle(
                 color: colors.onSurfaceVariant,
                 fontSize: 13,

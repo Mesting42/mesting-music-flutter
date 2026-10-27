@@ -1,11 +1,19 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-enum AppleAudioGlyphKind { route, earphones, speakerQuiet, speakerLoud, check }
+enum AppleAudioGlyphKind {
+  route,
+  earphones,
+  phone,
+  speakerQuiet,
+  speakerLoud,
+  check,
+}
 
-/// Application-authored vectors informed by Apple's playback-destination
-/// vocabulary. These are not extracted SF Symbols or an assertion of a device
-/// brand: native route metadata continues to own the actual name and type.
+/// Playback-destination vectors. The earbud contour adapts Tabler's MIT-licensed
+/// device-airpods outline (see third_party/audio_glyphs/NOTICE.md), rather than
+/// bundling Apple's platform-restricted SF Symbols. A glyph never changes the
+/// real device name or claims that a non-Apple headset is an Apple product.
 class AppleAudioGlyph extends StatelessWidget {
   const AppleAudioGlyph(
     this.kind, {
@@ -74,33 +82,49 @@ void paintAppleAudioGlyph(
         pen,
       );
     case AppleAudioGlyphKind.earphones:
+      canvas.scale(40 / 24);
+      pen
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.65
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
       for (final mirror in [false, true]) {
         canvas.save();
         if (mirror) {
-          canvas.translate(40, 0);
+          canvas.translate(24, 0);
           canvas.scale(-1, 1);
         }
         final bud = Path()
-          ..moveTo(8.5, 12.3)
-          ..cubicTo(8.5, 8.6, 13, 8.1, 16.4, 10.7)
-          ..cubicTo(19.6, 13.2, 19.1, 16.8, 15.5, 18.1)
-          ..lineTo(15.5, 29)
-          ..quadraticBezierTo(15.5, 31.5, 12.9, 31.5)
-          ..quadraticBezierTo(10.5, 31.5, 10.5, 29)
-          ..lineTo(10.5, 18)
-          ..quadraticBezierTo(8.5, 16, 8.5, 12.3)
+          ..moveTo(6, 4)
+          ..arcToPoint(const Offset(10, 7.8), radius: const Radius.circular(4))
+          ..lineTo(10, 18.5)
+          ..arcToPoint(
+            const Offset(7, 18.5),
+            radius: const Radius.circular(1.5),
+          )
+          ..lineTo(7, 12)
+          ..lineTo(6, 12)
+          ..arcToPoint(const Offset(2, 8.2), radius: const Radius.circular(4))
+          ..lineTo(2, 8)
+          ..arcToPoint(const Offset(6, 4), radius: const Radius.circular(4))
           ..close();
-        // Transparent acoustic ports keep the contour crisp in both themes.
-        final port = Paint()
-          ..isAntiAlias = true
-          ..color = color.withValues(alpha: .3)
-          ..blendMode = BlendMode.dstOut;
-        canvas.saveLayer(const Rect.fromLTWH(7, 7, 13, 26), Paint());
         canvas.drawPath(bud, pen);
-        canvas.drawOval(const Rect.fromLTWH(12.8, 11, 3.4, 4.3), port);
-        canvas.restore();
         canvas.restore();
       }
+    case AppleAudioGlyphKind.phone:
+      pen
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.2
+        ..strokeCap = StrokeCap.round;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(11, 4, 18, 32),
+          const Radius.circular(4),
+        ),
+        pen,
+      );
+      canvas.drawLine(const Offset(17, 8), const Offset(23, 8), pen);
+      canvas.drawLine(const Offset(18, 32), const Offset(22, 32), pen);
     case AppleAudioGlyphKind.speakerQuiet:
     case AppleAudioGlyphKind.speakerLoud:
       canvas.drawPath(

@@ -189,6 +189,15 @@ void main() {
 
   Future<void> capture(WidgetTester tester, String name) async {
     if (!_export) return;
+    // Capture a decoded app-logo frame, including the first/cold light theme.
+    final context = tester.element(find.byType(MaterialApp).first);
+    final images = tester.widgetList<Image>(find.byType(Image)).toList();
+    await tester.runAsync(() async {
+      await Future.wait(
+        images.map((image) => precacheImage(image.image, context)),
+      );
+    });
+    await tester.pump();
     await tester.runAsync(() async {
       final frame = await tester
           .renderObject<RenderRepaintBoundary>(
@@ -206,6 +215,47 @@ void main() {
       frame.dispose();
     });
   }
+
+  testWidgets(
+    'music refinement current version stays beside its label',
+    (tester) async {
+      for (final dark in [false, true]) {
+        await mount(
+          tester,
+          Consumer(
+            builder: (context, ref, _) => TextButton(
+              onPressed: () => showAppUpdateSheet(context),
+              child: const Text('显示更新'),
+            ),
+          ),
+          dark: dark,
+          scale: 1.5,
+          size: const Size(320, 780),
+          update: _Update(
+            const AppUpdateState(
+              phase: AppUpdatePhase.upToDate,
+              currentVersion: _current,
+            ),
+          ),
+        );
+        await tester.tap(find.text('显示更新'));
+        await tester.pumpAndSettle();
+        final label = tester.getRect(find.text('当前版本'));
+        final version = tester.getRect(find.text('1.0.1').last);
+        expect(version.left - label.right, inInclusiveRange(10, 14));
+        expect(version.top, closeTo(label.top, 2));
+        await capture(
+          tester,
+          'refinement-current-version-${dark ? 'dark' : 'light'}-narrow-large',
+        );
+        expect(tester.takeException(), isNull);
+        await tester.tap(find.text('完成'));
+        await tester.pumpAndSettle();
+        await tester.pumpWidget(const SizedBox());
+      }
+    },
+    skip: !DistributionChannel.isBeta,
+  );
 
   testWidgets(
     'manual update opens before response and cannot create a duplicate drawer',

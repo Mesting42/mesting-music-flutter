@@ -89,6 +89,10 @@ dev_dependencies:
 # Keep the optical correction reproducible in APK and source archives. The
 # local MIT fork removes a synthetic dark-mode perimeter, not refraction.
 dependency_overrides:
+  # The pinned local adapter exposes per-player Android AudioTrack routing.
+  # It never changes the shared Pub cache or creates a second music player.
+  just_audio:
+    path: third_party/just_audio/package
   liquid_glass_widgets:
     path: third_party/liquid_glass_widgets/package
 
@@ -109,6 +113,8 @@ flutter:
     - third_party/md3music/UPSTREAM_DISCLAIMER.md
     - third_party/liquid_glass_widgets/LICENSE
     - third_party/liquid_glass_widgets/NOTICE.md
+    - third_party/audio_glyphs/LICENSE
+    - third_party/audio_glyphs/NOTICE.md
     - assets/branding/mesting-mark-master.png
     - assets/branding/mesting-app-icon.png
     - assets/branding/mesting-launch-lockup-master.png

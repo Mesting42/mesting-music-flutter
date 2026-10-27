@@ -74,7 +74,7 @@ class _PlayerOutputDialogState extends ConsumerState<PlayerOutputDialog> {
                         children: [
                           Expanded(
                             child: Text(
-                              _devices ? '选择播放设备' : '音频输出',
+                              _devices ? '播放设备' : '音频输出',
                               style: TextStyle(
                                 fontSize: 23,
                                 fontWeight: FontWeight.w700,
@@ -141,7 +141,9 @@ class _PlayerOutputDialogState extends ConsumerState<PlayerOutputDialog> {
                         Row(
                           children: [
                             AppleAudioGlyph(
-                              output.headphones
+                              output.local
+                                  ? AppleAudioGlyphKind.phone
+                                  : output.headphones
                                   ? AppleAudioGlyphKind.earphones
                                   : AppleAudioGlyphKind.speakerLoud,
                               size: 40,
@@ -256,17 +258,6 @@ class _PlayerOutputDialogState extends ConsumerState<PlayerOutputDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (_devices)
-                      CupertinoButton(
-                        key: const ValueKey('output-system-management'),
-                        onPressed: output.available
-                            ? () => Navigator.of(context).pop(true)
-                            : null,
-                        child: Text(
-                          '系统设备管理',
-                          style: TextStyle(color: scheme.primary, fontSize: 14),
-                        ),
-                      ),
                     CupertinoButton(
                       key: const ValueKey('output-open-system-picker'),
                       color: const Color(0xFF0069D5),

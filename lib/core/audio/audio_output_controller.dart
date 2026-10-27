@@ -11,13 +11,15 @@ class AudioOutputRoute {
     this.headphones = false,
     this.selected = false,
     this.selectable = false,
+    this.local = false,
   });
   final String id, name;
-  final bool headphones, selected, selectable;
+  final bool headphones, selected, selectable, local;
   factory AudioOutputRoute.fromMap(Map<Object?, Object?> raw) =>
       AudioOutputRoute(
         id: raw['id'] as String? ?? '',
-        name: raw['name'] as String? ?? '音频设备',
+        name: raw['kind'] == 'phone' ? '本机' : raw['name'] as String? ?? '音频设备',
+        local: raw['kind'] == 'phone',
         headphones: raw['kind'] == 'headphones',
         selected: raw['selected'] == true,
         selectable: raw['selectable'] == true,
@@ -32,16 +34,23 @@ class AudioOutput {
     this.available = false,
     this.id = '',
     this.routes = const [],
+    this.local = false,
+    this.pendingId = '',
   });
   final String name;
   final String id;
+  final String pendingId;
   final List<AudioOutputRoute> routes;
-  final bool headphones, available;
+  final bool headphones, available, local;
   static AudioOutput fromMap(Map<Object?, Object?> value) => AudioOutput(
-    name: (value['name'] as String?)?.trim().isNotEmpty == true
+    name: value['kind'] == 'phone'
+        ? '本机'
+        : (value['name'] as String?)?.trim().isNotEmpty == true
         ? value['name'] as String
         : '本机扬声器',
     headphones: value['kind'] == 'headphones',
+    local: value['kind'] == 'phone',
+    pendingId: value['pendingId'] as String? ?? '',
     available: value['available'] == true,
     id: value['id'] as String? ?? '',
     routes: (value['routes'] as List? ?? const [])
@@ -81,6 +90,8 @@ class AudioOutputController extends Notifier<AudioOutput>
         state.headphones != next.headphones ||
         state.available != next.available ||
         state.id != next.id ||
+        state.pendingId != next.pendingId ||
+        state.local != next.local ||
         _routeSignature(state) != _routeSignature(next)) {
       state = next;
     }
@@ -89,12 +100,12 @@ class AudioOutputController extends Notifier<AudioOutput>
   String _routeSignature(AudioOutput value) => value.routes
       .map(
         (route) =>
-            '${route.id}:${route.name}:${route.headphones}:${route.selected}:${route.selectable}',
+            '${route.id}:${route.name}:${route.headphones}:${route.local}:${route.selected}:${route.selectable}',
       )
       .join('|');
 
-  /// Native exposes only routes it is allowed to transfer to, not paired-device
-  /// guesses. Older Android versions keep the explicit system-management path.
+  /// Native exposes connected media sinks and the app player's real route.
+  /// An accepted paused preference is distinct from a confirmed active output.
   Future<void> refreshRoutes() async {
     _accept(await methods.invokeMapMethod<Object?, Object?>('routes'));
   }
@@ -107,7 +118,8 @@ class AudioOutputController extends Notifier<AudioOutput>
       'id': routeId,
     });
     await refresh();
-    return confirmed == true && state.id == routeId;
+    return confirmed == true &&
+        (state.id == routeId || state.pendingId == routeId);
   }
 
   Future<void> refresh() async {

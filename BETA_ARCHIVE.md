@@ -1,14 +1,25 @@
-# Mesting Music Beta 版本归档
+# Mesting Music 版本归档
 
-归档更新：2026-10-27（Asia/Shanghai）。Git 已归档最新版本仍为 **1.0.37-beta.19**；本机 Beta.20/21/1.0.1 修改尚未提交、推送或建立标签。当前公开命名交付为 **1.0.1 / 22**，见 [修改记录](docs/fixes-2026-10-27-v1.0.1.md) 与 [接续](docs/SESSION-HANDOFF-2026-10-27-v1.0.1.md)。Beta.20/21 的冻结 APK、源码 ZIP 与历史记录完整保留。
+归档更新：2026-10-27（Asia/Shanghai）。已补齐 Beta.20、Beta.21、正式版 1.0.1 和 1.0.2 的源码提交、固定标签与 GitHub Release；最新正式版本为 **1.0.2 / 23**，同时已发布到 Ring Download 的 music。来源和逐文件摘要见 [本次补档记录](docs/version-archive/RELEASE-BACKFILL-2026-10-27.md)，产品变化见 [修改记录](docs/fixes-2026-10-27-v1.0.2.md)。内部 beta 名称仅用于身份兼容；各版原始 APK、源码 ZIP 与历史记录保持冻结。
 日常开发分支：`beta`。另一台电脑从 [接续入口](docs/CONTINUE-BETA.md) 开始，
-源码和 APK 使用同名固定版本标签。正式分支 `main` 和已有标签/Release 保留原样。
+源码和 APK 使用同名固定版本标签。旧 `main` 分支和此前已有标签/Release 保留原样；正式 1.0.1/1.0.2 标签来自当前维护的 `beta` 代码线，不切换到旧 stable 产品界面。
 
-## 本地工作区交付
+## 本次补齐的 GitHub 版本
 
-1.0.1 交付 `release/Mesting-Music-v1.0.1.apk` 与 `Mesting-Music-v1.0.1-source.zip`；身份、原签名、资源、平台及主机验证边界见同目录验证 JSON 和接续记录。本轮没有安装手机、Git commit/tag/push 或 GitHub Release，因此下表仍只列 Git 已归档的 Beta.1–19。平台发布不等同于 Git 归档。历史 Beta.21 交付文件与原有源码快照保持。
+| 公开版本 | 固定源码标签 | 发布入口与属性 |
+| --- | --- | --- |
+| Beta.20 / code 20 | [`v1.0.37-beta.20`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.20) | [历史预发布](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.20) |
+| Beta.21 / code 21 | [`v1.0.37-beta.21`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.37-beta.21) | [历史预发布](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.37-beta.21) |
+| 1.0.1 / code 22 | [`v1.0.1`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.1) | [正式发布](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.1) |
+| 1.0.2 / code 23 | [`v1.0.2`](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.2) | [最新正式发布](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.2) |
 
-当前 [music 公开下载](https://download.csnas.asia/music/download) 已返回 1.0.1 / 22，SHA256 与本地包相符；生产下载代码的主机真实 HTTPS 暂停/续传及完整摘要核验通过。后续发布见 [操作步骤](docs/RELEASE-UPDATE-GUIDE.md)。
+以上各版均附原始 APK、原始源码 ZIP、包核验 JSON、原始源码逐条清单、安装说明、修改记录和 SHA-256 汇总。归档提交创建于本次补档，不回填旧开发时间；历史冻结文档中的“未推送”描述保留为当时状态，由本记录更新。
+
+## 本地交付与应用内更新
+
+1.0.2 交付 `release/Mesting-Music-v1.0.2.apk` 与 `Mesting-Music-v1.0.2-source.zip`；身份、原签名、资源、平台及主机验证边界见同目录验证 JSON 和 [原交付记录](docs/SESSION-HANDOFF-2026-10-27-v1.0.2.md)。GitHub 标签另外包含本次归档文档，原始 ZIP 不重打包。本次补档没有运行手机安装或重跑产品测试，已有验证边界不变。
+
+当前 [music 公开下载](https://download.csnas.asia/music/download) 已返回 1.0.2 / 23，SHA256 与本地包相符；生产下载代码以模拟已安装 1.0.1 / 22 的身份完成真实 HTTPS 暂停/续传及完整摘要核验，同版本不提示新版本。主/备下载入口 HEAD 200、Range 206 及前 64 KiB 与本包匹配；未对备用入口另做全包下载。后续发布见 [操作步骤](docs/RELEASE-UPDATE-GUIDE.md)。
 
 ## Beta.1–19 版本索引
 
@@ -68,10 +79,10 @@ git status --short --branch
 git describe --tags --exact-match HEAD
 ```
 
-本轮同步完成时应显示 `v1.0.37-beta.19`。若以后分支已前进，固定查看本版：
+本次补档完成时应显示 `v1.0.2`。若以后分支已前进，固定查看本版：
 
 ```powershell
-git switch -c continue-beta19 v1.0.37-beta.19
+git switch -c codex/continue-v1.0.2 v1.0.2
 ```
 
 已有克隆应先检查未提交修改，再 `git fetch origin --tags`；工作区干净且位于 `beta`
@@ -84,11 +95,11 @@ git switch -c continue-beta19 v1.0.37-beta.19
 架构；保留原安装包字节，不为统一证书重签历史版本。
 
 - Beta.1–13 证书：`08C3774545B89E3A30F5D20F162A30D1B48C13C19205A5073AA945CB8360AD4F`。
-- Beta.14–19 证书：`8CE2203AD821AD8D38576F9AE86350D98254AC05F2CB974E773C1973B22E0333`。
+- Beta.14–21 及正式 1.0.1/1.0.2 证书：`8CE2203AD821AD8D38576F9AE86350D98254AC05F2CB974E773C1973B22E0333`。
 
 因此旧版 APK 是历史留档，不能仅凭相同包名保证跨这两个签名组覆盖安装；Android
 也限制 versionCode 降级。为查看旧源码使用标签即可，无需在日常手机卸载应用。
-后续给 Beta.19 做覆盖升级时，需通过私有方式转移 Beta.14–19 的原签名密钥。
+后续覆盖升级 1.0.1/1.0.2 时，需通过私有方式转移同一原签名密钥，并提高实际版本 code。
 源码仓库和 Release 均不含私钥或密码。
 
 ## 本次验证边界

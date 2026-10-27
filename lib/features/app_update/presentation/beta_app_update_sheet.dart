@@ -318,25 +318,23 @@ class _BetaAppUpdateSheetState extends ConsumerState<BetaAppUpdateSheet>
 
   Widget _detail(BuildContext context, String label, String value) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 7),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    // Keep a version and its label together. Wrap only when accessibility text
+    // really needs another line, rather than pushing the version to the edge.
+    child: Wrap(
+      spacing: 12,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 15,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 15,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
-        const SizedBox(width: 16),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.end,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-          ),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ],
     ),

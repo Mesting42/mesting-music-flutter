@@ -29,6 +29,10 @@ class AudioOutputBridge(private val activity: Activity, messenger: BinaryMesseng
     private var observing = false
     private var modern: ModernRoutes? = null
     private val main = Handler(Looper.getMainLooper())
+    // The Beta music player owns its AudioTrack. Stable keeps its established
+    // system-controller path, independent of the custom Beta picker.
+    private val playerRoutes = if (activity.packageName.endsWith(".beta"))
+        MusicPlayerOutputRoutes(activity) { publish() } else null
     private var transferId: String? = null
     private var transferResult: MethodChannel.Result? = null
     private var transferTimeout: Runnable? = null
@@ -49,7 +53,9 @@ class AudioOutputBridge(private val activity: Activity, messenger: BinaryMesseng
                     "routes" -> result.success(read())
                     "transfer" -> {
                         val id = call.argument<String>("id")
-                        if (Build.VERSION.SDK_INT < 30 || id.isNullOrBlank()) {
+                        if (playerRoutes != null) {
+                            playerRoutes.transfer(id, result)
+                        } else if (Build.VERSION.SDK_INT < 30 || id.isNullOrBlank()) {
                             result.success(false)
                         } else if (transferResult != null) {
                             result.error("audio_output_busy", "设备正在切换，请稍候", null)
@@ -101,6 +107,7 @@ class AudioOutputBridge(private val activity: Activity, messenger: BinaryMesseng
 
     @Suppress("DEPRECATION")
     private fun read(): Map<String, Any> {
+        playerRoutes?.let { return it.read() }
         if (Build.VERSION.SDK_INT >= 30) {
             // A system controller includes Bluetooth, wired and local outputs
             // and supplies user/OEM names without BLUETOOTH_CONNECT access.
@@ -197,5 +204,5 @@ class AudioOutputBridge(private val activity: Activity, messenger: BinaryMesseng
         modern = null
         observing = false
     }
-    fun dispose() { stop(); methods.setMethodCallHandler(null); events.setStreamHandler(null) }
+    fun dispose() { stop(); playerRoutes?.dispose(); methods.setMethodCallHandler(null); events.setStreamHandler(null) }
 }

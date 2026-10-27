@@ -358,6 +358,7 @@ class _ApplePlayerControlsState extends ConsumerState<ApplePlayerControls> {
                     key: const ValueKey('player-output-glyph'),
                     tool: PlayerToolbarTool.output,
                     headphones: output.headphones,
+                    local: output.local,
                   ),
                   icon: output.headphones
                       ? Icons.headphones_rounded

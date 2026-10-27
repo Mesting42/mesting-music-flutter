@@ -29,6 +29,15 @@ class PlatformCredits {
       yield LicenseEntryWithLineBreaks([
         'Liquid Glass Widgets Apple Music example · Sebastian Degenaar',
       ], '$glassNotice\n\n$glassLicense');
+      final audioGlyphLicense = await rootBundle.loadString(
+        'third_party/audio_glyphs/LICENSE',
+      );
+      final audioGlyphNotice = await rootBundle.loadString(
+        'third_party/audio_glyphs/NOTICE.md',
+      );
+      yield LicenseEntryWithLineBreaks([
+        'Tabler Icons · Paweł Kuna',
+      ], '$audioGlyphNotice\n\n$audioGlyphLicense');
     });
   }
 }

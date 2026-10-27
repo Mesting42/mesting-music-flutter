@@ -164,7 +164,16 @@ daily time in server readback or the user's official-app comparison.
 
 Git 仍为 `beta`，基于 `edc6d1bf881cbe2173709cc84b86b91637fbaaed` / `v1.0.37-beta.19`，Beta.20 与 Beta.21 均为本机未提交修改；本轮不提交、建标签、推送或发布。Beta.20 APK/源码 ZIP、原始启动图与依赖锁继续冻结保留。
 
-## Release 1.0.1 current contract (authoritative)
+## Release 1.0.2 current contract (authoritative)
+
+2026-10-27：本轮正式版本为 **1.0.2 / 23**。原包名、原签名和内部 beta flavor 保持覆盖升级兼容；公开界面与法律说明不再称 Beta。用户授权发布到 music 并验证旧 1.0.1 的更新发现/下载；没有授权操作手机或 Git 发布。实现与证据入口见 [1.0.2 修改](docs/fixes-2026-10-27-v1.0.2.md)。下方 1.0.1 节保留为交付历史，本节覆盖其中本轮涉及的操作。
+
+- 版本信息标签与值相邻；装扮只在设置中提供，指南使用“设置 → 装扮”。
+- 输出由既有音乐播放器的真实音轨与同一 ExoPlayer 配置持有；本机和已连接输出在同一玻璃卡片内选择，不自动打开系统选择器。暂停偏好与实际已生效路由区分，真实回读后才显示当前设备。新设备在系统配对，不把已配对等同于已连接。
+- 音乐首页保留原视觉，扩充当前账号推荐、新歌、榜单、歌单、新碟、主题与场景；不引入听书、直播或混合广告流。场景先解析真实音乐模块/标签，目录点击进入真实音乐详情。账号/token 变化拒绝旧数据，不新增播放 owner 或伪造统计。
+- Dart 锁改为本地 just_audio 0.10.6 路由适配，不再沿用 1.0.1 的旧锁摘要。共享历史 stable/Java 渠道保持各自既有规则。旧发布 APK/ZIP 冻结，不能由本轮测试推导为新的交付包。
+
+## Release 1.0.1 delivered contract (historical)
 
 2026-10-27：用户确认公开版本名为 `1.0.1`、Android build code 为 `22`；内部继续使用 Beta flavor、`com.mesting.music.beta` 包名及原签名身份，以支持已有安装覆盖升级。它延续当前视觉世界，方向见 [.impeccable/surfaces/release-1.0.1.md](.impeccable/surfaces/release-1.0.1.md)。本节覆盖旧版关于暖色欢迎底、小型成功通知仅文字及关闭应用更新的说明；Beta.20/21 和更早记录保留为各版历史，其余当前功能契约继续有效。最终 APK、签名、发布与源码归档身份以独立交付记录为准。
 

@@ -23,8 +23,12 @@ class PlatformExploreItem {
     required this.cover,
     required this.kind,
     this.rankCid = '',
+    this.subtitle = '',
+    this.moduleId = '',
+    this.tag = '',
   });
   final String id, title, cover, rankCid;
+  final String subtitle, moduleId, tag;
   final PlatformExploreKind kind;
 }
 
@@ -47,6 +51,12 @@ class PlatformExploreRepository {
       },
     );
     var rows = PlatformCatalog.rows(payload);
+    if (kind == PlatformExploreKind.theme && rows.isEmpty) {
+      final themeData = MusicPlatformApi.objectMap(payload['data']);
+      rows = PlatformCatalog.rows(
+        themeData['themes'] ?? themeData['theme_list'],
+      );
+    }
     if (kind == PlatformExploreKind.scene) rows = _sceneRows(payload);
     final data = MusicPlatformApi.objectMap(payload['data']);
     if (kind == PlatformExploreKind.rank && rows.isEmpty) {
@@ -98,13 +108,22 @@ class PlatformExploreRepository {
               'albumname',
               'title',
               'scene_name',
+              'theme_name',
             ]),
             cover: PlatformArtwork.fromPayload(row),
             kind: kind,
             rankCid: text(['rank_cid']),
+            subtitle: text([
+              'singername',
+              'author_name',
+              'intro',
+              'description',
+            ]),
+            moduleId: text(['module_id']),
+            tag: text(['tag']),
           );
         })
-        .where((item) => item.title.isNotEmpty)
+        .where((item) => item.title.isNotEmpty && item.id.isNotEmpty)
         .toList();
   }
 
@@ -136,7 +155,41 @@ class PlatformExploreRepository {
         : const [];
   }
 
+  /// A named scene is a catalogue, not a generic recommendation seed. Resolve
+  /// the server's first music module/tag in its own order; skip video, books
+  /// and discussion modules instead of guessing parameters for audio_list.
+  Future<PlatformExploreItem> resolveScene(PlatformExploreItem item) async {
+    if (item.kind != PlatformExploreKind.scene ||
+        (item.moduleId.isNotEmpty && item.tag.isNotEmpty)) {
+      return item;
+    }
+    final payload = await api.get('/scene/module', query: {'id': item.id});
+    final data = MusicPlatformApi.objectMap(payload['data']);
+    for (final module in PlatformCatalog.rows(data['content'])) {
+      if ('${module['module_type'] ?? ''}' != '2') continue;
+      final moduleId = '${module['module_id'] ?? module['id'] ?? ''}'.trim();
+      if (moduleId.isEmpty) continue;
+      for (final tag in PlatformCatalog.rows(module['extra'])) {
+        if ('${tag['content_type'] ?? tag['types'] ?? ''}' != '6') continue;
+        final tagId = '${tag['tag_id'] ?? tag['id'] ?? ''}'.trim();
+        if (tagId.isEmpty) continue;
+        return PlatformExploreItem(
+          id: item.id,
+          title: item.title,
+          cover: item.cover,
+          kind: item.kind,
+          subtitle: item.subtitle,
+          rankCid: item.rankCid,
+          moduleId: moduleId,
+          tag: tagId,
+        );
+      }
+    }
+    throw const MusicPlatformException('此场景暂未提供可播放的音乐内容');
+  }
+
   Future<List<Track>> tracks(PlatformExploreItem item, {int page = 1}) async {
+    item = await resolveScene(item);
     final path = switch (item.kind) {
       PlatformExploreKind.rank => '/rank/audio',
       PlatformExploreKind.album => '/album/songs',
@@ -155,9 +208,13 @@ class PlatformExploreRepository {
           if (item.kind == PlatformExploreKind.album) 'album_id': item.id,
           if (item.kind == PlatformExploreKind.playlist)
             'global_collection_id': item.id,
-          if (item.kind == PlatformExploreKind.theme ||
-              item.kind == PlatformExploreKind.scene)
+          // The theme endpoint requires theme_id, not the generic scene id.
+          if (item.kind == PlatformExploreKind.theme) 'theme_id': item.id,
+          if (item.kind == PlatformExploreKind.scene) ...{
             'id': item.id,
+            if (item.moduleId.isNotEmpty) 'module_id': item.moduleId,
+            if (item.tag.isNotEmpty) 'tag': item.tag,
+          },
           'page': '$page',
           'pagesize': '30',
         },

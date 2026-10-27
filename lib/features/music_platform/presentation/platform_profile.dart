@@ -104,19 +104,22 @@ class PlatformProfile extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 28),
-        const EditorialSection('应用与外观'),
+        EditorialSection(DistributionChannel.isBeta ? '应用' : '应用与外观'),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 22),
           child: PlatformPanel(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             child: Column(
               children: [
-                _ProfileLink(
-                  icon: Icons.palette_outlined,
-                  title: '装扮',
-                  subtitle: '启动页、播放器与外观',
-                  onTap: () => showDressUpCenterSheet(context),
-                ),
+                // Beta exposes appearance once, in Settings. Stable retains
+                // its existing profile navigation independently.
+                if (!DistributionChannel.isBeta)
+                  _ProfileLink(
+                    icon: Icons.palette_outlined,
+                    title: '装扮',
+                    subtitle: '启动页、播放器与外观',
+                    onTap: () => showDressUpCenterSheet(context),
+                  ),
                 _ProfileLink(
                   icon: Icons.tune_rounded,
                   title: '设置',

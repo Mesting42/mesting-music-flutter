@@ -72,7 +72,7 @@ class _BetaGuidePreviewState extends State<BetaGuidePreview> {
           _alternate ? '选择播放设备' : '音频输出',
           '可切换设备在同一面板中选择',
         ),
-        row(CupertinoIcons.speaker_2, '系统媒体音量', '连接与授权按需进入系统设备管理'),
+        row(CupertinoIcons.speaker_2, '系统媒体音量', '在音频输出卡片中选择本机或已连接耳机'),
       ],
       3 => [
         row(CupertinoIcons.person_crop_circle, '酷狗账号', '手机号验证码 · 微信等扫码方式'),
@@ -91,7 +91,7 @@ class _BetaGuidePreviewState extends State<BetaGuidePreview> {
         row(CupertinoIcons.trash, '左滑移除待播歌曲', '随机与循环分别设置，自动推荐有标注'),
       ],
       _ => [
-        row(CupertinoIcons.paintbrush, '我的 → 装扮', '浅色 · 深色 · 跟随系统'),
+        row(CupertinoIcons.paintbrush, '设置 → 装扮', '浅色 · 深色 · 跟随系统'),
         row(
           CupertinoIcons.sparkles,
           _alternate ? '小新七种天气' : '静态启动图与启动视频',

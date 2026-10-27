@@ -14,18 +14,8 @@ import 'platform_design.dart';
 import 'apple_hot_search.dart';
 import '../data/music_platform_api.dart';
 import '../data/platform_recommendations.dart';
-
-final platformExploreRepositoryProvider = Provider<PlatformExploreRepository>(
-  (ref) => PlatformExploreRepository(ref.watch(musicPlatformApiProvider)),
-);
-final platformExploreProvider =
-    FutureProvider.family<List<PlatformExploreItem>, PlatformExploreKind>((
-      ref,
-      kind,
-    ) async {
-      await ref.watch(platformAccountProvider.future);
-      return ref.watch(platformExploreRepositoryProvider).list(kind);
-    });
+import '../platform_explore_providers.dart';
+export '../platform_explore_providers.dart';
 
 /// Search history, real keyword boards, then upstream music exploration. A
 /// keyword opens search; it is never presented as a directly playable song.
@@ -225,7 +215,9 @@ class _ExploreSection extends ConsumerWidget {
                                     : () => Navigator.of(context).push(
                                         MaterialPageRoute<void>(
                                           builder: (_) =>
-                                              _ExploreSongsPage(item: item),
+                                              PlatformExploreSongsPage(
+                                                item: item,
+                                              ),
                                         ),
                                       ),
                                 child: Column(
@@ -261,19 +253,23 @@ class _ExploreSection extends ConsumerWidget {
       );
 }
 
-class _ExploreSongsPage extends ConsumerStatefulWidget {
-  const _ExploreSongsPage({required this.item});
+class PlatformExploreSongsPage extends ConsumerStatefulWidget {
+  const PlatformExploreSongsPage({required this.item, super.key});
   final PlatformExploreItem item;
   @override
-  ConsumerState<_ExploreSongsPage> createState() => _ExploreSongsPageState();
+  ConsumerState<PlatformExploreSongsPage> createState() =>
+      _ExploreSongsPageState();
 }
 
-class _ExploreSongsPageState extends ConsumerState<_ExploreSongsPage> {
+class _ExploreSongsPageState extends ConsumerState<PlatformExploreSongsPage> {
   final _tracks = <Track>[];
   int _page = 0;
   bool _busy = false, _more = true;
   String? _error;
   String? _owner;
+  String? _token;
+  bool _loaded = false;
+  PlatformExploreItem? _resolvedItem;
   @override
   void initState() {
     super.initState();
@@ -286,13 +282,17 @@ class _ExploreSongsPageState extends ConsumerState<_ExploreSongsPage> {
       _busy = true;
       _error = null;
     });
-    final owner = ref.read(platformAccountProvider).value?.userId;
     try {
-      final fresh = await ref
-          .read(platformExploreRepositoryProvider)
-          .tracks(widget.item, page: _page + 1);
+      final account = await ref.read(platformAccountProvider.future);
+      if (!mounted) return;
+      final owner = account?.userId, token = account?.token;
+      final repository = ref.read(platformExploreRepositoryProvider);
+      final resolved =
+          _resolvedItem ?? await repository.resolveScene(widget.item);
+      final fresh = await repository.tracks(resolved, page: _page + 1);
       if (!mounted ||
-          ref.read(platformAccountProvider).value?.userId != owner) {
+          ref.read(platformAccountProvider).value?.userId != owner ||
+          ref.read(platformAccountProvider).value?.token != token) {
         return;
       }
       setState(() {
@@ -300,8 +300,14 @@ class _ExploreSongsPageState extends ConsumerState<_ExploreSongsPage> {
         final additions = fresh.where((e) => ids.add(e.id)).toList();
         _tracks.addAll(additions);
         _page++;
-        _more = fresh.isNotEmpty && additions.isNotEmpty;
+        _more =
+            widget.item.kind != PlatformExploreKind.theme &&
+            fresh.length >= 30 &&
+            additions.isNotEmpty;
         _owner = owner;
+        _token = token;
+        _loaded = true;
+        _resolvedItem = resolved;
       });
     } catch (_) {
       if (mounted) setState(() => _error = '歌曲加载失败，请重试');
@@ -312,8 +318,8 @@ class _ExploreSongsPageState extends ConsumerState<_ExploreSongsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final account = ref.watch(platformAccountProvider).value?.userId;
-    if (_owner != null && account != _owner) {
+    final account = ref.watch(platformAccountProvider).value;
+    if (_loaded && (account?.userId != _owner || account?.token != _token)) {
       return PlatformPageFrame(
         title: widget.item.title,
         child: const EditorialEmpty('账号已变化，请返回后重新打开'),

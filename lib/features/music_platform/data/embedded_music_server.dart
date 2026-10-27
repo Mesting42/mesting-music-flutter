@@ -41,7 +41,7 @@ class EmbeddedMusicServer implements MusicServer {
 
   Future<Uri> _start() async {
     if (!Platform.isAndroid) {
-      throw StateError('音乐平台本机服务目前仅在 Android Beta 中提供');
+      throw StateError('音乐平台本机服务目前仅在 Android 版中提供');
     }
     final root = await getApplicationSupportDirectory();
     final directory = Directory('${root.path}/music_platform/runtime');

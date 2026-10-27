@@ -70,7 +70,8 @@ class _Routes extends AudioOutputController {
   AudioOutput build() => _state('earbuds');
   AudioOutput _state(String id) => AudioOutput(
     id: id,
-    name: id == 'earbuds' ? 'vivo TWS 5' : '本机扬声器',
+    name: id == 'earbuds' ? 'vivo TWS 5' : '本机',
+    local: id == 'phone',
     headphones: id == 'earbuds',
     available: true,
     routes: [
@@ -83,7 +84,8 @@ class _Routes extends AudioOutputController {
       ),
       AudioOutputRoute(
         id: 'phone',
-        name: '本机扬声器',
+        name: '本机',
+        local: true,
         selected: id == 'phone',
         selectable: id != 'phone',
       ),
@@ -218,6 +220,16 @@ void main() {
 
   Future<void> capture(WidgetTester tester, String name) async {
     if (!_export) return;
+    // The first light capture has a cold image cache. Wait for its real asset
+    // frame instead of recording a transient empty artwork slot as UI evidence.
+    final context = tester.element(find.byType(MaterialApp).first);
+    final images = tester.widgetList<Image>(find.byType(Image)).toList();
+    await tester.runAsync(() async {
+      await Future.wait(
+        images.map((image) => precacheImage(image.image, context)),
+      );
+    });
+    await tester.pump();
     await tester.runAsync(() async {
       final boundary = tester.renderObject<RenderRepaintBoundary>(
         find.byKey(const ValueKey('beta21-capture')),
@@ -419,6 +431,44 @@ void main() {
       await tester.pumpWidget(const SizedBox());
       await tester.runAsync(handler.debugDispose);
     },
+  );
+
+  testWidgets(
+    'music refinement output card keeps local switching inside glass',
+    (tester) async {
+      for (final dark in [false, true]) {
+        final routes = _Routes();
+        await mount(
+          tester,
+          const PlayerOutputDialog(),
+          dark: dark,
+          routes: routes,
+        );
+        await capture(tester, 'refinement-output-${dark ? 'dark' : 'light'}');
+        await tester.tap(find.text('切换设备'));
+        await tester.pumpAndSettle();
+        expect(find.text('本机'), findsOneWidget);
+        expect(find.text('系统设备管理'), findsNothing);
+        expect(routes.systems, 0);
+        await capture(
+          tester,
+          'refinement-output-${dark ? 'dark' : 'light'}-routes',
+        );
+        await tester.pumpWidget(const SizedBox());
+      }
+      await mount(
+        tester,
+        const PlayerOutputDialog(),
+        size: const Size(320, 640),
+        textScale: 1.5,
+      );
+      await tester.tap(find.text('切换设备'));
+      await tester.pumpAndSettle();
+      await capture(tester, 'refinement-output-narrow-large');
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+    skip: !DistributionChannel.isBeta,
   );
 
   testWidgets(

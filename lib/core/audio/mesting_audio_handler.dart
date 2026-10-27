@@ -16,6 +16,7 @@ import 'playback_completion_gate.dart';
 import 'playback_mode.dart';
 import 'playback_start_guard.dart';
 import 'queue_engine.dart';
+import '../platform/distribution_channel.dart';
 
 typedef RadioTrackLoader =
     Future<List<Track>> Function(Set<String> excludedTrackKeys);
@@ -34,7 +35,13 @@ class MestingAudioHandler extends BaseAudioHandler
     Random? random,
     AudioPlayer? player,
   }) : _libraryTracks = List.of(tracks),
-       _player = player ?? AudioPlayer(),
+       _player =
+           player ??
+           AudioPlayer(
+             androidAudioOutputOwner: DistributionChannel.isBeta
+                 ? 'mesting-music'
+                 : null,
+           ),
        _random = random ?? Random(),
        _knownTracks = <String, Track>{
          for (final track in tracks) track.id: track,

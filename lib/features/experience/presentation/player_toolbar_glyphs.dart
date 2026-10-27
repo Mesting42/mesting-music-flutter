@@ -14,25 +14,32 @@ class PlayerToolbarGlyph extends StatelessWidget {
     required this.tool,
     this.active = false,
     this.headphones = false,
+    this.local = false,
     this.order = const PlaybackOrder(),
     super.key,
   });
   final PlayerToolbarTool tool;
-  final bool active, headphones;
+  final bool active, headphones, local;
   final PlaybackOrder order;
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
     child: CustomPaint(
       size: const Size.square(40),
-      painter: _ToolbarPainter(tool, active, headphones, order),
+      painter: _ToolbarPainter(tool, active, headphones, local, order),
     ),
   );
 }
 
 class _ToolbarPainter extends CustomPainter {
-  _ToolbarPainter(this.tool, this.active, this.headphones, this.order);
+  _ToolbarPainter(
+    this.tool,
+    this.active,
+    this.headphones,
+    this.local,
+    this.order,
+  );
   final PlayerToolbarTool tool;
-  final bool active, headphones;
+  final bool active, headphones, local;
   final PlaybackOrder order;
   static const ink = Color(0xFFB5C7D7);
   @override
@@ -84,7 +91,9 @@ class _ToolbarPainter extends CustomPainter {
         paintAppleAudioGlyph(
           canvas,
           const Size.square(40),
-          headphones
+          local
+              ? AppleAudioGlyphKind.phone
+              : headphones
               ? AppleAudioGlyphKind.earphones
               : AppleAudioGlyphKind.route,
           ink,
@@ -172,5 +181,6 @@ class _ToolbarPainter extends CustomPainter {
       tool != old.tool ||
       active != old.active ||
       headphones != old.headphones ||
+      local != old.local ||
       order != old.order;
 }
