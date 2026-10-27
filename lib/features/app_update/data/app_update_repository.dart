@@ -32,12 +32,12 @@ class UpdateDownloadCancellationToken {
     await _cancelActiveRead?.call();
   }
 
-  Future<void> _attach(Future<void> Function() cancelActiveRead) async {
+  Future<void> attach(Future<void> Function() cancelActiveRead) async {
     _cancelActiveRead = cancelActiveRead;
     if (_cancelled) await cancelActiveRead();
   }
 
-  void _detach() => _cancelActiveRead = null;
+  void detach() => _cancelActiveRead = null;
 }
 
 class AppUpdateDownloadSnapshot {
@@ -54,6 +54,21 @@ class AppUpdateDownloadSnapshot {
   bool get isComplete => completedPath != null;
 }
 
+/// Download-only seam: discovery, update policy and installation stay in Music.
+/// Implementations own their private cache and must finish writers on cancel.
+abstract class AppUpdateDownloadTransport {
+  Future<File> download(
+    AppUpdateManifest manifest, {
+    required UpdateDownloadProgress onProgress,
+    UpdateDownloadCancellationToken? cancellationToken,
+  });
+  Future<void> clearDownloads();
+  Future<void> dispose();
+  Future<void> reconcileInstalledBuild(int build) async {}
+  Future<void> rememberInstallation(AppUpdateManifest manifest) async {}
+  Future<void> reportInstallationFailure(AppUpdateManifest manifest) async {}
+}
+
 /// Validates, resumes and installs updates for one Android package/channel.
 ///
 /// [defaultManifestUrl] and [expectedPackageName] are build-time settings, so
@@ -65,10 +80,12 @@ class AppUpdateRepository {
     required AppUpdatePlatform platform,
     Uri? manifestUrl,
     AppUpdateReleaseSource? releaseSource,
+    AppUpdateDownloadTransport? downloadTransport,
     UpdateDirectoryProvider? directoryProvider,
   }) : _client = client,
        _platform = platform,
        _releaseSource = releaseSource,
+       _downloadTransport = downloadTransport,
        _manifestUrl = manifestUrl ?? Uri.parse(defaultManifestUrl),
        _directoryProvider = directoryProvider ?? getApplicationSupportDirectory;
 
@@ -92,6 +109,9 @@ class AppUpdateRepository {
   final http.Client _client;
   final AppUpdatePlatform _platform;
   final AppUpdateReleaseSource? _releaseSource;
+  final AppUpdateDownloadTransport? _downloadTransport;
+  final _transportReceived = <String, int>{};
+  final _verifiedDownloads = <String, AppUpdateManifest>{};
   Future<String>? _deviceIdentity;
   final Uri _manifestUrl;
   final UpdateDirectoryProvider _directoryProvider;
@@ -103,6 +123,11 @@ class AppUpdateRepository {
       final current = await currentVersion();
       if (current.packageName != expectedPackageName) {
         throw const AppUpdateException('当前安装包标识不受支持', code: 'package');
+      }
+      final transport = _downloadTransport;
+      if (transport != null) {
+        // Best-effort installation telemetry must not delay release discovery.
+        unawaited(transport.reconcileInstalledBuild(current.versionCode));
       }
       final source = _releaseSource;
       if (source != null) {
@@ -165,6 +190,40 @@ class AppUpdateRepository {
     required UpdateDownloadProgress onProgress,
     UpdateDownloadCancellationToken? cancellationToken,
   }) async {
+    final transport = _downloadTransport;
+    if (transport != null) {
+      final files = await _filesFor(manifest);
+      final snapshot = await inspectDownload(manifest);
+      if (snapshot.completedPath case final completedPath?) {
+        onProgress(manifest.sizeBytes, manifest.sizeBytes);
+        return completedPath;
+      }
+      // Finish a pre-SDK partial with the original Range/session protocol once.
+      // New downloads use SDK-owned resume data; never guess its file format.
+      if (await _safeLength(files.partial) == 0) {
+        _throwIfCancelled(cancellationToken);
+        final file = await transport.download(
+          manifest,
+          onProgress: (received, total) {
+            _transportReceived[files.target.path] = received;
+            onProgress(received, total);
+          },
+          cancellationToken: cancellationToken,
+        );
+        _throwIfCancelled(cancellationToken);
+        if (await file.length() != manifest.sizeBytes ||
+            !await _matchesDigest(file, manifest.sha256)) {
+          throw const AppUpdateException('安装包校验失败，请重新下载', code: 'sha256');
+        }
+        // Keep the established app_updates/ installer allowlist. A rename in
+        // the same app-private filesystem avoids a second full APK copy.
+        await _deleteIfPresent(files.target);
+        await file.rename(files.target.path);
+        _verifiedDownloads[files.target.path] = manifest;
+        _transportReceived.remove(files.target.path);
+        return files.target.path;
+      }
+    }
     try {
       return await _downloadFrom(
         manifest,
@@ -291,7 +350,7 @@ class AppUpdateRepository {
       final iterator = StreamIterator<List<int>>(
         response.stream.timeout(const Duration(seconds: 30)),
       );
-      await cancellationToken?._attach(iterator.cancel);
+      await cancellationToken?.attach(iterator.cancel);
       try {
         while (await iterator.moveNext()) {
           _throwIfCancelled(cancellationToken);
@@ -331,7 +390,7 @@ class AppUpdateRepository {
           }
         }
       } finally {
-        cancellationToken?._detach();
+        cancellationToken?.detach();
         await iterator.cancel();
         await prefixReader?.close();
         await output?.flush();
@@ -349,7 +408,7 @@ class AppUpdateRepository {
         throw const AppUpdateException('安装包大小异常', code: 'apk_size');
       }
       onProgress(persistedBytes, manifest.sizeBytes);
-      return _finalizeDownload(manifest, files);
+      return await _finalizeDownload(manifest, files);
     } on AppUpdateException catch (error) {
       if (error.code == 'sha256' ||
           error.code == 'apk_size' ||
@@ -494,6 +553,7 @@ class AppUpdateRepository {
       final targetLength = await files.target.length();
       if (targetLength == manifest.sizeBytes &&
           await _matchesDigest(files.target, manifest.sha256)) {
+        _verifiedDownloads[files.target.path] = manifest;
         return AppUpdateDownloadSnapshot(
           receivedBytes: manifest.sizeBytes,
           totalBytes: manifest.sizeBytes,
@@ -505,7 +565,9 @@ class AppUpdateRepository {
 
     if (!await files.partial.exists()) {
       return AppUpdateDownloadSnapshot(
-        receivedBytes: 0,
+        // Display-only checkpoint for a paused SDK task. After process restart
+        // SDK publishes its actual persisted progress when resume begins.
+        receivedBytes: _transportReceived[files.target.path] ?? 0,
         totalBytes: manifest.sizeBytes,
       );
     }
@@ -539,6 +601,9 @@ class AppUpdateRepository {
   }
 
   Future<void> clearDownloads() async {
+    await _downloadTransport?.clearDownloads();
+    _transportReceived.clear();
+    _verifiedDownloads.clear();
     final baseDirectory = await _directoryProvider();
     final directory = Directory(
       '${baseDirectory.path}${Platform.pathSeparator}app_updates',
@@ -552,7 +617,26 @@ class AppUpdateRepository {
 
   Future<void> openInstallPermission() => _platform.openInstallPermission();
 
-  Future<void> installApk(String path) => _platform.installApk(path);
+  Future<void> installApk(String path) async {
+    final manifest = _verifiedDownloads[path];
+    if (manifest != null) {
+      final file = File(path);
+      if (!await file.exists() ||
+          await file.length() != manifest.sizeBytes ||
+          !await _matchesDigest(file, manifest.sha256)) {
+        throw const AppUpdateException('安装包已变化，请重新下载', code: 'sha256');
+      }
+      await _downloadTransport?.rememberInstallation(manifest);
+    }
+    try {
+      await _platform.installApk(path);
+    } catch (_) {
+      if (manifest != null) {
+        await _downloadTransport?.reportInstallationFailure(manifest);
+      }
+      rethrow;
+    }
+  }
 
   /// Creates deterministic names that include a digest prefix.
   ///
@@ -592,6 +676,7 @@ class AppUpdateRepository {
     }
     await _deleteIfPresent(files.target);
     await files.partial.rename(files.target.path);
+    _verifiedDownloads[files.target.path] = manifest;
     return files.target.path;
   }
 

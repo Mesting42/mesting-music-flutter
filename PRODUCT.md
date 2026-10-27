@@ -204,4 +204,12 @@ Git 仍为 `beta`，基于 `edc6d1bf881cbe2173709cc84b86b91637fbaaed` / `v1.0.37
 
 已有主机证据位于 `.codex-artifacts/2026-10-27-release103/`：`broad-beta-tests.log` 为广泛 Beta 回归 **122 项通过**，`final-ui-tests.log` 为最终 UI **22 项通过**，`flutter-analyze.log` 为 **No issues found**。两组是各自有界结果，后续选定补充验证有重跑，不将各日志或重复运行相加成总通过数。独立 finish review 最终为 **SHIP**，persistence/fidelity/ceiling 均通过，R1 音效图标语义和 6dp 滑块要求已 resolved，无开放发现。
 
-`final-ui/` 中的最终有效捕获来自生产 Flutter 控件、合成账号/目录/MV 画面和 Windows 专用 QA 字体；它们证明主机可观察的布局、状态与交互，不能证明真实云端写入、真实音频输出、Android GPU 光学、TalkBack、设备安装或发布。本轮没有访问手机或设备测试；Android Release 构建、原签名、music 发布及线上 HTTPS 下载/续传已核验，详见同版交接。P8P SDK 属于用户另行要求的后续任务，须在核验 1.0.3 已发布后才开始；当前实现不包含该 SDK。
+`final-ui/` 中的最终有效捕获来自生产 Flutter 控件、合成账号/目录/MV 画面和 Windows 专用 QA 字体；它们证明主机可观察的布局、状态与交互，不能证明真实云端写入、真实音频输出、Android GPU 光学、TalkBack、设备安装或发布。本轮没有访问手机或设备测试；Android Release 构建、原签名、music 发布及线上 HTTPS 下载/续传已核验，详见同版交接。P8P SDK 属于用户另行要求的后续任务，须在核验 1.0.3 已发布后才开始；本节记录的 1.0.3 实现不包含该 SDK。
+
+## Release 1.0.4 current contract (authoritative)
+
+2026-10-28：已先发布并冻结 1.0.3，再按用户确认完成 P8P SDK 接入，**1.0.4 / code 25 已发布 music**。当前产品继续保留 1.0.3 的资料、均衡/音效、MV、定时及 6dp 滑块，既有素材、原生音乐 owner 和页面风格保持同一实现。签名、包名及内部 beta 身份延续，详见 [1.0.4 交接](docs/SESSION-HANDOFF-2026-10-28-v1.0.4.md)。
+
+更新下载使用本地 Ring Download SDK 1.1.0：music appId，P2P/P8P 开启，用户端 allowSharing=false；HTTPS 先行，可用节点提供辅助分片，SDK 管理会话、取消与续传。更新发现仍为原 health/真实 code，宿主保留二次大小/SHA 和安装前校验，完成文件原子移至原安装目录；旧 HTTP partial 兼容一次，不启动重复整包降级下载。隐私说明已披露实际网络协商和诊断，版本说明新增 1.0.4。
+
+宿主回归 80、选定 stable 18、Beta 隐私界面 2 通过；SDK 首轮 213 通过及 1 个测试工作目录夹具失败，修正后该项复测通过，保留原结果。静态分析、完整 Android 构建、原签名及原生库对齐通过。真实 SDK 默认引擎的主机 HTTPS 下载/暂停/续传、旧 1.0.3 原代码发现及完整下载本版、主备有界入口和公开 metadata 均已核验。真实 Android P8P 节点贡献、安装和音频/视频仍由用户自行验收，没有访问手机。完整源码包含原权利的 SDK，以本地私有快照保存，GitHub 尚未同步本轮。

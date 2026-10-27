@@ -50,8 +50,13 @@ dependencies:
   drift_flutter: 0.2.8
   shared_preferences: ^2.5.5
   http: ^1.6.0
+  # Pinned local release; application updates never fetch SDK code at runtime.
+  ring_download_sdk:
+    path: third_party/ring_download_sdk
   flutter_cache_manager: ^3.4.1
   crypto: 3.0.7
+  # Match SDK 1.1.0 native metadata support without upgrading the app AGP.
+  package_info_plus: 8.3.1
   ffi: ^2.1.4
   pinyin: 3.3.0
   image_picker: ^1.2.3
@@ -71,6 +76,7 @@ dependencies:
   webview_flutter: 4.10.0
 
 dev_dependencies:
+  dio: ^5.7.0
   flutter_test:
     sdk: flutter
   integration_test:

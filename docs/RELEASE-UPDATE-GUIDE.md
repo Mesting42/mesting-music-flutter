@@ -1,12 +1,12 @@
 # 发布下一版应用更新
 
-适用当前 Mesting Music 的常规 HTTPS 更新链。没有更新功能的旧版需手动覆盖安装一次当前正式版（现为 1.0.2）；1.0.1 起客户端从 music 公开 health 检查新版本。管理后台凭据只在浏览器使用，不应写入项目或构建参数。
+适用当前 Mesting Music 更新链。当前已发布正式版为 **1.0.4 / code 25**，见 [最新交接](SESSION-HANDOFF-2026-10-28-v1.0.4.md)。没有更新功能的旧版需手动覆盖安装一次当前版本；1.0.1 起客户端从 music 公开 health 检查新版本，1.0.4 起后续下载接入 Ring SDK。管理后台凭据只在浏览器使用，不写入源码、构建参数或交付快照。
 
-1. 保持包名 `com.mesting.music.beta`、显示名 Mesting Music 和原签名证书。1.0.2 的实际 code 为 `23`；后续公开版本使用正式数字，例如 `1.0.3`，实际 code 必须大于 `23`。内部 flavor 仅用于已有安装的兼容，不另发公开 Beta 版本。
+1. 保持包名 `com.mesting.music.beta`、显示名 Mesting Music 和原签名证书。1.0.4 的实际 code 为 `25`；后续版本必须使用更高 code，例如下一版 `1.0.5 / 26`。内部 flavor 仅用于已有安装的兼容，不另发公开 Beta 版本。
 2. 在保留当前工作区的前提下完成代码和相应回归，再构建：
 
    ```powershell
-   ./tool/build_android_release_apk.ps1 -FlutterSdkRoot 'D:/你的Flutter目录/flutter' -VersionName '1.0.3' -VersionCode 24
+   ./tool/build_android_release_apk.ps1 -FlutterSdkRoot 'D:/你的Flutter目录/flutter' -VersionName '1.0.5' -VersionCode 26
    ```
 
    不加 `--no-pub`。检查构建后的版本、包名、签名、SHA-256、大小及资源排除，保存独立版本安装包与源码快照。不要覆盖已冻结的旧交付文件。
@@ -18,4 +18,4 @@
 
 当前客户端使用 15 分钟自动前台检查节流；手动点击设置“版本更新”立即检查，同一非强制版本选择“稍后提醒我”后暂缓 12 小时。服务器只修改显示版本名不会提高已安装应用的实际 versionCode，也不能为旧 Beta.20/21 自动补装更新功能。安装器由 Android 决定，用户仍需确认安装。
 
-主/备站只在传输或服务器失败时做一次有界切换；限流、摘要、范围或身份错误由用户重试或重新发布正确包解决。不要为绕过错误而放宽 HTTPS、包名、版本或签名校验。当前不需要 SDK 密钥、P2P/P8P 或向其他用户上传文件。
+1.0.4 当前下载由 Ring Download SDK 1.1.0 管理 HTTPS 及可用节点的 P2P/P8P、续传和有界恢复；用户端分享保持关闭，业务层不再为 SDK 失败启动重复整包 HTTP 下载。旧 HTTP partial 仍可沿原协议完成一次。限流、摘要、范围或身份错误不能靠放宽 HTTPS、包名、版本或签名校验绕过。更新发现仍依赖 music/health，接入 SDK 不提供独立 COS 新版本发现源。SDK 源码随私有接续包提供，保留原权利和第三方声明，不直接公开上传公共仓库；管理后台只接收可公开分发的签名 APK。

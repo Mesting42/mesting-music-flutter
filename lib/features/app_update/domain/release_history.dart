@@ -2,6 +2,12 @@
 /// offline and must never be shown as the notes of an unknown future build.
 /// The distribution service may also supply notes for a newer release.
 const musicReleaseNotes = <String, List<String>>{
+  '1.0.4': [
+    '接入 Ring Download SDK 1.1.0，更新下载支持 HTTPS 与可用节点的 P2P/P8P 辅助传输。',
+    '保留下载暂停、续传和安装前完整性校验，旧版未完成的下载仍可继续。',
+    '用户端文件上传分享保持关闭，音乐播放沿用原有播放链路。',
+    '保留 1.0.3 的个人资料、均衡器、音效、MV、定时关闭及按钮适配修复。',
+  ],
   '1.0.3': [
     '修复禁用按钮在浅色、深色模式下的文字与背景对比，关闭触感后仍能看清“体验触感”。',
     '版本更新新增“查看此次更新”，可随时查看当前版本的更新说明。',

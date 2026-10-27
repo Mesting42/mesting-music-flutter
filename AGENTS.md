@@ -4,6 +4,6 @@
 
 编码时写好必要注释，尽可能解耦设计，便于其他人员接手代码时快速上手。
 
-接续当前正式版开发前，先阅读 [1.0.3 最新交接](docs/SESSION-HANDOFF-2026-10-27-v1.0.3.md)、[本版修改](docs/fixes-2026-10-27-v1.0.3.md)、[接续入口](docs/CONTINUE-BETA.md) 及 [Git/GitHub 补档记录](docs/version-archive/RELEASE-BACKFILL-2026-10-27.md)，核对当前分支、标签与工作区。music 后台已是 1.0.3 / 24，GitHub 尚为 1.0.2；后续 P8P SDK 已确认使用 1.0.4 / 25。旧版记录对应各自冻结构建，不把历史方案当成新的待办；内部 beta 名称仅作身份兼容。
+接续当前正式版开发前，先阅读 [1.0.4 最新交接](docs/SESSION-HANDOFF-2026-10-28-v1.0.4.md)、[本版修改](docs/fixes-2026-10-28-v1.0.4.md)、[接续入口](docs/CONTINUE-BETA.md) 及 [Git/GitHub 补档记录](docs/version-archive/RELEASE-BACKFILL-2026-10-27.md)，核对分支、标签和工作区。music 后台已是 1.0.4 / 25，GitHub 尚为 1.0.2；SDK 已接入并保持用户端分享关闭，完整源码以本地私有快照保存。旧版记录对应各自冻结构建，不把历史方案当成新的待办；内部 beta 名称仅作身份兼容。
 
 用户已要求后续自行真机测试并断开手机；没有新的明确授权时，不访问或操作其手机。原生性能测试只使用隔离的 `.beta.benchmark` 包，并强制 `--keep-app-running`，不得对日常安装执行默认 `flutter drive`。

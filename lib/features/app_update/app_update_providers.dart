@@ -4,11 +4,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 
 import '../../core/persistence/app_preferences.dart';
 import 'data/app_update_platform.dart';
 import 'data/app_update_repository.dart';
 import 'data/app_update_release_source.dart';
+import 'data/ring_app_update_transport.dart';
 import '../../core/platform/distribution_channel.dart';
 import 'data/java_mysql_test_channel_repository.dart';
 import 'domain/app_update_models.dart';
@@ -26,8 +28,19 @@ final appUpdatePlatformProvider = Provider<AppUpdatePlatform>(
   (ref) => AppUpdatePlatform(),
 );
 
+final appUpdateDownloadTransportProvider =
+    Provider<AppUpdateDownloadTransport?>((ref) {
+      if (!DistributionChannel.isBeta) return null;
+      final transport = RingAppUpdateTransport(
+        directoryProvider: getApplicationSupportDirectory,
+      );
+      ref.onDispose(() => unawaited(transport.dispose()));
+      return transport;
+    });
+
 final appUpdateRepositoryProvider = Provider<AppUpdateRepository>((ref) {
   return AppUpdateRepository(
+    downloadTransport: ref.watch(appUpdateDownloadTransportProvider),
     client: ref.watch(appUpdateHttpClientProvider),
     platform: ref.watch(appUpdatePlatformProvider),
     releaseSource: DistributionChannel.isBeta
