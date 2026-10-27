@@ -64,3 +64,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local Beta.21 host screenshots; source and portable summaries remain separate.
+/.impeccable/review/beta21/

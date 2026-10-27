@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mesting_music/core/persistence/app_preferences.dart';
+import 'package:mesting_music/core/platform/distribution_channel.dart';
 import 'package:mesting_music/core/audio/audio_output_controller.dart';
 import 'package:mesting_music/core/audio/media_volume_controller.dart';
 import 'package:mesting_music/core/audio/mesting_audio_handler.dart';
@@ -90,7 +91,7 @@ void main() {
       expect(find.text('已切换为单曲循环'), findsOneWidget);
       await tester.tap(repeat);
       await tester.pumpAndSettle();
-      expect(repeatIcon(), CupertinoIcons.arrow_right);
+      expect(repeatIcon(), CupertinoIcons.repeat);
       expect(find.text('已切换为顺序播放，不循环'), findsOneWidget);
       await tester.tap(repeat);
       await tester.pumpAndSettle();
@@ -195,6 +196,12 @@ void main() {
       expect(volume, .8);
       await tester.tap(find.byKey(const ValueKey('output-open-system-picker')));
       await tester.pumpAndSettle();
+      if (DistributionChannel.isBeta) {
+        expect(chooses, 0);
+        expect(find.text('选择播放设备'), findsOneWidget);
+        await tester.tap(find.text('系统设备管理'));
+        await tester.pumpAndSettle();
+      }
       expect(chooses, 1);
       expect(find.byKey(const ValueKey('apple-output-picker')), findsNothing);
       expect(tester.takeException(), isNull);

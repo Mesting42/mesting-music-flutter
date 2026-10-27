@@ -1,5 +1,7 @@
 # Beta.20 接续
 
+本轮完整完成项、未完成事项、冻结产物和新会话边界，见 [当前会话完整交接](SESSION-HANDOFF-2026-10-27-CURRENT-SESSION.md)。
+
 先读 [接续入口](CONTINUE-BETA.md)、[Beta.20 修改记录](fixes-2026-10-27-beta20.md)、[时长同步验证](listening-sync-verification-2026-10-27.md) 和根目录 `AGENTS.md`。旧版修复记录是冻结历史，不作为新待办。
 
 ## 状态与范围

@@ -5,11 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/audio/audio_output_controller.dart';
 import '../../../core/audio/media_volume_controller.dart';
 import '../../../core/audio/playback_providers.dart';
+import '../../../core/platform/distribution_channel.dart';
 import '../../../shared/widgets/artwork_image.dart';
 import '../../../shared/widgets/beta_glass_popover.dart';
 import '../../../shared/widgets/beta_icon_button.dart';
 import 'apple_audio_glyphs.dart';
 import 'apple_output_volume_slider.dart';
+import 'player_output_routes.dart';
 import '../../music_platform/presentation/platform_feedback.dart';
 
 /// The app owns this presentation; Android owns the real device transfer.
@@ -37,6 +39,7 @@ class PlayerOutputDialog extends ConsumerStatefulWidget {
 
 class _PlayerOutputDialogState extends ConsumerState<PlayerOutputDialog> {
   double? _drag;
+  bool _devices = false;
   @override
   Widget build(BuildContext context) {
     final output = ref.watch(audioOutputProvider);
@@ -71,7 +74,7 @@ class _PlayerOutputDialogState extends ConsumerState<PlayerOutputDialog> {
                         children: [
                           Expanded(
                             child: Text(
-                              '音频输出',
+                              _devices ? '选择播放设备' : '音频输出',
                               style: TextStyle(
                                 fontSize: 23,
                                 fontWeight: FontWeight.w700,
@@ -132,48 +135,53 @@ class _PlayerOutputDialogState extends ConsumerState<PlayerOutputDialog> {
                         ],
                       ),
                       const SizedBox(height: 26),
-                      Row(
-                        children: [
-                          AppleAudioGlyph(
-                            output.headphones
-                                ? AppleAudioGlyphKind.earphones
-                                : AppleAudioGlyphKind.speakerLoud,
-                            size: 40,
-                            color: blue,
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  output.name,
-                                  key: const ValueKey('output-current-device'),
-                                  style: TextStyle(
-                                    color: ink,
-                                    fontSize: 19,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  output.available ? '当前播放设备' : '设备状态暂不可用',
-                                  style: TextStyle(
-                                    color: ink.withValues(alpha: .7),
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (output.available)
+                      if (_devices)
+                        const PlayerOutputRoutes()
+                      else
+                        Row(
+                          children: [
                             AppleAudioGlyph(
-                              AppleAudioGlyphKind.check,
+                              output.headphones
+                                  ? AppleAudioGlyphKind.earphones
+                                  : AppleAudioGlyphKind.speakerLoud,
+                              size: 40,
                               color: blue,
-                              size: 28,
                             ),
-                        ],
-                      ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    output.name,
+                                    key: const ValueKey(
+                                      'output-current-device',
+                                    ),
+                                    style: TextStyle(
+                                      color: ink,
+                                      fontSize: 19,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    output.available ? '当前播放设备' : '设备状态暂不可用',
+                                    style: TextStyle(
+                                      color: ink.withValues(alpha: .7),
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (output.available)
+                              AppleAudioGlyph(
+                                AppleAudioGlyphKind.check,
+                                color: blue,
+                                size: 28,
+                              ),
+                          ],
+                        ),
                       const SizedBox(height: 24),
                       Row(
                         children: [
@@ -245,20 +253,44 @@ class _PlayerOutputDialogState extends ConsumerState<PlayerOutputDialog> {
               // Keep the primary action visible even in a short landscape card.
               Padding(
                 padding: const EdgeInsets.fromLTRB(22, 8, 22, 22),
-                child: CupertinoButton(
-                  key: const ValueKey('output-open-system-picker'),
-                  color: const Color(0xFF0069D5),
-                  borderRadius: BorderRadius.circular(25),
-                  onPressed: output.available
-                      ? () => Navigator.of(context).pop(true)
-                      : null,
-                  child: const Text(
-                    '切换设备',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_devices)
+                      CupertinoButton(
+                        key: const ValueKey('output-system-management'),
+                        onPressed: output.available
+                            ? () => Navigator.of(context).pop(true)
+                            : null,
+                        child: Text(
+                          '系统设备管理',
+                          style: TextStyle(color: scheme.primary, fontSize: 14),
+                        ),
+                      ),
+                    CupertinoButton(
+                      key: const ValueKey('output-open-system-picker'),
+                      color: const Color(0xFF0069D5),
+                      borderRadius: BorderRadius.circular(25),
+                      onPressed: output.available
+                          ? () {
+                              if (_devices) {
+                                Navigator.of(context).pop(false);
+                              } else if (!DistributionChannel.isBeta) {
+                                Navigator.of(context).pop(true);
+                              } else {
+                                setState(() => _devices = true);
+                              }
+                            }
+                          : null,
+                      child: Text(
+                        _devices ? '完成' : '切换设备',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ],

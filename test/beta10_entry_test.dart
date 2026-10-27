@@ -48,6 +48,16 @@ class _Platform extends PlatformAccountController {
 
 const _captureKey = ValueKey('beta10-capture');
 void main() {
+  // These are Beta welcome/guide surfaces with Beta-only assets. The formal
+  // channel has its own auth flow tests and never mounts these entry pages.
+  group(
+    'Beta entry surfaces',
+    _betaEntryTests,
+    skip: !DistributionChannel.isBeta,
+  );
+}
+
+void _betaEntryTests() {
   setUpAll(() async {
     await LiquidGlassWidgets.initialize();
     if (const bool.fromEnvironment('EXPORT_BETA_SCREENSHOTS')) {

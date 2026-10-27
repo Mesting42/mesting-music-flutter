@@ -7,6 +7,7 @@ import '../../../core/audio/playback_providers.dart';
 import '../../../core/platform/distribution_channel.dart';
 import '../../../shared/models/track.dart';
 import 'queue_track_duration.dart';
+import 'beta_playback_queue.dart';
 import '../../../shared/widgets/artwork_image.dart';
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../themes/music_theme_tokens.dart';
@@ -77,11 +78,16 @@ class _PlaybackQueueSheetFrame extends ConsumerWidget {
     return AnimatedFractionallySizedBox(
       duration: const Duration(milliseconds: 280),
       curve: Curves.easeOutCubic,
-      heightFactor: playbackQueueSheetHeightFactorForCount(
-        count: queue.length,
-        viewportHeight: mediaQuery.size.height,
-        bottomInset: mediaQuery.padding.bottom,
-      ),
+      heightFactor: DistributionChannel.isBeta
+          ? ((160 + queue.length * 76 + mediaQuery.padding.bottom) /
+                    mediaQuery.size.height)
+                .clamp(.32, .86)
+                .toDouble()
+          : playbackQueueSheetHeightFactorForCount(
+              count: queue.length,
+              viewportHeight: mediaQuery.size.height,
+              bottomInset: mediaQuery.padding.bottom,
+            ),
       alignment: Alignment.bottomCenter,
       child: const QueuePage(sheet: true),
     );
@@ -95,6 +101,26 @@ class QueuePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (DistributionChannel.isBeta) {
+      return Material(
+        color: Colors.transparent,
+        child: SafeArea(
+          top: !sheet,
+          child: Column(
+            children: [
+              if (sheet) const _QueueGrabHandle(),
+              Expanded(
+                child: BetaPlaybackQueue(
+                  onClose: sheet
+                      ? () => Navigator.of(context).pop()
+                      : () => context.go('/music'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     final tokens = context.musicThemeTokens;
     final queue = ref.watch(upcomingQueueProvider).value ?? const [];
     final mode = ref.watch(playbackModeProvider).value ?? PlaybackMode.list;

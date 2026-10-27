@@ -34,13 +34,13 @@ class LegalDocumentsPage extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               _LegalDocumentLink(
-                document: userAgreementDocument,
+                document: legalDocumentFor(LegalDocumentType.userAgreement),
                 icon: Icons.menu_book_rounded,
                 onTap: () => context.push('/legal/user-agreement'),
               ),
               const SizedBox(height: 12),
               _LegalDocumentLink(
-                document: privacyPolicyDocument,
+                document: legalDocumentFor(LegalDocumentType.privacyPolicy),
                 icon: Icons.verified_user_outlined,
                 onTap: () => context.push('/legal/privacy-policy'),
               ),

@@ -4,13 +4,38 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 @immutable
+class AudioOutputRoute {
+  const AudioOutputRoute({
+    required this.id,
+    required this.name,
+    this.headphones = false,
+    this.selected = false,
+    this.selectable = false,
+  });
+  final String id, name;
+  final bool headphones, selected, selectable;
+  factory AudioOutputRoute.fromMap(Map<Object?, Object?> raw) =>
+      AudioOutputRoute(
+        id: raw['id'] as String? ?? '',
+        name: raw['name'] as String? ?? '音频设备',
+        headphones: raw['kind'] == 'headphones',
+        selected: raw['selected'] == true,
+        selectable: raw['selectable'] == true,
+      );
+}
+
+@immutable
 class AudioOutput {
   const AudioOutput({
     this.name = '本机扬声器',
     this.headphones = false,
     this.available = false,
+    this.id = '',
+    this.routes = const [],
   });
   final String name;
+  final String id;
+  final List<AudioOutputRoute> routes;
   final bool headphones, available;
   static AudioOutput fromMap(Map<Object?, Object?> value) => AudioOutput(
     name: (value['name'] as String?)?.trim().isNotEmpty == true
@@ -18,6 +43,13 @@ class AudioOutput {
         : '本机扬声器',
     headphones: value['kind'] == 'headphones',
     available: value['available'] == true,
+    id: value['id'] as String? ?? '',
+    routes: (value['routes'] as List? ?? const [])
+        .whereType<Map>()
+        .map(
+          (route) => AudioOutputRoute.fromMap(route.cast<Object?, Object?>()),
+        )
+        .toList(growable: false),
   );
 }
 
@@ -47,9 +79,35 @@ class AudioOutputController extends Notifier<AudioOutput>
     final next = AudioOutput.fromMap(raw.cast<Object?, Object?>());
     if (state.name != next.name ||
         state.headphones != next.headphones ||
-        state.available != next.available) {
+        state.available != next.available ||
+        state.id != next.id ||
+        _routeSignature(state) != _routeSignature(next)) {
       state = next;
     }
+  }
+
+  String _routeSignature(AudioOutput value) => value.routes
+      .map(
+        (route) =>
+            '${route.id}:${route.name}:${route.headphones}:${route.selected}:${route.selectable}',
+      )
+      .join('|');
+
+  /// Native exposes only routes it is allowed to transfer to, not paired-device
+  /// guesses. Older Android versions keep the explicit system-management path.
+  Future<void> refreshRoutes() async {
+    _accept(await methods.invokeMapMethod<Object?, Object?>('routes'));
+  }
+
+  Future<bool> transfer(String routeId) async {
+    if (!state.routes.any((route) => route.id == routeId && route.selectable)) {
+      return false;
+    }
+    final confirmed = await methods.invokeMethod<bool>('transfer', {
+      'id': routeId,
+    });
+    await refresh();
+    return confirmed == true && state.id == routeId;
   }
 
   Future<void> refresh() async {

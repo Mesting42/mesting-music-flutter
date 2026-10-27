@@ -145,3 +145,21 @@ their own palette. Static startup images receive a short full-image presentation
 period after decoding and painting. No automatic listening-time synchronization
 is enabled: two isolated real-playback tests did not show credited cumulative or
 daily time in server readback or the user's official-app comparison.
+
+## Beta.21 current contract (authoritative)
+
+2026-10-27：这是已确认的同一 Mesting / Apple Music 视觉世界内的局部扩展，具体方向见 [.impeccable/surfaces/beta21-refinements.md](.impeccable/surfaces/beta21-refinements.md)。本节是当前 Beta 的权威补充：上文 Beta.10 的音符/唱片矢量双角色及 Beta.13 的小型操作成功绘制标记仅作为对应版本的历史说明保留，不能继续作为当前欢迎页或操作 HUD 的实施规则。没有新增或补造批准 UI comp、QUALITY BAR card 或随机方向 seed。
+
+- **欢迎伙伴**：只使用 `assets/branding/welcome/companions-atlas.png` 这一张双角色四姿态图集。黑胶唱片坐在左侧，高挑奶油色耳机站在右侧，手搭在唱片上；缩放与换姿态维持同一构图。它是由原启动图身份派生的 3D 渲染姿态的二维图像动画，不是新建或绑定骨骼的 3D 模型。小写 `hi` 气泡和三道手指线由代码独立绘制，默认可见，随挥手/轻点问候轻弹；眨眼、点头和轻跳保持轻量节奏。离屏、后台及减少动画时停止动作。原始启动 PNG 字节不变，来源与完整生成提示保留在该目录的 `provenance.json`。
+- **共享待播**：队列 sheet 与播放器内面板复用 `BetaPlaybackQueue`，直接呈现既有音频 handler 的权威待播顺序。手动待播优先和自动推荐来源仍由 handler 决定，界面不另建播放状态或重分组后冒充真实顺序。拖动开始保存歌曲身份快照，提交时按实时队列重定位，覆盖拖动中切歌/队列变化；支持右侧手柄排序和左滑移除。随机与循环各自设置，上一首仍使用真实历史。
+- **小型操作反馈**：Beta 的成功通知保留结果文字、live-region 语义和原有停留/退出反馈，移除绿色成功图标及其绘制动画。错误/警告仍保留实际原因。独立登录成功 HUD 继续使用自己的既定展示与指南交互契约；移除操作通知图标不删除登录成功反馈，也不制造业务成功。
+- **登录滚动玻璃**：手机号/验证码保留原 premium 材质、按压和回弹。`BetaGlassScrollBody` 在滚动 overscroll 合成内部绘制真实页面 surface，使玻璃有正确背板可采样；不以降级光学或关闭滚动回弹替代修复。
+- **同意与法律文本**：Beta 不再自动展示重复的首次法规卡片；欢迎页显式协议/隐私链接与主动同意行保留，关闭自动 gate 不写入任何接受状态。协议/隐私按 flavor 选取，说明当前酷狗/资源/验证服务、历史 Mesting 会话与实际本机存储、退出及平台账号注销边界。依用户决定暂不填写联系方式；这次是当前产品事实校准，不构成法律合规审计。自动听歌时长上报仍关闭，已领取的会员奖励不证明本次获得新增权益。
+- **八页指南**：使用当前歌曲、专辑、歌手、歌单、歌词五类搜索，真实播放器/歌词/评论与音质边界，系统音量/输出，账号归属的收藏、歌单、签到及会员限制，共享待播、启动/进度角色选择和五种实际播放器样式。指南预览使用现有偏好与局部绘制时钟，样式选择会保存，不创建第二个播放器或伪造云端写入。
+- **输出卡片**：“切换设备”在现有玻璃卡片内部展开，不另开一种视觉面板。列表只显示系统确认的当前路由与公开可转移路由，选择要经原生确认和回读后才生效；已配对设备不等于可用输出。需配对/授权、旧系统或不开放的切换保留用户已接受的次级“系统设备管理”入口；“完成”关闭卡片。
+
+本轮已存在的主机证据见 `.codex-artifacts/2026-10-27-beta21/`：`beta-regression.log` 为早期广泛 Beta 回归 266 项通过，`targeted-final.log` 为后续定向 24 项通过，`queue-final.log` 覆盖拖动中队列变化，`paired-final.log` 为后续双角色定向 22 项通过，`screenshots-final.log` 为截图相关 24 项通过，`analyze-final.log` 为 No issues found。各组存在重叠，不相加。`stable-final.log` 为 732 项通过、113 项跳过、2 项既有失败（文本编辑菜单间距、关注者移除 sheet），不能描述为全量全绿。Release 构建、签名与交付身份以另行冻结的最终交付记录为准，不由这些主机结果推导。
+
+`.impeccable/review/beta21` 的 31 张图片来自实际生产 Flutter 控件、合成账号/媒体/设备夹具与 Windows QA 中文字体，只支持主机布局/交互审查；不能认证 Android GPU 光学、IME/自动填充、TalkBack、蓝牙实际转移、系统/预测返回或性能。用户自行真机测试，本轮不访问手机、模拟器或 ADB；原生 Flutter 范围没有运行 HTML/CSS 检测器。
+
+Git 仍为 `beta`，基于 `edc6d1bf881cbe2173709cc84b86b91637fbaaed` / `v1.0.37-beta.19`，Beta.20 与 Beta.21 均为本机未提交修改；本轮不提交、建标签、推送或发布。Beta.20 APK/源码 ZIP、原始启动图与依赖锁继续冻结保留。

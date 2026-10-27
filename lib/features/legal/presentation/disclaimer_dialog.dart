@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/persistence/app_preferences.dart';
+import '../../../core/platform/distribution_channel.dart';
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../themes/music_theme_tokens.dart';
 import '../domain/legal_documents.dart';
@@ -58,7 +59,11 @@ class _FirstLaunchDisclaimerCoordinatorState
   @override
   void initState() {
     super.initState();
-    _visible = !hasAcceptedLegalDocuments(ref.read(sharedPreferencesProvider));
+    // Beta's welcome page owns explicit, unchecked first-use consent. Removing
+    // this second blocking card must never manufacture acceptance in storage.
+    _visible =
+        !DistributionChannel.isBeta &&
+        !hasAcceptedLegalDocuments(ref.read(sharedPreferencesProvider));
   }
 
   @override
@@ -251,13 +256,17 @@ class _TimedDisclaimerSheetState extends State<_TimedDisclaimerSheet> {
                     ),
                     const SizedBox(height: 12),
                     _TimedLegalDocumentLink(
-                      document: userAgreementDocument,
+                      document: legalDocumentFor(
+                        LegalDocumentType.userAgreement,
+                      ),
                       onTap: () =>
                           _openDocument(LegalDocumentType.userAgreement),
                     ),
                     const SizedBox(height: 9),
                     _TimedLegalDocumentLink(
-                      document: privacyPolicyDocument,
+                      document: legalDocumentFor(
+                        LegalDocumentType.privacyPolicy,
+                      ),
                       onTap: () =>
                           _openDocument(LegalDocumentType.privacyPolicy),
                     ),
@@ -490,7 +499,7 @@ class _RequiredLegalConsentCardState extends State<_RequiredLegalConsentCard> {
                 ),
                 const SizedBox(height: 17),
                 _LegalConsentChoice(
-                  document: userAgreementDocument,
+                  document: legalDocumentFor(LegalDocumentType.userAgreement),
                   checked: _acceptedUserAgreement,
                   onChanged: (value) =>
                       setState(() => _acceptedUserAgreement = value),
@@ -500,7 +509,7 @@ class _RequiredLegalConsentCardState extends State<_RequiredLegalConsentCard> {
                 ),
                 const SizedBox(height: 10),
                 _LegalConsentChoice(
-                  document: privacyPolicyDocument,
+                  document: legalDocumentFor(LegalDocumentType.privacyPolicy),
                   checked: _acceptedPrivacyPolicy,
                   onChanged: (value) =>
                       setState(() => _acceptedPrivacyPolicy = value),

@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,40 +6,44 @@ import '../../themes/theme_controller.dart';
 import '../../music_platform/music_platform_providers.dart';
 import 'mesting_music_companions.dart';
 import 'beta_player_style_previews.dart';
-import '../../../shared/widgets/player_comment_glyph.dart';
+import 'beta_guide_preview.dart';
 
 /// Content is deliberately grounded in the Beta's current capabilities.
 /// Demonstrations never write to cloud accounts or start a second player.
 const betaGuidePages = <({String title, String body, List<String> tags})>[
   (
     title: '发现你的音乐',
-    body: '在发现页听每日推荐、新歌与精选内容。轻点搜索，找到你此刻想听的歌。',
-    tags: ['每日推荐', '搜索发现', '新歌速递'],
+    body: '从首页的为你精选和发现页开始，探索私人 FM、每日推荐、刷歌推荐与新歌速递。搜索支持歌曲、专辑、歌手、歌单和歌词五类结果。',
+    tags: ['首页与发现', '五类搜索', '平台推荐'],
   ),
   (
     title: '播放与歌词',
-    body: '轻点小播放条展开播放器。点击封面查看歌词，再轻点上方封面返回，音乐始终连贯。',
+    body: '轻点底部播放胶囊展开播放器，点击封面查看同步歌词，再点上方封面返回。更多菜单提供歌曲评论、实际可用的音质与播放器风格。',
     tags: ['完整播放器', '同步歌词', '双向切换'],
   ),
   (
     title: '顺手的播放器操作',
-    body: '从顶部灰条下拉收起。底部切换歌词、输出设备与待播列表；队列里设置随机和循环，更多菜单里打开评论、音质与外观。',
-    tags: ['歌词与设备', '随机与循环', '更多操作'],
+    body:
+        '从顶部灰条下拉收起播放器。底部可打开歌词、音频输出和待播列表；音频输出面板可调节系统媒体音量。支持的设备在同款面板里选择，需要配对或授权时进入系统设备管理。',
+    tags: ['下拉收起', '系统音量', '输出设备'],
   ),
   (
-    title: '私人 FM 与收藏',
-    body: '在发现页探索私人 FM。轻点播放器的星标收藏喜欢的音乐，云端收藏与歌单跟随当前账号。',
-    tags: ['发现推荐', '星标收藏', '账号歌单'],
+    title: '账号、收藏与签到',
+    body:
+        '登录酷狗后，可按平台权限使用收藏、个人歌单与评论，并在“我的 → 签到与会员”查看打卡和到期时间。奖励是否新增由平台确认，应用内播放目前不保证计入平台听歌时长。',
+    tags: ['酷狗账号', '收藏与歌单', '签到与会员'],
   ),
   (
     title: '让音乐接着播放',
-    body: '单击只播放所选歌曲，播放全部才加入整组。手动待播优先，耗尽后推荐续播；上一首返回真实历史。',
-    tags: ['手动优先', '推荐续播', '真实历史'],
+    body:
+        '轻点歌曲只播放所选一首，“播放全部”才加入整组。在待播列表按住右侧手柄排序，左滑移除，随机与循环分别设置。手动待播优先，自动推荐有标注；上一首回到真实播放历史。',
+    tags: ['拖拽排序', '左滑移除', '手动优先'],
   ),
   (
     title: '调成你的样子',
-    body: '浅色、深色或跟随系统，由你选择。装扮里还可设置自定义背景和进度条样式。',
-    tags: ['外观模式', '自定义背景', '进度条'],
+    body:
+        '在“我的 → 装扮”选择浅色、深色或跟随系统，分别设置背景、进度条角色和启动页。启动页保留两张静态图与两段视频；小新进度角色还有七种可独立保存的天气。',
+    tags: ['外观模式', '启动页', '进度角色'],
   ),
   (
     title: '五种播放器风格',
@@ -102,13 +105,20 @@ class BetaOnboardingPageState extends ConsumerState<BetaOnboardingPage>
     super.dispose();
   }
 
-  void _page(int index) => _pager.animateToPage(
-    index,
-    duration: MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : const Duration(milliseconds: 380),
-    curve: Curves.easeInOutCubic,
-  );
+  void _page(int index) {
+    // PageController rejects a zero-duration scroll activity. Reduced motion
+    // uses a real jump, leaving the same page/state and accessible controls.
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _pager.jumpToPage(index);
+      return;
+    }
+    _pager.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.easeInOutCubic,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ink = Theme.of(context).colorScheme.onSurface;
@@ -292,7 +302,7 @@ class _GuideContent extends ConsumerWidget {
     final page = betaGuidePages[index];
     final platform = ref.watch(platformAccountProvider).value;
     final body = index == 3 && platform == null
-        ? '在发现页探索推荐，轻点爱心收藏。收藏与歌单按当前账号管理，登录酷狗后可使用对应的云端歌单与私人 FM。'
+        ? '游客可浏览公开内容、使用五类搜索并播放开放资源。登录酷狗后使用收藏、个人歌单与评论；签到和会员任务按平台结果展示。手机号验证码和多种扫码方式可在欢迎页选择。'
         : page.body;
     return LayoutBuilder(
       builder: (context, bounds) => SingleChildScrollView(
@@ -315,7 +325,7 @@ class _GuideContent extends ConsumerWidget {
                 GuideAnimatedScene(index: index),
               const SizedBox(height: 26),
               Text(
-                index == 3 && platform == null ? '推荐与收藏' : page.title,
+                index == 3 && platform == null ? '账号与收藏' : page.title,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 25,
@@ -348,7 +358,10 @@ class _GuideContent extends ConsumerWidget {
                       ('classic-system', '跟随系统'),
                     ])
                       ChoiceChip(
-                        label: Text(mode.$2),
+                        label: Text(
+                          mode.$2,
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
                         selected: ref.watch(musicThemeProvider).id == mode.$1,
                         onSelected: (_) => ref
                             .read(musicThemeProvider.notifier)
@@ -366,7 +379,12 @@ class _GuideContent extends ConsumerWidget {
                   children: [
                     for (final tag in page.tags)
                       Chip(
-                        label: Text(tag, style: const TextStyle(fontSize: 12)),
+                        label: Text(
+                          tag,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.labelSmall?.copyWith(fontSize: 12),
+                        ),
                         side: BorderSide.none,
                         backgroundColor: const Color(
                           0xFFDE5757,
@@ -382,292 +400,10 @@ class _GuideContent extends ConsumerWidget {
   }
 }
 
-/// Each page owns one bounded, interactive scene. It pauses through TickerMode
-/// when PageView keeps an adjacent page alive; no global frame notifications.
-class GuideAnimatedScene extends StatefulWidget {
+/// Compatibility entry for guide previews, isolated from account/audio writes.
+class GuideAnimatedScene extends StatelessWidget {
   const GuideAnimatedScene({required this.index, super.key});
   final int index;
   @override
-  State<GuideAnimatedScene> createState() => _GuideAnimatedSceneState();
-}
-
-class _GuideAnimatedSceneState extends State<GuideAnimatedScene>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _motion = AnimationController(
-    vsync: this,
-    duration: const Duration(seconds: 6),
-  )..repeat();
-  bool _alternate = false;
-  @override
-  void dispose() {
-    _motion.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    label: '轻点体验${betaGuidePages[widget.index].title}',
-    child: GestureDetector(
-      onTap: () => setState(() => _alternate = !_alternate),
-      child: RepaintBoundary(
-        child: SizedBox(
-          height: 224,
-          width: 320,
-          child: AnimatedBuilder(
-            animation: _motion,
-            builder: (context, _) => CustomPaint(
-              painter: _GuidePainter(
-                widget.index,
-                MediaQuery.disableAnimationsOf(context) ? .2 : _motion.value,
-                _alternate,
-                Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-class _GuidePainter extends CustomPainter {
-  _GuidePainter(this.index, this.time, this.alternate, this.ink);
-  final int index;
-  final double time;
-  final bool alternate;
-  final Color ink;
-  static const accent = Color(0xFFDE5757);
-  @override
-  void paint(Canvas c, Size s) {
-    c.save();
-    c.translate(s.width / 2, s.height / 2);
-    final wave = math.sin(time * math.pi * 2);
-    final pen = Paint()..isAntiAlias = true;
-    void icon(IconData data, Offset p, double size, Color color) {
-      final t = TextPainter(
-        textDirection: TextDirection.ltr,
-        text: TextSpan(
-          text: String.fromCharCode(data.codePoint),
-          style: TextStyle(
-            fontFamily: data.fontFamily,
-            package: data.fontPackage,
-            fontSize: size,
-            color: color,
-          ),
-        ),
-      )..layout();
-      t.paint(c, p - Offset(t.width / 2, t.height / 2));
-    }
-
-    void panel(Rect r, Color color) => c.drawRRect(
-      RRect.fromRectAndRadius(r, const Radius.circular(18)),
-      pen
-        ..color = color
-        ..style = PaintingStyle.fill,
-    );
-    if (index == 0 || index == 3) {
-      for (var i = 0; i < 3; i++) {
-        c.drawCircle(
-          Offset.zero,
-          67 + i * 17,
-          pen
-            ..color = accent.withValues(alpha: .13 + i * .04)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.5,
-        );
-      }
-      c.drawCircle(
-        Offset.zero,
-        52,
-        pen
-          ..color = accent.withValues(alpha: .22)
-          ..style = PaintingStyle.fill,
-      );
-      icon(
-        index == 0
-            ? CupertinoIcons.compass_fill
-            : CupertinoIcons.antenna_radiowaves_left_right,
-        Offset.zero,
-        46,
-        accent,
-      );
-      for (var i = 0; i < 4; i++) {
-        final a = time * math.pi * 2 + i * math.pi / 2;
-        icon(
-          index == 3
-              ? (alternate ? CupertinoIcons.star_fill : CupertinoIcons.star)
-              : CupertinoIcons.music_note,
-          Offset(math.cos(a) * 91, math.sin(a) * 91),
-          alternate ? 25 : 20,
-          i.isEven ? accent : ink.withValues(alpha: .65),
-        );
-      }
-    } else if (index == 1) {
-      final expanded = alternate ? 1.0 : (wave + 1) / 2;
-      panel(
-        Rect.fromCenter(
-          center: Offset(0, -expanded * 19),
-          width: 222,
-          height: 68 + expanded * 121,
-        ),
-        ink.withValues(alpha: .08),
-      );
-      panel(
-        Rect.fromLTWH(-91, -21 - expanded * 57, 48, 48),
-        accent.withValues(alpha: .3),
-      );
-      icon(
-        CupertinoIcons.music_note,
-        Offset(-67, 3 - expanded * 57),
-        25,
-        accent,
-      );
-      for (var i = 0; i < 3; i++) {
-        panel(
-          Rect.fromLTWH(-25, -12 + i * 15 + expanded * 5, 95 - i * 12, 5),
-          i == (time * 3).floor() % 3 ? accent : ink.withValues(alpha: .2),
-        );
-      }
-      icon(
-        alternate ? CupertinoIcons.pause_fill : CupertinoIcons.play_fill,
-        Offset(75, 1 + expanded * 56),
-        23,
-        ink,
-      );
-    } else if (index == 2) {
-      c.save();
-      c.translate(0, alternate ? 12 : (wave + 1) * 4);
-      panel(
-        const Rect.fromLTWH(-97, -91, 194, 181),
-        ink.withValues(alpha: .07),
-      );
-      panel(const Rect.fromLTWH(-26, -81, 52, 4), ink.withValues(alpha: .38));
-      panel(
-        const Rect.fromLTWH(-68, -59, 136, 66),
-        accent.withValues(alpha: .22),
-      );
-      icon(CupertinoIcons.music_note, const Offset(0, -27), 30, accent);
-      panel(const Rect.fromLTWH(-68, 20, 136, 4), ink.withValues(alpha: .16));
-      panel(Rect.fromLTWH(-68, 20, 60 + wave * 12, 4), accent);
-      paintPlayerCommentGlyph(c, const Rect.fromLTWH(-65, 47, 25, 25), accent);
-      icon(Icons.earbuds_rounded, const Offset(0, 60), 24, ink);
-      icon(CupertinoIcons.list_bullet, const Offset(53, 60), 25, ink);
-      if (alternate) {
-        panel(const Rect.fromLTWH(27, -68, 90, 91), ink.withValues(alpha: .9));
-        for (var i = 0; i < 3; i++) {
-          panel(Rect.fromLTWH(41, -48 + i * 23, 60 - i * 9, 4), Colors.white70);
-        }
-      }
-      c.restore();
-      icon(
-        CupertinoIcons.hand_point_left_fill,
-        Offset(14, -81 + (wave + 1) * 20),
-        26,
-        accent,
-      );
-    } else if (index == 4) {
-      for (var i = 0; i < 3; i++) {
-        final selected = ((time * 3).floor() + (alternate ? 1 : 0)) % 3 == i;
-        final y = -72.0 + i * 61 + (alternate && index == 4 ? -6 : 0);
-        panel(Rect.fromLTWH(-119, y, 238, 52), ink.withValues(alpha: .07));
-        if (index == 2 && i == 2) {
-          paintPlayerCommentGlyph(
-            c,
-            Rect.fromCenter(center: Offset(-87, y + 26), width: 25, height: 25),
-            accent,
-          );
-        } else {
-          icon(
-            index == 4
-                ? CupertinoIcons.music_note
-                : [
-                    CupertinoIcons.chevron_down,
-                    CupertinoIcons.hifispeaker_fill,
-                    CupertinoIcons.text_quote,
-                  ][i],
-            Offset(-87, y + 26),
-            24,
-            selected ? accent : ink.withValues(alpha: .5),
-          );
-        }
-        panel(
-          Rect.fromLTWH(-55, y + 17, selected ? 116 : 85, 6),
-          selected ? accent : ink.withValues(alpha: .25),
-        );
-        panel(Rect.fromLTWH(-55, y + 31, 68, 4), ink.withValues(alpha: .15));
-        if (selected) {
-          icon(
-            CupertinoIcons.hand_point_left_fill,
-            Offset(103 + wave * 4, y + 39),
-            25,
-            accent,
-          );
-        }
-      }
-    } else {
-      final background = Rect.fromCenter(
-        center: Offset(0, -43),
-        width: 174,
-        height: 105,
-      );
-      panel(
-        background,
-        alternate ? const Color(0xFF34313C) : const Color(0xFFF2D6C9),
-      );
-      c.drawCircle(
-        Offset(48 + wave * 4, -62),
-        15,
-        pen
-          ..color = alternate
-              ? const Color(0xFFF1DCB3)
-              : const Color(0xFFDE5757),
-      );
-      final hills = Path()
-        ..moveTo(-87, 9)
-        ..quadraticBezierTo(-40, -58, 0, -9)
-        ..quadraticBezierTo(44, -52, 87, 9)
-        ..close();
-      c.drawPath(
-        hills,
-        pen
-          ..color = alternate
-              ? const Color(0xFF705C7F)
-              : const Color(0xFFCC8981),
-      );
-      c.translate(0, 64);
-      for (var i = 0; i < 3; i++) {
-        final x = (i - 1) * 91.0;
-        c.drawCircle(
-          Offset(x, wave * (i - 1) * 7),
-          34,
-          pen
-            ..style = PaintingStyle.fill
-            ..color = [
-              const Color(0xFFFFE7DD),
-              const Color(0xFF34313C),
-              accent,
-            ][i],
-        );
-        icon(
-          [
-            CupertinoIcons.sun_max_fill,
-            CupertinoIcons.moon_fill,
-            CupertinoIcons.circle_lefthalf_fill,
-          ][i],
-          Offset(x, wave * (i - 1) * 7),
-          27,
-          i == 0 ? accent : Colors.white,
-        );
-      }
-    }
-    c.restore();
-  }
-
-  @override
-  bool shouldRepaint(_GuidePainter old) =>
-      old.time != time ||
-      old.index != index ||
-      old.alternate != alternate ||
-      old.ink != ink;
+  Widget build(BuildContext context) => BetaGuidePreview(index: index);
 }

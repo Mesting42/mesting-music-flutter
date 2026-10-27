@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../../shared/widgets/beta_glass_controls.dart';
+import '../../../shared/widgets/beta_glass_scroll_body.dart';
 import '../../../shared/widgets/music_notice.dart';
 import '../data/music_platform_api.dart';
 import '../music_platform_providers.dart';
@@ -331,7 +332,7 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
                   ),
                 ),
                 Expanded(
-                  child: ListView(
+                  child: BetaGlassScrollBody(
                     padding: const EdgeInsets.fromLTRB(24, 30, 24, 32),
                     children: [
                       if (account.isLoading)

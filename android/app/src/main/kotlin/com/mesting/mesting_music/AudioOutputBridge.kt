@@ -28,6 +28,10 @@ class AudioOutputBridge(private val activity: Activity, messenger: BinaryMesseng
     private var sink: EventChannel.EventSink? = null
     private var observing = false
     private var modern: ModernRoutes? = null
+    private val main = Handler(Looper.getMainLooper())
+    private var transferId: String? = null
+    private var transferResult: MethodChannel.Result? = null
+    private var transferTimeout: Runnable? = null
     private val callback = object : MediaRouter.SimpleCallback() {
         override fun onRouteSelected(router: MediaRouter, type: Int, route: MediaRouter.RouteInfo) = publish()
         override fun onRouteChanged(router: MediaRouter, route: MediaRouter.RouteInfo) = publish()
@@ -42,6 +46,28 @@ class AudioOutputBridge(private val activity: Activity, messenger: BinaryMesseng
             try {
                 when (call.method) {
                     "current" -> result.success(read())
+                    "routes" -> result.success(read())
+                    "transfer" -> {
+                        val id = call.argument<String>("id")
+                        if (Build.VERSION.SDK_INT < 30 || id.isNullOrBlank()) {
+                            result.success(false)
+                        } else if (transferResult != null) {
+                            result.error("audio_output_busy", "设备正在切换，请稍候", null)
+                        } else {
+                            val router = MediaRouter2.getInstance(activity)
+                            // Only public transferable routes are actionable.
+                            // A paired Bluetooth device is not proof of a route.
+                            val route = router.systemController.transferableRoutes.firstOrNull { it.id == id }
+                            if (route == null) result.success(false) else {
+                                if (modern == null) modern = ModernRoutes()
+                                transferId = id
+                                transferResult = result
+                                transferTimeout = Runnable { finishTransfer(false) }.also { main.postDelayed(it, 8000) }
+                                try { router.transferTo(route) }
+                                catch (error: Exception) { finishTransfer(false) }
+                            }
+                        }
+                    }
                     "choose" -> {
                         // The public system picker starts at Android 14. Older
                         // phones use their Bluetooth settings instead of hidden
@@ -65,7 +91,7 @@ class AudioOutputBridge(private val activity: Activity, messenger: BinaryMesseng
                     // requesting active scans or depending on AndroidX flags.
                     legacy.addCallback(MediaRouter.ROUTE_TYPE_LIVE_AUDIO, callback)
                     audio.registerAudioDeviceCallback(devices, Handler(Looper.getMainLooper()))
-                    if (Build.VERSION.SDK_INT >= 30) modern = ModernRoutes()
+                    if (Build.VERSION.SDK_INT >= 30 && modern == null) modern = ModernRoutes()
                 }
                 publish()
             }
@@ -79,7 +105,19 @@ class AudioOutputBridge(private val activity: Activity, messenger: BinaryMesseng
             // A system controller includes Bluetooth, wired and local outputs
             // and supplies user/OEM names without BLUETOOTH_CONNECT access.
             val route = MediaRouter2.getInstance(activity).systemController.selectedRoutes.firstOrNull()
-            if (route != null) return mapOf("name" to route.name.toString(), "kind" to kind(route.type), "available" to true)
+            if (route != null) {
+                val controller = MediaRouter2.getInstance(activity).systemController
+                // Some OEMs restrict route enumeration. Retain the confirmed
+                // current-device metadata even when no transferable list is exposed.
+                val transferable = runCatching { controller.transferableRoutes }.getOrDefault(emptyList())
+                val routes = (listOf(route) + transferable).distinctBy { it.id }.map {
+                    mapOf("id" to it.id, "name" to it.name.toString(), "kind" to kind(it.type),
+                        "selected" to (it.id == route.id),
+                        "selectable" to (it.id != route.id && transferable.any { candidate -> candidate.id == it.id }))
+                }
+                return mapOf("id" to route.id, "name" to route.name.toString(), "kind" to kind(route.type),
+                    "available" to true, "routes" to routes)
+            }
         }
         val selected = legacy.getSelectedRoute(MediaRouter.ROUTE_TYPE_LIVE_AUDIO)
         val outputs = audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
@@ -101,7 +139,20 @@ class AudioOutputBridge(private val activity: Activity, messenger: BinaryMesseng
     private fun publish() {
         // OEM route services may briefly disappear during a Bluetooth change.
         // Keep the last confirmed metadata; a foreground probe can recover.
-        runCatching { read() }.onSuccess { sink?.success(it) }
+        runCatching { read() }.onSuccess {
+            sink?.success(it)
+            if (transferId != null && it["id"] == transferId) finishTransfer(true)
+        }
+    }
+
+    /** Complete only on a confirmed selection or bounded failure, never on tap. */
+    private fun finishTransfer(success: Boolean) {
+        val result = transferResult ?: return
+        transferTimeout?.let { main.removeCallbacks(it) }
+        transferTimeout = null
+        transferResult = null
+        transferId = null
+        result.success(success)
     }
 
     /** Keep API-30 classes out of the legacy lifecycle path. */
@@ -116,17 +167,27 @@ class AudioOutputBridge(private val activity: Activity, messenger: BinaryMesseng
         private val controller = object : MediaRouter2.ControllerCallback() {
             override fun onControllerUpdated(controller: MediaRouter2.RoutingController) = publish()
         }
+        private val transfers = object : MediaRouter2.TransferCallback() {
+            override fun onTransfer(oldController: MediaRouter2.RoutingController, newController: MediaRouter2.RoutingController) = publish()
+            override fun onTransferFailure(route: MediaRoute2Info) {
+                if (route.id == transferId) finishTransfer(false)
+                publish()
+            }
+        }
         init {
             router.registerRouteCallback(activity.mainExecutor, routes,
                 RouteDiscoveryPreference.Builder(listOf(MediaRoute2Info.FEATURE_LIVE_AUDIO), false).build())
             router.registerControllerCallback(activity.mainExecutor, controller)
+            router.registerTransferCallback(activity.mainExecutor, transfers)
         }
         fun dispose() {
             router.unregisterRouteCallback(routes)
             router.unregisterControllerCallback(controller)
+            router.unregisterTransferCallback(transfers)
         }
     }
     private fun stop() {
+        finishTransfer(false)
         sink = null
         if (observing) {
             legacy.removeCallback(callback)

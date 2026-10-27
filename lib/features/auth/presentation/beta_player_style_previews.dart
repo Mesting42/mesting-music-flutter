@@ -18,7 +18,18 @@ class _BetaPlayerStylePreviewsState
   late final AnimationController _phase = AnimationController(
     vsync: this,
     duration: const Duration(seconds: 8),
-  )..repeat();
+  );
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!MediaQuery.disableAnimationsOf(context) &&
+        TickerMode.valuesOf(context).enabled) {
+      if (!_phase.isAnimating) _phase.repeat();
+    } else {
+      _phase.stop();
+    }
+  }
+
   @override
   void dispose() {
     _phase.dispose();
@@ -59,7 +70,7 @@ class _BetaPlayerStylePreviewsState
                       border: Border.all(
                         width: selected == style ? 1.8 : 1,
                         color: selected == style
-                            ? const Color(0xFFDE5757)
+                            ? Theme.of(context).colorScheme.primary
                             : ink.withValues(alpha: .16),
                       ),
                     ),
@@ -90,7 +101,7 @@ class _BetaPlayerStylePreviewsState
                               : Icons.circle_outlined,
                           size: 15,
                           color: selected == style
-                              ? const Color(0xFFDE5757)
+                              ? Theme.of(context).colorScheme.primary
                               : ink.withValues(alpha: .25),
                         ),
                       ],
