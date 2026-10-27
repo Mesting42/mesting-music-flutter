@@ -34,70 +34,89 @@ class BetaGlassButton extends StatelessWidget {
   final double? width;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    label: label,
-    enabled: interactionEnabled && onPressed != null && !loading,
-    // Blocking a sibling request is an interaction state, not a new optical
-    // material. Keep the same glass layer instead of inserting disabled opacity.
-    child: ExcludeFocus(
-      excluding: !interactionEnabled || loading,
-      child: IgnorePointer(
-        ignoring: !interactionEnabled || loading,
-        child: RepaintBoundary(
-          child: GlassButton.custom(
-            onTap: () {
-              if (!interactionEnabled || loading || onPressed == null) return;
-              if (hapticFeedback) {
-                appHaptic(
-                  context,
-                  blue ? AppHapticEvent.impact : AppHapticEvent.selection,
-                );
-              }
-              onPressed!();
-            },
-            enabled: onPressed != null,
-            height: height,
-            width: width,
-            useOwnLayer: true,
-            quality: GlassQuality.premium,
-            stretch: .12,
-            // A ListView winning the gesture must cancel every button's press
-            // sheen. Raw-pointer tracking would leave neutral glass darkened
-            // (and blue glass washed out) for the remainder of a page drag.
-            // Tap/keyboard inflation, refraction and highlight remain intact.
-            persistPressOnDrag: false,
-            ambientBaseLight: blue ? .06 : null,
-            glowColor: blue ? const Color(0xFF6CA7FF) : null,
-            glowOpacity: blue ? .12 : null,
-            settings: blue ? betaBlueActionGlass : betaMusicPillGlass(context),
-            shape: LiquidRoundedRectangle(borderRadius: height / 2),
-            child: Padding(
-              padding: width == height
-                  ? EdgeInsets.zero
-                  : EdgeInsets.symmetric(horizontal: horizontalPadding),
-              child: loading
-                  ? BetaActivityIndicator(color: blue ? Colors.white : null)
-                  : DefaultTextStyle.merge(
-                      style: TextStyle(
-                        fontSize: fontSize,
-                        fontWeight: FontWeight.w700,
-                        color: blue
-                            ? Colors.white
-                            : accent
-                            ? BetaAppearance.accent(
-                                Theme.of(context).brightness,
-                              )
-                            : Theme.of(context).colorScheme.onSurface,
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final available = onPressed != null;
+    final interactive = interactionEnabled && available && !loading;
+    // Disabled controls own a complete foreground/material pair. The library's
+    // generic 50% opacity fades the *whole* blue lens against the page, while
+    // our white label used to stay white. Keep premium optics and render an
+    // explicit neutral state instead; semantics, focus and hit testing below
+    // remain genuinely disabled. A pending request keeps its original tint.
+    final emphasized = blue && (available || loading);
+    final foreground = !available && !loading
+        ? scheme.onSurfaceVariant
+        : emphasized
+        ? Colors.white
+        : accent
+        ? BetaAppearance.accent(Theme.of(context).brightness)
+        : scheme.onSurface;
+    return Semantics(
+      button: true,
+      label: label,
+      enabled: interactive,
+      // Blocking a sibling request is an interaction state, not a new optical
+      // material. Keep the same glass layer instead of inserting disabled opacity.
+      child: ExcludeFocus(
+        excluding: !interactive,
+        child: IgnorePointer(
+          ignoring: !interactive,
+          child: RepaintBoundary(
+            child: GlassButton.custom(
+              onTap: () {
+                if (!interactionEnabled || loading || onPressed == null) return;
+                if (hapticFeedback) {
+                  appHaptic(
+                    context,
+                    blue ? AppHapticEvent.impact : AppHapticEvent.selection,
+                  );
+                }
+                onPressed!();
+              },
+              enabled: true,
+              excludeFromSemantics: true,
+              canRequestFocus: interactive,
+              height: height,
+              width: width,
+              useOwnLayer: true,
+              quality: GlassQuality.premium,
+              stretch: .12,
+              // A ListView winning the gesture must cancel every button's press
+              // sheen. Raw-pointer tracking would leave neutral glass darkened
+              // (and blue glass washed out) for the remainder of a page drag.
+              // Tap/keyboard inflation, refraction and highlight remain intact.
+              persistPressOnDrag: false,
+              ambientBaseLight: emphasized ? .06 : null,
+              glowColor: emphasized ? const Color(0xFF6CA7FF) : null,
+              glowOpacity: emphasized ? .12 : null,
+              settings: emphasized
+                  ? betaBlueActionGlass
+                  : betaMusicPillGlass(context),
+              shape: LiquidRoundedRectangle(borderRadius: height / 2),
+              child: Padding(
+                padding: width == height
+                    ? EdgeInsets.zero
+                    : EdgeInsets.symmetric(horizontal: horizontalPadding),
+                child: loading
+                    ? BetaActivityIndicator(color: foreground)
+                    : IconTheme.merge(
+                        data: IconThemeData(color: foreground),
+                        child: DefaultTextStyle.merge(
+                          style: TextStyle(
+                            fontSize: fontSize,
+                            fontWeight: FontWeight.w700,
+                            color: foreground,
+                          ),
+                          child: child,
+                        ),
                       ),
-                      child: child,
-                    ),
+              ),
             ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class BetaGlassBackButton extends StatelessWidget {

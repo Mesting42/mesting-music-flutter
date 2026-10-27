@@ -30,6 +30,7 @@ import '../../features/playlists/presentation/playlist_detail_page.dart';
 import '../../features/queue/presentation/queue_page.dart';
 import '../../features/search/presentation/music_search_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
+import '../../features/music_platform/presentation/platform_profile_edit_page.dart';
 import '../../features/social/presentation/chat_page.dart';
 import '../../features/social/presentation/public_profile_page.dart';
 import '../../features/social/presentation/social_connections_page.dart';
@@ -184,12 +185,14 @@ final appRouter = GoRouter(
           path: '/profile/edit',
           pageBuilder: (context, state) => _profileEditTransitionPage(
             state: state,
-            child: const SensitiveScreen(
-              child: AuthProtectedPage(
-                reason: '登录后才能编辑头像和个人资料。',
-                redirect: '/profile/edit',
-                child: ProfileEditPage(),
-              ),
+            child: SensitiveScreen(
+              child: DistributionChannel.isBeta
+                  ? const PlatformProfileEditPage()
+                  : const AuthProtectedPage(
+                      reason: '登录后才能编辑头像和个人资料。',
+                      redirect: '/profile/edit',
+                      child: ProfileEditPage(),
+                    ),
             ),
           ),
         ),

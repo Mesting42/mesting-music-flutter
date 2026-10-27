@@ -5,7 +5,9 @@ import '../../../shared/widgets/beta_glass_controls.dart';
 import '../../../shared/widgets/beta_icon_button.dart';
 import '../../themes/beta_appearance.dart';
 import '../app_update_providers.dart';
+import '../domain/release_history.dart';
 import 'apple_download_progress.dart';
+import 'release_notes_sheet.dart';
 
 /// Presentation only: one controller owns checking, download, pause and install.
 /// A missing release is a visible checking/current/error state, never an empty
@@ -85,6 +87,12 @@ class _BetaAppUpdateSheetState extends ConsumerState<BetaAppUpdateSheet>
     final waiting =
         checking || verifying || phase == AppUpdatePhase.launchingInstaller;
     final current = phase == AppUpdatePhase.upToDate;
+    final notesVersion = !current && manifest != null
+        ? manifest.versionName
+        : installed?.versionName;
+    final releaseNotes = !current && manifest?.releaseNotes.isNotEmpty == true
+        ? manifest!.releaseNotes
+        : notesForMusicVersion(notesVersion ?? '');
     final title = checking
         ? '正在检查更新'
         : current
@@ -277,7 +285,20 @@ class _BetaAppUpdateSheetState extends ConsumerState<BetaAppUpdateSheet>
                     ),
                   ],
                 ],
-                const SizedBox(height: 30),
+                if (notesVersion != null && !checking)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      key: const ValueKey('app-update-view-notes'),
+                      onPressed: () => showMusicReleaseNotes(
+                        context,
+                        version: notesVersion,
+                        notes: releaseNotes,
+                      ),
+                      child: const Text('查看此次更新'),
+                    ),
+                  ),
+                const SizedBox(height: 24),
                 BetaGlassButton(
                   key: const ValueKey('app-update-primary'),
                   blue: true,

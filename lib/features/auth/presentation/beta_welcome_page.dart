@@ -176,7 +176,6 @@ class _BetaWelcomePageState extends ConsumerState<BetaWelcomePage> {
                                 Icon(
                                   CupertinoIcons.device_phone_portrait,
                                   size: 23,
-                                  color: Colors.white,
                                 ),
                                 SizedBox(width: 9),
                                 Text('手机号登录'),

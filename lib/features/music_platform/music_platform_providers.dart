@@ -136,6 +136,30 @@ class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
     }
   });
 
+  /// Refresh display metadata without re-authenticating or replaying onboarding.
+  /// A profile response from a previous account cannot replace a new session.
+  Future<void> updateProfileMetadata(
+    PlatformSession expected, {
+    String? nickname,
+    String? avatarUrl,
+  }) => _serialize(() async {
+    final current = await future;
+    if (current?.userId != expected.userId ||
+        current?.token != expected.token) {
+      throw const MusicPlatformException('账号已变化，请返回后重新操作');
+    }
+    final updated = PlatformSession(
+      userId: current!.userId,
+      token: current.token,
+      vipToken: current.vipToken,
+      nickname: nickname ?? current.nickname,
+      avatarUrl: avatarUrl?.isNotEmpty == true ? avatarUrl! : current.avatarUrl,
+    );
+    await ref.read(platformSessionStoreProvider).write(updated);
+    ref.read(musicPlatformApiProvider).session = updated;
+    state = AsyncData(updated);
+  });
+
   Future<void> signOut() => _serialize(() async {
     await future;
     // Remove the credential before publishing guest state; failure remains

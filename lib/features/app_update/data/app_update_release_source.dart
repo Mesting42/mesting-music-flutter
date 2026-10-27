@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../domain/app_update_models.dart';
+import '../domain/release_history.dart';
 
 /// Release discovery is independent of download state and Android installation.
 abstract interface class AppUpdateReleaseSource {
@@ -103,7 +104,7 @@ class CsnasUpdateReleaseSource implements AppUpdateReleaseSource {
         minimumVersionCode: 1,
         mandatory: false,
         title: '发现新版本',
-        releaseNotes: const [], // This public endpoint does not publish notes.
+        releaseNotes: notesForMusicVersion(name),
         apkUrl: primary,
         apkBackupUrl: backup,
         downloadEtag: etag as String?,

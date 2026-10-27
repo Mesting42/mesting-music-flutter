@@ -10,6 +10,7 @@ import '../features/legal/presentation/disclaimer_dialog.dart';
 import '../features/lyrics/presentation/lyrics_overlay_coordinator.dart';
 import '../features/app_update/presentation/app_update_coordinator.dart';
 import '../core/audio/playback_providers.dart';
+import '../core/audio/music_equalizer_providers.dart';
 import '../core/platform/distribution_channel.dart';
 import '../features/music_platform/data/embedded_kugou_music_source.dart';
 import '../features/music_platform/data/music_platform_api.dart';
@@ -66,6 +67,7 @@ class MestingMusicApp extends ConsumerWidget {
       });
     }
     if (DistributionChannel.isBeta) {
+      ref.watch(musicEqualizerProvider);
       ref.watch(platformRecommendationBindingProvider);
     }
     final radioController = DistributionChannel.isBeta

@@ -56,6 +56,23 @@ class MusicPlatformApi {
     timeout: timeout,
   );
 
+  /// Profile/avatar payloads belong in a JSON body, especially base64 images.
+  /// Putting an image in the URL exceeds request-line limits and exposes its
+  /// contents to URL diagnostics. Existing flat-query write contracts remain.
+  Future<Map<String, dynamic>> postJson(
+    String path, {
+    required Map<String, Object?> body,
+    required PlatformSession expectedSession,
+  }) => _request(
+    'POST',
+    path,
+    query: const {},
+    body: body,
+    allowBusinessError: true,
+    expectedSession: expectedSession,
+    timeout: const Duration(seconds: 30),
+  );
+
   Future<Map<String, dynamic>> _request(
     String method,
     String path, {
@@ -64,6 +81,7 @@ class MusicPlatformApi {
     Future<void>? abortTrigger,
     PlatformSession? expectedSession,
     Duration timeout = const Duration(seconds: 15),
+    Map<String, Object?>? body,
   }) async {
     // Enforce the boundary even if a future caller passes a malformed path.
     if (!path.startsWith('/') || path.startsWith('//') || path.contains('?')) {
@@ -96,6 +114,10 @@ class MusicPlatformApi {
     request.headers['Accept'] = 'application/json';
     request.headers['x-apicache-bypass'] = '1';
     request.headers['Cache-Control'] = 'no-cache';
+    if (body != null) {
+      request.headers['Content-Type'] = 'application/json; charset=utf-8';
+      request.body = jsonEncode(body);
+    }
     if (identity != null) {
       request.headers['Authorization'] = [
         'token=${identity.token}',

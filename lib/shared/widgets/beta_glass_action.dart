@@ -44,7 +44,11 @@ class BetaGlassAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = blue
+    final interactive = onPressed != null && !loading;
+    final emphasized = blue && (onPressed != null || loading);
+    final foreground = onPressed == null && !loading
+        ? Theme.of(context).colorScheme.onSurfaceVariant
+        : emphasized
         ? Colors.white
         : Theme.of(context).colorScheme.onSurface;
     void activate() {
@@ -71,30 +75,37 @@ class BetaGlassAction extends StatelessWidget {
               child: Center(
                 child: IgnorePointer(
                   ignoring: compact,
-                  child: GlassButton.custom(
-                    onTap: activate,
-                    enabled: onPressed != null && !loading,
-                    width: compact ? 36 : 48,
-                    height: compact ? 36 : 48,
-                    useOwnLayer: true,
-                    quality: GlassQuality.premium,
-                    interactionScale: compact ? 1 : null,
-                    stretch: compact ? 0 : .15,
-                    shape: const LiquidRoundedRectangle(borderRadius: 24),
-                    settings: blue
-                        ? betaBlueActionGlass
-                        : betaMusicPillGlass(context),
-                    child: loading
-                        ? CupertinoActivityIndicator(color: foreground)
-                        : Icon(
-                            icon,
-                            color: foreground,
-                            size: compact
-                                ? 23
-                                : blue
-                                ? 25
-                                : 27,
-                          ),
+                  child: IgnorePointer(
+                    ignoring: !interactive,
+                    child: GlassButton.custom(
+                      onTap: activate,
+                      // Match BetaGlassButton: disabled is a neutral material,
+                      // not a translucent blue lens carrying a white icon.
+                      enabled: true,
+                      excludeFromSemantics: true,
+                      canRequestFocus: interactive,
+                      width: compact ? 36 : 48,
+                      height: compact ? 36 : 48,
+                      useOwnLayer: true,
+                      quality: GlassQuality.premium,
+                      interactionScale: compact ? 1 : null,
+                      stretch: compact ? 0 : .15,
+                      shape: const LiquidRoundedRectangle(borderRadius: 24),
+                      settings: emphasized
+                          ? betaBlueActionGlass
+                          : betaMusicPillGlass(context),
+                      child: loading
+                          ? CupertinoActivityIndicator(color: foreground)
+                          : Icon(
+                              icon,
+                              color: foreground,
+                              size: compact
+                                  ? 23
+                                  : blue
+                                  ? 25
+                                  : 27,
+                            ),
+                    ),
                   ),
                 ),
               ),

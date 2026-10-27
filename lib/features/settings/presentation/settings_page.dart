@@ -22,6 +22,9 @@ import '../../auth/presentation/beta_onboarding_page.dart';
 import '../../auth/presentation/beta_welcome_page.dart';
 import '../../auth/presentation/beta_sign_out_dialog.dart';
 import 'haptic_settings_page.dart';
+import 'music_equalizer_page.dart';
+import 'music_sleep_timer_sheet.dart';
+import '../../music_platform/presentation/music_effects_page.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -116,6 +119,48 @@ class SettingsPage extends ConsumerWidget {
                       ),
               ),
               const SizedBox(height: 18),
+              if (DistributionChannel.isBeta) ...[
+                const _SettingsSectionLabel('播放'),
+                _SettingsSurface(
+                  child: Column(
+                    children: [
+                      _SettingsTile(
+                        key: const ValueKey('settings-equalizer'),
+                        icon: Icons.graphic_eq_rounded,
+                        iconColor: const Color(0xFF527FD3),
+                        title: '均衡器',
+                        subtitle: '频段增益、预设与自定义声音',
+                        onTap: () =>
+                            Navigator.of(context, rootNavigator: true).push(
+                              betaEntryRoute<void>(const MusicEqualizerPage()),
+                            ),
+                      ),
+                      const _SettingsDivider(),
+                      _SettingsTile(
+                        key: const ValueKey('settings-effects'),
+                        icon: Icons.surround_sound_outlined,
+                        iconColor: const Color(0xFF527FD3),
+                        title: '音效',
+                        subtitle: '社区、耳机与明星音效',
+                        onTap: () => Navigator.of(
+                          context,
+                          rootNavigator: true,
+                        ).push(betaEntryRoute<void>(const MusicEffectsPage())),
+                      ),
+                      const _SettingsDivider(),
+                      _SettingsTile(
+                        key: const ValueKey('settings-sleep-timer'),
+                        icon: Icons.bedtime_outlined,
+                        iconColor: const Color(0xFF527FD3),
+                        title: '定时关闭',
+                        subtitle: '倒计时或播完当前歌曲后停止',
+                        onTap: () => showMusicSleepTimer(context, ref),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+              ],
               const _SettingsSectionLabel('应用'),
               _SettingsSurface(
                 child: Column(

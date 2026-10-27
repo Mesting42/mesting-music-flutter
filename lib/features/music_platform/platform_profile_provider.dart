@@ -1,14 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'data/music_platform_api.dart';
+import 'data/platform_profile_repository.dart';
 import 'domain/platform_session.dart';
+import 'domain/platform_regions.dart';
 import 'music_platform_providers.dart';
+import 'domain/platform_profile.dart';
+export 'domain/platform_profile.dart';
 
-class PlatformProfileInfo {
-  const PlatformProfileInfo(this.nickname, this.avatarUrl);
-  final String nickname;
-  final String avatarUrl;
-}
+final platformProfileRepositoryProvider = Provider<PlatformProfileRepository>(
+  (ref) => PlatformProfileRepository(ref.watch(musicPlatformApiProvider)),
+);
+final platformEditableProfileProvider = FutureProvider.autoDispose
+    .family<PlatformProfileInfo, PlatformSession>(
+      (ref, session) =>
+          ref.watch(platformProfileRepositoryProvider).fetch(session),
+    );
+final musicRegionsProvider = FutureProvider<List<MusicRegion>>(
+  (ref) => loadMusicRegions(),
+);
 
 /// Profile refresh is independent of credential restoration: an unavailable
 /// avatar endpoint must never undo a working login or block music playback.
@@ -22,13 +31,7 @@ final platformProfileProvider = FutureProvider<PlatformProfileInfo?>((
     final payload = await ref
         .watch(musicPlatformApiProvider)
         .get('/user/detail', expectedSession: session);
-    final data = MusicPlatformApi.objectMap(payload['data'] ?? payload);
-    return PlatformProfileInfo(
-      '${data['nickname'] ?? data['username'] ?? data['name'] ?? session.nickname}',
-      PlatformSession.picture(
-        data['avatar'] ?? data['pic'] ?? data['img'] ?? session.avatarUrl,
-      ),
-    );
+    return PlatformProfileInfo.fromJson(payload, session);
   } catch (_) {
     return fallback;
   }

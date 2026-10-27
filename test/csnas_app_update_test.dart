@@ -167,7 +167,7 @@ void main() {
       final newer = await _release(client);
       expect(newer.isNewerThan(await _Platform().currentVersion()), true);
       expect(newer.versionName, '1.0.1');
-      expect(newer.releaseNotes, isEmpty);
+      expect(newer.releaseNotes, isNotEmpty); // Exact known release has bundled notes.
       expect(newer.mandatory, false);
     },
   );

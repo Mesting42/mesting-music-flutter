@@ -16,6 +16,7 @@ import 'playback_completion_gate.dart';
 import 'playback_mode.dart';
 import 'playback_start_guard.dart';
 import 'queue_engine.dart';
+import 'music_sleep_timer.dart';
 import '../platform/distribution_channel.dart';
 
 typedef RadioTrackLoader =
@@ -51,6 +52,7 @@ class MestingAudioHandler extends BaseAudioHandler
       setVolume: _player.setVolume,
       pause: _player.pause,
     );
+    sleepTimer.addListener(_syncSleepBoundary);
     _player.playbackEventStream.listen(
       _broadcastState,
       onError: (Object error, StackTrace stackTrace) {
@@ -68,9 +70,14 @@ class MestingAudioHandler extends BaseAudioHandler
     _player.durationStream.listen(_handleDuration);
     _player.processingStateStream.listen((state) {
       if (state == ProcessingState.completed) {
+        if (_sleepStoppedAtCompletion) return;
         final completedTrack = trackForId(mediaItem.value?.id ?? '');
         if (_completionGate.takeCompletion() && completedTrack != null) {
           _completedTrackController.add(completedTrack);
+        }
+        if (sleepTimer.consumeTrackCompletion()) {
+          _sleepStoppedAtCompletion = true;
+          return;
         }
         unawaited(_advancePlayback(forward: true, automatic: true));
       }
@@ -85,6 +92,20 @@ class MestingAudioHandler extends BaseAudioHandler
   final Map<String, Track> _knownTracks;
   List<Track> _tracks;
   final AudioPlayer _player;
+  late final MusicSleepTimer sleepTimer = MusicSleepTimer(onExpire: pause);
+  bool _sleepStoppedAtCompletion = false;
+  bool _sleepBoundaryRequested = false;
+
+  void _syncSleepBoundary() {
+    final boundary = sleepTimer.mode == MusicSleepMode.endOfTrack;
+    if (boundary == _sleepBoundaryRequested) return;
+    _sleepBoundaryRequested = boundary;
+    // ExoPlayer's native repeat-one never emits Completed. Temporarily wait
+    // for a real boundary without changing the user's saved playback order.
+    // Expiry already pauses the owner; defer restoring its loop until play.
+    if (!sleepTimer.expiring) unawaited(_applyPlaybackOrder());
+  }
+
   final Random _random;
   final StreamController<PlaybackMode> _modeController =
       StreamController<PlaybackMode>.broadcast();
@@ -247,6 +268,12 @@ class MestingAudioHandler extends BaseAudioHandler
 
   Stream<Duration> get positionStream => _player.positionStream;
   Stream<Duration?> get durationStream => _player.durationStream;
+  int? get androidAudioSessionId => _player.androidAudioSessionId;
+  Stream<int?> get androidAudioSessionIdStream =>
+      _player.androidAudioSessionIdStream;
+
+  /// A modal MV may resume only while no later transport command supersedes it.
+  int get transportRevision => _userCommandEpoch;
   Stream<PlaybackMode> get playbackModeStream async* {
     yield _mode;
     yield* _modeController.stream;
@@ -283,6 +310,7 @@ class MestingAudioHandler extends BaseAudioHandler
 
   @visibleForTesting
   Future<void> debugDispose() async {
+    sleepTimer.dispose();
     _cancelPlaybackStartGuard();
     _consumptionTimer?.cancel();
     await _pauseFadeController.cancel();
@@ -413,6 +441,7 @@ class MestingAudioHandler extends BaseAudioHandler
     if (_continueAfterExplicitQueue) {
       _recordPlaybackHistory(orderedTracks.first);
     }
+    await _applyPlaybackOrder();
     _scheduleConsumptionConfirmation();
     _trace(
       'load-current id=${mediaItems.first.id} '
@@ -618,6 +647,7 @@ class MestingAudioHandler extends BaseAudioHandler
   }
 
   void _handlePosition(Duration position) {
+    sleepTimer.checkDeadline();
     if (position <= Duration.zero) return;
     _cancelPlaybackStartGuard();
     // Source replacement can update the current index before any bytes have
@@ -875,9 +905,15 @@ class MestingAudioHandler extends BaseAudioHandler
 
   @override
   Future<void> play() async {
+    final restartAfterSleep = _sleepStoppedAtCompletion;
     _markUserCommand('play');
     await _ready;
     await _pauseFadeController.cancel();
+    if (restartAfterSleep) {
+      _completionGate.reset();
+      await _player.seek(Duration.zero);
+      await _applyPlaybackOrder();
+    }
     _consecutiveLoadFailures = 0;
     _startPlayer();
   }
@@ -930,6 +966,7 @@ class MestingAudioHandler extends BaseAudioHandler
 
   @override
   Future<void> stop() async {
+    sleepTimer.cancel();
     _markUserCommand('stop');
     await _ready;
     _cancelPlaybackStartGuard();
@@ -1846,7 +1883,10 @@ class MestingAudioHandler extends BaseAudioHandler
     await _readyIfAvailable();
     await _player.setShuffleModeEnabled(false);
     await _player.setLoopMode(
-      _order.repeat == PlaybackRepeat.one ? LoopMode.one : LoopMode.off,
+      _order.repeat == PlaybackRepeat.one &&
+              sleepTimer.mode != MusicSleepMode.endOfTrack
+          ? LoopMode.one
+          : LoopMode.off,
     );
     if (_order.shuffle) {
       final current = trackForId(mediaItem.value?.id ?? '');
@@ -1878,6 +1918,7 @@ class MestingAudioHandler extends BaseAudioHandler
   }
 
   void _markUserCommand(String command) {
+    if (command != 'pause') _sleepStoppedAtCompletion = false;
     if (const {
       'play',
       'pause',

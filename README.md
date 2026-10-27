@@ -1,6 +1,6 @@
 # Mesting Music
 
-> **Beta 开发分支：当前为 1.0.37-beta.19。** 另一台电脑从 [接续入口](docs/CONTINUE-BETA.md) 开始。Beta.1–19 的源码标签、APK 与证据见 [版本归档](BETA_ARCHIVE.md)。正式版及旧通道说明保留在下方。
+> **当前正式交付：1.0.3 / code 24，已发布到 music 后台。** 见 [本版交接](docs/SESSION-HANDOFF-2026-10-27-v1.0.3.md) 和 [修改记录](docs/fixes-2026-10-27-v1.0.3.md)。本轮源码尚未推送 GitHub，远端 `beta`/`v1.0.2` 仍是 1.0.2；1.0.3 源码已另存本地快照。后续用户已确认 P8P SDK 作为 1.0.4 / 25 接入。内部 beta 名称只用于安装兼容。下方为历史产品说明。
 
 ## Beta.19 本次更新
 

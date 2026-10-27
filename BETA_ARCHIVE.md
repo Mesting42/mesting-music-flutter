@@ -1,5 +1,7 @@
 # Mesting Music 版本归档
 
+**新增本地交付 1.0.3 / 24**：已发布现有 music 后台，APK 与源码快照在本地冻结；尚未 commit/tag/push 或创建 GitHub Release。远端最新标签仍为下方 1.0.2。本版见 [1.0.3 交接](docs/SESSION-HANDOFF-2026-10-27-v1.0.3.md)。后续 P8P SDK 接入将使用 1.0.4 / 25，不覆盖 1.0.3 快照。
+
 归档更新：2026-10-27（Asia/Shanghai）。已补齐 Beta.20、Beta.21、正式版 1.0.1 和 1.0.2 的源码提交、固定标签与 GitHub Release；最新正式版本为 **1.0.2 / 23**，同时已发布到 Ring Download 的 music。来源和逐文件摘要见 [本次补档记录](docs/version-archive/RELEASE-BACKFILL-2026-10-27.md)，产品变化见 [修改记录](docs/fixes-2026-10-27-v1.0.2.md)。内部 beta 名称仅用于身份兼容；各版原始 APK、源码 ZIP 与历史记录保持冻结。
 日常开发分支：`beta`。另一台电脑从 [接续入口](docs/CONTINUE-BETA.md) 开始，
 源码和 APK 使用同名固定版本标签。旧 `main` 分支和此前已有标签/Release 保留原样；正式 1.0.1/1.0.2 标签来自当前维护的 `beta` 代码线，不切换到旧 stable 产品界面。

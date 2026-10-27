@@ -22,6 +22,11 @@ import 'apple_player_controls.dart';
 import 'immersive_lyrics.dart';
 import 'player_pull_to_dismiss.dart';
 import 'player_more_menu.dart';
+import '../../settings/presentation/music_equalizer_page.dart';
+import '../../settings/presentation/music_sleep_timer_sheet.dart';
+import '../../music_platform/presentation/music_effects_page.dart';
+import '../../music_platform/presentation/music_mv_page.dart';
+import '../../auth/presentation/beta_welcome_page.dart';
 import 'player_chrome_reveal.dart';
 import 'player_content_transition.dart';
 
@@ -374,6 +379,22 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
     final track = ref.read(currentTrackProvider);
     return PlayerMoreMenu(
       onSelected: (value) async {
+        if (value == 'sleep-timer') {
+          await showMusicSleepTimer(context, ref);
+          return;
+        }
+        if (value == 'equalizer' || value == 'effects' || value == 'mv') {
+          final page = value == 'equalizer'
+              ? const MusicEqualizerPage()
+              : value == 'effects'
+              ? const MusicEffectsPage()
+              : MusicMvPage(track: track);
+          await Navigator.of(
+            context,
+            rootNavigator: true,
+          ).push(betaEntryRoute<void>(page));
+          return;
+        }
         if (value == 'fm-dislike') {
           await recommendation.dislike(track);
           return;
@@ -447,6 +468,20 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
               '不喜欢这首',
               CupertinoIcons.hand_thumbsdown,
             ),
+        ],
+        [
+          const PlayerMenuAction(
+            'equalizer',
+            '均衡器',
+            CupertinoIcons.slider_horizontal_3,
+          ),
+          const PlayerMenuAction('effects', '音效', CupertinoIcons.waveform),
+          const PlayerMenuAction('mv', '观看 MV', CupertinoIcons.play_rectangle),
+          const PlayerMenuAction(
+            'sleep-timer',
+            '定时关闭',
+            CupertinoIcons.moon_zzz,
+          ),
         ],
         [
           for (final style in PlayerVisualStyle.values)

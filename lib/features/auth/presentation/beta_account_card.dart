@@ -5,6 +5,7 @@ import '../../music_platform/music_platform_providers.dart';
 import '../../music_platform/platform_profile_provider.dart';
 import '../../music_platform/presentation/platform_account_page.dart';
 import '../../music_platform/presentation/platform_avatar.dart';
+import '../../music_platform/presentation/platform_profile_edit_page.dart';
 import '../auth_providers.dart';
 import 'beta_login_navigation.dart';
 import 'beta_welcome_page.dart';
@@ -36,12 +37,24 @@ class BetaAccountCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              PlatformAvatar(
-                url:
-                    profile?.avatarUrl ??
-                    platform?.avatarUrl ??
-                    user?.avatarUrl ??
-                    '',
+              Semantics(
+                button: platform != null,
+                label: '编辑个人资料',
+                child: GestureDetector(
+                  key: const ValueKey('platform-profile-edit-entry'),
+                  onTap: platform == null
+                      ? null
+                      : () => Navigator.of(context, rootNavigator: true).push(
+                          betaEntryRoute<void>(const PlatformProfileEditPage()),
+                        ),
+                  child: PlatformAvatar(
+                    url:
+                        profile?.avatarUrl ??
+                        platform?.avatarUrl ??
+                        user?.avatarUrl ??
+                        '',
+                  ),
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -76,6 +89,17 @@ class BetaAccountCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 22),
+          if (platform != null) ...[
+            BetaGlassButton(
+              accent: true,
+              onPressed: () => Navigator.of(
+                context,
+                rootNavigator: true,
+              ).push(betaEntryRoute<void>(const PlatformProfileEditPage())),
+              child: const Text('编辑个人资料'),
+            ),
+            const SizedBox(height: 10),
+          ],
           BetaGlassButton(
             onPressed: () {
               if (platform != null) {

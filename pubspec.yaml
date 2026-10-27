@@ -108,6 +108,10 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/data/music-regions.json
+    - third_party/region_data/LICENSE
+    - third_party/region_data/NOTICE.md
+    - third_party/md3music/MESTING-1.0.3-PORTS.md
     - third_party/md3music/LICENSE
     - third_party/md3music/NOTICE.md
     - third_party/md3music/UPSTREAM_DISCLAIMER.md

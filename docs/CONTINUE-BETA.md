@@ -1,5 +1,11 @@
 # Mesting Music 正式版接续
 
+**2026-10-27 当前指针：1.0.3 / code 24 已发布到 music 后台；先读 [1.0.3 交接](SESSION-HANDOFF-2026-10-27-v1.0.3.md) 与 [修改记录](fixes-2026-10-27-v1.0.3.md)。GitHub 尚未同步本轮，远端 beta / v1.0.2 仍为旧 1.0.2。本地工作分支 codex/release-1.0.3，完整源码另存 Mesting-Music-v1.0.3-source.zip。后续已确认 P8P SDK 接入为 1.0.4 / 25。**
+
+## 以下为 1.0.2 冻结归档的接续记录
+
+下方 GitHub 命令和 1.0.2 摘要只用于取得旧的已归档基线，不能取得尚未推送的 1.0.3 工作区。本版新功能、验证边界及后续 SDK 决定以上方最新交接为准。
+
 **2026-10-27 最新指针：正式版 1.0.2 / code 23 已发布到 music。先读 [1.0.2 完整交接](SESSION-HANDOFF-2026-10-27-v1.0.2.md) 和 [本轮修改](fixes-2026-10-27-v1.0.2.md)；内部 beta 名称只作包名/签名兼容，不代表公开测试版。1.0.1 及更早记录属于各自冻结交付。**
 
 **新会话先读 [Git/GitHub 最新补档记录](version-archive/RELEASE-BACKFILL-2026-10-27.md) 和 [当前完整产品交接](SESSION-HANDOFF-2026-10-27-v1.0.2.md)，只读核对后等待用户指示。** [1.0.1 会话交接](SESSION-HANDOFF-2026-10-27-CURRENT-v1.0.1.md)、[1.0.1 交付记录](SESSION-HANDOFF-2026-10-27-v1.0.1.md) 与 [Beta.20 会话记录](SESSION-HANDOFF-2026-10-27-CURRENT-SESSION.md) 分别保留。

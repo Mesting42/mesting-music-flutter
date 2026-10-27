@@ -84,6 +84,9 @@ open class MainActivity : AudioServiceActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        if (!flutterEngine.plugins.has(MusicEqualizerPlugin::class.java)) {
+            flutterEngine.plugins.add(MusicEqualizerPlugin())
+        }
         hapticFeedbackBridge?.dispose()
         hapticFeedbackBridge = HapticFeedbackBridge(this, flutterEngine.dartExecutor.binaryMessenger)
         loginSuccessSoundBridge?.dispose()

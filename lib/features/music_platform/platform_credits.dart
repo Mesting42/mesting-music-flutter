@@ -17,9 +17,10 @@ class PlatformCredits {
       final notice = await rootBundle.loadString(
         'third_party/md3music/NOTICE.md',
       );
-      yield LicenseEntryWithLineBreaks([
-        'md3Music · zzyoxml and contributors',
-      ], '$notice\n\n$license');
+      yield LicenseEntryWithLineBreaks(
+        ['md3Music · zzyoxml and contributors'],
+        '$notice\n\n${await rootBundle.loadString('third_party/md3music/MESTING-1.0.3-PORTS.md')}\n\n$license',
+      );
       final glassLicense = await rootBundle.loadString(
         'third_party/liquid_glass_widgets/LICENSE',
       );
@@ -38,6 +39,15 @@ class PlatformCredits {
       yield LicenseEntryWithLineBreaks([
         'Tabler Icons · Paweł Kuna',
       ], '$audioGlyphNotice\n\n$audioGlyphLicense');
+      final regionLicense = await rootBundle.loadString(
+        'third_party/region_data/LICENSE',
+      );
+      final regionNotice = await rootBundle.loadString(
+        'third_party/region_data/NOTICE.md',
+      );
+      yield LicenseEntryWithLineBreaks([
+        'Administrative divisions · modood and contributors',
+      ], '$regionNotice\n\n$regionLicense');
     });
   }
 }
