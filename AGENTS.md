@@ -4,6 +4,6 @@
 
 编码时写好必要注释，尽可能解耦设计，便于其他人员接手代码时快速上手。
 
-接续当前正式版开发前，先阅读 [1.0.4 最新交接](docs/SESSION-HANDOFF-2026-10-28-v1.0.4.md)、[本版修改](docs/fixes-2026-10-28-v1.0.4.md)、[接续入口](docs/CONTINUE-BETA.md) 及 [Git/GitHub 补档记录](docs/version-archive/RELEASE-BACKFILL-2026-10-27.md)，核对分支、标签和工作区。music 后台已是 1.0.4 / 25，GitHub 尚为 1.0.2；SDK 已接入并保持用户端分享关闭，完整源码以本地私有快照保存。旧版记录对应各自冻结构建，不把历史方案当成新的待办；内部 beta 名称仅作身份兼容。
+接续前先阅读 [当前总交接](HANDOFF-CURRENT-SESSION-2026-10-28-v1.0.5.md)、[1.0.5 交接](docs/SESSION-HANDOFF-2026-10-28-v1.0.5.md)、[修改](docs/fixes-2026-10-28-v1.0.5.md)、[接续入口](docs/CONTINUE-BETA.md) 和 [Git/GitHub 归档](docs/version-archive/RELEASE-BACKFILL-2026-10-28.md)，核对分支、标签与工作区。1.0.5 / 26 已构建、原签名，三版源码归档由用户授权；music 后台仍为 1.0.4 / 25，1.0.5 管理 UI 发布因浏览器 URL 安全检查中止，不冒充已经发布。用户已确认取得 SDK 源码公开分发授权，完整源码可用于 GitHub 接续，原 LICENSE 和第三方声明保留；用户端分享继续关闭。后续只补发既有签名 1.0.5，不重做 SDK 或覆盖旧冻结文件；凭据、私钥和本机配置不公开。内部 beta 名称只作安装身份兼容。
 
 用户已要求后续自行真机测试并断开手机；没有新的明确授权时，不访问或操作其手机。原生性能测试只使用隔离的 `.beta.benchmark` 包，并强制 `--keep-app-running`，不得对日常安装执行默认 `flutter drive`。

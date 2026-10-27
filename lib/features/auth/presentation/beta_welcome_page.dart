@@ -126,114 +126,131 @@ class _BetaWelcomePageState extends ConsumerState<BetaWelcomePage> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 500),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(28, 16, 28, 24),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: (bounds.maxHeight - 40).clamp(
-                        0,
-                        double.infinity,
-                      ),
-                    ),
-                    child: IntrinsicHeight(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const Spacer(flex: 2),
-                          MestingMusicCompanions(
-                            height: (bounds.maxHeight * .32).clamp(180, 260),
+                  padding: EdgeInsets.zero,
+                  child: ColoredBox(
+                    // Backdrop sampling must see the welcome surface inside
+                    // the scroll pass as well as behind the Scaffold.
+                    color: dark
+                        ? const Color(0xFF0C0D0F)
+                        : const Color(0xFFF5F5F7),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(28, 16, 28, 24),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: (bounds.maxHeight - 40).clamp(
+                            0,
+                            double.infinity,
                           ),
-                          const Text(
-                            'Mesting Music',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 33,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -1,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            '让喜欢的音乐，陪你多一会儿。',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withValues(alpha: .7),
-                            ),
-                          ),
-                          const Spacer(flex: 3),
-                          const SizedBox(height: 38),
-                          BetaGlassButton(
-                            key: const ValueKey('welcome-phone-login'),
-                            blue: true,
-                            onPressed: _opening
-                                ? null
-                                : () => _platform(PlatformLoginMethod.phone),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  CupertinoIcons.device_phone_portrait,
-                                  size: 23,
+                        ),
+                        child: IntrinsicHeight(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Spacer(flex: 2),
+                              MestingMusicCompanions(
+                                height: (bounds.maxHeight * .32).clamp(
+                                  180,
+                                  260,
                                 ),
-                                SizedBox(width: 9),
-                                Text('手机号登录'),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          BetaGlassButton(
-                            key: const ValueKey('welcome-wechat-login'),
-                            onPressed: _opening
-                                ? null
-                                : () => _platform(PlatformLoginMethod.wechatQr),
-                            child: const Text('微信扫码登录'),
-                          ),
-                          const SizedBox(height: 18),
-                          if (MediaQuery.textScalerOf(context).scale(15) > 18 ||
-                              bounds.maxWidth < 350) ...[
-                            BetaGlassButton(
-                              onPressed: _opening ? null : _guest,
-                              child: const Text('游客体验'),
-                            ),
-                            const SizedBox(height: 12),
-                            BetaGlassButton(
-                              onPressed: _opening ? null : _other,
-                              child: const Text('其他登录方式'),
-                            ),
-                          ] else
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: BetaGlassButton(
-                                    height: 46,
-                                    onPressed: _opening ? null : _guest,
-                                    child: const Text('游客体验'),
-                                  ),
+                              ),
+                              const Text(
+                                'Mesting Music',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 33,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -1,
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: BetaGlassButton(
-                                    height: 46,
-                                    onPressed: _opening ? null : _other,
-                                    child: const Text('其他登录方式'),
-                                  ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                '让喜欢的音乐，陪你多一会儿。',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withValues(alpha: .7),
                                 ),
-                              ],
-                            ),
-                          const SizedBox(height: 24),
-                          BetaConsentRow(
-                            accepted: _accepted,
-                            onChanged: (value) =>
-                                setState(() => _accepted = value),
-                            onAgreement: () =>
-                                _legal(LegalDocumentType.userAgreement),
-                            onPrivacy: () =>
-                                _legal(LegalDocumentType.privacyPolicy),
+                              ),
+                              const Spacer(flex: 3),
+                              const SizedBox(height: 38),
+                              BetaGlassButton(
+                                key: const ValueKey('welcome-phone-login'),
+                                blue: true,
+                                onPressed: _opening
+                                    ? null
+                                    : () =>
+                                          _platform(PlatformLoginMethod.phone),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      CupertinoIcons.device_phone_portrait,
+                                      size: 23,
+                                    ),
+                                    SizedBox(width: 9),
+                                    Text('手机号登录'),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              BetaGlassButton(
+                                key: const ValueKey('welcome-wechat-login'),
+                                onPressed: _opening
+                                    ? null
+                                    : () => _platform(
+                                        PlatformLoginMethod.wechatQr,
+                                      ),
+                                child: const Text('微信扫码登录'),
+                              ),
+                              const SizedBox(height: 18),
+                              if (MediaQuery.textScalerOf(context).scale(15) >
+                                      18 ||
+                                  bounds.maxWidth < 350) ...[
+                                BetaGlassButton(
+                                  onPressed: _opening ? null : _guest,
+                                  child: const Text('游客体验'),
+                                ),
+                                const SizedBox(height: 12),
+                                BetaGlassButton(
+                                  onPressed: _opening ? null : _other,
+                                  child: const Text('其他登录方式'),
+                                ),
+                              ] else
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: BetaGlassButton(
+                                        height: 46,
+                                        onPressed: _opening ? null : _guest,
+                                        child: const Text('游客体验'),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: BetaGlassButton(
+                                        height: 46,
+                                        onPressed: _opening ? null : _other,
+                                        child: const Text('其他登录方式'),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              const SizedBox(height: 24),
+                              BetaConsentRow(
+                                accepted: _accepted,
+                                onChanged: (value) =>
+                                    setState(() => _accepted = value),
+                                onAgreement: () =>
+                                    _legal(LegalDocumentType.userAgreement),
+                                onPrivacy: () =>
+                                    _legal(LegalDocumentType.privacyPolicy),
+                              ),
+                              const Spacer(),
+                            ],
                           ),
-                          const Spacer(),
-                        ],
+                        ),
                       ),
                     ),
                   ),

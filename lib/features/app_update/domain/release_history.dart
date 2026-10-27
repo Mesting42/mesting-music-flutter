@@ -2,6 +2,14 @@
 /// offline and must never be shown as the notes of an unknown future build.
 /// The distribution service may also supply notes for a newer release.
 const musicReleaseNotes = <String, List<String>>{
+  '1.0.5': [
+    '统一移除歌曲标题末尾的音频文件后缀，保留原歌曲与文件身份。',
+    '修复定时关闭浅色主题，以及资料、MV 等页面滚动时玻璃控件背景变灰。',
+    '播放器更多菜单折叠封面样式，移除重复歌词入口，统一输出设备图标尺寸。',
+    'MV 全屏切换横屏，退出恢复竖屏与原页面，保留播放进度并加入进出过渡。',
+    '音效目录采用统一主题图标，胶囊与输入框长按菜单加入液态分离、融合过渡。',
+    '优化页面与底栏收展过渡，保留完整玻璃光学、胶囊效果及 6dp 均衡圆点。',
+  ],
   '1.0.4': [
     '接入 Ring Download SDK 1.1.0，更新下载支持 HTTPS 与可用节点的 P2P/P8P 辅助传输。',
     '保留下载暂停、续传和安装前完整性校验，旧版未完成的下载仍可继续。',

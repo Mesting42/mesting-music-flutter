@@ -7,15 +7,21 @@ class BetaGlassScrollBody extends StatelessWidget {
   const BetaGlassScrollBody({
     required this.children,
     this.padding = const EdgeInsets.fromLTRB(24, 30, 24, 32),
+    this.controller,
+    this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
     super.key,
   });
 
   final List<Widget> children;
   final EdgeInsetsGeometry padding;
+  final ScrollController? controller;
+  final ScrollViewKeyboardDismissBehavior keyboardDismissBehavior;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, viewport) => ListView(
+      controller: controller,
+      keyboardDismissBehavior: keyboardDismissBehavior,
       padding: EdgeInsets.zero,
       children: [
         ConstrainedBox(

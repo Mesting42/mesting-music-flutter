@@ -9,8 +9,12 @@ import '../../../shared/widgets/liquid_glass_sheet.dart';
 
 Future<void> showMusicSleepTimer(BuildContext context, WidgetRef ref) {
   final handler = ref.read(audioHandlerProvider);
+  // The artwork player deliberately installs a dark local Theme. The timer
+  // is an application sheet, so both its material and its content must resolve
+  // from the root app theme instead of mixing the two brightness contexts.
+  final appContext = Navigator.of(context, rootNavigator: true).context;
   return showLiquidGlassBottomSheet<void>(
-    context: context,
+    context: appContext,
     useRootNavigator: true,
     useSafeArea: true,
     isScrollControlled: true,

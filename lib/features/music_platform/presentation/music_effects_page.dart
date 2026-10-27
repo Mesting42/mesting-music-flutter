@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/audio/music_equalizer_providers.dart';
 import '../../../shared/widgets/beta_glass_controls.dart';
+import '../../../shared/widgets/beta_glass_scroll_body.dart';
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../../shared/widgets/music_feature_page.dart';
-import '../../../shared/widgets/artwork_image.dart';
+import '../../../shared/widgets/music_effect_glyph.dart';
 import '../data/platform_effects_repository.dart';
 import '../platform_effects_providers.dart';
 
@@ -157,7 +158,7 @@ class _MusicEffectsPageState extends ConsumerState<MusicEffectsPage> {
       title: '音效',
       child: ListenableBuilder(
         listenable: equalizer,
-        builder: (context, _) => ListView(
+        builder: (context, _) => BetaGlassScrollBody(
           controller: _scroll,
           padding: const EdgeInsets.fromLTRB(22, 12, 22, 40),
           children: [
@@ -272,26 +273,11 @@ class _MusicEffectsPageState extends ConsumerState<MusicEffectsPage> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    if (effect.cover.isNotEmpty)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: SizedBox.square(
-                          dimension: 52,
-                          child: ArtworkImage(
-                            uri: effect.cover,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      )
-                    else
-                      SizedBox.square(
-                        dimension: 52,
-                        child: Icon(
-                          CupertinoIcons.waveform,
-                          color: scheme.primary,
-                          size: 28,
-                        ),
-                      ),
+                    MusicEffectGlyph(
+                      name: effect.name,
+                      category: effect.category,
+                      preset: effect.preset,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(

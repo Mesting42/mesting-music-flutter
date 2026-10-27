@@ -1352,8 +1352,15 @@ void main() {
         for (var frame = 0; frame < 5; frame++) {
           await tester.pump(const Duration(milliseconds: 100));
         }
-        expect(find.text('查看歌词'), findsOneWidget);
+        // 1.0.5 removes the duplicate lyrics action and starts styles folded.
+        expect(find.text('查看歌词'), findsNothing);
         expect(find.text('黑胶唱片'), findsOneWidget);
+        expect(find.text('流光唱片'), findsNothing);
+        final styles = find.byKey(const ValueKey('player-style-disclosure'));
+        await tester.ensureVisible(styles);
+        await tester.tap(styles);
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(find.text('流光唱片'), findsOneWidget);
         expect(tester.takeException(), null);
         await captureScreenshot(
           tester,
@@ -1494,9 +1501,19 @@ void main() {
           container.read(playerChromeRevealProvider).value = 1;
           await tester.pump();
           final handler = container.read(audioHandlerProvider) as _Handler;
-          await tester.tap(find.bySemanticsLabel('播放').hitTestable().first);
+          // Settings gained a section also named "播放" in 1.0.3. Target the
+          // real capsule control rather than tapping that static heading.
+          await tester.tap(
+            find
+                .descendant(
+                  of: find.byType(FloatingPlaybackPill),
+                  matching: find.bySemanticsLabel('播放'),
+                )
+                .hitTestable()
+                .first,
+          );
           await tester.pump();
-          expect(handler.toggles, 1);
+          expect(handler.toggles, 1, reason: 'viewport=$sample');
           await tester.tap(find.byIcon(Icons.home_rounded).hitTestable().first);
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 500));
@@ -1520,6 +1537,11 @@ void main() {
                   )
                   .first,
             );
+            await Scrollable.ensureVisible(
+              tester.element(haptics),
+              alignment: .25,
+            );
+            await tester.pump();
             await tester.tap(haptics);
             await tester.pump();
             await tester.pump(const Duration(milliseconds: 500));
@@ -1541,6 +1563,7 @@ void main() {
                 )
                 .first,
           );
+          await Scrollable.ensureVisible(tester.element(guide), alignment: .25);
           await tester.pump(const Duration(milliseconds: 500));
           await tester.tap(guide);
           await tester.pump();
@@ -2037,6 +2060,10 @@ void main() {
         settle: Duration.zero,
       );
       await tester.pump(const Duration(milliseconds: 250));
+      final styles = find.byKey(const ValueKey('player-style-disclosure'));
+      await tester.ensureVisible(styles);
+      await tester.tap(styles);
+      await tester.pump();
       await tester.tap(find.text('黑胶唱片'));
       await middle('beta10-style-switch-middle');
       await tester.pump(const Duration(milliseconds: 450));

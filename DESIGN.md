@@ -427,3 +427,14 @@ BetaGlassMenuSurface 将同一 betaMusicPillGlass 用于编辑横条、展开菜
 - Signed days use a pale green rounded 44×48dp cell with the date and an inset check, independent of today's blue outline. One-line dates scale down only when their calendar column cannot fit the requested glyph width. The month count and progress use completion green; the auto-sign-in switch retains the functional tint.
 - StartupImageSurface reports its first decoded painted frame. StartupVisibilityGate measures the short static-image hold from that callback, not process startup; audio/optics initialize concurrently. Videos and formal-channel timing keep their prior contracts.
 - Live listening synchronization was not credited in the isolated test: cumulative server time stayed 850 seconds and the user confirmed the official app still showed 14 minutes and no daily record. Automatic duration reporting is not integrated. Today's already-claimed member reward cannot prove new task credit.
+
+
+## Release 1.0.5 current contract (authoritative)
+
+2026-10-28：沿用既有 Apple/Cupertino 和完整 premium 玻璃世界。资料、MV、均衡/音效、触感和欢迎页的滚动合成内提供真实同色背景；定时弹层统一应用主题。完整播放器更多菜单移除重复歌词项，默认折叠“封面样式”；工具栏设备 glyph 统一光学尺度，卡片/设备列表尺寸不改。均衡圆点继续 6dp/轨道约2dp/48dp响应区。
+
+BetaLiquidMenu 从真实胶囊或输入区域分离，以同一几何进度反向融合；Impeller 使用共享 premium 层的 SDF 连接，Skia 使用既有光学回退。绘制 tick 不重建菜单内容，文本前景可以淡入，但不以祖先 opacity 隔离 live glass。减少动画跳过大幅形变；真实编辑动作仍由 EditableText 处理。底栏附件统一几何时钟，保留重定向和快速反转的连续位置。
+
+MV 全屏请求横屏，退出/系统返回恢复竖屏和原详情，同一控制器保留位置。音效列表用一致的本地主题 symbol 代替旧远程缩略图，业务预设能力不扩张。Track 只清理末尾音频扩展名的显示，原持久化标题和文件身份保留。
+
+本轮 179 项受影响 Beta 回归、56 项选定 stable 回归通过；42 张主机控件捕获已复核。来源与边界见 docs/fixes-2026-10-28-v1.0.5.md 和同版交接。主机结果不认证实际 Android GPU 液态效果、120fps、真实 P8P 字节贡献或安装。GitHub 归档和 music 后台分开记录；music 的 1.0.5 管理 UI 发布被浏览器 URL 安全检查中止。

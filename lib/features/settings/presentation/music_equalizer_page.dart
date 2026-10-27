@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/audio/music_equalizer.dart';
 import '../../../core/audio/music_equalizer_providers.dart';
 import '../../../shared/widgets/beta_glass_controls.dart';
+import '../../../shared/widgets/beta_glass_scroll_body.dart';
 import '../../../shared/widgets/music_feature_page.dart';
 import '../../auth/presentation/beta_welcome_page.dart';
 import '../../music_platform/presentation/music_effects_page.dart';
@@ -35,7 +36,7 @@ class _MusicEqualizerPageState extends ConsumerState<MusicEqualizerPage> {
         builder: (context, _) {
           final state = controller.state;
           final interactive = state.enabled && state.bound && !state.binding;
-          return ListView(
+          return BetaGlassScrollBody(
             padding: const EdgeInsets.fromLTRB(22, 12, 22, 40),
             children: [
               Container(

@@ -1,6 +1,8 @@
 # Mesting Music
 
-> **当前正式交付：1.0.4 / code 25，已发布到 music 后台。** 见 [本版交接](docs/SESSION-HANDOFF-2026-10-28-v1.0.4.md) 和 [修改记录](docs/fixes-2026-10-28-v1.0.4.md)。已接入更新下载 P8P SDK，保留 1.0.3 全部功能，旧版完整下载/续传已核验。本轮尚未推送 GitHub，远端 `beta`/`v1.0.2` 仍是 1.0.2；本版完整源码包含 SDK，以本地私有快照保存，1.0.3 独立快照保持冻结。内部 beta 名称只用于安装兼容。下方为历史产品说明。
+**新会话先读 [当前总交接](HANDOFF-CURRENT-SESSION-2026-10-28-v1.0.5.md) 与 [换电脑接续](docs/CONTINUE-BETA.md)。**
+
+> **最新构建与 GitHub 交付：1.0.5 / code 26。** [本版说明](docs/fixes-2026-10-28-v1.0.5.md) · [交接与验证](docs/SESSION-HANDOFF-2026-10-28-v1.0.5.md) · [GitHub Release](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.5)。1.0.3、1.0.4 同时补齐独立 Git/GitHub 归档，完整源码包含已授权分发的 SDK，保留原权利声明。**music 更新后台仍是 1.0.4 / 25；1.0.5 后台上传发布被浏览器 URL 安全检查中止，待完成。** 内部 beta 身份和原签名保持兼容，下方保留历史产品说明。
 
 ## Beta.19 本次更新
 

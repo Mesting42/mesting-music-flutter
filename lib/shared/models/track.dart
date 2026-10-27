@@ -2,10 +2,25 @@ import 'package:audio_service/audio_service.dart';
 
 enum TrackSource { local, kugou, netease, audius, jamendo }
 
+final _audioTitleSuffix = RegExp(
+  r'\.(?:mp3|flac|m4a|wav|aac|ogg|opus|wma|aiff|aif|alac|ape|dsf|dff)\s*$',
+  caseSensitive: false,
+);
+
+/// Only a recognized file extension at the end is presentation noise. Text
+/// such as "Live", "伴奏", punctuation and an extension inside a title survives.
+String musicDisplayTitle(String title) {
+  final match = _audioTitleSuffix.firstMatch(title);
+  if (match == null || title.substring(0, match.start).trim().isEmpty) {
+    return title;
+  }
+  return title.substring(0, match.start).trimRight();
+}
+
 class Track {
   const Track({
     required this.id,
-    required this.title,
+    required String title,
     required this.artist,
     required this.album,
     required this.duration,
@@ -20,10 +35,15 @@ class Track {
     this.availabilityMessage = '',
     this.platformSongId = '',
     this.playbackQuality = '',
-  });
+  }) : _sourceTitle = title;
 
   final String id;
-  final String title;
+  final String _sourceTitle;
+
+  /// All consumers, including restored history and Android media metadata,
+  /// use the same display name. Preserve the upstream value in persistence:
+  /// stripping a known terminal audio extension must not rename a file or ID.
+  String get title => musicDisplayTitle(_sourceTitle);
   final String artist;
   final String album;
   final Duration duration;
@@ -69,7 +89,7 @@ class Track {
   Map<String, Object?> toJson() {
     return {
       'id': id,
-      'title': title,
+      'title': _sourceTitle,
       'artist': artist,
       'album': album,
       'durationMs': duration.inMilliseconds,
@@ -148,7 +168,7 @@ class Track {
   }) {
     return Track(
       id: id,
-      title: title,
+      title: _sourceTitle,
       artist: artist,
       album: album,
       duration: duration ?? this.duration,

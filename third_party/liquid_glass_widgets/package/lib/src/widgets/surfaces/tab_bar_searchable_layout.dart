@@ -555,15 +555,16 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
       platformViewBackdrop: widget.platformViewBackdrop,
       blendAmount: widget.enableBlend ? widget.blendAmount : 0,
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: widget.horizontalPadding,
-          vertical: widget.verticalPadding),
+        padding: EdgeInsets.symmetric(
+            horizontal: widget.horizontalPadding,
+            vertical: widget.verticalPadding),
         child: TweenAnimationBuilder<double>(
-      tween: Tween<double>(
-          end: searching ? widget.searchBarHeight : widget.barHeight),
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
-      builder: (context, animH, child) {
-        return LayoutBuilder(
+          tween: Tween<double>(
+              end: searching ? widget.searchBarHeight : widget.barHeight),
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          builder: (context, animH, child) {
+            return LayoutBuilder(
               builder: (context, constraints) {
                 final totalW = constraints.maxWidth;
 
@@ -1061,7 +1062,7 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                 );
               },
             );
-      },
+          },
         ),
       ),
     );
@@ -1135,95 +1136,61 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
       // The same accessory subtree moves on both axes. Rebuilding its optical
       // layer on each geometry tick invalidates shader/layout work needlessly.
       final accessorySurface = AnimatedOpacity(
-        duration: const Duration(milliseconds: 200), curve: Curves.easeOut,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
         opacity: widget.bottomAccessoryEnabled ? 1.0 : 0.0,
-        child: GlassBackdropGroup(enabled: false,
-          child: RepaintBoundary(child: widget.bottomAccessory!)),
+        child: GlassBackdropGroup(
+            enabled: false,
+            child: RepaintBoundary(child: widget.bottomAccessory!)),
       );
       barContent = GlassTabBarAccessoryPlacementScope(
         placement: accessoryInline
             ? GlassTabBarAccessoryPlacement.inline
             : GlassTabBarAccessoryPlacement.expanded,
-        // Two independent TweenAnimationBuilders drive two independent axes:
-        //
-        //   accessoryT (outer): drives the CONTAINER height, accessory
-        //     left/right width, and coarse vertical position. Controlled by
-        //     `accessoryInline` — 0.0 means expanded above the pill, 1.0 means
-        //     inline beside the pill.
-        //
-        //   searchT (inner): tracks the search bar morphing. Used to compute
-        //     the live `expandedBottom` so the play pill moves down as the bar
-        //     shrinks, maintaining a perfect 6px overlap with the top of the glass.
-        child: TweenAnimationBuilder<double>(
-          tween: Tween<double>(end: accessoryInline ? 1.0 : 0.0),
-          duration: const Duration(milliseconds: 300),
+        // Music 1.0.5: one geometry clock owns width, height and vertical travel.
+        // Independent 200/300ms tweens used to restart at different times while
+        // scrolling reversed, and nested builders recreated each other's work.
+        // Lerp from the currently painted geometry, retaining the accessory and
+        // bar subtrees and every optical/refraction setting.
+        child: TweenAnimationBuilder<_AccessoryGeometry>(
+          tween: _AccessoryGeometryTween(
+              end: _AccessoryGeometry(
+            height:
+                (accessoryInline ? collapsedPillH : expandedH) + keyboardFloat,
+            left: accessoryInline
+                ? inlineAccessoryLeft
+                : widget.horizontalPadding,
+            right: accessoryInline
+                ? inlineAccessoryRight
+                : widget.horizontalPadding,
+            bottom: accessoryInline
+                ? (collapsedPillH - accessoryH) / 2
+                : collapsedPillH +
+                    widget.bottomAccessorySpacing -
+                    (searching ? pillH - collapsedPillH : 0),
+          )),
+          duration: GlassAccessibilityData.of(context).reduceMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 300),
           curve: Curves.easeOutCubic,
-          builder: (context, accessoryT, _) {
-            // Outer container height follows the ACCESSORY state.
-            final height =
-                ui.lerpDouble(expandedH, collapsedPillH, accessoryT)! +
-                keyboardFloat;
-
-            // Accessory left/right: constant when expanded, narrows when inline.
-            final accessoryLeft = ui.lerpDouble(
-              widget.horizontalPadding,
-              inlineAccessoryLeft,
-              accessoryT,
-            )!;
-            final accessoryRight = ui.lerpDouble(
-              widget.horizontalPadding,
-              inlineAccessoryRight,
-              accessoryT,
-            )!;
-
-            return SizedBox(
-              height: height,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  // ── Accessory: position/width driven by accessoryT AND searchT.
-                  TweenAnimationBuilder<double>(
-                    tween: Tween<double>(end: searching ? 1.0 : 0.0),
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeOut,
-                    child: accessorySurface,
-                    builder: (context, searchT, accessory) {
-                      // Move down by 14px (= pillH - collapsedPillH) when searching
-                      final expandedBottom = ui.lerpDouble(
-                        collapsedPillH + widget.bottomAccessorySpacing,
-                        collapsedPillH +
-                            widget.bottomAccessorySpacing -
-                            (pillH - collapsedPillH),
-                        searchT,
-                      )!;
-
-                      return Positioned(
-                        left: accessoryLeft,
-                        right: accessoryRight,
-                        bottom: ui.lerpDouble(
-                          expandedBottom,
-                          (collapsedPillH - accessoryH) / 2,
-                          accessoryT,
-                        )!,
-                        height: accessoryH,
-                        child: accessory!,
-                      );
-                    },
-                  ),
-
-                  // ── Glass pill: anchored to bottom. Its height is managed
-                  //    internally by the animH TweenAnimationBuilder inside
-                  //    barContent (searching → searchBarHeight morph). ────────
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: innerBarContent,
-                  ),
-                ],
-              ),
-            );
-          },
+          child: accessorySurface,
+          builder: (context, geometry, accessory) => SizedBox(
+            height: geometry.height,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(
+                  left: geometry.left,
+                  right: geometry.right,
+                  bottom: geometry.bottom,
+                  height: accessoryH,
+                  child: accessory!,
+                ),
+                Positioned(
+                    bottom: 0, left: 0, right: 0, child: innerBarContent),
+              ],
+            ),
+          ),
         ),
       );
     }
@@ -1318,4 +1285,37 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
       ],
     );
   }
+}
+
+/// Internal layout values, kept independent of playback and glass settings.
+class _AccessoryGeometry {
+  const _AccessoryGeometry(
+      {required this.height,
+      required this.left,
+      required this.right,
+      required this.bottom});
+  final double height, left, right, bottom;
+  static _AccessoryGeometry lerp(
+          _AccessoryGeometry a, _AccessoryGeometry b, double t) =>
+      _AccessoryGeometry(
+        height: ui.lerpDouble(a.height, b.height, t)!,
+        left: ui.lerpDouble(a.left, b.left, t)!,
+        right: ui.lerpDouble(a.right, b.right, t)!,
+        bottom: ui.lerpDouble(a.bottom, b.bottom, t)!,
+      );
+  @override
+  bool operator ==(Object other) =>
+      other is _AccessoryGeometry &&
+      other.height == height &&
+      other.left == left &&
+      other.right == right &&
+      other.bottom == bottom;
+  @override
+  int get hashCode => Object.hash(height, left, right, bottom);
+}
+
+class _AccessoryGeometryTween extends Tween<_AccessoryGeometry> {
+  _AccessoryGeometryTween({required super.end});
+  @override
+  _AccessoryGeometry lerp(double t) => _AccessoryGeometry.lerp(begin!, end!, t);
 }

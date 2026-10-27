@@ -138,6 +138,16 @@ class _BetaEditingMenuState extends State<_BetaEditingMenu>
         .where((b) => b.type == ContextMenuButtonType.selectAll)
         .firstOrNull;
     return [
+      for (final item in e.contextMenuButtonItems)
+        if (item.type == ContextMenuButtonType.copy ||
+            item.type == ContextMenuButtonType.cut)
+          (
+            label: item.type == ContextMenuButtonType.copy ? '复制' : '剪切',
+            icon: item.type == ContextMenuButtonType.copy
+                ? CupertinoIcons.doc_on_doc
+                : CupertinoIcons.scissors,
+            action: item.onPressed,
+          ),
       (
         label: '粘贴',
         icon: CupertinoIcons.doc_on_clipboard,
@@ -229,68 +239,59 @@ class _BetaEditingMenuState extends State<_BetaEditingMenu>
             )
           : Text(label, maxLines: 1),
     );
-    return CustomSingleChildLayout(
-      delegate: layout,
+    return BetaLiquidMenu(
+      animation: _motion,
+      layout: layout,
       child: TapRegion(
         onTapOutside: (_) => _close(),
-        child: BetaGlassMenuTransition(
-          animation: _motion,
-          origin: layout.motionOrigin,
-          child: CupertinoTheme(
-            data: CupertinoThemeData(
-              brightness: Theme.of(context).brightness,
-              primaryColor: Theme.of(context).colorScheme.onSurface,
-            ),
-            child: AnimatedSize(
-              duration: media.disableAnimations
-                  ? Duration.zero
-                  : betaMenuOpenDuration,
-              alignment: Alignment.bottomRight,
-              curve: Curves.easeOutCubic,
-              child: SingleChildScrollView(
-                scrollDirection: _expanded ? Axis.vertical : Axis.horizontal,
-                child: _expanded
-                    ? Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: CupertinoButton(
-                              onPressed: () =>
-                                  setState(() => _expanded = false),
-                              child: const Icon(
-                                CupertinoIcons.chevron_down,
-                                semanticLabel: '收回编辑菜单',
-                                size: 19,
-                              ),
-                            ),
-                          ),
-                          for (final item in actions)
-                            button(
-                              item.label,
-                              item.icon,
-                              item.action,
-                              row: true,
-                            ),
-                        ],
-                      )
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          for (final item in actions)
-                            button(item.label, item.icon, item.action),
-                          CupertinoButton(
-                            padding: const EdgeInsets.all(12),
-                            onPressed: () => setState(() => _expanded = true),
+        child: CupertinoTheme(
+          data: CupertinoThemeData(
+            brightness: Theme.of(context).brightness,
+            primaryColor: Theme.of(context).colorScheme.onSurface,
+          ),
+          child: AnimatedSize(
+            duration: media.disableAnimations
+                ? Duration.zero
+                : betaMenuOpenDuration,
+            alignment: Alignment.bottomRight,
+            curve: Curves.easeOutCubic,
+            child: SingleChildScrollView(
+              scrollDirection: _expanded ? Axis.vertical : Axis.horizontal,
+              child: _expanded
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: CupertinoButton(
+                            onPressed: () => setState(() => _expanded = false),
                             child: const Icon(
-                              CupertinoIcons.chevron_right,
-                              semanticLabel: '更多编辑操作',
-                              size: 18,
+                              CupertinoIcons.chevron_down,
+                              semanticLabel: '收回编辑菜单',
+                              size: 19,
                             ),
                           ),
-                        ],
-                      ),
-              ),
+                        ),
+                        for (final item in actions)
+                          button(item.label, item.icon, item.action, row: true),
+                      ],
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (final item in actions)
+                          button(item.label, item.icon, item.action),
+                        CupertinoButton(
+                          padding: const EdgeInsets.all(12),
+                          onPressed: () => setState(() => _expanded = true),
+                          child: const Icon(
+                            CupertinoIcons.chevron_right,
+                            semanticLabel: '更多编辑操作',
+                            size: 18,
+                          ),
+                        ),
+                      ],
+                    ),
             ),
           ),
         ),

@@ -99,7 +99,11 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
   Widget build(BuildContext context) {
     final track = ref.watch(currentTrackProvider);
     final style = ref.watch(playerVisualStyleProvider);
-    final playing = ref.watch(playbackStateProvider).value?.playing ?? false;
+    // Buffer/position publications do not change the full artwork page. Keep
+    // the transport's detailed subscriptions local to its own controls.
+    final playing = ref.watch(
+      playbackStateProvider.select((state) => state.value?.playing ?? false),
+    );
     final detail = _lyrics || _queue;
     final classic = style == PlayerVisualStyle.classic && !detail;
     final theme = Theme.of(context);
@@ -399,10 +403,6 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
           await recommendation.dislike(track);
           return;
         }
-        if (value == 'lyrics') {
-          _showLyrics(!_lyrics);
-          return;
-        }
         if (value == 'playlist') {
           await showAddToPlaylistSheet(
             context,
@@ -445,11 +445,6 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
       },
       groups: [
         [
-          PlayerMenuAction(
-            'lyrics',
-            _lyrics ? '查看封面' : '查看歌词',
-            CupertinoIcons.text_alignleft,
-          ),
           const PlayerMenuAction(
             'mode',
             '待播列表与播放模式',
@@ -483,7 +478,11 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
             CupertinoIcons.moon_zzz,
           ),
         ],
-        [
+      ],
+      disclosure: PlayerMenuDisclosure(
+        title: '封面样式',
+        current: current.displayName,
+        actions: [
           for (final style in PlayerVisualStyle.values)
             PlayerMenuAction(style.name, style.displayName, switch (style) {
               PlayerVisualStyle.cover => CupertinoIcons.photo,
@@ -493,7 +492,7 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
               PlayerVisualStyle.lyricStage => CupertinoIcons.waveform,
             }, selected: current == style),
         ],
-      ],
+      ),
     );
   }
 }

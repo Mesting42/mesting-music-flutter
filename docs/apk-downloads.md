@@ -1,5 +1,7 @@
 # Mesting Music APK 下载中心
 
+当前维护产品的最新 GitHub 安装包：[Mesting Music 1.0.5 / code 26](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.5)。已补齐 [1.0.3](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.3)、[1.0.4](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.4)。三版沿用 `com.mesting.music.beta` 和原签名；完整源码随对应 Release 提供。music 后台仍为 1.0.4 / 25，1.0.5 后台发布待完成。下方旧 stable/Java 产品线及历史包独立保留。
+
 最后核对：2026-08-27（北京时间）。本页只列出现存且已完成 SHA-256 校验的 APK。所有附件均托管在本仓库的 GitHub Releases；APK 不进入 Git 源码提交。
 
 ## 先看这里

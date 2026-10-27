@@ -1,5 +1,7 @@
 # Ring Download SDK 来源
 
+**2026-10-28 分发边界更新**：用户在本次会话明确确认已取得 SDK 源码公开分发授权，并要求将 1.0.4 / 1.0.5 完整源码推送 GitHub，供另一台电脑接续。下方本机集成时期的“仅私有”操作说明属于当时状态；本次授权记录见 `docs/version-archive/RELEASE-BACKFILL-2026-10-28.md`。原 LICENSE、所有权和第三方声明保持原文，不重新宣称 SDK 采用 Music 的开源许可。
+
 - 固定版本：1.1.0（P8P 正式 SDK）。
 - 原始包：https://download.csnas.asia/static/ring-download-sdk-1.1.0.zip
 - ZIP 字节：499322。

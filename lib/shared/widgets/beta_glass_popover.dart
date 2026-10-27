@@ -15,16 +15,18 @@ class BetaGlassMenuSurface extends StatelessWidget {
     required this.child,
     this.radius = 24,
     this.visibility = 1,
+    this.grouped = false,
     super.key,
   });
   final Widget child;
   final double radius;
   final double visibility;
+  final bool grouped;
   @override
   Widget build(BuildContext context) => GlassContainer(
     key: const ValueKey('beta13-glass-menu-surface'),
     quality: GlassQuality.premium,
-    useOwnLayer: true,
+    useOwnLayer: !grouped,
     settings: betaMusicPillGlass(context).copyWith(
       blur: betaMusicPillGlass(context).blur + 2,
       visibility: visibility,
@@ -33,6 +35,140 @@ class BetaGlassMenuSurface extends StatelessWidget {
     clipBehavior: Clip.hardEdge,
     child: Material(type: MaterialType.transparency, child: child),
   );
+}
+
+/// The menu and its short liquid neck share one premium optical layer. Flow
+/// measures the actual menu once, then changes paint transforms only: a tick
+/// never rebuilds its rows, the source page, or the audio owner. In Impeller the
+/// grouped SDFs blend before separating; Skia keeps the same bounded geometry
+/// and the package's existing optical fallback. No opacity wraps live glass.
+class BetaLiquidMenu extends StatelessWidget {
+  const BetaLiquidMenu({
+    required this.animation,
+    required this.layout,
+    required this.child,
+    super.key,
+  });
+  final Animation<double> animation;
+  final BetaMenuLayout layout;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduced = MediaQuery.disableAnimationsOf(context);
+    final settings = betaMusicPillGlass(context);
+    final foreground = reduced
+        ? kAlwaysCompleteAnimation
+        : animation.drive(
+            CurveTween(
+              curve: const Interval(.22, .76, curve: Curves.easeOutCubic),
+            ),
+          );
+    return AdaptiveLiquidGlassLayer(
+      quality: GlassQuality.premium,
+      settings: settings.copyWith(blur: settings.blur + 2),
+      blendAmount: 16,
+      child: Flow(
+        key: const ValueKey('beta105-liquid-menu-flow'),
+        clipBehavior: Clip.none,
+        delegate: _LiquidMenuFlow(animation, layout, reduced),
+        children: [
+          BetaGlassMenuSurface(
+            grouped: true,
+            child: FadeTransition(opacity: foreground, child: child),
+          ),
+          for (final part in ['source', 'neck'])
+            IgnorePointer(
+              child: GlassContainer(
+                key: ValueKey('beta105-liquid-$part'),
+                quality: GlassQuality.premium,
+                shape: const LiquidOval(),
+                child: const SizedBox.square(dimension: 32),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LiquidMenuFlow extends FlowDelegate {
+  _LiquidMenuFlow(this.animation, this.layout, this.reduced)
+    : super(repaint: animation);
+  final Animation<double> animation;
+  final BetaMenuLayout layout;
+  final bool reduced;
+
+  @override
+  BoxConstraints getConstraintsForChild(int i, BoxConstraints constraints) =>
+      i == 0
+      ? layout.getConstraintsForChild(constraints)
+      : const BoxConstraints.tightFor(width: 32, height: 32);
+
+  @override
+  void paintChildren(FlowPaintingContext context) {
+    final menuSize = context.getChildSize(0)!;
+    final target =
+        layout.getPositionForChild(context.size, menuSize) & menuSize;
+    final anchor = layout.anchor;
+    final start = Rect.fromCenter(
+      center: anchor.center,
+      width: math.min(menuSize.width * .65, math.max(36, anchor.width * .48)),
+      height: math.min(30, math.max(16, anchor.height * .48)),
+    );
+    // One position function in both directions makes an interrupted opening
+    // reverse continuously, without switching curves or replaying a new route.
+    final raw = reduced ? 1.0 : animation.value.clamp(0.0, 1.0);
+    final t = Curves.easeOutCubic.transform(raw);
+    final rect = Rect.lerp(start, target, t)!;
+    void paint(int index, Rect bounds) {
+      final size = context.getChildSize(index)!;
+      context.paintChild(
+        index,
+        transform: Matrix4.identity()
+          ..translateByDouble(bounds.left, bounds.top, 0, 1)
+          ..scaleByDouble(
+            bounds.width / size.width,
+            bounds.height / size.height,
+            1,
+            1,
+          ),
+      );
+    }
+
+    // The seam thins to zero before the menu reaches its final gap. The reverse
+    // trajectory reconnects the meniscus before the menu merges into its source.
+    final join = reduced ? 0.0 : (1 - raw / .72).clamp(0.0, 1.0);
+    final source = anchor.center;
+    final edge = Offset(
+      source.dx.clamp(
+        rect.left + rect.width * .2,
+        rect.right - rect.width * .2,
+      ),
+      layout.above ? rect.bottom : rect.top,
+    );
+    final neck = Rect.fromCenter(
+      center: Offset.lerp(source, edge, .5)!,
+      width: math.max(.001, 30 * join),
+      height: math.max(.001, ((edge.dy - source.dy).abs() + 24) * join),
+    );
+    paint(
+      1,
+      Rect.fromCenter(
+        center: source,
+        width: math.max(.001, start.width * join),
+        height: math.max(.001, 22 * join),
+      ),
+    );
+    paint(2, neck);
+    paint(0, rect);
+  }
+
+  @override
+  bool shouldRepaint(_LiquidMenuFlow old) =>
+      old.animation != animation ||
+      old.layout != layout ||
+      old.reduced != reduced;
 }
 
 /// One motion contract for editing and playback menus. The trigger-facing edge
@@ -192,15 +328,12 @@ Future<T?> showBetaGlassPopover<T>({
   final route = _BetaGlassPopoverRoute<T>(
     label: label,
     reduceMotion: media.disableAnimations,
-    pageBuilder: (dialog, animation, _) => CustomSingleChildLayout(
-      delegate: layout,
-      child: Theme(
-        data: Theme.of(context),
-        child: BetaGlassMenuTransition(
-          animation: animation,
-          origin: layout.motionOrigin,
-          child: builder(dialog),
-        ),
+    pageBuilder: (dialog, animation, _) => Theme(
+      data: Theme.of(context),
+      child: BetaLiquidMenu(
+        animation: animation,
+        layout: layout,
+        child: builder(dialog),
       ),
     ),
   );

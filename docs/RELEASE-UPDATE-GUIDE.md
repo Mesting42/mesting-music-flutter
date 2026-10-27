@@ -1,12 +1,12 @@
 # 发布下一版应用更新
 
-适用当前 Mesting Music 更新链。当前已发布正式版为 **1.0.4 / code 25**，见 [最新交接](SESSION-HANDOFF-2026-10-28-v1.0.4.md)。没有更新功能的旧版需手动覆盖安装一次当前版本；1.0.1 起客户端从 music 公开 health 检查新版本，1.0.4 起后续下载接入 Ring SDK。管理后台凭据只在浏览器使用，不写入源码、构建参数或交付快照。
+适用当前 Mesting Music 更新链。最新 GitHub/本地交付为 **1.0.5 / code 26**，但 music 后台仍是 **1.0.4 / 25**；见 [当前交接](SESSION-HANDOFF-2026-10-28-v1.0.5.md)。本次上传发布被浏览器 URL 安全检查中止，待续时直接使用 `release/Mesting-Music-v1.0.5.apk`，大小 97,702,493 字节、SHA-256 `48F99ABCFB2381EE1E499EC1E0E935449D498D8233BEC8F95BE7D0EB4798FDF1`，按下文第 3—6 步完成，不重建旧 code。1.0.1 起客户端从 music health 检查，1.0.4 起后续下载接入 Ring SDK。管理凭据不写入源码、构建参数或交付快照。
 
-1. 保持包名 `com.mesting.music.beta`、显示名 Mesting Music 和原签名证书。1.0.4 的实际 code 为 `25`；后续版本必须使用更高 code，例如下一版 `1.0.5 / 26`。内部 flavor 仅用于已有安装的兼容，不另发公开 Beta 版本。
+1. 保持包名 `com.mesting.music.beta`、显示名 Mesting Music 和原签名证书。1.0.5 的实际 code 为 `26`；后续修复使用更高 code，例如 `1.0.6 / 27`。内部 flavor 仅用于已有安装的兼容，不另发公开 Beta 版本。
 2. 在保留当前工作区的前提下完成代码和相应回归，再构建：
 
    ```powershell
-   ./tool/build_android_release_apk.ps1 -FlutterSdkRoot 'D:/你的Flutter目录/flutter' -VersionName '1.0.5' -VersionCode 26
+   ./tool/build_android_release_apk.ps1 -FlutterSdkRoot 'D:/你的Flutter目录/flutter' -VersionName '1.0.6' -VersionCode 27
    ```
 
    不加 `--no-pub`。检查构建后的版本、包名、签名、SHA-256、大小及资源排除，保存独立版本安装包与源码快照。不要覆盖已冻结的旧交付文件。

@@ -16,6 +16,17 @@ class PlayerMenuAction {
   final bool selected;
 }
 
+/// Presentation-only disclosure; the caller still owns persistence and actions.
+class PlayerMenuDisclosure {
+  const PlayerMenuDisclosure({
+    required this.title,
+    required this.current,
+    required this.actions,
+  });
+  final String title, current;
+  final List<PlayerMenuAction> actions;
+}
+
 /// Geometry, motion and glass share one owner with the capsule and editing
 /// toolbar. Business actions run only after the surface has finished closing.
 class PlayerMoreMenu extends StatefulWidget {
@@ -25,6 +36,7 @@ class PlayerMoreMenu extends StatefulWidget {
     this.trigger,
     this.tooltip = '更多操作',
     this.menuWidth = 280,
+    this.disclosure,
     super.key,
   });
   final List<List<PlayerMenuAction>> groups;
@@ -32,6 +44,7 @@ class PlayerMoreMenu extends StatefulWidget {
   final Widget? trigger;
   final String tooltip;
   final double menuWidth;
+  final PlayerMenuDisclosure? disclosure;
   @override
   State<PlayerMoreMenu> createState() => _PlayerMoreMenuState();
 }
@@ -50,72 +63,138 @@ class _PlayerMoreMenuState extends State<PlayerMoreMenu> {
       final ink = theme.brightness == Brightness.dark
           ? Colors.white
           : const Color(0xFF202024);
+      var expanded = false;
       final value = await showBetaGlassPopover<String>(
         context: context,
         anchor: box.localToGlobal(Offset.zero) & box.size,
         width: widget.menuWidth,
         label: '关闭更多菜单',
-        builder: (dialogContext) => SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var group = 0; group < widget.groups.length; group++) ...[
-                if (group > 0)
-                  Divider(
-                    height: 13,
-                    thickness: .5,
-                    color: theme.dividerColor.withValues(alpha: .3),
-                    indent: 16,
-                    endIndent: 16,
-                  ),
-                for (final action in widget.groups[group])
-                  Semantics(
-                    selected: action.selected,
-                    button: true,
-                    child: InkWell(
-                      onTap: () =>
-                          Navigator.of(dialogContext).pop(action.value),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(minHeight: 46),
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, update) => SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (
+                  var group = 0;
+                  group <
+                      widget.groups.length +
+                          (widget.disclosure == null ? 0 : 1);
+                  group++
+                ) ...[
+                  if (group > 0)
+                    Divider(
+                      height: 13,
+                      thickness: .5,
+                      color: theme.dividerColor.withValues(alpha: .3),
+                      indent: 16,
+                      endIndent: 16,
+                    ),
+                  if (group == widget.groups.length) ...[
+                    Semantics(
+                      button: true,
+                      expanded: expanded,
+                      child: InkWell(
+                        key: const ValueKey('player-style-disclosure'),
+                        onTap: () => update(() => expanded = !expanded),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 18,
-                            vertical: 11,
+                            vertical: 12,
                           ),
                           child: Row(
                             children: [
-                              Icon(action.icon, color: ink, size: 20),
+                              Icon(
+                                CupertinoIcons.photo_on_rectangle,
+                                size: 20,
+                                color: ink,
+                              ),
                               const SizedBox(width: 13),
                               Expanded(
                                 child: Text(
-                                  action.label,
+                                  widget.disclosure!.title,
+                                  style: TextStyle(color: ink, fontSize: 15),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  widget.disclosure!.current,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    color: ink,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w500,
+                                    color: ink.withValues(alpha: .65),
+                                    fontSize: 12,
                                   ),
                                 ),
                               ),
-                              if (action.selected)
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 8),
-                                  child: Icon(
-                                    CupertinoIcons.check_mark,
-                                    size: 18,
-                                    color: BetaAppearance.accent(
-                                      theme.brightness,
-                                    ),
-                                  ),
-                                ),
+                              const SizedBox(width: 6),
+                              Icon(
+                                expanded
+                                    ? CupertinoIcons.chevron_up
+                                    : CupertinoIcons.chevron_down,
+                                size: 13,
+                                color: ink,
+                              ),
                             ],
                           ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
+                  for (final action
+                      in group < widget.groups.length
+                          ? widget.groups[group]
+                          : expanded
+                          ? widget.disclosure!.actions
+                          : <PlayerMenuAction>[])
+                    Semantics(
+                      selected: action.selected,
+                      button: true,
+                      child: InkWell(
+                        onTap: () =>
+                            Navigator.of(dialogContext).pop(action.value),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 46),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 18,
+                              vertical: 11,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(action.icon, color: ink, size: 20),
+                                const SizedBox(width: 13),
+                                Expanded(
+                                  child: Text(
+                                    action.label,
+                                    style: TextStyle(
+                                      color: ink,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                if (action.selected)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 8),
+                                    child: Icon(
+                                      CupertinoIcons.check_mark,
+                                      size: 18,
+                                      color: BetaAppearance.accent(
+                                        theme.brightness,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       );

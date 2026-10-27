@@ -1,16 +1,17 @@
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 import '../../../core/audio/playback_interruption.dart';
 import '../../../core/audio/playback_providers.dart';
 import '../../../shared/models/track.dart';
 import '../../../shared/widgets/beta_glass_controls.dart';
+import '../../../shared/widgets/beta_glass_scroll_body.dart';
 import '../../../shared/widgets/music_feature_page.dart';
 import '../data/platform_mv_repository.dart';
 import '../platform_mv_providers.dart';
+import 'music_mv_fullscreen.dart';
 
 class MusicMvPage extends ConsumerStatefulWidget {
   const MusicMvPage({required this.track, super.key});
@@ -32,6 +33,8 @@ class _MusicMvPageState extends ConsumerState<MusicMvPage>
       _pausingForVideo = false;
   String? _error;
   int _generation = 0;
+  final _videoAnchor = GlobalKey();
+  bool _fullscreenOpen = false;
   @override
   void initState() {
     super.initState();
@@ -158,43 +161,19 @@ class _MusicMvPageState extends ConsumerState<MusicMvPage>
 
   Future<void> _fullscreen() async {
     final video = _video;
-    if (video == null) return;
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    if (!mounted) return;
+    if (video == null || _fullscreenOpen || _loading) return;
+    final box = _videoAnchor.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return;
+    final origin = box.localToGlobal(Offset.zero) & box.size;
+    setState(() => _fullscreenOpen = true);
     try {
-      await Navigator.of(context, rootNavigator: true).push(
-        MaterialPageRoute<void>(
-          builder: (context) => Scaffold(
-            backgroundColor: Colors.black,
-            body: SafeArea(
-              child: Stack(
-                children: [
-                  Center(
-                    child: _VideoSurface(
-                      controller: video,
-                      onToggle: _toggleVideo,
-                    ),
-                  ),
-                  Positioned(
-                    right: 12,
-                    top: 12,
-                    child: IconButton(
-                      tooltip: '退出全屏',
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(
-                        CupertinoIcons.arrow_down_right_arrow_up_left,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+      await showMusicMvFullscreen(
+        context: context,
+        origin: origin,
+        video: _VideoSurface(controller: video, onToggle: _toggleVideo),
       );
     } finally {
-      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      if (mounted) setState(() => _fullscreenOpen = false);
     }
   }
 
@@ -239,10 +218,11 @@ class _MusicMvPageState extends ConsumerState<MusicMvPage>
     final scheme = Theme.of(context).colorScheme;
     return MusicFeaturePage(
       title: 'MV',
-      child: ListView(
+      child: BetaGlassScrollBody(
         padding: const EdgeInsets.fromLTRB(22, 12, 22, 40),
         children: [
           ClipRRect(
+            key: _videoAnchor,
             borderRadius: BorderRadius.circular(18),
             child: ColoredBox(
               color: Colors.black,
@@ -261,10 +241,11 @@ class _MusicMvPageState extends ConsumerState<MusicMvPage>
                     : Stack(
                         fit: StackFit.expand,
                         children: [
-                          _VideoSurface(
-                            controller: _video!,
-                            onToggle: _toggleVideo,
-                          ),
+                          if (!_fullscreenOpen)
+                            _VideoSurface(
+                              controller: _video!,
+                              onToggle: _toggleVideo,
+                            ),
                           if (_loading)
                             const Center(
                               child: BetaActivityIndicator(color: Colors.white),
@@ -326,7 +307,10 @@ class _MusicMvPageState extends ConsumerState<MusicMvPage>
             ),
             const SizedBox(height: 24),
             BetaGlassButton(
-              onPressed: _video == null || _loading ? null : _fullscreen,
+              key: const ValueKey('music-mv-fullscreen'),
+              onPressed: _video == null || _loading || _fullscreenOpen
+                  ? null
+                  : _fullscreen,
               child: const Text('全屏播放'),
             ),
           ],

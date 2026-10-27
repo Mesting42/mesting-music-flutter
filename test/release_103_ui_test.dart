@@ -38,6 +38,7 @@ import 'package:mesting_music/features/settings/presentation/music_sleep_timer_s
 import 'package:mesting_music/features/themes/app_theme.dart';
 import 'package:mesting_music/features/themes/music_theme_preset.dart';
 import 'package:mesting_music/shared/widgets/beta_glass_controls.dart';
+import 'package:mesting_music/shared/widgets/beta_glass_scroll_body.dart';
 import 'support/deterministic_audio_player.dart';
 import 'support/test_tracks.dart';
 import 'package:mesting_music/shared/models/track.dart';
@@ -580,6 +581,101 @@ void main() {
       );
       expect(tester.takeException(), isNull);
     });
+    testWidgets(
+      '105 timer uses app brightness beneath a forced-dark player, $mode',
+      (tester) async {
+        await mount(
+          tester,
+          Theme(
+            data: ThemeData.dark(),
+            child: Consumer(
+              builder: (context, ref, _) => Scaffold(
+                body: Center(
+                  child: TextButton(
+                    onPressed: () => showMusicSleepTimer(context, ref),
+                    child: const Text('从播放器打开定时'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          dark: dark,
+        );
+        await tester.tap(find.text('从播放器打开定时'));
+        await tester.pumpAndSettle();
+        final sheetContext = tester.element(find.text('自定义时长'));
+        expect(
+          Theme.of(sheetContext).brightness,
+          dark ? Brightness.dark : Brightness.light,
+        );
+        for (final chip in tester.elementList(find.byType(ChoiceChip))) {
+          expect(
+            Theme.of(chip).brightness,
+            dark ? Brightness.dark : Brightness.light,
+          );
+        }
+        await capture(tester, '105-sleep-from-player-$mode');
+      },
+    );
+    testWidgets(
+      '105 profile glass shares the scrolling surface during drag, $mode',
+      (tester) async {
+        await mount(tester, const PlatformProfileEditPage(), dark: dark);
+        await tester.pumpAndSettle();
+        expect(find.byType(BetaGlassScrollBody), findsOneWidget);
+        final field = find.byType(BetaGlassField).first;
+        expect(
+          find.ancestor(
+            of: field,
+            matching: find.byKey(
+              const ValueKey('glass-scroll-backing-surface'),
+            ),
+          ),
+          findsOneWidget,
+        );
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.byType(ListView)),
+        );
+        await gesture.moveBy(const Offset(0, 180));
+        await tester.pump(const Duration(milliseconds: 40));
+        await capture(tester, '105-profile-overscroll-$mode');
+        await gesture.up();
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+      },
+    );
+    testWidgets(
+      '105 MV full-screen entry and return retain the same controller, $mode',
+      (tester) async {
+        final previous = VideoPlayerPlatform.instance;
+        final video = _Video();
+        VideoPlayerPlatform.instance = video;
+        addTearDown(() => VideoPlayerPlatform.instance = previous);
+        final track = Track.fromJson({
+          ...testTracks.first.toJson(),
+          'source': 'kugou',
+          'platformSongId': '12345',
+        });
+        await mount(tester, MusicMvPage(track: track), dark: dark);
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('music-mv-fullscreen')),
+        );
+        await tester.tap(find.byKey(const ValueKey('music-mv-fullscreen')));
+        await tester.pumpAndSettle();
+        expect(video.ids, 1);
+        expect(video.disposals, 0);
+        await tester.tap(
+          find.byKey(const ValueKey('music-mv-exit-fullscreen')),
+        );
+        await tester.pumpAndSettle();
+        expect(video.ids, 1);
+        expect(video.disposals, 0);
+        expect(find.text('720P · H.264'), findsOneWidget);
+        expect(find.byType(VideoPlayer), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
   }
   testWidgets(
     'profile read failure is retryable and exposes no editable empty draft',

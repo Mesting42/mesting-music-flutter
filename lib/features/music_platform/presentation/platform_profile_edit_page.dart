@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../shared/widgets/beta_glass_controls.dart';
+import '../../../shared/widgets/beta_glass_scroll_body.dart';
 import '../../../shared/widgets/beta_text_editing.dart';
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../../shared/widgets/music_feature_page.dart';
@@ -387,7 +388,7 @@ class _PlatformProfileEditPageState
                     _province = profile.province;
                     _city = profile.city;
                   }
-                  return ListView(
+                  return BetaGlassScrollBody(
                     padding: const EdgeInsets.fromLTRB(22, 12, 22, 40),
                     children: [
                       Center(

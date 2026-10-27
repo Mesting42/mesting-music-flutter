@@ -88,9 +88,14 @@ class _ToolbarPainter extends CustomPainter {
           );
         }
       case PlayerToolbarTool.output:
+        // The device contours fill almost all of their native 40dp canvas;
+        // lyrics/queue occupy about 22dp. Normalize optical size here, leaving
+        // the larger output-card/list glyphs and the 48dp hit target alone.
+        canvas.save();
+        canvas.translate(8, 8);
         paintAppleAudioGlyph(
           canvas,
-          const Size.square(40),
+          const Size.square(24),
           local
               ? AppleAudioGlyphKind.phone
               : headphones
@@ -98,6 +103,7 @@ class _ToolbarPainter extends CustomPainter {
               : AppleAudioGlyphKind.route,
           ink,
         );
+        canvas.restore();
       case PlayerToolbarTool.queue:
         paint
           ..color = ink

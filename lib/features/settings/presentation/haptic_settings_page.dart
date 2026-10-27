@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../shared/widgets/beta_glass_controls.dart';
+import '../../../shared/widgets/beta_glass_scroll_body.dart';
 import '../../../shared/widgets/music_notice.dart';
 
 /// A small grouped settings surface. It edits preferences; the platform bridge
@@ -18,7 +19,7 @@ class HapticSettingsPage extends ConsumerWidget {
       appBar: AppBar(title: const Text('震动与触感')),
       body: SafeArea(
         top: false,
-        child: ListView(
+        child: BetaGlassScrollBody(
           padding: const EdgeInsets.all(20),
           children: [
             Container(
