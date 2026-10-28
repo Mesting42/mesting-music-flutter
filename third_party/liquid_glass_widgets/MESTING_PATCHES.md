@@ -88,3 +88,18 @@ across width-only LayoutBuilder updates, including its invisible collapsed state
 Quality, shaders, magnification, drag/press springs and accessory geometry remain.
 The 336-frame host comparison at 8333 microseconds per pump records structural
 work only; Android GPU timing and physical 120Hz delivery require device checks.
+
+## Music 1.0.7 capture and content reuse
+
+The background capture boundary now shares a full-DPR GPU image within each
+interaction frame. Every lens owns a cloned image handle. A fresh frame gets
+a fresh image even when a nested repaint boundary or video texture updates
+without repainting its parent, so dynamic wallpapers remain live. This removes
+duplicate fullscreen `toImageSync` work without
+changing material parameters, resolution, refraction or shader quality.
+
+The accessory wrapper gives the tab/search bar a stable bottom-aligned viewport
+while its outer bounds move. Selected tab glyph/label subtrees are retained
+through intensity transforms and invalidated for configuration/dependency
+changes. The same host scenario measures 21426 widget builds versus 22726 in
+1.0.6; it remains structural evidence rather than Android 120fps certification.

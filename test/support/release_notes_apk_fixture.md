@@ -1,8 +1,8 @@
 # Remote release-note ZIP fixture
 
 `release_notes_apk_fixture.zip` is a synthetic ZIP, not an installable APK or a
-third-party download. Its DEFLATE-compressed JSON names future version 1.0.7 /
-code 28 and contains two Chinese fixture notes. A stored 80,000-byte zero-filled
+third-party download. Its DEFLATE-compressed JSON names future version 1.0.8 /
+code 29 and contains two Chinese fixture notes. A stored 80,000-byte zero-filled
 entry makes a tail Range smaller than the complete file, so the test exercises
 real ZIP offsets rather than accidentally fetching the entire archive.
 

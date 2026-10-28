@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:audio_service/audio_service.dart';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,7 @@ import '../../shared/models/track.dart';
 import '../../features/library/data/retired_bundled_tracks.dart';
 import '../audio/mesting_audio_handler.dart';
 import '../audio/playback_mode.dart';
+import '../audio/actual_listening_counter.dart';
 import '../database/app_database.dart';
 
 final playbackPersistenceControllerProvider =
@@ -26,17 +28,21 @@ class PlaybackPersistenceController with WidgetsBindingObserver {
   PlaybackPersistenceController({
     required AppDatabase database,
     required MestingAudioHandler audioHandler,
+    ListeningClock? listeningClock,
   }) : _database = database,
-       _audioHandler = audioHandler;
+       _audioHandler = audioHandler,
+       _listeningClock = listeningClock ?? MonotonicListeningClock();
 
   final AppDatabase _database;
   final MestingAudioHandler _audioHandler;
+  final ListeningClock _listeningClock;
   final List<StreamSubscription<Object?>> _subscriptions = [];
 
   Timer? _saveTimer;
   Timer? _librarySyncTimer;
   String? _sampledTrackId;
-  Duration _sampledPosition = Duration.zero;
+  ActualListeningCounter? _listeningCounter;
+  int _sampledHeardMs = 0;
   bool _saving = false;
   bool _started = false;
   bool _switchingOwner = false;
@@ -82,7 +88,8 @@ class PlaybackPersistenceController with WidgetsBindingObserver {
       }
       _ownerId = ownerId;
       _sampledTrackId = null;
-      _sampledPosition = Duration.zero;
+      _listeningCounter = null;
+      _sampledHeardMs = 0;
       final session = await _database.loadPlaybackSession(ownerId);
       if (session == null) {
         await _audioHandler.clearSession();
@@ -125,6 +132,7 @@ class PlaybackPersistenceController with WidgetsBindingObserver {
       await _audioHandler.clearSession();
     } finally {
       _switchingOwner = false;
+      _resetMeasurement();
     }
   }
 
@@ -132,13 +140,23 @@ class PlaybackPersistenceController with WidgetsBindingObserver {
   void start() {
     if (_started) return;
     _started = true;
+    _resetMeasurement();
     WidgetsBinding.instance.addObserver(this);
     _subscriptions.add(
       _audioHandler.mediaItem.listen((item) async {
         final id = item?.id;
-        if (id != null && id != _sampledTrackId) {
+        if (!_switchingOwner && id != _sampledTrackId) {
+          final owner = _ownerId;
+          // Metadata already names the next song. Settle the old counter
+          // against its retained ID before selecting a new decoder interval.
+          if (owner != null) {
+            unawaited(_sampleListeningProgress(ownerId: owner));
+          }
           _sampledTrackId = id;
-          _sampledPosition = _audioHandler.currentPosition;
+          _sampledHeardMs = 0;
+          _listeningCounter = id == null
+              ? null
+              : ActualListeningCounter(_listeningClock);
         }
         await saveNow();
       }),
@@ -165,6 +183,14 @@ class PlaybackPersistenceController with WidgetsBindingObserver {
     );
     _subscriptions.add(
       _audioHandler.playbackState.listen((state) {
+        if (!_switchingOwner) {
+          _listeningCounter?.update(
+            playing: state.playing,
+            ready: state.processingState == AudioProcessingState.ready,
+            speed: state.speed,
+            seeking: _audioHandler.isSeeking,
+          );
+        }
         if (!state.playing) {
           final ownerId = _ownerId;
           if (ownerId != null && !_switchingOwner) {
@@ -172,6 +198,11 @@ class PlaybackPersistenceController with WidgetsBindingObserver {
           }
           saveNow();
         }
+      }),
+    );
+    _subscriptions.add(
+      _audioHandler.seekingStream.listen((seeking) {
+        if (!_switchingOwner) _listeningCounter?.update(seeking: seeking);
       }),
     );
     _saveTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
@@ -184,21 +215,34 @@ class PlaybackPersistenceController with WidgetsBindingObserver {
   }
 
   Future<void> _sampleListeningProgress({required String ownerId}) async {
-    final currentId = _audioHandler.mediaItem.value?.id;
-    final currentPosition = _audioHandler.currentPosition;
-    if (currentId == null) return;
-    if (_sampledTrackId != currentId) {
-      _sampledTrackId = currentId;
-      _sampledPosition = currentPosition;
-      return;
-    }
-    final delta = currentPosition - _sampledPosition;
-    _sampledPosition = currentPosition;
-    // Ignore seeks and timeline jumps. Normal playback samples are five
-    // seconds apart, with a little tolerance for a busy device.
-    if (delta <= Duration.zero || delta > const Duration(seconds: 12)) return;
-    await _database.addPlaybackDuration(ownerId, currentId, delta);
+    final currentId = _sampledTrackId;
+    final counter = _listeningCounter;
+    if (currentId == null || counter == null) return;
+    final heard = counter.sample();
+    final deltaMs = heard - _sampledHeardMs;
+    _sampledHeardMs = heard;
+    if (deltaMs <= 0) return;
+    await _database.addPlaybackDuration(
+      ownerId,
+      currentId,
+      Duration(milliseconds: deltaMs),
+    );
     _synchronizeLibrary(ownerId);
+  }
+
+  void _resetMeasurement() {
+    final item = _audioHandler.mediaItem.value;
+    _sampledTrackId = item?.id;
+    _sampledHeardMs = 0;
+    final state = _audioHandler.playbackState.value;
+    _listeningCounter = item == null
+        ? null
+        : (ActualListeningCounter(_listeningClock)..update(
+            playing: state.playing,
+            ready: state.processingState == AudioProcessingState.ready,
+            speed: state.speed,
+            seeking: _audioHandler.isSeeking,
+          ));
   }
 
   void _synchronizeLibrary(String ownerId) {

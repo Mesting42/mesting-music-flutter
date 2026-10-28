@@ -2,6 +2,19 @@
 
 <!-- impeccable:product-schema 1 -->
 
+## 1.0.7 approved extension (2026-10-28)
+
+The approved navigation is 发现 / 功能 / 音乐库 / 我的. The former home keeps its
+content under 发现; 功能 is a fixed three-column launchpad of working existing
+and newly integrated features. New local music, recognition, audiobooks and
+Kugou together rooms inherit the current Apple/Cupertino visual language and
+reuse the single playback engine. The device-local music index is independent
+of cloud favorites. Official music-history synchronization is account-scoped;
+old aggregate duration remains local, new duration uses actual listening time,
+and official acceptance is separate from confirmed read-back. See the 1.0.7
+fix and handoff documents for verification and publishing status. No device
+access is implied by this contract.
+
 ## Platform
 
 adaptive

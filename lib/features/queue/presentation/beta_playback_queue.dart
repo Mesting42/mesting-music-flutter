@@ -127,7 +127,9 @@ class _BetaPlaybackQueueState extends ConsumerState<BetaPlaybackQueue> {
               modeButton(
                 'player-shuffle',
                 order.shuffle ? '随机播放已开启，点击关闭' : '顺序播放，点击开启随机播放',
-                CupertinoIcons.shuffle,
+                order.shuffle
+                    ? CupertinoIcons.shuffle
+                    : CupertinoIcons.arrow_up_arrow_down,
                 order.shuffle,
                 () => unawaited(
                   act(
@@ -146,7 +148,9 @@ class _BetaPlaybackQueueState extends ConsumerState<BetaPlaybackQueue> {
                 '${order.repeat.label}，点击切换循环方式',
                 order.repeat == PlaybackRepeat.one
                     ? CupertinoIcons.repeat_1
-                    : CupertinoIcons.repeat,
+                    : order.repeat == PlaybackRepeat.all
+                    ? CupertinoIcons.repeat
+                    : CupertinoIcons.arrow_turn_down_right,
                 order.repeat != PlaybackRepeat.off,
                 () => unawaited(
                   act(

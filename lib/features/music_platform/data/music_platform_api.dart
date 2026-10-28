@@ -73,6 +73,23 @@ class MusicPlatformApi {
     timeout: const Duration(seconds: 30),
   );
 
+  /// PCM recognition is an octet-stream contract, not JSON or URL data.
+  Future<Map<String, dynamic>> postBytes(
+    String path,
+    List<int> bytes, {
+    Future<void>? abortTrigger,
+    PlatformSession? expectedSession,
+  }) => _request(
+    'POST',
+    path,
+    query: const {},
+    allowBusinessError: false,
+    binaryBody: bytes,
+    abortTrigger: abortTrigger,
+    expectedSession: expectedSession,
+    timeout: const Duration(seconds: 20),
+  );
+
   Future<Map<String, dynamic>> _request(
     String method,
     String path, {
@@ -82,6 +99,7 @@ class MusicPlatformApi {
     PlatformSession? expectedSession,
     Duration timeout = const Duration(seconds: 15),
     Map<String, Object?>? body,
+    List<int>? binaryBody,
   }) async {
     // Enforce the boundary even if a future caller passes a malformed path.
     if (!path.startsWith('/') || path.startsWith('//') || path.contains('?')) {
@@ -117,6 +135,9 @@ class MusicPlatformApi {
     if (body != null) {
       request.headers['Content-Type'] = 'application/json; charset=utf-8';
       request.body = jsonEncode(body);
+    } else if (binaryBody != null) {
+      request.headers['Content-Type'] = 'application/octet-stream';
+      request.bodyBytes = binaryBody;
     }
     if (identity != null) {
       request.headers['Authorization'] = [

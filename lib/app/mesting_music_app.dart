@@ -18,6 +18,11 @@ import '../features/music_platform/data/music_platform_api.dart';
 import '../features/music_platform/music_platform_providers.dart';
 import '../features/music_platform/platform_quality_providers.dart';
 import '../features/music_platform/platform_recommendation_providers.dart';
+import '../features/music_platform/listening_sync/listening_sync_providers.dart';
+import '../features/audiobooks/audiobook_repository.dart';
+import '../features/audiobooks/audiobook_models.dart';
+import '../features/audiobooks/audiobook_playback.dart';
+import '../features/kugou_together/together_controller.dart';
 import '../shared/models/track.dart';
 import '../core/persistence/playback_persistence_controller.dart';
 import '../features/library/library_providers.dart';
@@ -54,6 +59,13 @@ class MestingMusicApp extends ConsumerWidget {
         // Playback restored from disk must use the current platform account,
         // rather than a signed URL left over from a previous login/session.
         await ref.read(platformAccountProvider.future);
+        if (bookIdentity(track) != null) {
+          return ref.read(audiobookRepositoryProvider).resolve(track);
+        }
+        final roomTrack = await ref
+            .read(togetherControllerProvider)
+            .resolveRoomTrack(track);
+        if (roomTrack != null) return roomTrack;
         final resolved = await source.resolveTrack(
           track,
           quality: ref.read(platformQualityProvider).preferred,
@@ -70,6 +82,8 @@ class MestingMusicApp extends ConsumerWidget {
     if (DistributionChannel.isBeta) {
       ref.watch(musicEqualizerProvider);
       ref.watch(platformRecommendationBindingProvider);
+      ref.watch(audiobookProgressBindingProvider);
+      ref.watch(platformListeningSyncProvider);
     }
     final radioController = DistributionChannel.isBeta
         ? null

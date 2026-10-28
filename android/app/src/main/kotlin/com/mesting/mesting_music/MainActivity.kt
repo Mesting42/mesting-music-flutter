@@ -32,6 +32,10 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.view.Surface
+import android.view.SurfaceHolder
+import android.view.ViewGroup
+import io.flutter.embedding.android.FlutterSurfaceView
 import android.view.animation.DecelerateInterpolator
 import android.widget.LinearLayout
 import android.widget.ImageView
@@ -55,6 +59,9 @@ open class MainActivity : AudioServiceActivity() {
     private var mediaVolumeBridge: MediaVolumeBridge? = null
     private var loginSuccessSoundBridge: LoginSuccessSoundBridge? = null
     private var hapticFeedbackBridge: HapticFeedbackBridge? = null
+    private var localMusicBridge: LocalMusicBridge? = null
+    private var requestedSurfaceHz = 0f
+    private val refreshSurfaceCallbacks = java.util.WeakHashMap<SurfaceHolder, SurfaceHolder.Callback>()
     private lateinit var lyricsChannel: MethodChannel
     private var secureScreenRequests = 0
     private var pendingImageSave: PendingImageSave? = null
@@ -63,6 +70,10 @@ open class MainActivity : AudioServiceActivity() {
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         audioOutputBridge?.dispose()
         audioOutputBridge = null
+        localMusicBridge?.dispose()
+        localMusicBridge = null
+        refreshSurfaceCallbacks.forEach { (holder, callback) -> holder.removeCallback(callback) }
+        refreshSurfaceCallbacks.clear()
         hapticFeedbackBridge?.dispose()
         hapticFeedbackBridge = null
         loginSuccessSoundBridge?.dispose()
@@ -84,6 +95,8 @@ open class MainActivity : AudioServiceActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        localMusicBridge?.dispose()
+        localMusicBridge = LocalMusicBridge(this, flutterEngine.dartExecutor.binaryMessenger)
         if (!flutterEngine.plugins.has(MusicEqualizerPlugin::class.java)) {
             flutterEngine.plugins.add(MusicEqualizerPlugin())
         }
@@ -138,6 +151,19 @@ open class MainActivity : AudioServiceActivity() {
             SYSTEM_CHANNEL,
         ).setMethodCallHandler { call, result ->
             when (call.method) {
+                "getListeningDeviceInfo" -> {
+                    // Runtime screen/device fields for this app's own signed
+                    // playback events. No identifier or credential is logged.
+                    val size = android.graphics.Point()
+                    @Suppress("DEPRECATION")
+                    windowManager.defaultDisplay.getRealSize(size)
+                    result.success(mapOf(
+                        "model" to Build.MODEL,
+                        "systemVersion" to Build.VERSION.RELEASE,
+                        "screenWidth" to size.x,
+                        "screenHeight" to size.y,
+                    ))
+                }
                 "bringAppToFront" -> {
                     packageManager.getLaunchIntentForPackage(packageName)?.let { intent ->
                         intent.addFlags(
@@ -598,12 +624,19 @@ open class MainActivity : AudioServiceActivity() {
         return candidate
     }
 
+    @Deprecated("Deprecated in Android")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        localMusicBridge?.onActivityResult(requestCode, resultCode, data)
+    }
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
         grantResults: IntArray,
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (localMusicBridge?.onRequestPermissionsResult(requestCode, permissions, grantResults) == true) return
         if (requestCode == PHONE_NUMBER_PERMISSION_REQUEST_CODE) {
             val result = pendingPhoneNumberResult ?: return
             pendingPhoneNumberResult = null
@@ -1078,15 +1111,43 @@ open class MainActivity : AudioServiceActivity() {
                 ?: return
 
         val attributes = window.attributes
-        if (
+        if (!(
             attributes.preferredDisplayModeId == preferredMode.modeId &&
             abs(attributes.preferredRefreshRate - preferredMode.refreshRate) <= REFRESH_RATE_TOLERANCE
-        ) {
-            return
+        )) {
+            attributes.preferredDisplayModeId = preferredMode.modeId
+            attributes.preferredRefreshRate = preferredMode.refreshRate
+            window.attributes = attributes
         }
-        attributes.preferredDisplayModeId = preferredMode.modeId
-        attributes.preferredRefreshRate = preferredMode.refreshRate
-        window.attributes = attributes
+        requestedSurfaceHz = preferredMode.refreshRate
+        // Window mode and Surface frame-rate are separate Android hints. The
+        // latter must also be restored after a Flutter surface is recreated.
+        window.decorView.post { hintFlutterSurfaces(window.decorView) }
+    }
+
+    private fun hintFlutterSurfaces(view: View) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+        if (view is FlutterSurfaceView) {
+            val holder = view.holder
+            if (!refreshSurfaceCallbacks.containsKey(holder)) {
+                val callback = object : SurfaceHolder.Callback {
+                    override fun surfaceCreated(surface: SurfaceHolder) = hintSurface(surface)
+                    override fun surfaceChanged(surface: SurfaceHolder, format: Int, width: Int, height: Int) = hintSurface(surface)
+                    override fun surfaceDestroyed(surface: SurfaceHolder) = Unit
+                }
+                refreshSurfaceCallbacks[holder] = callback
+                holder.addCallback(callback)
+            }
+            hintSurface(holder)
+        } else if (view is ViewGroup) {
+            for (index in 0 until view.childCount) hintFlutterSurfaces(view.getChildAt(index))
+        }
+    }
+
+    private fun hintSurface(holder: SurfaceHolder) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && holder.surface.isValid && requestedSurfaceHz > 0f) {
+            runCatching { holder.surface.setFrameRate(requestedSurfaceHz, Surface.FRAME_RATE_COMPATIBILITY_DEFAULT) }
+        }
     }
 
     companion object {

@@ -68,7 +68,7 @@ class EditorialHeader extends ConsumerWidget {
         ? null
         : ref.watch(platformProfileProvider).value;
     final user = ref.watch(currentUserProvider);
-    final homeGreeting = !back && title == '首页';
+    final homeGreeting = !back && (title == '首页' || title == '发现');
     final titleLabel = Text(
       title,
       style: TextStyle(

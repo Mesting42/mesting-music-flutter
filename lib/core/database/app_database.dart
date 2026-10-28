@@ -111,6 +111,23 @@ class PlaybackDailyHistories extends Table {
   Set<Column<Object>> get primaryKey => {ownerId, dayKey, trackId};
 }
 
+/// Durable platform reporting journal, separate from Mesting's cloud outbox.
+/// A dispatched write is never made eligible for a blind retry after a crash.
+/// Only compact facts are stored here; tokens and device identifiers stay out.
+@DataClassName('PlatformListeningOutbox')
+class PlatformListeningOutboxes extends Table {
+  TextColumn get ownerId => text()();
+  TextColumn get eventId => text()();
+  TextColumn get kind => text()();
+  TextColumn get payload => text()();
+  TextColumn get state => text().withDefault(const Constant('queued'))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {ownerId, eventId};
+}
+
 @DriftDatabase(
   tables: [
     FavoriteTracks,
@@ -120,6 +137,7 @@ class PlaybackDailyHistories extends Table {
     PlaybackSessions,
     PlaybackHistories,
     PlaybackDailyHistories,
+    PlatformListeningOutboxes,
   ],
 )
 /// Device-local source of truth for the music library and playback state.
@@ -132,11 +150,14 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'mesting_music'));
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-    onCreate: (migrator) => migrator.createAll(),
+    onCreate: (migrator) async {
+      await migrator.createAll();
+      await _createListeningJournalIndexes();
+    },
     onUpgrade: (migrator, from, to) async {
       if (from < 2) {
         await migrator.alterTable(
@@ -207,8 +228,26 @@ class AppDatabase extends _$AppDatabase {
       if (from < 6) {
         await migrator.addColumn(userPlaylists, userPlaylists.coverCloudId);
       }
+      if (from < 7) {
+        await migrator.createTable(platformListeningOutboxes);
+        await _createListeningJournalIndexes();
+      }
     },
   );
+
+  /// A long-lived journal must drain pending work without rescanning months
+  /// of confirmed facts on each playback edge. The primary key still owns
+  /// event identity; these indexes serve state and chronological queries only.
+  Future<void> _createListeningJournalIndexes() async {
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS platform_listening_pending '
+      'ON platform_listening_outboxes (owner_id, kind, state, created_at)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS platform_listening_timeline '
+      'ON platform_listening_outboxes (owner_id, created_at)',
+    );
+  }
 
   Stream<List<FavoriteTrack>> watchFavorites(String ownerId) {
     return (select(favoriteTracks)

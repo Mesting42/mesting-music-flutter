@@ -6,6 +6,7 @@ import '../../../shared/widgets/beta_edge_back.dart';
 import '../../../shared/widgets/beta_text_editing.dart';
 import '../../../shared/widgets/beta_glass_action.dart';
 import '../../../core/haptics/app_haptics.dart';
+import '../../../core/performance/frame_timing_probe.dart';
 
 import '../../../core/audio/playback_providers.dart';
 import '../../../shared/layout/adaptive_layout.dart';
@@ -120,6 +121,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
   void didUpdateWidget(covariant BetaMusicShell oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.location != oldWidget.location) {
+      FrameTimingProbe.markTransition('page_change');
       if (widget.location == '/player') {
         // Reset synchronously before the bar's next paint. A post-frame reset
         // left the previously revealed capsule visible over the entering page.
@@ -236,6 +238,9 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
           final value = _pendingCompact;
           _pendingCompact = null;
           if (value != null && !_searching && widget.chromeVisible) {
+            FrameTimingProbe.markTransition(
+              value ? 'capsule_compact' : 'capsule_expanded',
+            );
             _mini = value;
           }
         });

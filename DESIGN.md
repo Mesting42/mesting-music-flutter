@@ -438,3 +438,23 @@ BetaLiquidMenu 从真实胶囊或输入区域分离，以同一几何进度反�
 MV 全屏请求横屏，退出/系统返回恢复竖屏和原详情，同一控制器保留位置。音效列表用一致的本地主题 symbol 代替旧远程缩略图，业务预设能力不扩张。Track 只清理末尾音频扩展名的显示，原持久化标题和文件身份保留。
 
 本轮 179 项受影响 Beta 回归、56 项选定 stable 回归通过；42 张主机控件捕获已复核。来源与边界见 docs/fixes-2026-10-28-v1.0.5.md 和同版交接。主机结果不认证实际 Android GPU 液态效果、120fps、真实 P8P 字节贡献或安装。GitHub 归档和 music 后台分开记录；music 的 1.0.5 管理 UI 发布被浏览器 URL 安全检查中止。
+
+
+## Release 1.0.7 extension (2026-10-28)
+
+The established Apple/Cupertino world remains authoritative. The approved fixed
+three-column feature launchpad uses quiet grouped neutral surfaces, blue native
+glyphs and strong Chinese labels; no per-tile live glass is added. Root tabs are
+发现 / 功能 / 音乐库 / 我的. Player dismiss and overflow share one 48dp premium
+circular lens, and the overflow liquid source stays inside the button edge
+facing the menu. Existing 400ms/240ms liquid trajectories and optical settings
+are retained. Each shuffle/repeat state has a distinct glyph.
+
+New local-library, recognition, audiobook and together-room pages inherit shared
+PlatformStyle/PageFrame, theme-aware content and native back controls. Content
+loads, empty/error/permission states stay explicit. Device-wide music scanning
+starts only on a user action. Large text remains scrollable; the feature grid
+keeps three columns with taller cells. Performance work reuses full-DPR textures
+and static label subtrees, without reducing blur/refraction or replacing motion.
+Host screenshots verify composition, not Android GPU optics or 120fps; user-run
+frame diagnostics preserve that distinction.

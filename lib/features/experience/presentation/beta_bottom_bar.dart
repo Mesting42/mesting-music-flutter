@@ -30,12 +30,12 @@ const betaMusicRoutes = [
 ];
 const betaMusicTabs = [
   GlassTab(
-    label: '首页',
-    icon: Icon(Icons.home_rounded),
-    activeIcon: Icon(Icons.home_rounded),
+    label: '发现',
+    icon: Icon(CupertinoIcons.compass),
+    activeIcon: Icon(CupertinoIcons.compass_fill),
   ),
   GlassTab(
-    label: '发现',
+    label: '功能',
     icon: Icon(CupertinoIcons.square_grid_2x2),
     activeIcon: Icon(CupertinoIcons.square_grid_2x2_fill),
   ),

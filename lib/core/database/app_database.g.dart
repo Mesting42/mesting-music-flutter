@@ -3367,6 +3367,469 @@ class PlaybackDailyHistoriesCompanion
   }
 }
 
+class $PlatformListeningOutboxesTable extends PlatformListeningOutboxes
+    with TableInfo<$PlatformListeningOutboxesTable, PlatformListeningOutbox> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PlatformListeningOutboxesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerIdMeta = const VerificationMeta(
+    'ownerId',
+  );
+  @override
+  late final GeneratedColumn<String> ownerId = GeneratedColumn<String>(
+    'owner_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _eventIdMeta = const VerificationMeta(
+    'eventId',
+  );
+  @override
+  late final GeneratedColumn<String> eventId = GeneratedColumn<String>(
+    'event_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _payloadMeta = const VerificationMeta(
+    'payload',
+  );
+  @override
+  late final GeneratedColumn<String> payload = GeneratedColumn<String>(
+    'payload',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _stateMeta = const VerificationMeta('state');
+  @override
+  late final GeneratedColumn<String> state = GeneratedColumn<String>(
+    'state',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('queued'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    ownerId,
+    eventId,
+    kind,
+    payload,
+    state,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'platform_listening_outboxes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PlatformListeningOutbox> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_id')) {
+      context.handle(
+        _ownerIdMeta,
+        ownerId.isAcceptableOrUnknown(data['owner_id']!, _ownerIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerIdMeta);
+    }
+    if (data.containsKey('event_id')) {
+      context.handle(
+        _eventIdMeta,
+        eventId.isAcceptableOrUnknown(data['event_id']!, _eventIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_eventIdMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('payload')) {
+      context.handle(
+        _payloadMeta,
+        payload.isAcceptableOrUnknown(data['payload']!, _payloadMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_payloadMeta);
+    }
+    if (data.containsKey('state')) {
+      context.handle(
+        _stateMeta,
+        state.isAcceptableOrUnknown(data['state']!, _stateMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ownerId, eventId};
+  @override
+  PlatformListeningOutbox map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PlatformListeningOutbox(
+      ownerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_id'],
+      )!,
+      eventId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}event_id'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      payload: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload'],
+      )!,
+      state: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}state'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PlatformListeningOutboxesTable createAlias(String alias) {
+    return $PlatformListeningOutboxesTable(attachedDatabase, alias);
+  }
+}
+
+class PlatformListeningOutbox extends DataClass
+    implements Insertable<PlatformListeningOutbox> {
+  final String ownerId;
+  final String eventId;
+  final String kind;
+  final String payload;
+  final String state;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const PlatformListeningOutbox({
+    required this.ownerId,
+    required this.eventId,
+    required this.kind,
+    required this.payload,
+    required this.state,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_id'] = Variable<String>(ownerId);
+    map['event_id'] = Variable<String>(eventId);
+    map['kind'] = Variable<String>(kind);
+    map['payload'] = Variable<String>(payload);
+    map['state'] = Variable<String>(state);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  PlatformListeningOutboxesCompanion toCompanion(bool nullToAbsent) {
+    return PlatformListeningOutboxesCompanion(
+      ownerId: Value(ownerId),
+      eventId: Value(eventId),
+      kind: Value(kind),
+      payload: Value(payload),
+      state: Value(state),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory PlatformListeningOutbox.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PlatformListeningOutbox(
+      ownerId: serializer.fromJson<String>(json['ownerId']),
+      eventId: serializer.fromJson<String>(json['eventId']),
+      kind: serializer.fromJson<String>(json['kind']),
+      payload: serializer.fromJson<String>(json['payload']),
+      state: serializer.fromJson<String>(json['state']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerId': serializer.toJson<String>(ownerId),
+      'eventId': serializer.toJson<String>(eventId),
+      'kind': serializer.toJson<String>(kind),
+      'payload': serializer.toJson<String>(payload),
+      'state': serializer.toJson<String>(state),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  PlatformListeningOutbox copyWith({
+    String? ownerId,
+    String? eventId,
+    String? kind,
+    String? payload,
+    String? state,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => PlatformListeningOutbox(
+    ownerId: ownerId ?? this.ownerId,
+    eventId: eventId ?? this.eventId,
+    kind: kind ?? this.kind,
+    payload: payload ?? this.payload,
+    state: state ?? this.state,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  PlatformListeningOutbox copyWithCompanion(
+    PlatformListeningOutboxesCompanion data,
+  ) {
+    return PlatformListeningOutbox(
+      ownerId: data.ownerId.present ? data.ownerId.value : this.ownerId,
+      eventId: data.eventId.present ? data.eventId.value : this.eventId,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      payload: data.payload.present ? data.payload.value : this.payload,
+      state: data.state.present ? data.state.value : this.state,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PlatformListeningOutbox(')
+          ..write('ownerId: $ownerId, ')
+          ..write('eventId: $eventId, ')
+          ..write('kind: $kind, ')
+          ..write('payload: $payload, ')
+          ..write('state: $state, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(ownerId, eventId, kind, payload, state, createdAt, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PlatformListeningOutbox &&
+          other.ownerId == this.ownerId &&
+          other.eventId == this.eventId &&
+          other.kind == this.kind &&
+          other.payload == this.payload &&
+          other.state == this.state &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class PlatformListeningOutboxesCompanion
+    extends UpdateCompanion<PlatformListeningOutbox> {
+  final Value<String> ownerId;
+  final Value<String> eventId;
+  final Value<String> kind;
+  final Value<String> payload;
+  final Value<String> state;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const PlatformListeningOutboxesCompanion({
+    this.ownerId = const Value.absent(),
+    this.eventId = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.payload = const Value.absent(),
+    this.state = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PlatformListeningOutboxesCompanion.insert({
+    required String ownerId,
+    required String eventId,
+    required String kind,
+    required String payload,
+    this.state = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : ownerId = Value(ownerId),
+       eventId = Value(eventId),
+       kind = Value(kind),
+       payload = Value(payload),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<PlatformListeningOutbox> custom({
+    Expression<String>? ownerId,
+    Expression<String>? eventId,
+    Expression<String>? kind,
+    Expression<String>? payload,
+    Expression<String>? state,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerId != null) 'owner_id': ownerId,
+      if (eventId != null) 'event_id': eventId,
+      if (kind != null) 'kind': kind,
+      if (payload != null) 'payload': payload,
+      if (state != null) 'state': state,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PlatformListeningOutboxesCompanion copyWith({
+    Value<String>? ownerId,
+    Value<String>? eventId,
+    Value<String>? kind,
+    Value<String>? payload,
+    Value<String>? state,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return PlatformListeningOutboxesCompanion(
+      ownerId: ownerId ?? this.ownerId,
+      eventId: eventId ?? this.eventId,
+      kind: kind ?? this.kind,
+      payload: payload ?? this.payload,
+      state: state ?? this.state,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerId.present) {
+      map['owner_id'] = Variable<String>(ownerId.value);
+    }
+    if (eventId.present) {
+      map['event_id'] = Variable<String>(eventId.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (payload.present) {
+      map['payload'] = Variable<String>(payload.value);
+    }
+    if (state.present) {
+      map['state'] = Variable<String>(state.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PlatformListeningOutboxesCompanion(')
+          ..write('ownerId: $ownerId, ')
+          ..write('eventId: $eventId, ')
+          ..write('kind: $kind, ')
+          ..write('payload: $payload, ')
+          ..write('state: $state, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3382,6 +3845,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $PlaybackHistoriesTable(this);
   late final $PlaybackDailyHistoriesTable playbackDailyHistories =
       $PlaybackDailyHistoriesTable(this);
+  late final $PlatformListeningOutboxesTable platformListeningOutboxes =
+      $PlatformListeningOutboxesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3394,6 +3859,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     playbackSessions,
     playbackHistories,
     playbackDailyHistories,
+    platformListeningOutboxes,
   ];
 }
 
@@ -5163,6 +5629,263 @@ typedef $$PlaybackDailyHistoriesTableProcessedTableManager =
       PlaybackDailyHistory,
       PrefetchHooks Function()
     >;
+typedef $$PlatformListeningOutboxesTableCreateCompanionBuilder =
+    PlatformListeningOutboxesCompanion Function({
+      required String ownerId,
+      required String eventId,
+      required String kind,
+      required String payload,
+      Value<String> state,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$PlatformListeningOutboxesTableUpdateCompanionBuilder =
+    PlatformListeningOutboxesCompanion Function({
+      Value<String> ownerId,
+      Value<String> eventId,
+      Value<String> kind,
+      Value<String> payload,
+      Value<String> state,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$PlatformListeningOutboxesTableFilterComposer
+    extends Composer<_$AppDatabase, $PlatformListeningOutboxesTable> {
+  $$PlatformListeningOutboxesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get ownerId => $composableBuilder(
+    column: $table.ownerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get eventId => $composableBuilder(
+    column: $table.eventId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PlatformListeningOutboxesTableOrderingComposer
+    extends Composer<_$AppDatabase, $PlatformListeningOutboxesTable> {
+  $$PlatformListeningOutboxesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get ownerId => $composableBuilder(
+    column: $table.ownerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get eventId => $composableBuilder(
+    column: $table.eventId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PlatformListeningOutboxesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PlatformListeningOutboxesTable> {
+  $$PlatformListeningOutboxesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get ownerId =>
+      $composableBuilder(column: $table.ownerId, builder: (column) => column);
+
+  GeneratedColumn<String> get eventId =>
+      $composableBuilder(column: $table.eventId, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get payload =>
+      $composableBuilder(column: $table.payload, builder: (column) => column);
+
+  GeneratedColumn<String> get state =>
+      $composableBuilder(column: $table.state, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$PlatformListeningOutboxesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PlatformListeningOutboxesTable,
+          PlatformListeningOutbox,
+          $$PlatformListeningOutboxesTableFilterComposer,
+          $$PlatformListeningOutboxesTableOrderingComposer,
+          $$PlatformListeningOutboxesTableAnnotationComposer,
+          $$PlatformListeningOutboxesTableCreateCompanionBuilder,
+          $$PlatformListeningOutboxesTableUpdateCompanionBuilder,
+          (
+            PlatformListeningOutbox,
+            BaseReferences<
+              _$AppDatabase,
+              $PlatformListeningOutboxesTable,
+              PlatformListeningOutbox
+            >,
+          ),
+          PlatformListeningOutbox,
+          PrefetchHooks Function()
+        > {
+  $$PlatformListeningOutboxesTableTableManager(
+    _$AppDatabase db,
+    $PlatformListeningOutboxesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PlatformListeningOutboxesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$PlatformListeningOutboxesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$PlatformListeningOutboxesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> ownerId = const Value.absent(),
+                Value<String> eventId = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String> payload = const Value.absent(),
+                Value<String> state = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PlatformListeningOutboxesCompanion(
+                ownerId: ownerId,
+                eventId: eventId,
+                kind: kind,
+                payload: payload,
+                state: state,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String ownerId,
+                required String eventId,
+                required String kind,
+                required String payload,
+                Value<String> state = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => PlatformListeningOutboxesCompanion.insert(
+                ownerId: ownerId,
+                eventId: eventId,
+                kind: kind,
+                payload: payload,
+                state: state,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PlatformListeningOutboxesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PlatformListeningOutboxesTable,
+      PlatformListeningOutbox,
+      $$PlatformListeningOutboxesTableFilterComposer,
+      $$PlatformListeningOutboxesTableOrderingComposer,
+      $$PlatformListeningOutboxesTableAnnotationComposer,
+      $$PlatformListeningOutboxesTableCreateCompanionBuilder,
+      $$PlatformListeningOutboxesTableUpdateCompanionBuilder,
+      (
+        PlatformListeningOutbox,
+        BaseReferences<
+          _$AppDatabase,
+          $PlatformListeningOutboxesTable,
+          PlatformListeningOutbox
+        >,
+      ),
+      PlatformListeningOutbox,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -5183,5 +5906,10 @@ class $AppDatabaseManager {
       $$PlaybackDailyHistoriesTableTableManager(
         _db,
         _db.playbackDailyHistories,
+      );
+  $$PlatformListeningOutboxesTableTableManager get platformListeningOutboxes =>
+      $$PlatformListeningOutboxesTableTableManager(
+        _db,
+        _db.platformListeningOutboxes,
       );
 }

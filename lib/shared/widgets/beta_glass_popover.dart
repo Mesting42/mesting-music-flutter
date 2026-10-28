@@ -192,12 +192,7 @@ class _RenderLiquidMenu extends RenderBox
     _cachedProgress = progress;
     final menuSize = firstChild!.size;
     final target = _menuLayout.getPositionForChild(size, menuSize) & menuSize;
-    final anchor = _menuLayout.anchor;
-    final start = Rect.fromCenter(
-      center: anchor.center,
-      width: math.min(menuSize.width * .65, math.max(36, anchor.width * .48)),
-      height: math.min(30, math.max(16, anchor.height * .48)),
-    );
+    final start = _menuLayout.sourceBounds(size, menuSize);
     // One position function in both directions makes an interrupted opening
     // reverse continuously, without switching curves or replaying a new route.
     final raw = progress;
@@ -207,7 +202,7 @@ class _RenderLiquidMenu extends RenderBox
     // The seam thins to zero before the menu reaches its final gap. The reverse
     // trajectory reconnects the meniscus before the menu merges into its source.
     final join = reduced ? 0.0 : (1 - raw / .72).clamp(0.0, 1.0);
-    final source = anchor.center;
+    final source = start.center;
     final edge = Offset(
       source.dx.clamp(
         rect.left + rect.width * .2,
@@ -225,7 +220,10 @@ class _RenderLiquidMenu extends RenderBox
       Rect.fromCenter(
         center: source,
         width: math.max(.001, start.width * join),
-        height: math.max(.001, 22 * join),
+        height: math.max(
+          .001,
+          (_menuLayout.fromInnerEdge ? start.height : 22) * join,
+        ),
       ),
       neck,
     ];
@@ -424,10 +422,16 @@ Future<T?> showBetaGlassPopover<T>({
   required WidgetBuilder builder,
   double width = 300,
   String label = '关闭菜单',
+  bool fromInnerEdge = false,
 }) async {
   appHaptic(context, AppHapticEvent.impact);
   final media = MediaQuery.of(context);
-  final layout = BetaMenuLayout(anchor: anchor, media: media, width: width);
+  final layout = BetaMenuLayout(
+    anchor: anchor,
+    media: media,
+    width: width,
+    fromInnerEdge: fromInnerEdge,
+  );
   final route = _BetaGlassPopoverRoute<T>(
     label: label,
     reduceMotion: media.disableAnimations,
@@ -474,11 +478,40 @@ class BetaMenuLayout extends SingleChildLayoutDelegate {
     required this.media,
     required this.width,
     this.gap = betaMenuAnchorGap,
+    this.fromInnerEdge = false,
   });
   final Rect anchor;
   final MediaQueryData media;
   final double width;
   final double gap;
+  final bool fromInnerEdge;
+
+  /// The source stays inside the trigger's lens, on the side facing the menu.
+  /// Selection toolbars retain their original centre-based geometry.
+  Rect sourceBounds(Size parentSize, Size menuSize) {
+    if (!fromInnerEdge) {
+      return Rect.fromCenter(
+        center: anchor.center,
+        width: math.min(menuSize.width * .65, math.max(36, anchor.width * .48)),
+        height: math.min(30, math.max(16, anchor.height * .48)),
+      );
+    }
+    final target = getPositionForChild(parentSize, menuSize) & menuSize;
+    final direction = target.center - anchor.center;
+    final angle = math.atan2(direction.dy, direction.dx);
+    final centre =
+        anchor.center +
+        Offset(
+          math.cos(angle) * math.max(0, anchor.width / 2 - 10),
+          math.sin(angle) * math.max(0, anchor.height / 2 - 9),
+        );
+    return Rect.fromCenter(
+      center: centre,
+      width: math.min(16, anchor.width * .34),
+      height: math.min(12, anchor.height * .25),
+    );
+  }
+
   double get top => media.padding.top + 12;
   double get bottom =>
       media.size.height -
@@ -525,5 +558,6 @@ class BetaMenuLayout extends SingleChildLayoutDelegate {
       anchor != old.anchor ||
       media != old.media ||
       width != old.width ||
-      gap != old.gap;
+      gap != old.gap ||
+      fromInnerEdge != old.fromInnerEdge;
 }

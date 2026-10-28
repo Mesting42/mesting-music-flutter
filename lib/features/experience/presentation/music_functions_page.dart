@@ -1,0 +1,181 @@
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../music_platform/data/platform_explore.dart';
+import '../../music_platform/data/platform_recommendations.dart';
+import '../../music_platform/presentation/platform_recommendations_page.dart';
+import '../../music_platform/presentation/platform_design.dart';
+import '../../music_platform/presentation/music_effects_page.dart';
+import '../../themes/music_theme_tokens.dart';
+import 'editorial_widgets.dart';
+import 'music_home_catalogues.dart';
+
+/// Fixed launchpad: only destinations with a working local/platform owner are
+/// shown. Tiles inherit the quiet Apple library surface; expensive live glass
+/// belongs to the persistent floating navigation, not every grid cell.
+class MusicFunctionsPage extends StatelessWidget {
+  const MusicFunctionsPage({super.key});
+  @override
+  Widget build(BuildContext context) {
+    void page(Widget child) => Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => child));
+    final entries = <_FunctionEntry>[
+      _FunctionEntry(
+        '私人 FM',
+        CupertinoIcons.antenna_radiowaves_left_right,
+        () => page(
+          const PlatformRecommendationDetail(
+            title: '私人 FM',
+            kind: PlatformRecommendationKind.fm,
+          ),
+        ),
+      ),
+      _FunctionEntry(
+        '每日推荐',
+        CupertinoIcons.calendar,
+        () => context.push('/music?view=daily'),
+      ),
+      _FunctionEntry(
+        '搜索',
+        CupertinoIcons.search,
+        () => context.push('/music/search'),
+      ),
+      _FunctionEntry(
+        '排行榜',
+        CupertinoIcons.chart_bar,
+        () => openMusicHomeCatalogue(context, PlatformExploreKind.rank),
+      ),
+      _FunctionEntry(
+        '精选歌单',
+        CupertinoIcons.music_note_list,
+        () => openMusicHomeCatalogue(context, PlatformExploreKind.playlist),
+      ),
+      _FunctionEntry(
+        '听歌识曲',
+        CupertinoIcons.mic,
+        () => context.push('/music/recognize'),
+      ),
+      _FunctionEntry(
+        '听书',
+        CupertinoIcons.book,
+        () => context.push('/music/audiobooks'),
+      ),
+      _FunctionEntry(
+        '场景音乐',
+        CupertinoIcons.sun_haze,
+        () => openMusicHomeCatalogue(context, PlatformExploreKind.scene),
+      ),
+      _FunctionEntry(
+        '一起听',
+        CupertinoIcons.person_2,
+        () => context.push('/music/together'),
+      ),
+      _FunctionEntry(
+        '听歌回顾',
+        CupertinoIcons.clock,
+        () => context.push('/music/replay'),
+      ),
+      _FunctionEntry(
+        '新碟上架',
+        CupertinoIcons.music_note_2,
+        () => openMusicHomeCatalogue(context, PlatformExploreKind.album),
+      ),
+      _FunctionEntry(
+        '音效',
+        CupertinoIcons.slider_horizontal_3,
+        () => page(const MusicEffectsPage()),
+      ),
+    ];
+    final common = <_FunctionEntry>[
+      _FunctionEntry(
+        '发现',
+        CupertinoIcons.compass,
+        () => context.go('/music/recommend'),
+      ),
+      _FunctionEntry(
+        '收藏',
+        CupertinoIcons.heart,
+        () => context.push('/music/library?view=favorites'),
+      ),
+      _FunctionEntry(
+        '本地音乐',
+        CupertinoIcons.music_albums,
+        () => context.push('/music/local'),
+      ),
+    ];
+    return PlatformStyle(
+      child: EditorialScroll(
+        children: [
+          const EditorialHeader('功能'),
+          _FunctionGrid(entries),
+          const EditorialSection('常用'),
+          _FunctionGrid(common),
+        ],
+      ),
+    );
+  }
+}
+
+class _FunctionEntry {
+  const _FunctionEntry(this.title, this.icon, this.open);
+  final String title;
+  final IconData icon;
+  final VoidCallback open;
+}
+
+class _FunctionGrid extends StatelessWidget {
+  const _FunctionGrid(this.entries);
+  final List<_FunctionEntry> entries;
+  @override
+  Widget build(BuildContext context) {
+    final scale = MediaQuery.textScalerOf(context).scale(16) / 16;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 22),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.zero,
+        itemCount: entries.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          mainAxisExtent: 116 + (scale - 1).clamp(0, 2) * 48,
+        ),
+        itemBuilder: (context, i) {
+          final item = entries[i];
+          return CupertinoButton(
+            key: ValueKey('function-${item.title}'),
+            color: Theme.of(context).colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(22),
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 14),
+            onPressed: item.open,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  item.icon,
+                  size: 32,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(height: 13),
+                Text(
+                  item.title,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: context.musicThemeTokens.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}

@@ -117,6 +117,10 @@ class MestingAudioHandler extends BaseAudioHandler
       StreamController<Track>.broadcast();
   final StreamController<String> _userCommandController =
       StreamController<String>.broadcast();
+  final StreamController<bool> _seekingController =
+      StreamController<bool>.broadcast(sync: true);
+  bool _isSeeking = false;
+  int _seeksInFlight = 0;
   final Map<String, Uri> _artworkUriCache = <String, Uri>{};
   // Existing pinned audio/cache or schema migration API; covered by regression tests.
   // ignore: experimental_member_use
@@ -268,6 +272,15 @@ class MestingAudioHandler extends BaseAudioHandler
 
   Stream<Duration> get positionStream => _player.positionStream;
   Stream<Duration?> get durationStream => _player.durationStream;
+
+  /// Explicit seek work can leave just_audio's playing flag true. Listening
+  /// accounting observes this edge instead of charging decoder seek latency.
+  Stream<bool> get seekingStream => _seekingController.stream;
+  bool get isSeeking => _isSeeking;
+  Stream<void> get nativeRepeatBoundaryStream => _player
+      .positionDiscontinuityStream
+      .where((event) => event.reason == PositionDiscontinuityReason.autoAdvance)
+      .map<void>((_) {});
   int? get androidAudioSessionId => _player.androidAudioSessionId;
   Stream<int?> get androidAudioSessionIdStream =>
       _player.androidAudioSessionIdStream;
@@ -315,6 +328,7 @@ class MestingAudioHandler extends BaseAudioHandler
     _consumptionTimer?.cancel();
     await _pauseFadeController.cancel();
     await _userCommandController.close();
+    await _seekingController.close();
     await _player.dispose();
   }
 
@@ -452,6 +466,11 @@ class MestingAudioHandler extends BaseAudioHandler
 
   Future<MediaItem> _mediaItemFor(Track track) async {
     if (track.isRemote) return track.toMediaItem();
+    final localArtwork = Uri.tryParse(track.coverAsset);
+    if (localArtwork != null &&
+        (localArtwork.scheme == 'file' || localArtwork.scheme == 'content')) {
+      return track.toMediaItem(artUri: localArtwork);
+    }
     final cached = _artworkUriCache[track.coverAsset];
     if (cached != null) return track.toMediaItem(artUri: cached);
 
@@ -514,7 +533,8 @@ class MestingAudioHandler extends BaseAudioHandler
     }
     _currentSourceFromCache = false;
     final localUri = Uri.tryParse(track.audioAsset);
-    if (localUri != null && localUri.scheme == 'file') {
+    if (localUri != null &&
+        (localUri.scheme == 'file' || localUri.scheme == 'content')) {
       return AudioSource.uri(localUri, tag: item);
     }
     return AudioSource.asset(track.audioAsset, tag: item);
@@ -911,7 +931,7 @@ class MestingAudioHandler extends BaseAudioHandler
     await _pauseFadeController.cancel();
     if (restartAfterSleep) {
       _completionGate.reset();
-      await _player.seek(Duration.zero);
+      await _seekPlayer(Duration.zero);
       await _applyPlaybackOrder();
     }
     _consecutiveLoadFailures = 0;
@@ -984,7 +1004,20 @@ class MestingAudioHandler extends BaseAudioHandler
     await _pauseFadeController.cancel();
     final current = _player.position;
     _completionGate.onSeek(from: current, to: position);
-    await _player.seek(position);
+    await _seekPlayer(position);
+  }
+
+  Future<void> _seekPlayer(Duration position) async {
+    _seeksInFlight++;
+    _isSeeking = true;
+    _seekingController.add(true);
+    try {
+      await _player.seek(position);
+    } finally {
+      _seeksInFlight--;
+      _isSeeking = _seeksInFlight > 0;
+      _seekingController.add(_isSeeking);
+    }
   }
 
   @override
@@ -994,7 +1027,7 @@ class MestingAudioHandler extends BaseAudioHandler
     await _pauseFadeController.cancel();
     if (index < 0 || index >= _tracks.length) return;
     if (index == 0) {
-      await _player.seek(Duration.zero);
+      await _seekPlayer(Duration.zero);
       return;
     }
     await playSingleTrack(_tracks[index]);

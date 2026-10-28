@@ -1,4 +1,6 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter/rendering.dart';
+import 'dart:ui' as ui;
 
 /// A scope that provides infrastructure for glass refraction on Skia and Web.
 ///
@@ -142,10 +144,57 @@ class GlassBackgroundSource extends StatelessWidget {
     // If no scope is found, render the child normally — no silent failures.
     if (key == null) return child;
 
-    return RepaintBoundary(
+    return _GlassCaptureBoundary(
       key: key,
       child: child,
     );
+  }
+}
+
+class _GlassCaptureBoundary extends SingleChildRenderObjectWidget {
+  const _GlassCaptureBoundary({required super.child, super.key});
+  @override
+  RenderGlassBackgroundBoundary createRenderObject(BuildContext context) =>
+      RenderGlassBackgroundBoundary();
+}
+
+/// Full-resolution source texture shared by every lens sampling this boundary.
+/// During interaction, capture once per frame and clone a handle per lens.
+/// Descendant repaint boundaries can repaint without repainting this parent,
+/// so parent paintVersion alone is insufficient for cross-frame reuse.
+class RenderGlassBackgroundBoundary extends RenderRepaintBoundary {
+  int paintVersion = 0;
+  int debugCaptureCount = 0;
+  int _capturedVersion = -1;
+  double? _capturedDpr;
+  ui.Image? _snapshot;
+  Duration? _captureFrame;
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    super.paint(context, offset);
+    paintVersion++;
+  }
+
+  ui.Image captureSnapshot(double dpr, {Duration? frame}) {
+    final nextFrame = frame != null && _captureFrame != frame;
+    if (_snapshot == null || _capturedVersion != paintVersion || _capturedDpr != dpr || nextFrame) {
+      final next = toImageSync(pixelRatio: dpr);
+      _snapshot?.dispose();
+      _snapshot = next;
+      _capturedVersion = paintVersion;
+      _capturedDpr = dpr;
+      _captureFrame = frame;
+      debugCaptureCount++;
+    }
+    return _snapshot!.clone();
+  }
+
+  @override
+  void dispose() {
+    _snapshot?.dispose();
+    _snapshot = null;
+    super.dispose();
   }
 }
 

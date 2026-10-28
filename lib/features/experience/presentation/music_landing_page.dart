@@ -50,7 +50,7 @@ class MusicLandingPage extends ConsumerWidget {
               .then<void>((_) {}, onError: (Object _) {});
         },
         children: [
-          EditorialHeader(discovery ? '发现' : '首页'),
+          const EditorialHeader('发现'),
           if (!discovery) ...[
             EditorialSection(
               '为你精选',

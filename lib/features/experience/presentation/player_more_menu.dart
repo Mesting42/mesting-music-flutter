@@ -1,7 +1,6 @@
 import 'package:flutter/cupertino.dart';
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import '../../../shared/widgets/beta_glass_menu_item.dart';
-import 'beta_bottom_bar.dart';
+import 'player_glass_button.dart';
 import 'package:flutter/material.dart';
 import '../../../shared/widgets/beta_glass_popover.dart';
 import '../../themes/beta_appearance.dart';
@@ -71,6 +70,7 @@ class _PlayerMoreMenuState extends State<PlayerMoreMenu> {
         anchor: box.localToGlobal(Offset.zero) & box.size,
         width: widget.menuWidth,
         label: '关闭更多菜单',
+        fromInnerEdge: true,
         builder: (dialogContext) => StatefulBuilder(
           builder: (context, update) => SingleChildScrollView(
             padding: const EdgeInsets.symmetric(vertical: 6),
@@ -221,32 +221,10 @@ class _PlayerMoreMenuState extends State<PlayerMoreMenu> {
             ),
           ),
         )
-      : Semantics(
+      : PlayerGlassButton(
+          key: _anchor,
           label: widget.tooltip,
-          button: true,
-          child: Tooltip(
-            message: widget.tooltip,
-            child: RepaintBoundary(
-              child: GlassButton.custom(
-                key: _anchor,
-                onTap: _open,
-                width: 48,
-                height: 48,
-                useOwnLayer: true,
-                quality: GlassQuality.premium,
-                shape: const LiquidOval(),
-                // A permanent lens gives the liquid contraction a real source
-                // while retaining white-glyph contrast over every cover style.
-                settings: betaMusicPillGlass(
-                  context,
-                ).copyWith(glassColor: const Color(0x602C2C2E)),
-                child: const Icon(
-                  CupertinoIcons.ellipsis,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
-            ),
-          ),
+          onPressed: _open,
+          icon: CupertinoIcons.ellipsis,
         );
 }

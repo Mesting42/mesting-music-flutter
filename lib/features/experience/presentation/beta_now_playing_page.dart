@@ -22,6 +22,7 @@ import 'apple_player_controls.dart';
 import 'immersive_lyrics.dart';
 import 'player_pull_to_dismiss.dart';
 import 'player_more_menu.dart';
+import 'player_glass_button.dart';
 import '../../settings/presentation/music_equalizer_page.dart';
 import '../../settings/presentation/music_sleep_timer_sheet.dart';
 import '../../music_platform/presentation/music_effects_page.dart';
@@ -206,13 +207,13 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
                                     ),
                                     child: Row(
                                       children: [
-                                        IconButton(
-                                          tooltip: _lyrics ? '返回封面' : '收起播放器',
-                                          onPressed: _close,
-                                          icon: const Icon(
-                                            CupertinoIcons.chevron_down,
-                                            size: 23,
+                                        PlayerGlassButton(
+                                          key: const ValueKey(
+                                            'player-dismiss-glass',
                                           ),
+                                          label: _lyrics ? '返回封面' : '收起播放器',
+                                          onPressed: _close,
+                                          icon: CupertinoIcons.chevron_down,
                                         ),
                                         const Spacer(),
                                         _more(context),

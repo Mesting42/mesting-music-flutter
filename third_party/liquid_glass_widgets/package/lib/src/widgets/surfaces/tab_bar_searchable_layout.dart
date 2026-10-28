@@ -353,6 +353,7 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
   @override
   void didUpdateWidget(covariant TabBarSearchableLayout old) {
     super.didUpdateWidget(old);
+    _selectedRowItems = null;
     if (widget.controller != old.controller) {
       _controller.removeListener(_onControllerChanged);
       if (_ownsController) _controller.dispose();
@@ -1177,7 +1178,14 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                   child: accessory!,
                 ),
                 Positioned(
-                    bottom: 0, left: 0, right: 0, child: innerBarContent),
+                    bottom: 0, left: 0, right: 0,
+                    // The accessory's animated outer height must not change
+                    // the tab/search LayoutBuilder constraints on every tick.
+                    // A fixed, bottom-aligned viewport retains the live optics
+                    // and allows the inner pill to keep its own height tween.
+                    height: math.max(pillH, collapsedPillH) + keyboardFloat,
+                    child: Align(alignment: Alignment.bottomCenter,
+                      child: innerBarContent)),
               ],
             ),
           ),
@@ -1193,6 +1201,15 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
     );
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _selectedRowItems = null;
+  }
+
+  List<Widget>? _selectedRowItems;
+  Color? _selectedItemsInk, _selectedItemsMuted;
+
   Widget _buildTabRow({
     required List<GlassTab> tabs,
     required int selectedIndex,
@@ -1204,6 +1221,30 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
     Alignment alignment = Alignment.center,
   }) {
     if (selected) {
+      // Drag/press intensity changes only transforms. Reuse the actual icon
+      // and label widgets until configuration/semantic colours change; text
+      // shaping and focus/gesture nodes are not animation-frame work.
+      if (_selectedItemsInk != resolvedSelectedIconColor ||
+          _selectedItemsMuted != resolvedUnselectedIconColor) {
+        _selectedRowItems = null;
+        _selectedItemsInk = resolvedSelectedIconColor;
+        _selectedItemsMuted = resolvedUnselectedIconColor;
+      }
+      final items = _selectedRowItems ??= [
+        for (var i = 0; i < tabs.length; i++)
+          BottomBarTabItem(tab: tabs[i], selected: true,
+            selectedIconColor: resolvedSelectedIconColor,
+            unselectedIconColor: resolvedUnselectedIconColor,
+            selectedLabelColor: widget.selectedLabelColor,
+            unselectedLabelColor: widget.unselectedLabelColor,
+            selectedLabelStyle: widget.selectedLabelStyle,
+            unselectedLabelStyle: widget.unselectedLabelStyle,
+            iconSize: widget.iconSize, labelFontSize: widget.labelFontSize,
+            textStyle: widget.textStyle, iconLabelSpacing: widget.iconLabelSpacing,
+            glowDuration: widget.glowDuration, glowBlurRadius: widget.glowBlurRadius,
+            glowSpreadRadius: widget.glowSpreadRadius, glowOpacity: widget.glowOpacity,
+            onTap: null),
+      ];
       final scale = ui.lerpDouble(1.0, widget.magnification, intensity) ?? 1.0;
       final currentTabFloat = ((alignment.x + 1) / 2) * tabs.length;
       final aStart = (currentTabFloat - 1).floor().clamp(0, tabs.length - 1);
@@ -1217,25 +1258,7 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                 child: (i >= aStart && i <= aEnd)
                     ? Transform.scale(
                         scale: scale,
-                        child: BottomBarTabItem(
-                          tab: tabs[i],
-                          selected: true,
-                          selectedIconColor: resolvedSelectedIconColor,
-                          unselectedIconColor: resolvedUnselectedIconColor,
-                          selectedLabelColor: widget.selectedLabelColor,
-                          unselectedLabelColor: widget.unselectedLabelColor,
-                          selectedLabelStyle: widget.selectedLabelStyle,
-                          unselectedLabelStyle: widget.unselectedLabelStyle,
-                          iconSize: widget.iconSize,
-                          labelFontSize: widget.labelFontSize,
-                          textStyle: widget.textStyle,
-                          iconLabelSpacing: widget.iconLabelSpacing,
-                          glowDuration: widget.glowDuration,
-                          glowBlurRadius: widget.glowBlurRadius,
-                          glowSpreadRadius: widget.glowSpreadRadius,
-                          glowOpacity: widget.glowOpacity,
-                          onTap: null,
-                        ),
+                        child: items[i],
                       )
                     : const SizedBox.shrink(),
               ),

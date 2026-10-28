@@ -22,6 +22,8 @@ import '../../auth/presentation/beta_onboarding_page.dart';
 import '../../auth/presentation/beta_welcome_page.dart';
 import '../../auth/presentation/beta_sign_out_dialog.dart';
 import 'haptic_settings_page.dart';
+import 'frame_diagnostics_page.dart';
+import '../../music_platform/listening_sync_page.dart';
 import 'music_equalizer_page.dart';
 import 'music_sleep_timer_sheet.dart';
 import '../../music_platform/presentation/music_effects_page.dart';
@@ -125,6 +127,16 @@ class SettingsPage extends ConsumerWidget {
                   child: Column(
                     children: [
                       _SettingsTile(
+                        icon: Icons.cloud_sync_outlined,
+                        iconColor: const Color(0xFF527FD3),
+                        title: '酷狗播放同步',
+                        subtitle: '播放历史、真实听歌时长与同步状态',
+                        onTap: () => Navigator.of(
+                          context,
+                        ).push(betaEntryRoute<void>(const ListeningSyncPage())),
+                      ),
+                      const _SettingsDivider(),
+                      _SettingsTile(
                         key: const ValueKey('settings-equalizer'),
                         icon: Icons.graphic_eq_rounded,
                         iconColor: const Color(0xFF527FD3),
@@ -165,6 +177,18 @@ class SettingsPage extends ConsumerWidget {
               _SettingsSurface(
                 child: Column(
                   children: [
+                    if (DistributionChannel.isBeta) ...[
+                      _SettingsTile(
+                        icon: Icons.speed_rounded,
+                        iconColor: const Color(0xFF527FD3),
+                        title: '流畅度诊断',
+                        subtitle: '采集页面切换与底部控件的逐帧耗时',
+                        onTap: () => Navigator.of(context).push(
+                          betaEntryRoute<void>(const FrameDiagnosticsPage()),
+                        ),
+                      ),
+                      const _SettingsDivider(),
+                    ],
                     _SettingsTile(
                       key: const ValueKey('settings-check-update'),
                       icon: Icons.system_update_rounded,

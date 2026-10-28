@@ -91,13 +91,21 @@ void main() {
       expect(find.text('已切换为单曲循环'), findsOneWidget);
       await tester.tap(repeat);
       await tester.pumpAndSettle();
-      expect(repeatIcon(), CupertinoIcons.repeat);
+      expect(repeatIcon(), CupertinoIcons.arrow_turn_down_right);
       expect(find.text('已切换为顺序播放'), findsOneWidget);
       await tester.tap(repeat);
       await tester.pumpAndSettle();
       expect(repeatIcon(), CupertinoIcons.repeat);
       expect(find.text('已切换为列表循环'), findsOneWidget);
       final shuffle = find.byKey(const ValueKey('player-shuffle'));
+      expect(
+        tester
+            .widget<Icon>(
+              find.descendant(of: shuffle, matching: find.byType(Icon)),
+            )
+            .icon,
+        CupertinoIcons.arrow_up_arrow_down,
+      );
       await tester.tap(shuffle);
       await tester.pumpAndSettle();
       expect(find.text('已开启随机播放'), findsOneWidget);
@@ -112,6 +120,14 @@ void main() {
       await tester.tap(shuffle);
       await tester.pumpAndSettle();
       expect(find.text('已关闭随机播放，恢复顺序播放'), findsOneWidget);
+      expect(
+        tester
+            .widget<Icon>(
+              find.descendant(of: shuffle, matching: find.byType(Icon)),
+            )
+            .icon,
+        CupertinoIcons.arrow_up_arrow_down,
+      );
       await tester.pump(const Duration(seconds: 4));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);

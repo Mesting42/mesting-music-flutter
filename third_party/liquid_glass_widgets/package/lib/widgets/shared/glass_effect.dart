@@ -288,6 +288,13 @@ class _GlassEffectState extends State<GlassEffect>
     bool needsCapture = _backgroundImage == null;
     needsCapture |= _lastCaptureSize != currentSize;
     needsCapture |= _lastCapturePosition != currentPos;
+    if (boundary is RenderGlassBackgroundBoundary) {
+      needsCapture |= _lastCaptureRevision != boundary.paintVersion;
+      // A nested repaint boundary or video layer can change independently of
+      // this parent's paint revision. Tickers run only during interaction;
+      // share one fresh image across all lenses in that frame.
+      needsCapture = true;
+    }
     needsCapture |= isInteracting; // every frame during drag — free cost
 
     if (needsCapture) {
@@ -328,6 +335,7 @@ class _GlassEffectState extends State<GlassEffect>
   }
 
   /// Synchronous capture path for native (non-web) platforms.
+  int? _lastCaptureRevision;
   void _captureBackgroundSync(
       RenderRepaintBoundary boundary, Size size, Offset? pos) {
     try {
@@ -337,7 +345,12 @@ class _GlassEffectState extends State<GlassEffect>
       // across, eliminating the blocky 3×3 pixel "staircase" aliasing on
       // Retina/3× displays when pixelRatio: 1.0 was used.
       final dpr = _devicePixelRatio;
-      final image = boundary.toImageSync(pixelRatio: dpr);
+      final image = boundary is RenderGlassBackgroundBoundary
+          ? boundary.captureSnapshot(dpr, frame: SchedulerBinding.instance.currentFrameTimeStamp)
+          : boundary.toImageSync(pixelRatio: dpr);
+      if (boundary is RenderGlassBackgroundBoundary) {
+        _lastCaptureRevision = boundary.paintVersion;
+      }
       // Guard: if the widget was disposed between the toImageSync call and
       // this point (possible during rapid navigation), dispose the image
       // immediately rather than leaking it into a dead State.
