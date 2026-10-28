@@ -14,6 +14,8 @@ final usesNeteaseProvider = Provider<bool>(
 );
 
 final neteaseMusicRepositoryProvider = Provider<NeteaseMusicRepository>((ref) {
-  ref.watch(platformAccountProvider);
+  ref.watch(
+    platformAccountProvider.select((a) => (a.value?.ownerId, a.value?.token)),
+  );
   return NeteaseMusicRepository(ref.watch(neteaseApiProvider));
 });

@@ -4,7 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../history/listening_history_providers.dart';
 import '../../library/library_providers.dart';
-import '../../music_platform/data/platform_library_repository.dart';
+import '../../music_platform/data/cloud_library_repository.dart';
+import '../../music_platform/platform_backend_providers.dart';
+import '../../music_platform/netease/netease_features_page.dart';
+import '../../downloads/audio_downloads_page.dart';
 import '../../music_platform/presentation/platform_design.dart';
 import '../../playlists/presentation/playlist_editor_dialog.dart';
 import '../../../shared/models/track.dart';
@@ -22,7 +25,7 @@ class MusicLibraryPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final repository = ref.watch(libraryRepositoryProvider);
-    final cloud = repository is PlatformLibraryRepository;
+    final cloud = repository is CloudLibraryRepository;
     final favorites = ref.watch(favoriteTracksProvider);
     final playlists = ref.watch(playlistsProvider);
     final recent = ref.watch(recentPlaybackProvider);
@@ -106,6 +109,13 @@ class MusicLibraryPage extends ConsumerWidget {
             ),
           ),
           if (view == null) ...[
+            _LibraryLink(
+              icon: Icons.download_rounded,
+              title: '下载管理',
+              subtitle: '下载进度与已保存的音乐',
+              onTap: () => openAudioDownloads(context),
+            ),
+            if (ref.watch(usesNeteaseProvider)) const NeteaseLibraryLinks(),
             _LibraryLink(
               icon: Icons.favorite_rounded,
               title: '我的喜欢',

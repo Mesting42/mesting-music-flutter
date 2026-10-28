@@ -9,6 +9,7 @@ import '../../../shared/widgets/beta_glass_scroll_body.dart';
 import '../../../shared/widgets/music_feature_page.dart';
 import '../../auth/presentation/beta_welcome_page.dart';
 import '../../music_platform/presentation/music_effects_page.dart';
+import '../../music_platform/platform_backend_providers.dart';
 
 class MusicEqualizerPage extends ConsumerStatefulWidget {
   const MusicEqualizerPage({super.key});
@@ -244,26 +245,27 @@ class _MusicEqualizerPageState extends ConsumerState<MusicEqualizerPage> {
                   ),
               ],
               const SizedBox(height: 24),
-              CupertinoButton(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                onPressed: () => Navigator.of(
-                  context,
-                  rootNavigator: true,
-                ).push(betaEntryRoute<void>(const MusicEffectsPage())),
-                child: Row(
-                  children: [
-                    const Icon(CupertinoIcons.waveform),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        state.effectName ?? '浏览音效',
-                        style: const TextStyle(fontSize: 16),
+              if (!ref.watch(usesNeteaseProvider))
+                CupertinoButton(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  onPressed: () => Navigator.of(
+                    context,
+                    rootNavigator: true,
+                  ).push(betaEntryRoute<void>(const MusicEffectsPage())),
+                  child: Row(
+                    children: [
+                      const Icon(CupertinoIcons.waveform),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          state.effectName ?? '浏览音效',
+                          style: const TextStyle(fontSize: 16),
+                        ),
                       ),
-                    ),
-                    const Icon(CupertinoIcons.chevron_forward, size: 17),
-                  ],
+                      const Icon(CupertinoIcons.chevron_forward, size: 17),
+                    ],
+                  ),
                 ),
-              ),
               Text(
                 '设置会自动保存。频段范围由设备提供；音效仅作用于 Mesting Music 的音乐播放。',
                 style: TextStyle(

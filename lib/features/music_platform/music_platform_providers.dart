@@ -262,6 +262,30 @@ class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
     _publish(updated);
   });
 
+  /// Refresh in a private jar and commit only after secure-store readback.
+  /// A failed refresh leaves the currently working credential untouched.
+  Future<void> refreshNetease() => _serialize(() async {
+    final current = await future;
+    final saved = await ref.read(neteaseSessionStoreProvider).read();
+    if (current?.platform != MusicPlatform.netease ||
+        saved == null ||
+        saved.credentialId != current?.token) {
+      throw const MusicPlatformException('请先登录网易云账号');
+    }
+    final client = ref.read(neteaseApiProvider).loginClient()..configure(saved);
+    await client.call('/login/refresh', expectedCredential: saved.credentialId);
+    final updated = NeteaseSession(
+      userId: saved.userId,
+      cookies: client.cookies,
+      deviceId: saved.deviceId,
+      nickname: saved.nickname,
+      avatarUrl: saved.avatarUrl,
+    );
+    await ref.read(neteaseSessionStoreProvider).write(updated);
+    ref.read(neteaseApiProvider).configure(updated);
+    _publish(updated.identity);
+  });
+
   Future<void> signOut() => _serialize(() async {
     await future;
     // Remove the credential before publishing guest state; failure remains

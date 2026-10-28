@@ -3,7 +3,7 @@ import '../domain/platform_session.dart';
 import 'music_platform_api.dart';
 import 'platform_song_identity.dart';
 
-enum PlatformCommentKind { song, playlist }
+enum PlatformCommentKind { song, playlist, album, mv, podcast }
 
 enum PlatformCommentSort { hottest, newest, oldest }
 

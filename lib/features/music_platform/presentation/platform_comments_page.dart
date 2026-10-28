@@ -218,12 +218,19 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
       var childrenId = _childrenId;
       var nativeHot = _nativeHot;
       String? sortNotice;
-      var result = await widget.repository.load(
-        widget.resource,
-        page: page,
-        thread: widget.thread,
-        hottestChildrenId: !reset && _nativeHot ? _childrenId : null,
-      );
+      var result = widget.repository is NeteaseCommentsRepository
+          ? await (widget.repository as NeteaseCommentsRepository).loadSorted(
+              widget.resource,
+              page: page,
+              thread: widget.thread,
+              sort: requestedSort,
+            )
+          : await widget.repository.load(
+              widget.resource,
+              page: page,
+              thread: widget.thread,
+              hottestChildrenId: !reset && _nativeHot ? _childrenId : null,
+            );
       if (reset) {
         singers = result.singerComments;
         childrenId = result.childrenId.isNotEmpty
@@ -231,8 +238,11 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
             : result.comments.isNotEmpty
             ? result.comments.first.specialId
             : '';
-        nativeHot = false;
+        nativeHot =
+            widget.repository is NeteaseCommentsRepository &&
+            requestedSort == PlatformCommentSort.hottest;
         if (requestedSort == PlatformCommentSort.hottest &&
+            widget.repository is! NeteaseCommentsRepository &&
             widget.thread == null &&
             widget.resource.kind == PlatformCommentKind.song &&
             childrenId.isNotEmpty) {
@@ -314,8 +324,8 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('删除这条酷狗评论？'),
-        content: const Text('将删除你在酷狗发布的评论。'),
+        title: Text('删除这条${widget.repository.identity.platformLabel}评论？'),
+        content: Text('将删除你在${widget.repository.identity.platformLabel}发布的评论。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -397,7 +407,13 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
                           BetaAnchoredMenu<PlatformCommentSort>(
                             tooltip: '评论排序',
                             value: _sort,
-                            values: PlatformCommentSort.values,
+                            values:
+                                widget.repository is NeteaseCommentsRepository
+                                ? [
+                                    PlatformCommentSort.hottest,
+                                    PlatformCommentSort.newest,
+                                  ]
+                                : PlatformCommentSort.values,
                             label: (sort) => switch (sort) {
                               PlatformCommentSort.hottest => '最热',
                               PlatformCommentSort.newest => '最新',
@@ -414,7 +430,13 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
                           BetaAnchoredMenu<PlatformCommentScope>(
                             tooltip: '评论范围',
                             value: _scope,
-                            values: PlatformCommentScope.values,
+                            values:
+                                widget.repository is NeteaseCommentsRepository
+                                ? [
+                                    PlatformCommentScope.all,
+                                    PlatformCommentScope.mine,
+                                  ]
+                                : PlatformCommentScope.values,
                             label: (scope) => switch (scope) {
                               PlatformCommentScope.all => '全部',
                               PlatformCommentScope.singer => '歌手',
@@ -495,6 +517,39 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
                                   key: ValueKey('comment-reveal-${comment.id}'),
                                   child: PlatformCommentCard(
                                     comment: comment,
+                                    onReaction:
+                                        widget.repository
+                                                is NeteaseCommentsRepository &&
+                                            !_writing
+                                        ? () async {
+                                            if (!_current) return;
+                                            setState(() => _writing = true);
+                                            try {
+                                              await (widget.repository
+                                                      as NeteaseCommentsRepository)
+                                                  .like(
+                                                    widget.resource,
+                                                    comment,
+                                                  );
+                                              if (mounted && _current) {
+                                                await _load(
+                                                  reset: true,
+                                                  silent: true,
+                                                );
+                                              }
+                                            } catch (e) {
+                                              if (context.mounted) {
+                                                showPlatformFailure(context, e);
+                                              }
+                                            } finally {
+                                              if (mounted) {
+                                                setState(
+                                                  () => _writing = false,
+                                                );
+                                              }
+                                            }
+                                          }
+                                        : null,
                                     onReply: _writing
                                         ? null
                                         : () =>

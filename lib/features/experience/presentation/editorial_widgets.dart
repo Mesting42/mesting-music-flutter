@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import '../../downloads/audio_downloads_page.dart';
 import 'cold_start_greeting.dart';
 import '../../../shared/widgets/beta_glass_controls.dart';
 import '../../player/presentation/beta_playback_actions.dart';
@@ -343,6 +345,27 @@ class EditorialTrackRow extends ConsumerWidget {
   final int? rank;
   @override
   Widget build(BuildContext context, WidgetRef ref) => InkWell(
+    onLongPress: track.isRemote
+        ? () => showCupertinoModalPopup<void>(
+            context: context,
+            builder: (c) => CupertinoActionSheet(
+              title: Text(track.title),
+              actions: [
+                CupertinoActionSheetAction(
+                  onPressed: () {
+                    Navigator.pop(c);
+                    enqueueAudioDownload(context, ref, track);
+                  },
+                  child: const Text('下载到本地音乐'),
+                ),
+              ],
+              cancelButton: CupertinoActionSheetAction(
+                onPressed: () => Navigator.pop(c),
+                child: const Text('取消'),
+              ),
+            ),
+          )
+        : null,
     onTap:
         onPlay ?? () => playEditorialTrack(context, ref, track, contextTracks),
     child: Padding(

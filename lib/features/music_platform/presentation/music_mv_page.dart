@@ -12,10 +12,16 @@ import '../../../shared/widgets/music_feature_page.dart';
 import '../data/platform_mv_repository.dart';
 import '../platform_mv_providers.dart';
 import 'music_mv_fullscreen.dart';
+import '../platform_backend_providers.dart';
+import '../netease/netease_mv_repository.dart';
+import '../netease/netease_features_page.dart';
+import '../netease/netease_features_repository.dart';
+import '../music_platform_providers.dart';
 
 class MusicMvPage extends ConsumerStatefulWidget {
-  const MusicMvPage({required this.track, super.key});
+  const MusicMvPage({required this.track, this.mvId, super.key});
   final Track track;
+  final String? mvId;
   @override
   ConsumerState<MusicMvPage> createState() => _MusicMvPageState();
 }
@@ -35,9 +41,16 @@ class _MusicMvPageState extends ConsumerState<MusicMvPage>
   int _generation = 0;
   final _videoAnchor = GlobalKey();
   bool _fullscreenOpen = false;
+  late final String? _owner, _credential;
+  bool get _current =>
+      ref.read(platformAccountProvider).value?.ownerId == _owner &&
+      ref.read(platformAccountProvider).value?.token == _credential;
   @override
   void initState() {
     super.initState();
+    final account = ref.read(platformAccountProvider).value;
+    _owner = account?.ownerId;
+    _credential = account?.token;
     WidgetsBinding.instance.addObserver(this);
     final handler = ref.read(audioHandlerProvider);
     _music = MusicPlaybackInterruption(
@@ -71,6 +84,7 @@ class _MusicMvPageState extends ConsumerState<MusicMvPage>
   }
 
   Future<void> _load() async {
+    if (!_current) return;
     final generation = ++_generation;
     if (mounted) {
       setState(() {
@@ -81,11 +95,15 @@ class _MusicMvPageState extends ConsumerState<MusicMvPage>
     }
     try {
       await _music.acquire();
-      if (!mounted || generation != _generation) return;
-      final mv = await ref
-          .read(platformMvRepositoryProvider)
-          .lookup(widget.track);
-      if (!mounted || generation != _generation) return;
+      if (!mounted || generation != _generation || !_current) return;
+      final repository = ref.read(platformMvRepositoryProvider);
+      final mv = widget.mvId != null && repository is NeteaseMvRepository
+          ? await repository.byId(
+              widget.mvId!,
+              fallbackTitle: widget.track.title,
+            )
+          : await repository.lookup(widget.track);
+      if (!mounted || generation != _generation || !_current) return;
       if (mv == null) {
         setState(() {
           _absent = true;
@@ -106,6 +124,7 @@ class _MusicMvPageState extends ConsumerState<MusicMvPage>
   }
 
   Future<void> _select(MusicMvQuality quality, {bool? autoplay}) async {
+    if (!_current) return;
     final generation = ++_generation;
     final previous = _video;
     final position = previous?.value.position ?? Duration.zero;
@@ -123,7 +142,7 @@ class _MusicMvPageState extends ConsumerState<MusicMvPage>
         final candidate = VideoPlayerController.networkUrl(url);
         try {
           await candidate.initialize().timeout(const Duration(seconds: 15));
-          if (!mounted || generation != _generation) {
+          if (!mounted || generation != _generation || !_current) {
             await candidate.dispose();
             return;
           }
@@ -133,7 +152,7 @@ class _MusicMvPageState extends ConsumerState<MusicMvPage>
             );
           }
           if (play && _music.isCurrent) await candidate.play();
-          if (!mounted || generation != _generation) {
+          if (!mounted || generation != _generation || !_current) {
             await candidate.dispose();
             return;
           }
@@ -215,6 +234,14 @@ class _MusicMvPageState extends ConsumerState<MusicMvPage>
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(platformAccountProvider);
+    if (!_current) {
+      unawaited(_video?.pause());
+      return const MusicFeaturePage(
+        title: 'MV',
+        child: Center(child: Text('账号已变化，请返回后重新打开')),
+      );
+    }
     final scheme = Theme.of(context).colorScheme;
     return MusicFeaturePage(
       title: 'MV',
@@ -315,6 +342,14 @@ class _MusicMvPageState extends ConsumerState<MusicMvPage>
             ),
           ],
           const SizedBox(height: 20),
+          if (ref.watch(usesNeteaseProvider) && _mv != null)
+            NeteaseResourceActions(
+              item: NeteaseItem(
+                id: _mv!.id,
+                name: _mv!.title,
+                kind: NeteaseEntity.mv,
+              ),
+            ),
           Text(
             'MV 播放期间音乐暂停；返回时按进入前的播放状态恢复。',
             style: TextStyle(

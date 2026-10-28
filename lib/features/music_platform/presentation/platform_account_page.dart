@@ -511,6 +511,35 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
                           ),
                         ),
                         const SizedBox(height: 24),
+                        if (session?.platform == MusicPlatform.netease)
+                          BetaGlassButton(
+                            onPressed: _busy
+                                ? null
+                                : () async {
+                                    setState(() => _busy = true);
+                                    try {
+                                      await ref
+                                          .read(
+                                            platformAccountProvider.notifier,
+                                          )
+                                          .refreshNetease();
+                                      if (mounted) {
+                                        setState(() => _message = '网易云登录状态已刷新');
+                                      }
+                                    } catch (_) {
+                                      if (mounted) {
+                                        setState(
+                                          () => _message = '刷新未完成，已保留原登录状态',
+                                        );
+                                      }
+                                    } finally {
+                                      if (mounted) {
+                                        setState(() => _busy = false);
+                                      }
+                                    }
+                                  },
+                            child: const Text('刷新网易云登录状态'),
+                          ),
                         BetaGlassButton(
                           loading: _busy && _busyAction == 'logout',
                           onPressed: _busy ? null : _logout,

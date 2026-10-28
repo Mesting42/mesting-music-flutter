@@ -58,6 +58,20 @@ class LocalMusicBridge(
 
     init { channel.setMethodCallHandler(this) }
 
+    /** Explicit completed downloads enter the same device-only index. Queue
+     * this before replying to Flutter so a subsequent load sees the new row. */
+    fun indexDownloaded(uri: Uri) {
+        worker.execute {
+            try {
+                val index = edit()
+                val name = documentName(uri).orEmpty()
+                val mime = activity.contentResolver.getType(uri).orEmpty()
+                val row = readDocument(uri, idFor(uri.toString()), "downloads", "下载的音乐", "", "file", uri.toString(), name, mime)
+                if (row != null) { index.entries[row["id"] as String] = row; store(index) }
+            } catch (_: Exception) { /* The exported audio remains available for a later scan. */ }
+        }
+    }
+
     private class Failure(val code: String, override val message: String) : IOException(message)
     private data class Root(val uri: String, val name: String)
     private data class Index(

@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import '../data/music_platform_api.dart';
 import 'netease_crypto.dart';
 import 'netease_session.dart';
+import 'netease_extended_routes.dart';
 
 /// Embedded HTTPS transport. Only the two upstream music hosts receive cookies;
 /// no loopback process, external API deployment, or JavaScript runtime is used.
@@ -131,13 +132,13 @@ class NeteaseApi {
         weapi = true;
       case '/top/song':
         path = '/api/v1/discovery/new/songs';
-        data = {'areaId': 0, 'total': true};
+        data = {'areaId': q('type', 0), 'total': true};
         weapi = true;
       case '/top/playlist':
         path = '/api/playlist/list';
         data = {
           'cat': q('cat', '全部'),
-          'order': 'hot',
+          'order': q('order', 'hot'),
           'limit': q('limit', 30),
           'offset': q('offset', 0),
           'total': true,
@@ -150,7 +151,7 @@ class NeteaseApi {
       case '/album/new':
         path = '/api/album/new';
         data = {
-          'area': 'ALL',
+          'area': q('area', 'ALL'),
           'limit': q('limit', 30),
           'offset': q('offset', 0),
           'total': true,
@@ -161,6 +162,7 @@ class NeteaseApi {
         data = {};
         weapi = true;
       case '/artist':
+      case '/artists':
         path = '/api/v1/artist/${q('id')}';
         data = {};
         weapi = true;
@@ -277,13 +279,18 @@ class NeteaseApi {
         path = '/api/v2/resource/comments';
         final page = int.tryParse('${q('page', 1)}') ?? 1;
         final hot = q('hot') == true;
+        final sortType = q('sortType', hot ? 2 : 99);
         data = {
           'threadId': q('threadId'),
           'pageNo': page,
           'pageSize': 30,
           'showInner': true,
-          'sortType': hot ? 2 : 99,
-          'cursor': hot ? 'normalHot#${(page - 1) * 30}' : (page - 1) * 30,
+          'sortType': sortType,
+          'cursor': sortType == 3
+              ? q('cursor', '0')
+              : sortType == 2
+              ? 'normalHot#${(page - 1) * 30}'
+              : (page - 1) * 30,
         };
       case '/comment/floor':
         path = '/api/resource/comment/floor/get';
@@ -307,11 +314,17 @@ class NeteaseApi {
           if (action != 'delete') 'content': q('content'),
         };
       default:
-        throw ArgumentError.value(
-          route,
-          'route',
-          'Unknown embedded NetEase route',
-        );
+        final contract = neteaseExtendedRoute(route, query);
+        if (contract == null) {
+          throw ArgumentError.value(
+            route,
+            'route',
+            'Unknown embedded NetEase route',
+          );
+        }
+        path = contract.path;
+        data = contract.data;
+        weapi = contract.weapi;
     }
     return request(
       path,

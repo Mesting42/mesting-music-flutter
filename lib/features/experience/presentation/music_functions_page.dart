@@ -1,6 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../music_platform/platform_backend_providers.dart';
+import '../../music_platform/netease/netease_features_page.dart';
+import '../../music_platform/netease/netease_features_repository.dart';
+import '../../downloads/audio_downloads_page.dart';
 import '../../../shared/widgets/beta_bottom_search.dart';
 
 import '../../music_platform/data/platform_explore.dart';
@@ -15,10 +20,11 @@ import 'music_home_catalogues.dart';
 /// Fixed launchpad: only destinations with a working local/platform owner are
 /// shown. Tiles inherit the quiet Apple library surface; expensive live glass
 /// belongs to the persistent floating navigation, not every grid cell.
-class MusicFunctionsPage extends StatelessWidget {
+class MusicFunctionsPage extends ConsumerWidget {
   const MusicFunctionsPage({super.key});
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final netease = ref.watch(usesNeteaseProvider);
     void page(Widget child) => Navigator.of(
       context,
     ).push(MaterialPageRoute<void>(builder: (_) => child));
@@ -56,26 +62,30 @@ class MusicFunctionsPage extends StatelessWidget {
         CupertinoIcons.music_note_list,
         () => openMusicHomeCatalogue(context, PlatformExploreKind.playlist),
       ),
-      _FunctionEntry(
-        '听歌识曲',
-        CupertinoIcons.mic,
-        () => context.push('/music/recognize'),
-      ),
-      _FunctionEntry(
-        '听书',
-        CupertinoIcons.book,
-        () => context.push('/music/audiobooks'),
-      ),
-      _FunctionEntry(
-        '场景音乐',
-        CupertinoIcons.sun_haze,
-        () => openMusicHomeCatalogue(context, PlatformExploreKind.scene),
-      ),
-      _FunctionEntry(
-        '一起听',
-        CupertinoIcons.person_2,
-        () => context.push('/music/together'),
-      ),
+      if (!netease)
+        _FunctionEntry(
+          '听歌识曲',
+          CupertinoIcons.mic,
+          () => context.push('/music/recognize'),
+        ),
+      if (!netease)
+        _FunctionEntry(
+          '听书',
+          CupertinoIcons.book,
+          () => context.push('/music/audiobooks'),
+        ),
+      if (!netease)
+        _FunctionEntry(
+          '场景音乐',
+          CupertinoIcons.sun_haze,
+          () => openMusicHomeCatalogue(context, PlatformExploreKind.scene),
+        ),
+      if (!netease)
+        _FunctionEntry(
+          '一起听',
+          CupertinoIcons.person_2,
+          () => context.push('/music/together'),
+        ),
       _FunctionEntry(
         '听歌回顾',
         CupertinoIcons.clock,
@@ -91,8 +101,37 @@ class MusicFunctionsPage extends StatelessWidget {
         CupertinoIcons.slider_horizontal_3,
         () => page(const MusicEffectsPage()),
       ),
+      if (netease) ...[
+        for (final entry in <(NeteaseFeed, IconData)>[
+          (NeteaseFeed.categories, CupertinoIcons.square_grid_2x2),
+          (NeteaseFeed.premium, CupertinoIcons.sparkles),
+          (NeteaseFeed.artists, CupertinoIcons.person),
+          (NeteaseFeed.mvs, CupertinoIcons.play_rectangle),
+          (NeteaseFeed.cloud, CupertinoIcons.cloud),
+          (NeteaseFeed.intelligence, CupertinoIcons.heart_circle),
+          (NeteaseFeed.week, CupertinoIcons.chart_bar),
+          (NeteaseFeed.podcasts, CupertinoIcons.mic),
+          (NeteaseFeed.historyDates, CupertinoIcons.calendar),
+          (NeteaseFeed.artistNewSongs, CupertinoIcons.music_note),
+          (NeteaseFeed.recommendedMvs, CupertinoIcons.play_rectangle),
+          (NeteaseFeed.privateContent, CupertinoIcons.star),
+          (NeteaseFeed.newestAlbums, CupertinoIcons.music_albums),
+          (NeteaseFeed.topAlbums, CupertinoIcons.chart_bar),
+          (NeteaseFeed.recommendedSongs, CupertinoIcons.music_note_2),
+        ])
+          _FunctionEntry(
+            NeteaseFeaturesRepository.titles[entry.$1]!,
+            entry.$2,
+            () => openNeteaseFeed(context, entry.$1),
+          ),
+      ],
     ];
     final common = <_FunctionEntry>[
+      _FunctionEntry(
+        '下载管理',
+        CupertinoIcons.arrow_down_circle,
+        () => openAudioDownloads(context),
+      ),
       _FunctionEntry(
         '发现',
         CupertinoIcons.compass,

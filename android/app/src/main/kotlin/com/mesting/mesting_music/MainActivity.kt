@@ -60,6 +60,8 @@ open class MainActivity : AudioServiceActivity() {
     private var loginSuccessSoundBridge: LoginSuccessSoundBridge? = null
     private var hapticFeedbackBridge: HapticFeedbackBridge? = null
     private var localMusicBridge: LocalMusicBridge? = null
+    private var neteaseCloudFileBridge: NeteaseCloudFileBridge? = null
+    private var musicDownloadBridge: MusicDownloadBridge? = null
     private var requestedSurfaceHz = 0f
     private val refreshSurfaceCallbacks = java.util.WeakHashMap<SurfaceHolder, SurfaceHolder.Callback>()
     private lateinit var lyricsChannel: MethodChannel
@@ -72,6 +74,10 @@ open class MainActivity : AudioServiceActivity() {
         audioOutputBridge = null
         localMusicBridge?.dispose()
         localMusicBridge = null
+        neteaseCloudFileBridge?.dispose()
+        neteaseCloudFileBridge = null
+        musicDownloadBridge?.dispose()
+        musicDownloadBridge = null
         refreshSurfaceCallbacks.forEach { (holder, callback) -> holder.removeCallback(callback) }
         refreshSurfaceCallbacks.clear()
         hapticFeedbackBridge?.dispose()
@@ -97,6 +103,10 @@ open class MainActivity : AudioServiceActivity() {
         super.configureFlutterEngine(flutterEngine)
         localMusicBridge?.dispose()
         localMusicBridge = LocalMusicBridge(this, flutterEngine.dartExecutor.binaryMessenger)
+        neteaseCloudFileBridge?.dispose()
+        neteaseCloudFileBridge = NeteaseCloudFileBridge(this, flutterEngine.dartExecutor.binaryMessenger)
+        musicDownloadBridge?.dispose()
+        musicDownloadBridge = MusicDownloadBridge(this, flutterEngine.dartExecutor.binaryMessenger) { uri -> localMusicBridge?.indexDownloaded(uri) }
         if (!flutterEngine.plugins.has(MusicEqualizerPlugin::class.java)) {
             flutterEngine.plugins.add(MusicEqualizerPlugin())
         }
@@ -628,6 +638,8 @@ open class MainActivity : AudioServiceActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         localMusicBridge?.onActivityResult(requestCode, resultCode, data)
+        neteaseCloudFileBridge?.onActivityResult(requestCode, resultCode, data)
+        musicDownloadBridge?.onActivityResult(requestCode, resultCode, data)
     }
 
     override fun onRequestPermissionsResult(

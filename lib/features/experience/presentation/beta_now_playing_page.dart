@@ -1,6 +1,7 @@
 import '../../music_platform/presentation/platform_quality_button.dart';
 import '../../music_platform/presentation/platform_comments_page.dart';
 import '../../music_platform/music_platform_providers.dart';
+import '../../downloads/audio_downloads_page.dart';
 import '../../auth/presentation/beta_login_navigation.dart';
 import 'player_queue_panel.dart';
 import 'dart:ui';
@@ -384,6 +385,21 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
     final track = ref.read(currentTrackProvider);
     return PlayerMoreMenu(
       onSelected: (value) async {
+        if (value == 'source-info') {
+          showMusicNotice(
+            context,
+            icon: CupertinoIcons.info_circle,
+            title: '当前播放来源',
+            message: track.availabilityMessage.isNotEmpty
+                ? track.availabilityMessage
+                : track.provider,
+          );
+          return;
+        }
+        if (value == 'download') {
+          await enqueueAudioDownload(context, ref, track);
+          return;
+        }
         if (value == 'sleep-timer') {
           await showMusicSleepTimer(context, ref);
           return;
@@ -453,6 +469,20 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
           ),
           const PlayerMenuAction('quality', '音质选择', CupertinoIcons.waveform),
           const PlayerMenuAction('comments', '歌曲评论', CupertinoIcons.text_quote),
+          if (track.isRemote)
+            const PlayerMenuAction(
+              'download',
+              '下载到本地音乐',
+              CupertinoIcons.arrow_down_circle,
+            ),
+          if (track.isRemote)
+            PlayerMenuAction(
+              'source-info',
+              track.availabilityMessage.contains('备用音源')
+                  ? track.availabilityMessage
+                  : '播放来源',
+              CupertinoIcons.info_circle,
+            ),
           const PlayerMenuAction(
             'playlist',
             '添加到歌单',

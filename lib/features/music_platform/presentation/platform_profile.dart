@@ -15,6 +15,8 @@ import 'platform_avatar.dart';
 import 'platform_design.dart';
 import 'platform_reward_calendar.dart';
 import '../../themes/music_theme_tokens.dart';
+import '../platform_backend_providers.dart';
+import '../netease/netease_features_page.dart';
 
 /// Shared current-account entry for profile and settings. It never offers a
 /// second login while the platform credential is active.
@@ -66,9 +68,11 @@ class PlatformProfile extends ConsumerWidget {
           child: PlatformAccountTile(),
         ),
         const SizedBox(height: 18),
-        const Padding(
+        Padding(
           padding: EdgeInsets.symmetric(horizontal: 22),
-          child: PlatformRewardEntry(),
+          child: ref.watch(usesNeteaseProvider)
+              ? const NeteaseAccountPanel()
+              : const PlatformRewardEntry(),
         ),
         const SizedBox(height: 28),
         const EditorialSection('我的音乐'),

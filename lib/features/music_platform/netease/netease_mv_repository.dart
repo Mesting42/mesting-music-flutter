@@ -16,6 +16,11 @@ class NeteaseMvRepository extends PlatformMvRepository {
     final rows = NeteaseMusicRepository.rows(songs['songs']);
     final id = rows.isEmpty ? '0' : '${rows.first['mv'] ?? 0}';
     if ((int.tryParse(id) ?? 0) <= 0) return null;
+    return byId(id, fallbackTitle: track.title);
+  }
+
+  Future<MusicMv?> byId(String id, {String fallbackTitle = ''}) async {
+    NeteaseMusicRepository.songId(id);
     final detail = NeteaseMusicRepository.object(
       (await music.call('/mv/detail', {'id': id}))['data'],
     );
@@ -36,7 +41,7 @@ class NeteaseMvRepository extends PlatformMvRepository {
     if (qualities.isEmpty) return null;
     return MusicMv(
       id: id,
-      title: '${detail['name'] ?? track.title}',
+      title: '${detail['name'] ?? fallbackTitle}',
       qualities: qualities,
     );
   }

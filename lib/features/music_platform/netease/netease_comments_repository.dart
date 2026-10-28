@@ -7,8 +7,15 @@ class NeteaseCommentsRepository extends PlatformCommentsRepository {
   NeteaseCommentsRepository(super.api, super.identity, this.music);
   final NeteaseMusicRepository music;
   final _replyCursors = <String, int>{};
+  final _listCursors = <String, String>{};
   String _thread(PlatformCommentResource resource) =>
-      '${resource.kind == PlatformCommentKind.song ? 'R_SO_4_' : 'A_PL_0_'}${resource.id}';
+      '${switch (resource.kind) {
+        PlatformCommentKind.song => 'R_SO_4_',
+        PlatformCommentKind.playlist => 'A_PL_0_',
+        PlatformCommentKind.album => 'R_AL_3_',
+        PlatformCommentKind.mv => 'R_MV_5_',
+        PlatformCommentKind.podcast => 'A_DJ_1_',
+      }}${resource.id}';
 
   @override
   Future<PlatformCommentResource> songResource(Track track) async {
@@ -46,18 +53,36 @@ class NeteaseCommentsRepository extends PlatformCommentsRepository {
     int page = 1,
     PlatformComment? thread,
     String? hottestChildrenId,
+  }) => loadSorted(
+    resource,
+    page: page,
+    thread: thread,
+    sort: hottestChildrenId == null
+        ? PlatformCommentSort.newest
+        : PlatformCommentSort.hottest,
+  );
+
+  Future<PlatformCommentPage> loadSorted(
+    PlatformCommentResource resource, {
+    int page = 1,
+    PlatformComment? thread,
+    required PlatformCommentSort sort,
   }) async {
+    final cursorKey = '${_thread(resource)}:${sort.name}';
     final payload = await music
         .call(thread == null ? '/comment/new' : '/comment/floor', {
           'threadId': _thread(resource),
           'page': page,
-          'hot': hottestChildrenId != null,
+          'sortType': sort == PlatformCommentSort.hottest ? 2 : 3,
+          'cursor': page == 1 ? '0' : _listCursors[cursorKey] ?? '0',
           if (thread != null) 'parentId': thread.id,
           if (thread != null)
             'time': page == 1 ? -1 : _replyCursors[thread.id] ?? -1,
         });
     final data = NeteaseMusicRepository.object(payload['data']);
     final rows = NeteaseMusicRepository.rows(data['comments']);
+    _listCursors[cursorKey] =
+        '${data['cursor'] ?? (rows.isEmpty ? '0' : rows.last['time'])}';
     if (thread != null && rows.isNotEmpty) {
       _replyCursors[thread.id] = int.tryParse('${rows.last['time']}') ?? -1;
     }
@@ -66,6 +91,17 @@ class NeteaseCommentsRepository extends PlatformCommentsRepository {
       data['hasMore'] == true,
       total: int.tryParse('${data['totalCount'] ?? data['total']}'),
     );
+  }
+
+  Future<void> like(
+    PlatformCommentResource resource,
+    PlatformComment comment,
+  ) async {
+    await music.call('/comment/like', {
+      'threadId': _thread(resource),
+      'commentId': comment.id,
+      'like': !comment.liked,
+    });
   }
 
   @override

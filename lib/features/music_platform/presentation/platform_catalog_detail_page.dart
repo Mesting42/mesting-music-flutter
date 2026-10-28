@@ -11,6 +11,8 @@ import '../data/platform_catalog.dart';
 import '../data/platform_category_search.dart';
 import '../data/music_platform_api.dart';
 import 'platform_design.dart';
+import '../netease/netease_features_page.dart';
+import '../netease/netease_features_repository.dart';
 
 /// Read-only real catalogue details; selected songs use the shared audio owner
 /// and account-guarded library actions. No surrounding list is an implicit queue.
@@ -29,9 +31,13 @@ class _PlatformCatalogDetailPageState
   int _page = 0;
   String? _error;
   Future<List<Track>>? _neteaseTracks;
+  late final String? _owner, _token;
   @override
   void initState() {
     super.initState();
+    final account = ref.read(platformAccountProvider).value;
+    _owner = account?.ownerId;
+    _token = account?.token;
     Future<void>.microtask(_load);
   }
 
@@ -104,52 +110,80 @@ class _PlatformCatalogDetailPageState
   }
 
   @override
-  Widget build(BuildContext context) => PlatformPageFrame(
-    title: widget.hit.title,
-    child: AutomaticSongPaging(
-      enabled: _more && !_busy && _error == null,
-      onLoadMore: _load,
-      child: ListView.builder(
-        key: PageStorageKey('catalog-${widget.hit.kind.name}-${widget.hit.id}'),
-        padding: const EdgeInsets.only(bottom: 190),
-        itemCount: _tracks.length + 2,
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return Padding(
-              padding: const EdgeInsets.all(22),
-              child: Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(
-                      widget.hit.kind == PlatformSearchKind.artists ? 50 : 14,
+  Widget build(BuildContext context) {
+    final account = ref.watch(platformAccountProvider).value;
+    if (account?.ownerId != _owner || account?.token != _token) {
+      return PlatformPageFrame(
+        title: widget.hit.title,
+        child: const EditorialEmpty('账号已变化，请返回后重新打开'),
+      );
+    }
+    return PlatformPageFrame(
+      title: widget.hit.title,
+      child: AutomaticSongPaging(
+        enabled: _more && !_busy && _error == null,
+        onLoadMore: _load,
+        child: ListView.builder(
+          key: PageStorageKey(
+            'catalog-${widget.hit.kind.name}-${widget.hit.id}',
+          ),
+          padding: const EdgeInsets.only(bottom: 190),
+          itemCount: _tracks.length + 2,
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return Padding(
+                padding: const EdgeInsets.all(22),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(
+                            widget.hit.kind == PlatformSearchKind.artists
+                                ? 50
+                                : 14,
+                          ),
+                          child: ArtworkImage(
+                            uri: widget.hit.cover,
+                            width: 100,
+                            height: 100,
+                          ),
+                        ),
+                        const SizedBox(width: 18),
+                        Expanded(child: Text(widget.hit.subtitle)),
+                      ],
                     ),
-                    child: ArtworkImage(
-                      uri: widget.hit.cover,
-                      width: 100,
-                      height: 100,
-                    ),
-                  ),
-                  const SizedBox(width: 18),
-                  Expanded(child: Text(widget.hit.subtitle)),
-                ],
-              ),
-            );
-          }
-          if (index <= _tracks.length) {
-            return EditorialTrackRow(
-              track: _tracks[index - 1],
-              contextTracks: _tracks,
-            );
-          }
-          if (_busy) return const PlatformFeedbackState(loading: true);
-          if (_error != null) {
-            return TextButton(onPressed: _load, child: Text(_error!));
-          }
-          return _tracks.isEmpty
-              ? const EditorialEmpty('平台暂未返回歌曲')
-              : const SizedBox(height: 20);
-        },
+                    if (ref.watch(usesNeteaseProvider) &&
+                        widget.hit.kind != PlatformSearchKind.playlists)
+                      NeteaseResourceActions(
+                        item: NeteaseItem(
+                          id: widget.hit.id,
+                          name: widget.hit.title,
+                          kind: widget.hit.kind == PlatformSearchKind.artists
+                              ? NeteaseEntity.artist
+                              : NeteaseEntity.album,
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            }
+            if (index <= _tracks.length) {
+              return EditorialTrackRow(
+                track: _tracks[index - 1],
+                contextTracks: _tracks,
+              );
+            }
+            if (_busy) return const PlatformFeedbackState(loading: true);
+            if (_error != null) {
+              return TextButton(onPressed: _load, child: Text(_error!));
+            }
+            return _tracks.isEmpty
+                ? const EditorialEmpty('平台暂未返回歌曲')
+                : const SizedBox(height: 20);
+          },
+        ),
       ),
-    ),
-  );
+    );
+  }
 }

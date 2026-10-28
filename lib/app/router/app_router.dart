@@ -48,6 +48,7 @@ import '../../features/local_music/presentation/local_music_page.dart';
 import '../../features/kugou_together/together_page.dart';
 import '../../features/recognition/song_recognition_page.dart';
 import '../../features/audiobooks/audiobooks_page.dart';
+import '../../features/music_platform/platform_capabilities.dart';
 
 /// App navigation graph.
 ///
@@ -85,18 +86,33 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/music/audiobooks',
-          pageBuilder: (context, state) =>
-              _musicSlidePage(state: state, child: const AudiobooksPage()),
+          pageBuilder: (context, state) => _musicSlidePage(
+            state: state,
+            child: const PlatformFeatureGate(
+              feature: PlatformFeature.audiobooks,
+              child: AudiobooksPage(),
+            ),
+          ),
         ),
         GoRoute(
           path: '/music/together',
-          pageBuilder: (context, state) =>
-              _musicSlidePage(state: state, child: const TogetherPage()),
+          pageBuilder: (context, state) => _musicSlidePage(
+            state: state,
+            child: const PlatformFeatureGate(
+              feature: PlatformFeature.together,
+              child: TogetherPage(),
+            ),
+          ),
         ),
         GoRoute(
           path: '/music/recognize',
-          pageBuilder: (context, state) =>
-              _musicSlidePage(state: state, child: const SongRecognitionPage()),
+          pageBuilder: (context, state) => _musicSlidePage(
+            state: state,
+            child: const PlatformFeatureGate(
+              feature: PlatformFeature.recognition,
+              child: SongRecognitionPage(),
+            ),
+          ),
         ),
         GoRoute(
           path: '/music/replay',

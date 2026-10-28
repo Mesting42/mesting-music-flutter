@@ -15,6 +15,10 @@ import 'apple_hot_search.dart';
 import '../data/music_platform_api.dart';
 import '../data/platform_recommendations.dart';
 import '../platform_explore_providers.dart';
+import '../platform_backend_providers.dart';
+import '../netease/netease_features_page.dart';
+import '../netease/netease_features_repository.dart';
+import '../../downloads/audio_downloads.dart';
 export '../platform_explore_providers.dart';
 
 /// Search history, real keyword boards, then upstream music exploration. A
@@ -144,7 +148,12 @@ class _PlatformSearchLandingState extends ConsumerState<PlatformSearchLanding> {
               : AppleHotSearchBoards(boards: items, onSearch: widget.onSearch),
         ),
         const SizedBox(height: 28),
-        for (final kind in PlatformExploreKind.values)
+        for (final kind in PlatformExploreKind.values.where(
+          (k) =>
+              !ref.watch(usesNeteaseProvider) ||
+              (k != PlatformExploreKind.scene &&
+                  k != PlatformExploreKind.theme),
+        ))
           _ExploreSection(kind: kind),
       ],
     );
@@ -350,8 +359,44 @@ class _ExploreSongsPageState extends ConsumerState<PlatformExploreSongsPage> {
         child: ListView.builder(
           padding: const EdgeInsets.only(bottom: 190),
           itemCount:
-              (collectionScene ? _collections.length : _tracks.length) + 1,
+              (collectionScene ? _collections.length : _tracks.length) + 2,
           itemBuilder: (context, index) {
+            if (index == 0) {
+              if (!ref.watch(usesNeteaseProvider)) {
+                return const SizedBox.shrink();
+              }
+              return Column(
+                children: [
+                  NeteaseResourceActions(
+                    item: NeteaseItem(
+                      id: widget.item.id,
+                      name: widget.item.title,
+                      kind: widget.item.kind == PlatformExploreKind.album
+                          ? NeteaseEntity.album
+                          : NeteaseEntity.playlist,
+                    ),
+                  ),
+                  if (_tracks.isNotEmpty)
+                    TextButton.icon(
+                      icon: const Icon(Icons.download_rounded),
+                      label: const Text('下载已加载歌曲'),
+                      onPressed: () {
+                        final current = ref.read(platformAccountProvider).value;
+                        if (!_loaded ||
+                            current?.ownerId != _owner ||
+                            current?.token != _token) {
+                          return;
+                        }
+                        final manager = ref.read(audioDownloadManagerProvider);
+                        for (final track in _tracks) {
+                          manager.enqueue(track);
+                        }
+                      },
+                    ),
+                ],
+              );
+            }
+            index--;
             if (collectionScene && index < _collections.length) {
               final collection = _collections[index];
               return ListTile(

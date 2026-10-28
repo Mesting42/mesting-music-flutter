@@ -11,12 +11,15 @@ import '../platform_rewards_provider.dart';
 import 'platform_reward_verification.dart';
 import 'platform_reward_day.dart';
 import '../../themes/beta_appearance.dart';
+import '../platform_backend_providers.dart';
+import '../netease/netease_features_page.dart';
 
 /// Findable on My immediately below the unified account presentation.
 class PlatformRewardEntry extends ConsumerWidget {
   const PlatformRewardEntry({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(usesNeteaseProvider)) return const NeteaseAccountPanel();
     final state = ref.watch(platformRewardsProvider);
     final scheme = Theme.of(context).colorScheme;
     return Material(
@@ -86,6 +89,12 @@ class PlatformRewardCalendar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(usesNeteaseProvider)) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('网易云签到')),
+        body: const SafeArea(child: NeteaseAccountPanel()),
+      );
+    }
     final state = ref.watch(platformRewardsProvider);
     final controller = ref.read(platformRewardsProvider.notifier);
     final scheme = Theme.of(context).colorScheme;

@@ -27,6 +27,8 @@ import '../../music_platform/listening_sync_page.dart';
 import 'music_equalizer_page.dart';
 import 'music_sleep_timer_sheet.dart';
 import '../../music_platform/presentation/music_effects_page.dart';
+import '../../music_platform/platform_backend_providers.dart';
+import '../../music_platform/netease/netease_playback_settings_page.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -129,11 +131,17 @@ class SettingsPage extends ConsumerWidget {
                       _SettingsTile(
                         icon: Icons.cloud_sync_outlined,
                         iconColor: const Color(0xFF527FD3),
-                        title: '酷狗播放同步',
+                        title: ref.watch(usesNeteaseProvider)
+                            ? '网易云播放与同步'
+                            : '酷狗播放同步',
                         subtitle: '播放历史、真实听歌时长与同步状态',
-                        onTap: () => Navigator.of(
-                          context,
-                        ).push(betaEntryRoute<void>(const ListeningSyncPage())),
+                        onTap: () => Navigator.of(context).push(
+                          betaEntryRoute<void>(
+                            ref.read(usesNeteaseProvider)
+                                ? const NeteasePlaybackSettingsPage()
+                                : const ListeningSyncPage(),
+                          ),
+                        ),
                       ),
                       const _SettingsDivider(),
                       _SettingsTile(
@@ -153,7 +161,9 @@ class SettingsPage extends ConsumerWidget {
                         icon: Icons.surround_sound_outlined,
                         iconColor: const Color(0xFF527FD3),
                         title: '音效',
-                        subtitle: '社区、耳机与明星音效',
+                        subtitle: ref.watch(usesNeteaseProvider)
+                            ? '本地均衡器与声音预设'
+                            : '社区、耳机与明星音效',
                         onTap: () => Navigator.of(
                           context,
                           rootNavigator: true,

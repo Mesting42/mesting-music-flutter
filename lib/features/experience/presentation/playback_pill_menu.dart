@@ -17,6 +17,7 @@ import '../../music_platform/presentation/platform_quality_button.dart';
 import '../../music_platform/presentation/platform_feedback.dart';
 import '../../playlists/presentation/add_to_playlist_sheet.dart';
 import '../../queue/presentation/queue_page.dart';
+import '../../downloads/audio_downloads_page.dart';
 
 /// Presentation returns an intent only. Existing repositories/audio owner still
 /// perform every action after the menu has finished closing.
@@ -119,6 +120,8 @@ Future<void> showPlaybackPillMenu(
             if (platform)
               action('comments', '歌曲评论', CupertinoIcons.text_bubble),
             if (platform) action('quality', '音质', CupertinoIcons.waveform),
+            if (track.isRemote)
+              action('download', '下载到本地音乐', CupertinoIcons.arrow_down_circle),
             if (mode != null)
               action('mode', '播放模式 · ${mode.label}', CupertinoIcons.repeat),
             if (fm) ...[
@@ -142,6 +145,8 @@ Future<void> showPlaybackPillMenu(
   }
   try {
     switch (selected) {
+      case 'download':
+        await enqueueAudioDownload(context, ref, track);
       case 'favorite':
         if (!await ensureLibraryAccess(
               context,

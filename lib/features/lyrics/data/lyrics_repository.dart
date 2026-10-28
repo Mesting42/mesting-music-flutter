@@ -185,13 +185,32 @@ class LyricsRepository {
     if (songId.isEmpty) {
       throw const LyricsUnavailableException('网易云歌词参数不完整');
     }
-    final payload = _neteaseRequest != null
-        ? await _neteaseRequest('/lyric', {'id': songId})
+    var payload = _neteaseRequest != null
+        ? await _neteaseRequest(
+            locator.queryParameters.containsKey('cloudUid')
+                ? '/cloud/lyric'
+                : '/lyric',
+            {
+              'id': songId,
+              if (locator.queryParameters['cloudUid'] != null)
+                'uid': locator.queryParameters['cloudUid']!,
+            },
+          )
         : await _getJson(
             _endpoint(_neteaseApiBaseUrl, '/lyric/new', {'id': songId}),
           );
-    final lrc = _asMap(payload['lrc']);
-    final source = lrc?['lyric']?.toString() ?? '';
+    var lrc = _asMap(payload['lrc']);
+    var source =
+        lrc?['lyric']?.toString() ??
+        _asMap(payload['data'])?['lyric']?.toString() ??
+        '';
+    if (source.trim().isEmpty &&
+        locator.queryParameters.containsKey('cloudUid') &&
+        _neteaseRequest != null) {
+      payload = await _neteaseRequest('/lyric', {'id': songId});
+      lrc = _asMap(payload['lrc']);
+      source = lrc?['lyric']?.toString() ?? '';
+    }
     if (source.trim().isEmpty) {
       throw const LyricsUnavailableException('网易云暂未提供这首歌的歌词');
     }

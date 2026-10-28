@@ -9,6 +9,8 @@ import '../../../shared/widgets/music_feature_page.dart';
 import '../../../shared/widgets/artwork_image.dart';
 import '../data/platform_effects_repository.dart';
 import '../platform_effects_providers.dart';
+import '../platform_backend_providers.dart';
+import '../../settings/presentation/music_equalizer_page.dart';
 
 class MusicEffectsPage extends ConsumerStatefulWidget {
   const MusicEffectsPage({super.key});
@@ -49,6 +51,7 @@ class _MusicEffectsPageState extends ConsumerState<MusicEffectsPage> {
   }
 
   Future<void> _load({bool reset = false}) async {
+    if (ref.read(usesNeteaseProvider)) return;
     if (!mounted || (_loading && !reset)) return;
     final generation = reset ? ++_generation : _generation;
     final page = reset ? 1 : _page + 1;
@@ -142,6 +145,7 @@ class _MusicEffectsPageState extends ConsumerState<MusicEffectsPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (ref.watch(usesNeteaseProvider)) return const MusicEqualizerPage();
     final equalizer = ref.watch(musicEqualizerProvider);
     final scheme = Theme.of(context).colorScheme;
     final query = _search.text.trim().toLowerCase();

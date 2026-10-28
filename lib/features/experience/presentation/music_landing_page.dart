@@ -17,6 +17,8 @@ import '../../music_platform/data/platform_recommendations.dart';
 import '../../music_platform/data/platform_explore.dart';
 import '../../music_platform/platform_explore_providers.dart';
 import 'music_home_catalogues.dart';
+import '../../music_platform/platform_backend_providers.dart';
+import '../../music_platform/netease/netease_features_page.dart';
 
 /// Home and discovery share presentation primitives, never the same content
 /// composition. All recommendation data still comes from the concept adapter.
@@ -26,6 +28,7 @@ class MusicLandingPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(usesNeteaseProvider)) return const NeteaseDiscoveryPage();
     if (discovery) return const PlatformRecommendationHome();
     final daily = ref.watch(platformDailyProvider);
     final newSongs = ref.watch(platformNewSongsProvider);

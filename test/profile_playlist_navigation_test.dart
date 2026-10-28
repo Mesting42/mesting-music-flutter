@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mesting_music/features/player/presentation/music_navigation.dart';
 import 'package:mesting_music/features/player/presentation/music_shell.dart';
 import 'package:mesting_music/features/profile/presentation/profile_page.dart';
+import 'package:mesting_music/core/platform/distribution_channel.dart';
 
 void main() {
   test('bottom navigation keeps a compact accessible content height', () {
@@ -14,16 +15,17 @@ void main() {
     );
   });
 
-  test('personal playlist routes belong to the profile tab', () {
+  test('playlist routes follow the active channel navigation contract', () {
+    final playlistTab = DistributionChannel.isBeta ? 2 : 3;
     expect(musicBottomNavigationIndexForLocation('/profile'), 3);
     expect(musicBottomNavigationIndexForLocation('/profile/account'), 3);
     expect(musicBottomNavigationIndexForLocation('/social?tab=1'), 3);
     expect(musicBottomNavigationIndexForLocation('/social/users/friend'), 3);
-    expect(musicBottomNavigationIndexForLocation('/music?view=playlists'), 3);
-    expect(musicBottomNavigationIndexForLocation('/music/playlists'), 3);
+    expect(musicBottomNavigationIndexForLocation('/music?view=playlists'), playlistTab);
+    expect(musicBottomNavigationIndexForLocation('/music/playlists'), playlistTab);
     expect(
       musicBottomNavigationIndexForLocation('/music/playlists/playlist-1'),
-      3,
+      playlistTab,
     );
     expect(musicBottomNavigationIndexForLocation('/music?view=favorites'), 2);
     expect(musicBottomNavigationIndexForLocation('/music/recommend'), 0);

@@ -6,6 +6,7 @@ import '../../../shared/models/track.dart';
 import '../../experience/presentation/editorial_widgets.dart';
 import '../data/platform_recommendations.dart';
 import '../music_platform_providers.dart';
+import '../platform_backend_providers.dart';
 import '../platform_catalog_providers.dart';
 import '../platform_recommendation_providers.dart';
 import '../../auth/presentation/beta_login_navigation.dart';
@@ -75,22 +76,23 @@ class PlatformFmSection extends ConsumerWidget {
             ),
           )
         else ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(22, 0, 22, 10),
-            child: Wrap(
-              spacing: 8,
-              children: [
-                for (final option in PlatformFmStation.values)
-                  ChoiceChip(
-                    label: Text(option.label),
-                    selected: station == option,
-                    onSelected: (_) => ref
-                        .read(platformFmStationProvider.notifier)
-                        .select(option),
-                  ),
-              ],
+          if (!ref.watch(usesNeteaseProvider))
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 0, 22, 10),
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  for (final option in PlatformFmStation.values)
+                    ChoiceChip(
+                      label: Text(option.label),
+                      selected: station == option,
+                      onSelected: (_) => ref
+                          .read(platformFmStationProvider.notifier)
+                          .select(option),
+                    ),
+                ],
+              ),
             ),
-          ),
           const PlatformRecommendedSection(
             title: '',
             kind: PlatformRecommendationKind.fm,
