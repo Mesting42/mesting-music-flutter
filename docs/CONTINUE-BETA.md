@@ -1,31 +1,23 @@
-> 2026-10-29：1.0.12/code33 原签名包已准备，尚未发布。先读 [本版接续](SESSION-HANDOFF-2026-10-29-v1.0.12.md)，保护未提交工作区。
+# 当前接续：Mesting Music 1.0.12 / code33
 
-# 当前本机接续：1.0.11 / code32
-
-新会话先读 [本次会话移交总览](../HANDOFF-SESSION-2026-10-28-TO-NEW-CHAT.md)，包含已完成、未完成、已停止事项和用户最后确认的约束。本总览与指针补充晚于冻结源码 ZIP，原 APK／ZIP 保持不变。
-
-1.0.11 双平台接入已完成并发布到 music，后台与公开 health、完整下载摘要、HTTP 续传、安装前线上更新说明均通过。先读 [1.0.11 总交接](../HANDOFF-CURRENT-SESSION-2026-10-28-v1.0.11.md)。本版改动仍在工作区，尚未 Git 提交/推送；跨电脑接续请使用完整 `Mesting-Music-v1.0.11-source.zip`。不要 reset 或清理现有修改，不再重传同 code。
-
-下面为此前 1.0.10 的 GitHub 接续说明，远端 beta 暂未包含本版运行源码。真实账号和手机体验继续由用户验收，没有新明确授权不使用 ADB 或操作手机。
-
-## 1.0.10 GitHub 归档接续
-
-1.0.6～1.0.10五版Git提交、标签与正式GitHub Release均已补齐，1.0.10为最新正式版。
-
-从 [另一台电脑接续总交接](../HANDOFF-CURRENT-SESSION-2026-10-28-GITHUB-CONTINUE.md) 开始，包含分支、标签、构建环境、原签名要求、已完成与待真机验证事项。维护分支为`beta`，`main`保留旧stable历史。
+1.0.11、1.0.12 的版本提交、固定标签与正式 GitHub Release 均已归档，全部附件大小和 SHA-256 已核验；维护分支 beta 包含1.0.12运行源码和最新交接。先读[跨电脑总交接](../HANDOFF-CURRENT-SESSION-2026-10-29-GITHUB-CONTINUE.md)与根目录 AGENTS.md。
 
 ```powershell
 git clone --branch beta https://github.com/Mesting42/mesting-music-flutter.git Mesting-Music
 cd Mesting-Music
+git fetch origin --tags
 git status --short --branch
-git log -7 --oneline --decorate
+git log -5 --oneline --decorate
+git merge-base --is-ancestor v1.0.12 HEAD
 ```
 
-先读AGENTS.md并只读核对，再等待用户；保持未提交文件、原包名和签名。后续Android code须大于31，music公开包不因Git归档而重发。
+- [1.0.11 Release：原 APK / 完整源码 / 校验](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.11)
+- [1.0.12 Release：原 APK / 完整源码 / 校验](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.12)
+- [本轮来源说明](version-archive/RELEASE-ARCHIVE-2026-10-29-v111-v112.md)与[GitHub 附件核验](version-archive/GITHUB-ARCHIVE-2026-10-29-verification.json)
+- [1.0.12 修改](fixes-2026-10-29-v1.0.12.md)、[安装验收](INSTALL-v1.0.12.md)、[历史冻结交接](SESSION-HANDOFF-2026-10-29-v1.0.12.md)
 
-- [最新正式版Release](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.10)
-- [五版归档说明](version-archive/RELEASE-BACKFILL-2026-10-28-v106-v110.md)
-- [1.0.10原发布交接](SESSION-HANDOFF-2026-10-28-v1.0.10.md)
-- [此前接续全文，保留历史事实](version-archive/CONTINUE-BETA-BEFORE-v1.0.10-ARCHIVE.md)
+本轮只读 music health 已显示1.0.12/code33，公布大小及摘要匹配原 APK，公开下载首尾各64KiB核验一致；未重下公开整包，也未操作后台。旧冻结文件中的未提交／未发布字段是历史状态，以跨电脑总交接及最新远端为准，不重复发布同 code。
 
-签名材料需私下转移；真实设备与官版统计仍待用户验收。完整步骤见总交接。
+环境、原签名私下转移、既有测试和待真实账号／手机验收事项见总交接；后续 Android code 大于33。本机原脏工作区保持原分支和暂存区，不 reset、clean 或直接切分支。新需求依协作约定逐题确认；没有新明确授权不访问手机。
+
+[归档前接续全文](version-archive/CONTINUE-BETA-BEFORE-v1.0.12-ARCHIVE.md)保留历史事实。

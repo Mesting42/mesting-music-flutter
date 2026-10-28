@@ -1,8 +1,12 @@
 # Mesting Music
 
-**新会话先读 [跨电脑总交接](HANDOFF-CURRENT-SESSION-2026-10-28-GITHUB-CONTINUE.md) 与 [接续入口](docs/CONTINUE-BETA.md)。**
+**当前维护版本：1.0.12 / Android code33，开发分支 beta。** 新电脑先读[跨电脑总交接](HANDOFF-CURRENT-SESSION-2026-10-29-GITHUB-CONTINUE.md)、[接续入口](docs/CONTINUE-BETA.md)与 AGENTS.md。
 
-> **当前正式产品版：1.0.10 / code31。** 1.0.6～1.0.10五版Git提交、标签与正式GitHub Release均已补齐，1.0.10为最新正式版。 [本版修改](docs/fixes-2026-10-28-v1.0.10.md) · [GitHub Release](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.10) · [music下载](https://download.csnas.asia/music/download)。维护分支为beta；完整源码含已获分发授权的SDK，原LICENSE与第三方声明保留。签名材料私下转移。以下Beta.19与stable介绍为历史产品背景。
+1.0.11、1.0.12 已分别保存版本提交、固定标签与正式 GitHub Release，附原 APK、完整源码 ZIP 和校验资料，全部附件 digest 已核验。[1.0.11 Release](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.11) · [1.0.12 Release](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.12) · [本轮来源与核验](docs/version-archive/RELEASE-ARCHIVE-2026-10-29-v111-v112.md)。
+
+网易云与酷狗按登录平台隔离页面与账号；1.0.12 补齐网易云功能、备用音源、文件下载及实际播放秒数上报。[本版修改与验收边界](docs/fixes-2026-10-29-v1.0.12.md)。本轮只读[music 公开 health](https://download.csnas.asia/api/app/music/health)已显示1.0.12/code33，公布大小与摘要匹配冻结 APK，下载首尾64KiB匹配；本次归档未操作后台或重下公开整包。原签名材料须私下转移。
+
+以下 Beta.19 与 stable 介绍保留历史产品背景；当前跨电脑开发以 beta 和上方接续文档为准。
 
 ## Beta.19 本次更新
 

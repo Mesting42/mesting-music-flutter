@@ -1,5 +1,14 @@
 # Mesting Music 版本归档
 
+**2026-10-29 最新 GitHub 归档：1.0.12 / code33。** 1.0.11、1.0.12 均已有固定源码提交、标签与正式 Release，beta 维护入口为1.0.12；main 与历史版本保持。原 APK / ZIP 摘要和所有附件已核验，详见[最新跨电脑交接](HANDOFF-CURRENT-SESSION-2026-10-29-GITHUB-CONTINUE.md)与[本轮来源](docs/version-archive/RELEASE-ARCHIVE-2026-10-29-v111-v112.md)。
+
+| 版本 | 固定标签 | Release |
+| --- | --- | --- |
+| 1.0.12 / 33 | [v1.0.12](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.12) | [原APK / 源码 / 校验](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.12) |
+| 1.0.11 / 32 | [v1.0.11](https://github.com/Mesting42/mesting-music-flutter/tree/v1.0.11) | [原APK / 源码 / 校验](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.11) |
+
+music 的最新只读核对已显示1.0.12/code33；归档不重复发布。下文较旧“最新／未推送／仅私有”保留各次历史状态，当前以本段和最新总交接为准。
+
 **2026-10-28 最新归档：1.0.5 / code 26。** 1.0.3、1.0.4 从原冻结快照补齐提交、标签和 Release；1.0.5 包含本轮修复与已授权分发的 SDK 源码。见 [归档记录](docs/version-archive/RELEASE-BACKFILL-2026-10-28.md) 与 [最新交接](docs/SESSION-HANDOFF-2026-10-28-v1.0.5.md)。music 后台仍为 1.0.4 / 25，1.0.5 管理 UI 发布待完成。下文旧“未推送/仅私有”是历史时点描述。
 
 | 版本 | 源码标签 | 交付 |
