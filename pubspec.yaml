@@ -31,6 +31,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -115,6 +117,7 @@ flutter:
 
   assets:
     - assets/data/music-regions.json
+    - assets/data/release-notes.json
     - third_party/region_data/LICENSE
     - third_party/region_data/NOTICE.md
     - third_party/md3music/MESTING-1.0.3-PORTS.md

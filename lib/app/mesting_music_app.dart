@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/themes/app_theme.dart';
@@ -104,6 +105,11 @@ class MestingMusicApp extends ConsumerWidget {
       });
     }
     final application = MaterialApp.router(
+      // Native Cupertino pickers use these delegates too; the product is
+      // Chinese even when Android's current system language is English.
+      locale: const Locale('zh', 'CN'),
+      supportedLocales: const [Locale('zh', 'CN')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       title: DistributionChannel.isBeta ? 'Mesting Music' : 'Mesting 音乐',
       debugShowCheckedModeBanner: false,
       theme: buildMestingTheme(musicTheme),

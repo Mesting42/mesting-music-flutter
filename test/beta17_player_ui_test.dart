@@ -92,7 +92,7 @@ void main() {
       await tester.tap(repeat);
       await tester.pumpAndSettle();
       expect(repeatIcon(), CupertinoIcons.repeat);
-      expect(find.text('已切换为顺序播放，不循环'), findsOneWidget);
+      expect(find.text('已切换为顺序播放'), findsOneWidget);
       await tester.tap(repeat);
       await tester.pumpAndSettle();
       expect(repeatIcon(), CupertinoIcons.repeat);

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/beta_glass_controls.dart';
 import '../../../shared/widgets/music_notice.dart';
+import '../../../shared/widgets/quiet_pull_to_refresh.dart';
 import '../domain/platform_rewards.dart';
 import '../music_platform_providers.dart';
 import '../platform_rewards_provider.dart';
@@ -148,7 +149,8 @@ class PlatformRewardCalendar extends ConsumerWidget {
       ),
       body: state.ownerId == null
           ? const Center(child: Text('当前酷狗账号已退出'))
-          : RefreshIndicator(
+          : QuietPullToRefresh(
+              enabled: !state.loading && state.action == null,
               onRefresh: controller.refresh,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),

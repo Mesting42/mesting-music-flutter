@@ -76,3 +76,15 @@ changes the ancestor hit bounds, with no second keyboard translation and no
 change to optical quality, press/drag springs, accessory morphing or shaders.
 Host regression taps the visible field with and without an accessory across
 keyboard heights 100, 280, 180 and zero, and checks that the body receives none.
+
+## Music 1.0.6 spring subtree retention
+
+`tab_bar_searchable_layout.dart` passes the search pill and complete tab
+indicator as stable `ListenableBuilder.child` subtrees. Spring ticks change
+their positioned bounds without reconstructing the text field, input selection
+machinery or optical controls. Height morphs still update their real dimensions.
+`tab_bar_searchable_internal.dart` also retains the expanded input subtree
+across width-only LayoutBuilder updates, including its invisible collapsed state.
+Quality, shaders, magnification, drag/press springs and accessory geometry remain.
+The 336-frame host comparison at 8333 microseconds per pump records structural
+work only; Android GPU timing and physical 120Hz delivery require device checks.

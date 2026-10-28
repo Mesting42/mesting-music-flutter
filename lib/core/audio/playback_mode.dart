@@ -21,7 +21,7 @@ enum PlaybackRepeat {
   one;
 
   String get label => switch (this) {
-    off => '顺序播放，不循环',
+    off => '顺序播放',
     all => '列表循环',
     one => '单曲循环',
   };

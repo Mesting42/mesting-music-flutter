@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/audio/playback_providers.dart';
 import '../../../shared/models/track.dart';
 import '../../../shared/widgets/beta_glass_popover.dart';
+import '../../../shared/widgets/beta_glass_menu_item.dart';
 import '../../../shared/widgets/music_notice.dart';
 import '../../library/library_providers.dart';
 import '../../library/presentation/library_access.dart';
@@ -43,12 +44,11 @@ Future<void> showPlaybackPillMenu(
         bool quick = false,
       }) => Semantics(
         button: true,
-        child: InkWell(
+        child: BetaGlassMenuItem(
           onTap: () => Navigator.of(dialog).pop(id),
-          borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: quick ? 8 : 18,
+              horizontal: quick ? 2 : 12,
               vertical: 13,
             ),
             child: quick

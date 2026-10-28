@@ -23,20 +23,15 @@ class BetaPageMotion extends StatelessWidget {
       ),
     );
     if (MediaQuery.disableAnimationsOf(context)) return surface;
-    return AnimatedBuilder(
-      animation: animation,
-      child: surface,
-      builder: (context, stable) {
-        final progress = linear
-            ? animation.value
-            : Curves.easeInOutCubic.transform(animation.value);
-        return ClipRect(
-          child: FractionalTranslation(
-            translation: Offset(1 - progress, 0),
-            child: stable,
+    return ClipRect(
+      child: SlideTransition(
+        position: animation.drive(
+          Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero).chain(
+            CurveTween(curve: linear ? Curves.linear : Curves.easeInOutCubic),
           ),
-        );
-      },
+        ),
+        child: surface,
+      ),
     );
   }
 }

@@ -65,7 +65,18 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
   @override
   void initState() {
     super.initState();
+    _searchMotion.addStatusListener(_searchStatus);
     _scheduleBackHistory();
+  }
+
+  // Only mount/hide source pages at transition boundaries. Per-frame motion
+  // belongs to SlideTransition; it must not rebuild the whole search/page tree.
+  void _searchStatus(AnimationStatus status) {
+    if (mounted &&
+        (status == AnimationStatus.completed ||
+            status == AnimationStatus.dismissed)) {
+      setState(() {});
+    }
   }
 
   static int? _rootTab(String location) => switch (location) {
@@ -274,47 +285,45 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
           type: MaterialType.transparency,
           child: NotificationListener<ScrollNotification>(
             onNotification: _scroll,
-            child: AnimatedBuilder(
-              animation: _searchMotion,
-              builder: (context, _) => Stack(
-                children: [
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      ignoring: _searching,
-                      child: Offstage(
-                        // Keep the source mounted for its scroll state, but
-                        // stop painting once the opaque search page has landed.
-                        offstage: _searching && _searchMotion.isCompleted,
-                        child: ExcludeSemantics(
-                          excluding: _searching,
-                          child: TickerMode(
-                            enabled: !_searching,
-                            child: MestingAdaptiveContentFrame(
-                              child: widget.child,
-                            ),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: IgnorePointer(
+                    ignoring: _searching,
+                    child: Offstage(
+                      // Keep the source mounted for its scroll state, but
+                      // stop painting once the opaque search page has landed.
+                      offstage: _searching && _searchMotion.isCompleted,
+                      child: ExcludeSemantics(
+                        excluding: _searching,
+                        child: TickerMode(
+                          enabled: !_searching,
+                          child: MestingAdaptiveContentFrame(
+                            child: widget.child,
                           ),
                         ),
                       ),
                     ),
                   ),
-                  if (_hasOpenedSearch)
-                    Positioned.fill(
-                      child: ExcludeFocus(
-                        excluding: !_searching,
-                        child: Offstage(
-                          offstage: !_searching && _searchMotion.isDismissed,
-                          child: TickerMode(
-                            enabled: !_searchMotion.isDismissed,
-                            child: NotificationListener<ScrollNotification>(
-                              onNotification: (_) => !_searching,
-                              child: FractionalTranslation(
-                                translation: Offset(
-                                  1 -
-                                      Curves.easeOutCubic.transform(
-                                        _searchMotion.value,
-                                      ),
-                                  0,
-                                ),
+                ),
+                if (_hasOpenedSearch)
+                  Positioned.fill(
+                    child: ExcludeFocus(
+                      excluding: !_searching,
+                      child: Offstage(
+                        offstage: !_searching && _searchMotion.isDismissed,
+                        child: TickerMode(
+                          enabled: !_searchMotion.isDismissed,
+                          child: NotificationListener<ScrollNotification>(
+                            onNotification: (_) => !_searching,
+                            child: SlideTransition(
+                              position: _searchMotion.drive(
+                                Tween<Offset>(
+                                  begin: const Offset(1, 0),
+                                  end: Offset.zero,
+                                ).chain(CurveTween(curve: Curves.easeOutCubic)),
+                              ),
+                              child: RepaintBoundary(
                                 child: ColoredBox(
                                   key: const ValueKey('beta10-search-surface'),
                                   color: Theme.of(context).colorScheme.surface,
@@ -338,8 +347,8 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
                         ),
                       ),
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
           ),
         ),

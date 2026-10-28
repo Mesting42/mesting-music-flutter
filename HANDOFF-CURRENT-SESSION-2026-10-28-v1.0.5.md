@@ -1,5 +1,7 @@
 # 当前接续入口：1.0.5
 
+**本机最新指针已更新为 [当前会话交接：1.0.5 接续与清理](HANDOFF-CURRENT-SESSION-2026-10-28-LOCAL-CLEANUP.md)。** 本机工程实际位于 D:/AnLi，music 已是 1.0.5 / 26；旧 Beta 和缓存优先清理已完成。下文其他机器的绝对路径及后台待发布状态保留为原交付历史，不作为当前待办。
+
 2026-10-28（Asia/Shanghai）。实际工程仍为 `D:/AnLi/Mesting-Music-Flutter/app-md3music-beta`，聊天的 C 盘项目目录不是工程根。所有工程命令显式使用实际目录。
 
 1. 先读本文、根目录 AGENTS、[1.0.5 交接](docs/SESSION-HANDOFF-2026-10-28-v1.0.5.md) 和 [修改](docs/fixes-2026-10-28-v1.0.5.md)。

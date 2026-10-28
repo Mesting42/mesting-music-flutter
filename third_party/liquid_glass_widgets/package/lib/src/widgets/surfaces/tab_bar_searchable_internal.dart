@@ -995,6 +995,12 @@ class SearchPillState extends State<SearchPill> {
         resolveIconColor(widget.config.micIconColor ?? rawIconColor);
     final shape = LiquidRoundedRectangle(borderRadius: widget.barBorderRadius);
 
+    // Mesting 1.0.6: a width spring changes LayoutBuilder constraints every
+    // frame, including while this field is invisible inside the collapsed
+    // circle. Build input/selection widgets once per real state/config change;
+    // layout can still constrain the same child at every intermediate width.
+    final expandedContent = _buildExpanded(iconColor, micColor);
+
     // LayoutBuilder reads the ACTUAL rendered width on every frame.
     // When isActive flips true, AnimatedContainer starts at compact width
     // (barHeight ≈ 64 px) and animates outward. The expanded Row needs at
@@ -1070,7 +1076,7 @@ class SearchPillState extends State<SearchPill> {
               IgnorePointer(
                 child: Opacity(
                   opacity: 0,
-                  child: _buildExpanded(iconColor, micColor),
+                  child: expandedContent,
                 ),
               ),
             ],
@@ -1120,7 +1126,7 @@ class SearchPillState extends State<SearchPill> {
               quality: widget.quality,
               platformViewBackdrop: widget.platformViewBackdrop,
               child: _wrapWithGlow(
-                child: _buildExpanded(iconColor, micColor),
+                child: expandedContent,
               ),
             ),
           ), // GestureDetector
@@ -1266,7 +1272,10 @@ class SearchPillState extends State<SearchPill> {
               // pre-0.13.0 "cursor matches textColor" behaviour pass
               // `cursorColor: textColor` explicitly via [config].
               cursorColor: config.cursorColor,
-              contextMenuBuilder: config.contextMenuBuilder ?? (context, editable) => CupertinoAdaptiveTextSelectionToolbar.editableText(editableTextState: editable),
+              contextMenuBuilder: config.contextMenuBuilder ??
+                  (context, editable) =>
+                      CupertinoAdaptiveTextSelectionToolbar.editableText(
+                          editableTextState: editable),
               selectionControls: config.selectionControls,
               placeholder: config.hintText,
               placeholderStyle: effectivePlaceholderStyle,

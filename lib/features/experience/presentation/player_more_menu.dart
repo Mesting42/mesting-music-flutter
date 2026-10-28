@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
-import '../../../shared/widgets/beta_icon_button.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import '../../../shared/widgets/beta_glass_menu_item.dart';
+import 'beta_bottom_bar.dart';
 import 'package:flutter/material.dart';
 import '../../../shared/widgets/beta_glass_popover.dart';
 import '../../themes/beta_appearance.dart';
@@ -94,12 +96,12 @@ class _PlayerMoreMenuState extends State<PlayerMoreMenu> {
                     Semantics(
                       button: true,
                       expanded: expanded,
-                      child: InkWell(
+                      child: BetaGlassMenuItem(
                         key: const ValueKey('player-style-disclosure'),
                         onTap: () => update(() => expanded = !expanded),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 18,
+                            horizontal: 12,
                             vertical: 12,
                           ),
                           child: Row(
@@ -151,14 +153,14 @@ class _PlayerMoreMenuState extends State<PlayerMoreMenu> {
                     Semantics(
                       selected: action.selected,
                       button: true,
-                      child: InkWell(
+                      child: BetaGlassMenuItem(
                         onTap: () =>
                             Navigator.of(dialogContext).pop(action.value),
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(minHeight: 46),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 18,
+                              horizontal: 12,
                               vertical: 11,
                             ),
                             child: Row(
@@ -219,15 +221,32 @@ class _PlayerMoreMenuState extends State<PlayerMoreMenu> {
             ),
           ),
         )
-      : BetaIconButton(
-          key: _anchor,
-          // The classic light turntable still needs its intentional dark
-          // contrast surface; only Material's transient press circle is removed.
-          backgroundColor:
-              IconButtonTheme.of(context).style?.backgroundColor?.resolve({}) ??
-              Colors.transparent,
-          tooltip: widget.tooltip,
-          onPressed: _open,
-          icon: const Icon(CupertinoIcons.ellipsis, color: Colors.white),
+      : Semantics(
+          label: widget.tooltip,
+          button: true,
+          child: Tooltip(
+            message: widget.tooltip,
+            child: RepaintBoundary(
+              child: GlassButton.custom(
+                key: _anchor,
+                onTap: _open,
+                width: 48,
+                height: 48,
+                useOwnLayer: true,
+                quality: GlassQuality.premium,
+                shape: const LiquidOval(),
+                // A permanent lens gives the liquid contraction a real source
+                // while retaining white-glyph contrast over every cover style.
+                settings: betaMusicPillGlass(
+                  context,
+                ).copyWith(glassColor: const Color(0x602C2C2E)),
+                child: const Icon(
+                  CupertinoIcons.ellipsis,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+            ),
+          ),
         );
 }

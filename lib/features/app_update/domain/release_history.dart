@@ -2,6 +2,14 @@
 /// offline and must never be shown as the notes of an unknown future build.
 /// The distribution service may also supply notes for a newer release.
 const musicReleaseNotes = <String, List<String>>{
+  '1.0.6': [
+    '修复播放器更多菜单展开时左上角闪现的玻璃，保留原有液态弹出与收回动画。',
+    '更多按钮增加圆形玻璃底座，菜单按压改为柔和透光高亮与轻微回弹。',
+    '顺序播放提示简化；签到刷新只显示右上角动画，保留下拉刷新。',
+    '生日选择器使用中文年月日；音效列表恢复酷狗官方对应图标。',
+    '优化页面切换与底部导航、播放胶囊的重建和布局，保留完整玻璃效果。',
+    '支持在安装前查看后续新版本的在线更新说明。',
+  ],
   '1.0.5': [
     '统一移除歌曲标题末尾的音频文件后缀，保留原歌曲与文件身份。',
     '修复定时关闭浅色主题，以及资料、MV 等页面滚动时玻璃控件背景变灰。',

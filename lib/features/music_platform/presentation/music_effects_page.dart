@@ -6,7 +6,7 @@ import '../../../shared/widgets/beta_glass_controls.dart';
 import '../../../shared/widgets/beta_glass_scroll_body.dart';
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../../shared/widgets/music_feature_page.dart';
-import '../../../shared/widgets/music_effect_glyph.dart';
+import '../../../shared/widgets/artwork_image.dart';
 import '../data/platform_effects_repository.dart';
 import '../platform_effects_providers.dart';
 
@@ -273,10 +273,20 @@ class _MusicEffectsPageState extends ConsumerState<MusicEffectsPage> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    MusicEffectGlyph(
-                      name: effect.name,
-                      category: effect.category,
-                      preset: effect.preset,
+                    // The catalogue's icon_url/model_icon/logo is the exact
+                    // official per-effect artwork, never inferred from an EQ
+                    // category. The common image boundary sizes decodes and
+                    // retains a bounded persistent cache and failure state.
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: ArtworkImage(
+                        uri: effect.cover,
+                        width: 54,
+                        height: 54,
+                        fit: BoxFit.contain,
+                        retryOnNetworkError: true,
+                        persistentNetworkCacheKey: 'kugou-effect-${effect.id}',
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(

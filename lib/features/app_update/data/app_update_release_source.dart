@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../domain/app_update_models.dart';
 import '../domain/release_history.dart';
+import 'public_apk_release_notes.dart';
 
 /// Release discovery is independent of download state and Android installation.
 abstract interface class AppUpdateReleaseSource {
@@ -97,14 +98,14 @@ class CsnasUpdateReleaseSource implements AppUpdateReleaseSource {
       }
       // Version labels may be renamed for public releases (1.0.0 versus the
       // historical Beta label). Ordering always uses the APK's real build code.
-      return AppUpdateManifest(
+      final manifest = AppUpdateManifest(
         packageName: packageName,
         versionName: name.trim(),
         versionCode: code,
         minimumVersionCode: 1,
         mandatory: false,
         title: '发现新版本',
-        releaseNotes: notesForMusicVersion(name),
+        releaseNotes: const [],
         apkUrl: primary,
         apkBackupUrl: backup,
         downloadEtag: etag as String?,
@@ -113,6 +114,33 @@ class CsnasUpdateReleaseSource implements AppUpdateReleaseSource {
         publishedAt:
             DateTime.tryParse('${data['release_created_at'] ?? ''}')?.toUtc() ??
             DateTime.now().toUtc(),
+      );
+      // Prefer publisher metadata, then the target APK's version-bound asset.
+      // Bundled history remains an offline fallback for exact known releases.
+      var notes = PublicApkReleaseNotes.parse(
+        data['releaseNotes'] ?? data['release_notes'],
+      );
+      final bundled = notesForMusicVersion(name);
+      if (notes.isEmpty && bundled.isNotEmpty) notes = bundled;
+      if (notes.isEmpty) {
+        notes = await PublicApkReleaseNotes(client)
+            .load(manifest)
+            .timeout(const Duration(seconds: 10), onTimeout: () => const []);
+      }
+      return AppUpdateManifest(
+        packageName: manifest.packageName,
+        versionName: manifest.versionName,
+        versionCode: manifest.versionCode,
+        minimumVersionCode: manifest.minimumVersionCode,
+        mandatory: manifest.mandatory,
+        title: manifest.title,
+        releaseNotes: notes,
+        apkUrl: manifest.apkUrl,
+        apkBackupUrl: manifest.apkBackupUrl,
+        downloadEtag: manifest.downloadEtag,
+        sha256: manifest.sha256,
+        sizeBytes: manifest.sizeBytes,
+        publishedAt: manifest.publishedAt,
       );
     } on AppUpdateException {
       rethrow;

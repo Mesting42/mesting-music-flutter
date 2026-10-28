@@ -717,6 +717,88 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                 final floatY = layout.floatY;
                 final totalH = animH + floatY;
 
+                // Stable optical/search subtree: spring ticks only move its parent.
+                final Widget pillChild;
+                if (widget.searchConfig != null) {
+                  pillChild = SearchPill(
+                    config: widget.searchConfig!,
+                    nativePressHighlight: nativePressHighlight,
+                    isActive: searching,
+                    barBorderRadius: widget.barBorderRadius,
+                    // Chrome-plane peer: matches the track background,
+                    // not the indicator pill (effectiveQuality).
+                    quality: effectiveBackgroundQuality,
+                    platformViewBackdrop: widget.platformViewBackdrop,
+                    enableBackgroundAnimation:
+                        widget.interactionBehavior.hasScale,
+                    backgroundPressScale: widget.pressScale,
+                    iconColor: resolvedUnselectedIconColor,
+                    interactionGlowColor: widget.interactionBehavior.hasGlow
+                        ? effectiveInteractionGlowColor
+                        : const Color(0x00000000),
+                    interactionGlowRadius: glow.radius,
+                    interactionGlowBlurRadius: effectiveGlowBlurRadius,
+                    interactionGlowSpreadRadius: effectiveGlowSpreadRadius,
+                    interactionGlowOpacity: effectiveGlowOpacity,
+                    onFocusChanged: (focused) {
+                      if (focused) {
+                        _controller.onFocusChanged(true);
+                      } else {
+                        _onFocusLost();
+                      }
+                      widget.searchConfig?.onSearchFocusChanged?.call(focused);
+                    },
+                  );
+                } else {
+                  final renderedTrailing =
+                      widget.trailingButton ?? _lastTrailingButton;
+
+                  Widget buildTrailingPill({VoidCallback? onTap}) {
+                    return MinimizableTrailingPill(
+                      icon: renderedTrailing?.icon,
+                      nativePressHighlight: nativePressHighlight,
+                      onTap: onTap,
+                      label: renderedTrailing?.label,
+                      barBorderRadius: widget.barBorderRadius,
+                      // Chrome-plane peer: matches the track background,
+                      // not the indicator pill (effectiveQuality).
+                      quality: effectiveBackgroundQuality,
+                      platformViewBackdrop: widget.platformViewBackdrop,
+                      enableBackgroundAnimation:
+                          widget.interactionBehavior.hasScale,
+                      backgroundPressScale: widget.pressScale,
+                      iconColor: resolvedUnselectedIconColor,
+                      interactionGlowColor: widget.interactionBehavior.hasGlow
+                          ? effectiveInteractionGlowColor
+                          : const Color(0x00000000),
+                      interactionGlowRadius: glow.radius,
+                      interactionGlowBlurRadius: effectiveGlowBlurRadius,
+                      interactionGlowSpreadRadius: effectiveGlowSpreadRadius,
+                      interactionGlowOpacity: effectiveGlowOpacity,
+                    );
+                  }
+
+                  if (renderedTrailing?.isMenu == true) {
+                    pillChild = GlassMenu(
+                      menuAlignment: renderedTrailing!.menuAlignment,
+                      menuWidth: renderedTrailing.menuWidth,
+                      menuHeight: renderedTrailing.menuHeight,
+                      autoAdjustToScreen: true,
+                      items: renderedTrailing.menuItems!,
+                      triggerBuilder: (context, toggleMenu) =>
+                          buildTrailingPill(
+                        onTap: renderedTrailing.enabled ? toggleMenu : null,
+                      ),
+                    );
+                  } else {
+                    pillChild = buildTrailingPill(
+                      onTap: (renderedTrailing?.enabled == true)
+                          ? widget.trailingButton?.onTap
+                          : null,
+                    );
+                  }
+                }
+
                 return SizedBox(
                   width: totalW,
                   height: totalH,
@@ -726,7 +808,8 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                       // 1. Search pill / Trailing Action Pill — D1: left/width track spring controllers.
                       ListenableBuilder(
                         listenable: _searchPillListenable,
-                        builder: (context, _) {
+                        child: pillChild,
+                        builder: (context, stablePill) {
                           final pillScale =
                               _pillScaleCtrl.value.clamp(0.0, 1.25).toDouble();
                           if (pillScale < 0.02) {
@@ -740,97 +823,6 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                                   ? _searchWCtrl.value
                                   : targetSearchW)
                               .clamp(0.0, totalW);
-
-                          final Widget pillChild;
-                          if (widget.searchConfig != null) {
-                            pillChild = SearchPill(
-                              config: widget.searchConfig!,
-                              nativePressHighlight: nativePressHighlight,
-                              isActive: searching,
-                              barBorderRadius: widget.barBorderRadius,
-                              // Chrome-plane peer: matches the track background,
-                              // not the indicator pill (effectiveQuality).
-                              quality: effectiveBackgroundQuality,
-                              platformViewBackdrop: widget.platformViewBackdrop,
-                              enableBackgroundAnimation:
-                                  widget.interactionBehavior.hasScale,
-                              backgroundPressScale: widget.pressScale,
-                              iconColor: resolvedUnselectedIconColor,
-                              interactionGlowColor:
-                                  widget.interactionBehavior.hasGlow
-                                      ? effectiveInteractionGlowColor
-                                      : const Color(0x00000000),
-                              interactionGlowRadius: glow.radius,
-                              interactionGlowBlurRadius:
-                                  effectiveGlowBlurRadius,
-                              interactionGlowSpreadRadius:
-                                  effectiveGlowSpreadRadius,
-                              interactionGlowOpacity: effectiveGlowOpacity,
-                              onFocusChanged: (focused) {
-                                if (focused) {
-                                  _controller.onFocusChanged(true);
-                                } else {
-                                  _onFocusLost();
-                                }
-                                widget.searchConfig?.onSearchFocusChanged
-                                    ?.call(focused);
-                              },
-                            );
-                          } else {
-                            final renderedTrailing =
-                                widget.trailingButton ?? _lastTrailingButton;
-
-                            Widget buildTrailingPill({VoidCallback? onTap}) {
-                              return MinimizableTrailingPill(
-                                icon: renderedTrailing?.icon,
-                                nativePressHighlight: nativePressHighlight,
-                                onTap: onTap,
-                                label: renderedTrailing?.label,
-                                barBorderRadius: widget.barBorderRadius,
-                                // Chrome-plane peer: matches the track background,
-                                // not the indicator pill (effectiveQuality).
-                                quality: effectiveBackgroundQuality,
-                                platformViewBackdrop:
-                                    widget.platformViewBackdrop,
-                                enableBackgroundAnimation:
-                                    widget.interactionBehavior.hasScale,
-                                backgroundPressScale: widget.pressScale,
-                                iconColor: resolvedUnselectedIconColor,
-                                interactionGlowColor:
-                                    widget.interactionBehavior.hasGlow
-                                        ? effectiveInteractionGlowColor
-                                        : const Color(0x00000000),
-                                interactionGlowRadius: glow.radius,
-                                interactionGlowBlurRadius:
-                                    effectiveGlowBlurRadius,
-                                interactionGlowSpreadRadius:
-                                    effectiveGlowSpreadRadius,
-                                interactionGlowOpacity: effectiveGlowOpacity,
-                              );
-                            }
-
-                            if (renderedTrailing?.isMenu == true) {
-                              pillChild = GlassMenu(
-                                menuAlignment: renderedTrailing!.menuAlignment,
-                                menuWidth: renderedTrailing.menuWidth,
-                                menuHeight: renderedTrailing.menuHeight,
-                                autoAdjustToScreen: true,
-                                items: renderedTrailing.menuItems!,
-                                triggerBuilder: (context, toggleMenu) =>
-                                    buildTrailingPill(
-                                  onTap: renderedTrailing.enabled
-                                      ? toggleMenu
-                                      : null,
-                                ),
-                              );
-                            } else {
-                              pillChild = buildTrailingPill(
-                                onTap: (renderedTrailing?.enabled == true)
-                                    ? widget.trailingButton?.onTap
-                                    : null,
-                              );
-                            }
-                          }
 
                           return Positioned(
                             left: curSearchLeft,
@@ -848,7 +840,7 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                                 child: GlassBackdropGroup(
                                   enabled: !_controller.searchFocused &&
                                       !keyboardPresent,
-                                  child: pillChild,
+                                  child: stablePill!,
                                 ),
                               ),
                             ),
@@ -921,14 +913,92 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                       //    unselected row is built once and reused across spring ticks.
                       ListenableBuilder(
                         listenable: _tabWCtrl,
-                        child: _buildTabRow(
-                          tabs: tabs,
-                          selectedIndex: selectedIndex,
-                          onTabSelected: onTabSelected,
-                          selected: false,
-                          resolvedSelectedIconColor: resolvedSelectedIconColor,
-                          resolvedUnselectedIconColor:
-                              resolvedUnselectedIconColor,
+                        child: SearchableTabIndicator(
+                          key: _indicatorKey,
+                          quality: effectiveQuality,
+                          backgroundQuality: effectiveBackgroundQuality,
+                          visible: widget.showIndicator && !searching,
+                          tabIndex: selectedIndex,
+                          tabCount: tabs.length,
+                          onTabChanged: onTabSelected,
+                          barHeight: animH,
+                          barBorderRadius: widget.barBorderRadius,
+                          indicatorBorderRadius: widget.indicatorBorderRadius,
+                          tabPadding: widget.tabPadding,
+                          maskingQuality: widget.maskingQuality,
+                          magnification: widget.magnification,
+                          innerBlur: widget.innerBlur,
+                          indicatorColor: widget.indicatorColor,
+                          indicatorExpansion: widget.indicatorExpansion,
+                          indicatorSettings: widget.indicatorSettings,
+                          indicatorPinchStrength: widget.indicatorPinchStrength,
+                          backgroundKey: widget.backgroundKey,
+                          platformViewBackdrop: widget.platformViewBackdrop,
+                          passthroughOverPlatformView:
+                              widget.passthroughOverPlatformView,
+                          isSearchActive: searching,
+                          collapsedSemanticLabel:
+                              tabs[selectedIndex].semanticLabel ??
+                                  tabs[selectedIndex].label,
+                          nativePressHighlight: nativePressHighlight,
+                          interactionGlowColor:
+                              widget.interactionBehavior.hasGlow
+                                  ? effectiveInteractionGlowColor
+                                  : const Color(0x00000000),
+                          interactionGlowRadius: glow.radius,
+                          interactionGlowBlurRadius: effectiveGlowBlurRadius,
+                          interactionGlowSpreadRadius:
+                              effectiveGlowSpreadRadius,
+                          interactionGlowOpacity: effectiveGlowOpacity,
+                          enableBackgroundAnimation:
+                              widget.interactionBehavior.hasScale,
+                          backgroundPressScale: widget.pressScale,
+                          collapsedLogoBuilder:
+                              widget.searchConfig?.collapsedLogoBuilder ??
+                                  (context) {
+                                    final currentTab = tabs[selectedIndex];
+                                    return Center(
+                                      child: IconTheme(
+                                        data: IconThemeData(
+                                          color: resolvedCollapsedIconColor,
+                                          size: widget.iconSize,
+                                        ),
+                                        child: currentTab.activeIcon ??
+                                            currentTab.icon ??
+                                            const SizedBox.shrink(),
+                                      ),
+                                    );
+                                  },
+                          onDismissSearch: () {
+                            if (widget.onMinimizedTabTap != null) {
+                              widget.onMinimizedTabTap!();
+                            } else {
+                              widget.searchConfig?.onSearchToggle(false);
+                            }
+                          },
+                          childUnselected: _buildTabRow(
+                            tabs: tabs,
+                            selectedIndex: selectedIndex,
+                            onTabSelected: onTabSelected,
+                            selected: false,
+                            resolvedSelectedIconColor:
+                                resolvedSelectedIconColor,
+                            resolvedUnselectedIconColor:
+                                resolvedUnselectedIconColor,
+                          ),
+                          selectedTabBuilder: (ctx, intensity, alignment) =>
+                              _buildTabRow(
+                            tabs: tabs,
+                            selectedIndex: selectedIndex,
+                            onTabSelected: onTabSelected,
+                            selected: true,
+                            intensity: intensity,
+                            alignment: alignment,
+                            resolvedSelectedIconColor:
+                                resolvedSelectedIconColor,
+                            resolvedUnselectedIconColor:
+                                resolvedUnselectedIconColor,
+                          ),
                         ),
                         builder: (context, child) {
                           final curTabW = (_controller.pillsInitialized
@@ -943,87 +1013,7 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                             bottom: 0,
                             width: math.max(0.01, curTabW),
                             height: animH,
-                            child: SearchableTabIndicator(
-                              key: _indicatorKey,
-                              quality: effectiveQuality,
-                              backgroundQuality: effectiveBackgroundQuality,
-                              visible: widget.showIndicator && !searching,
-                              tabIndex: selectedIndex,
-                              tabCount: tabs.length,
-                              onTabChanged: onTabSelected,
-                              barHeight: animH,
-                              barBorderRadius: widget.barBorderRadius,
-                              indicatorBorderRadius:
-                                  widget.indicatorBorderRadius,
-                              tabPadding: widget.tabPadding,
-                              maskingQuality: widget.maskingQuality,
-                              magnification: widget.magnification,
-                              innerBlur: widget.innerBlur,
-                              indicatorColor: widget.indicatorColor,
-                              indicatorExpansion: widget.indicatorExpansion,
-                              indicatorSettings: widget.indicatorSettings,
-                              indicatorPinchStrength:
-                                  widget.indicatorPinchStrength,
-                              backgroundKey: widget.backgroundKey,
-                              platformViewBackdrop: widget.platformViewBackdrop,
-                              passthroughOverPlatformView:
-                                  widget.passthroughOverPlatformView,
-                              isSearchActive: searching,
-                              collapsedSemanticLabel:
-                                  tabs[selectedIndex].semanticLabel ??
-                                      tabs[selectedIndex].label,
-                              nativePressHighlight: nativePressHighlight,
-                              interactionGlowColor:
-                                  widget.interactionBehavior.hasGlow
-                                      ? effectiveInteractionGlowColor
-                                      : const Color(0x00000000),
-                              interactionGlowRadius: glow.radius,
-                              interactionGlowBlurRadius:
-                                  effectiveGlowBlurRadius,
-                              interactionGlowSpreadRadius:
-                                  effectiveGlowSpreadRadius,
-                              interactionGlowOpacity: effectiveGlowOpacity,
-                              enableBackgroundAnimation:
-                                  widget.interactionBehavior.hasScale,
-                              backgroundPressScale: widget.pressScale,
-                              collapsedLogoBuilder:
-                                  widget.searchConfig?.collapsedLogoBuilder ??
-                                      (context) {
-                                        final currentTab = tabs[selectedIndex];
-                                        return Center(
-                                          child: IconTheme(
-                                            data: IconThemeData(
-                                              color: resolvedCollapsedIconColor,
-                                              size: widget.iconSize,
-                                            ),
-                                            child: currentTab.activeIcon ??
-                                                currentTab.icon ??
-                                                const SizedBox.shrink(),
-                                          ),
-                                        );
-                                      },
-                              onDismissSearch: () {
-                                if (widget.onMinimizedTabTap != null) {
-                                  widget.onMinimizedTabTap!();
-                                } else {
-                                  widget.searchConfig?.onSearchToggle(false);
-                                }
-                              },
-                              childUnselected: child!,
-                              selectedTabBuilder: (ctx, intensity, alignment) =>
-                                  _buildTabRow(
-                                tabs: tabs,
-                                selectedIndex: selectedIndex,
-                                onTabSelected: onTabSelected,
-                                selected: true,
-                                intensity: intensity,
-                                alignment: alignment,
-                                resolvedSelectedIconColor:
-                                    resolvedSelectedIconColor,
-                                resolvedUnselectedIconColor:
-                                    resolvedUnselectedIconColor,
-                              ),
-                            ),
+                            child: child!,
                           );
                         },
                       ),

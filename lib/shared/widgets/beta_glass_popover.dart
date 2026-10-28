@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import '../../features/experience/presentation/beta_bottom_bar.dart';
 import '../../core/haptics/app_haptics.dart';
@@ -37,7 +38,7 @@ class BetaGlassMenuSurface extends StatelessWidget {
   );
 }
 
-/// The menu and its short liquid neck share one premium optical layer. Flow
+/// The menu and its short liquid neck share one premium optical layer. It
 /// measures the actual menu once, then changes paint transforms only: a tick
 /// never rebuilds its rows, the source page, or the audio owner. In Impeller the
 /// grouped SDFs blend before separating; Skia keeps the same bounded geometry
@@ -68,10 +69,11 @@ class BetaLiquidMenu extends StatelessWidget {
       quality: GlassQuality.premium,
       settings: settings.copyWith(blur: settings.blur + 2),
       blendAmount: 16,
-      child: Flow(
+      child: _LiquidMenuMotion(
         key: const ValueKey('beta105-liquid-menu-flow'),
-        clipBehavior: Clip.none,
-        delegate: _LiquidMenuFlow(animation, layout, reduced),
+        animation: animation,
+        layout: layout,
+        reduced: reduced,
         children: [
           BetaGlassMenuSurface(
             grouped: true,
@@ -92,25 +94,105 @@ class BetaLiquidMenu extends StatelessWidget {
   }
 }
 
-class _LiquidMenuFlow extends FlowDelegate {
-  _LiquidMenuFlow(this.animation, this.layout, this.reduced)
-    : super(repaint: animation);
+/// Flow caches its child transforms during paint. The premium glass ancestor
+/// gathers SDF geometry *before* that paint, so Flow exposes the last frame's
+/// transform (identity on first entry). That painted the ghost at (0, 0).
+/// This render boundary derives transforms from the same animation at query
+/// time, for SDF sampling, paint, hit testing and semantics alike. Layout and
+/// the menu subtree stay unchanged on animation ticks.
+class _LiquidMenuMotion extends MultiChildRenderObjectWidget {
+  const _LiquidMenuMotion({
+    required this.animation,
+    required this.layout,
+    required this.reduced,
+    required super.children,
+    super.key,
+  });
   final Animation<double> animation;
   final BetaMenuLayout layout;
   final bool reduced;
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderLiquidMenu(animation, layout, reduced);
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderLiquidMenu renderObject,
+  ) => renderObject.update(animation, layout, reduced);
+}
+
+class _MenuParentData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderLiquidMenu extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _MenuParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _MenuParentData> {
+  _RenderLiquidMenu(this.animation, this._menuLayout, this.reduced);
+  Animation<double> animation;
+  BetaMenuLayout _menuLayout;
+  bool reduced;
+  double? _cachedProgress;
+  List<Rect>? _cachedBounds;
+  void update(
+    Animation<double> next,
+    BetaMenuLayout nextLayout,
+    bool nextReduced,
+  ) {
+    if (animation != next) {
+      if (attached) animation.removeListener(markNeedsPaint);
+      animation = next;
+      if (attached) animation.addListener(markNeedsPaint);
+    }
+    if (_menuLayout.shouldRelayout(nextLayout)) markNeedsLayout();
+    _menuLayout = nextLayout;
+    reduced = nextReduced;
+    _cachedBounds = null;
+    markNeedsPaint();
+  }
 
   @override
-  BoxConstraints getConstraintsForChild(int i, BoxConstraints constraints) =>
-      i == 0
-      ? layout.getConstraintsForChild(constraints)
-      : const BoxConstraints.tightFor(width: 32, height: 32);
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    animation.addListener(markNeedsPaint);
+  }
 
   @override
-  void paintChildren(FlowPaintingContext context) {
-    final menuSize = context.getChildSize(0)!;
-    final target =
-        layout.getPositionForChild(context.size, menuSize) & menuSize;
-    final anchor = layout.anchor;
+  void detach() {
+    animation.removeListener(markNeedsPaint);
+    super.detach();
+  }
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _MenuParentData) {
+      child.parentData = _MenuParentData();
+    }
+  }
+
+  @override
+  void performLayout() {
+    _cachedBounds = null;
+    size = constraints.biggest;
+    var index = 0;
+    for (var child = firstChild; child != null; child = childAfter(child)) {
+      child.layout(
+        index++ == 0
+            ? _menuLayout.getConstraintsForChild(constraints)
+            : const BoxConstraints.tightFor(width: 32, height: 32),
+        parentUsesSize: true,
+      );
+    }
+  }
+
+  List<Rect> _bounds() {
+    final progress = reduced ? 1.0 : animation.value.clamp(0.0, 1.0);
+    if (_cachedBounds != null && _cachedProgress == progress) {
+      return _cachedBounds!;
+    }
+    _cachedProgress = progress;
+    final menuSize = firstChild!.size;
+    final target = _menuLayout.getPositionForChild(size, menuSize) & menuSize;
+    final anchor = _menuLayout.anchor;
     final start = Rect.fromCenter(
       center: anchor.center,
       width: math.min(menuSize.width * .65, math.max(36, anchor.width * .48)),
@@ -118,23 +200,9 @@ class _LiquidMenuFlow extends FlowDelegate {
     );
     // One position function in both directions makes an interrupted opening
     // reverse continuously, without switching curves or replaying a new route.
-    final raw = reduced ? 1.0 : animation.value.clamp(0.0, 1.0);
+    final raw = progress;
     final t = Curves.easeOutCubic.transform(raw);
     final rect = Rect.lerp(start, target, t)!;
-    void paint(int index, Rect bounds) {
-      final size = context.getChildSize(index)!;
-      context.paintChild(
-        index,
-        transform: Matrix4.identity()
-          ..translateByDouble(bounds.left, bounds.top, 0, 1)
-          ..scaleByDouble(
-            bounds.width / size.width,
-            bounds.height / size.height,
-            1,
-            1,
-          ),
-      );
-    }
 
     // The seam thins to zero before the menu reaches its final gap. The reverse
     // trajectory reconnects the meniscus before the menu merges into its source.
@@ -145,30 +213,65 @@ class _LiquidMenuFlow extends FlowDelegate {
         rect.left + rect.width * .2,
         rect.right - rect.width * .2,
       ),
-      layout.above ? rect.bottom : rect.top,
+      _menuLayout.above ? rect.bottom : rect.top,
     );
     final neck = Rect.fromCenter(
       center: Offset.lerp(source, edge, .5)!,
       width: math.max(.001, 30 * join),
       height: math.max(.001, ((edge.dy - source.dy).abs() + 24) * join),
     );
-    paint(
-      1,
+    return _cachedBounds = [
+      rect,
       Rect.fromCenter(
         center: source,
         width: math.max(.001, start.width * join),
         height: math.max(.001, 22 * join),
       ),
-    );
-    paint(2, neck);
-    paint(0, rect);
+      neck,
+    ];
+  }
+
+  Matrix4 _transform(RenderBox child) {
+    var index = 0;
+    for (var node = firstChild; node != child; node = childAfter(node!)) {
+      index++;
+    }
+    final rect = _bounds()[index];
+    return Matrix4.identity()
+      ..translateByDouble(rect.left, rect.top, 0, 1)
+      ..scaleByDouble(
+        rect.width / child.size.width,
+        rect.height / child.size.height,
+        1,
+        1,
+      );
   }
 
   @override
-  bool shouldRepaint(_LiquidMenuFlow old) =>
-      old.animation != animation ||
-      old.layout != layout ||
-      old.reduced != reduced;
+  void applyPaintTransform(RenderBox child, Matrix4 transform) =>
+      transform.multiply(_transform(child));
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    // Draw source and neck first, then the real menu as in the original Flow.
+    final ordered = [childAfter(firstChild!)!, lastChild!, firstChild!];
+    for (final child in ordered) {
+      context.pushTransform(
+        needsCompositing,
+        offset,
+        _transform(child),
+        (context, offset) => context.paintChild(child, offset),
+      );
+    }
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      result.addWithPaintTransform(
+        transform: _transform(firstChild!),
+        position: position,
+        hitTest: (result, position) =>
+            firstChild!.hitTest(result, position: position),
+      );
 }
 
 /// One motion contract for editing and playback menus. The trigger-facing edge
