@@ -1,5 +1,8 @@
 # 发布下一版应用更新
 
+<!-- current-git-archive-state -->
+**后续Git归档补记：** 1.0.6～1.0.10五版冻结源码已核验并准备归档提交；GitHub附件发布进行中，最终状态以Release和验收证据为准。 最新接续见 [跨电脑总交接](../HANDOFF-CURRENT-SESSION-2026-10-28-GITHUB-CONTINUE.md)；下方冻结时的未提交／HEAD字段保留原事实，不能当成当前远端状态。
+<!-- /current-git-archive-state -->
 **1.0.10/code31已发布music：** 本版构建验签、公开health、完整下载SHA-256及安装前线上更新说明读取均通过；先读 [本版接续](SESSION-HANDOFF-2026-10-28-v1.0.10.md)。后续code须大于31，保持原安装身份和签名，不重建或覆盖旧冻结交付。
 
 ## 2026-10-28 最新发布指针

@@ -1,6 +1,6 @@
 # 协作约定
 
-**新会话优先读取 [1.0.10当前会话接续](HANDOFF-CURRENT-SESSION-2026-10-28-v1.0.10.md)。1.0.10/code31已发布music，公开health、完整下载摘要及安装前线上更新说明读取均通过。再按其中链接读取界面／场景／同步与1.0.9背景。初始接手仅只读核对，然后等待用户；保留旧冻结交付，不回写其摘要。1.0.6～1.0.10源码均未Git提交／推送，HEAD仍为beta/v1.0.5，未经新明确授权不访问手机。**
+**新会话优先读取 [另一台电脑接续总交接](HANDOFF-CURRENT-SESSION-2026-10-28-GITHUB-CONTINUE.md)。1.0.6～1.0.10五版冻结源码已核验并准备归档提交；GitHub附件发布进行中，最终状态以Release和验收证据为准。 维护入口beta，原main和旧历史保留；旧冻结交接中的Git状态以最新归档记录为准。先只读核对，再等待用户；保留原APK／源码ZIP、签名和SDK。未经新明确授权不访问手机。**
 
 新增Beta页面按钮遵守 [按钮公共约定](docs/BETA-CONTROL-CONVENTIONS.md)：优先使用 `BetaGlassButton`／`BetaGlassAction`，不可复制灰色禁用填充或独立按压状态；必须检查从按钮起手滚动且手指未抬起时的高亮与形变恢复。普通页面不启用 `persistPressOnDrag`。
 

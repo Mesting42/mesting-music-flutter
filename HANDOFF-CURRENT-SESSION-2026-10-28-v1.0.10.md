@@ -1,5 +1,8 @@
 # 当前会话接续：Mesting Music 1.0.10
 
+<!-- current-git-archive-state -->
+**后续Git归档补记：** 1.0.6～1.0.10五版冻结源码已核验并准备归档提交；GitHub附件发布进行中，最终状态以Release和验收证据为准。 最新接续见 [跨电脑总交接](HANDOFF-CURRENT-SESSION-2026-10-28-GITHUB-CONTINUE.md)；下方冻结时的未提交／HEAD字段保留原事实，不能当成当前远端状态。
+<!-- /current-git-archive-state -->
 日期：2026-10-28（Asia/Shanghai），工程根 `D:/AnLi`。
 
 用户要求将界面、场景与同步参数修复发布到 music，并确认 **1.0.10 / Android code31**。**当前状态：已发布music，后台、公开health、完整下载SHA-256及安装前线上更新说明读取均通过。** 本轮打包与发布完成，真实设备体验和酷狗官版入账由用户自行验收。

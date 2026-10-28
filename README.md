@@ -1,8 +1,8 @@
 # Mesting Music
 
-**新会话先读 [当前总交接](HANDOFF-CURRENT-SESSION-2026-10-28-v1.0.5.md) 与 [换电脑接续](docs/CONTINUE-BETA.md)。**
+**新会话先读 [跨电脑总交接](HANDOFF-CURRENT-SESSION-2026-10-28-GITHUB-CONTINUE.md) 与 [接续入口](docs/CONTINUE-BETA.md)。**
 
-> **最新构建与 GitHub 交付：1.0.5 / code 26。** [本版说明](docs/fixes-2026-10-28-v1.0.5.md) · [交接与验证](docs/SESSION-HANDOFF-2026-10-28-v1.0.5.md) · [GitHub Release](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.5)。1.0.3、1.0.4 同时补齐独立 Git/GitHub 归档，完整源码包含已授权分发的 SDK，保留原权利声明。**music 更新后台仍是 1.0.4 / 25；1.0.5 后台上传发布被浏览器 URL 安全检查中止，待完成。** 内部 beta 身份和原签名保持兼容，下方保留历史产品说明。
+> **当前正式产品版：1.0.10 / code31。** 1.0.6～1.0.10五版冻结源码已核验并准备归档提交；GitHub附件发布进行中，最终状态以Release和验收证据为准。 [本版修改](docs/fixes-2026-10-28-v1.0.10.md) · [GitHub Release](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.10) · [music下载](https://download.csnas.asia/music/download)。维护分支为beta；完整源码含已获分发授权的SDK，原LICENSE与第三方声明保留。签名材料私下转移。以下Beta.19与stable介绍为历史产品背景。
 
 ## Beta.19 本次更新
 
