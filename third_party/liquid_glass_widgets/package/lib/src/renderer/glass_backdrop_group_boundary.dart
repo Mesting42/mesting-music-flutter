@@ -3,6 +3,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
 import '../engine/render_liquid_glass_geometry.dart';
+import 'glass_backdrop_peer.dart';
 
 /// Marks where a [GlassBackdropGroup] starts in the render tree, and counts
 /// the glass layers that share its backdrop read.
@@ -20,6 +21,7 @@ class GlassBackdropGroupBoundary extends SingleChildRenderObjectWidget {
   /// false, a group that joins the one further up.
   const GlassBackdropGroupBoundary({
     this.startsGroup = true,
+    this.requireDisjointBounds = false,
     super.key,
     super.child,
   });
@@ -27,10 +29,13 @@ class GlassBackdropGroupBoundary extends SingleChildRenderObjectWidget {
   /// Whether the group starts here. False when it joins an enclosing group,
   /// whose boundary then counts the members.
   final bool startsGroup;
+  final bool requireDisjointBounds;
 
   @override
   RenderGlassBackdropGroupBoundary createRenderObject(BuildContext context) =>
-      RenderGlassBackdropGroupBoundary(startsGroup: startsGroup);
+      RenderGlassBackdropGroupBoundary(
+          startsGroup: startsGroup,
+          requireDisjointBounds: requireDisjointBounds);
 
   @override
   void updateRenderObject(
@@ -38,14 +43,48 @@ class GlassBackdropGroupBoundary extends SingleChildRenderObjectWidget {
     RenderGlassBackdropGroupBoundary renderObject,
   ) {
     renderObject.startsGroup = startsGroup;
+    renderObject.requireDisjointBounds = requireDisjointBounds;
   }
 }
 
 /// The render object of a [GlassBackdropGroupBoundary].
 class RenderGlassBackdropGroupBoundary extends RenderProxyBox {
   /// Creates the boundary of a group, see [startsGroup].
-  RenderGlassBackdropGroupBoundary({bool startsGroup = true})
+  RenderGlassBackdropGroupBoundary(
+      {bool startsGroup = true, this.requireDisjointBounds = false})
       : _startsGroup = startsGroup;
+
+  bool requireDisjointBounds;
+
+  /// This opt-in policy is used for the bar/accessory pair, not arbitrary
+  /// layered glass. Test CURRENT transforms, including retained press scales.
+  bool allowsSharing() {
+    if (!requireDisjointBounds) return true;
+    final bounds = <(Rect, double)>[];
+    for (final member in _members) {
+      if (member is! GlassBackdropParticipant || !member.attached) return false;
+      final rect = (member as GlassBackdropParticipant).sharingBounds(this);
+      if (rect == null || rect.isEmpty || !rect.isFinite) return false;
+      final outset = (member as GlassBackdropParticipant).sharingReadOutset;
+      if (bounds.any((other) =>
+          rect.inflate(outset).overlaps(other.$1) ||
+          other.$1.inflate(other.$2).overlaps(rect))) {
+        return false;
+      }
+      bounds.add((rect, outset));
+    }
+    return bounds.length >= 2;
+  }
+
+  /// Retained layers can move without painting. Clear every peer before any
+  /// later sibling is added to the scene if that move made sharing unsafe.
+  void clearSharedKeys() {
+    for (final member in _members.toList()) {
+      if (member is GlassBackdropParticipant) {
+        (member as GlassBackdropParticipant).clearSharedBackdropKeys();
+      }
+    }
+  }
 
   final Set<RenderObject> _members = {};
   bool _repaintScheduled = false;
@@ -105,6 +144,7 @@ class RenderGlassBackdropGroupBoundary extends RenderProxyBox {
 RenderGlassBackdropGroupBoundary? enclosingBackdropGroup(RenderObject member) {
   RenderObject? node = member.parent;
   while (node != null) {
+    if (node is RenderGlassBackdropSharingGate && !node.enabled) return null;
     if (node is RenderGlassBackdropGroupBoundary && node.startsGroup) {
       return node;
     }
@@ -131,6 +171,7 @@ RenderGlassBackdropGroupBoundary? enclosingBackdropGroup(RenderObject member) {
 bool opensRenderPassBelow(RenderObject node) {
   bool saves(Clip clip) => clip == Clip.antiAliasWithSaveLayer;
   return switch (node) {
+    RenderGlassPeerOpacity(:final opacity) => opacity != 1,
     RenderOpacity() ||
     RenderAnimatedOpacityMixin() ||
     RenderSliverOpacity() ||

@@ -16,6 +16,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter/rendering.dart';
 import '../renderer/glass_backdrop_group.dart';
 import '../renderer/glass_backdrop_group_boundary.dart';
+import '../renderer/glass_backdrop_peer.dart';
+import '../../glass_render_diagnostics.dart';
 import '../renderer/glass_frost_budget.dart';
 import '../renderer/glass_materialize_scope.dart';
 import '../renderer/liquid_glass_push_back_scope.dart';
@@ -461,7 +463,8 @@ class _RawShapes extends SingleChildRenderObjectWidget {
 }
 
 class RenderLiquidGlassLayer extends LiquidGlassRenderObject
-    with TransformTrackingRenderObjectMixin {
+    with TransformTrackingRenderObjectMixin
+    implements GlassBackdropParticipant {
   RenderLiquidGlassLayer({
     required super.renderShader,
     required super.devicePixelRatio,
@@ -507,6 +510,45 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
   bool get debugSharesBackdrop => _sharesBackdrop;
   bool _sharesBackdrop = false;
 
+  @override
+  double get sharingReadOutset => settings.effectiveBlur * 3;
+
+  @override
+  Rect? sharingBounds(RenderObject group) {
+    if (enclosingBackdropGroup(this) != group ||
+        _hasBacker ||
+        settings.frost > 0 ||
+        captureImage != null ||
+        _pushBackActive ||
+        _selfScaled) {
+      return null;
+    }
+    final translation = MatrixUtils.getAsTranslation(getTransformTo(group));
+    if (translation == null) return null;
+    var bounds = paintBounds;
+    for (final shadow in shadows) {
+      if (shadow.color.a > 0) {
+        bounds = bounds.expandToInclude(_shadowClip(paintBounds, shadow));
+      }
+    }
+    return bounds.shift(translation);
+  }
+
+  @override
+  void clearSharedBackdropKeys() {
+    _sharesBackdrop = false;
+    _blurLayerHandle.layer?.backdropKey = null;
+    _frostLayerHandle.layer?.backdropKey = null;
+  }
+
+  @override
+  void invalidateBackdropSharing() {
+    clearSharedBackdropKeys();
+    _group?.leave(this);
+    _group = null;
+    markNeedsPaint();
+  }
+
   /// Runs the group check [paintLiquidGlass] runs; see there.
   @visibleForTesting
   bool debugResolveSharing() => _resolveSharing();
@@ -531,7 +573,8 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
       _group = group;
     }
     group?.join(this);
-    return _sharesBackdrop = group != null && group.memberCount >= 2;
+    return _sharesBackdrop =
+        group != null && group.memberCount >= 2 && group.allowsSharing();
   }
 
   @override
@@ -713,6 +756,13 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
   /// this layer without repainting it (a reused repaint boundary: layout or a
   /// scroll that only translated it), in the frame being composited.
   bool _updateAtComposite() {
+    // A press/ancestor transform can reuse retained glass without painting it.
+    // Strict chrome peers must drop ALL old keys before the later peer is
+    // composited; ordinary layered glass keeps its original grouping policy.
+    final previousGroup = _group;
+    if (previousGroup?.requireDisjointBounds ?? false) {
+      if (!_resolveSharing()) previousGroup!.clearSharedKeys();
+    }
     final shaderLayer = _shaderHandle.layer;
     final clipLayer = _clipRectLayerHandle.layer;
     if (!attached ||
@@ -726,7 +776,9 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     final transform = getTransformTo(null);
     final pass = enclosingBackdropPassRect();
     // Painted this frame where it is now: the layers are already current.
-    if (transform == _uniformsTransform && pass == _uniformsBackdropPass) return true;
+    if (transform == _uniformsTransform && pass == _uniformsBackdropPass) {
+      return true;
+    }
     _uniformsTransform = null;
     final prevFrostRows = frostRowsPath;
     _updateScaleState(transform, super.captureOriginInScreenSpace);
@@ -771,6 +823,7 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     _uniformsTransform = getTransformTo(null);
     _uniformsBackdropPass = enclosingBackdropPassRect();
     final shared = _resolveSharing();
+    GlassRenderDiagnostics.count(GlassRenderMetric.glassPaints);
 
     // ── Pass 0: SDF Shadows ──────────────────────────────────────────────────
     if (shadows.isNotEmpty && geometryImage != null) {
@@ -796,6 +849,10 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
             settings.effectiveBlur * devicePixelRatio >
                 LiquidGlassRenderObject.frostGhostMaxSigma)) {
       final blurSigma = settings.effectiveBlur;
+      GlassRenderDiagnostics.count(GlassRenderMetric.blurPasses);
+      if (shared) {
+        GlassRenderDiagnostics.count(GlassRenderMetric.sharedBlurPasses);
+      }
       // Reuse cached blur filter when sigma hasn't changed.
       if (_cachedBlur == null || _cachedBlurSigma != blurSigma) {
         _cachedBlur = ImageFilter.blur(
@@ -1006,6 +1063,7 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     backdropPassClipRectLocal = clipRect;
     final shaderLayer = (_shaderHandle.layer ??= BackdropFilterLayer())
       ..filter = ImageFilter.shader(renderShader!);
+    GlassRenderDiagnostics.count(GlassRenderMetric.shaderPasses);
 
     _clipRectLayerHandle.layer = context.pushClipRect(
       needsCompositing,
@@ -1046,6 +1104,7 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
         _bakeShadows(geometry, bounds);
       }
       if (_bakedShadow case final baked?) {
+        GlassRenderDiagnostics.count(GlassRenderMetric.shadowCacheHits);
         canvas.drawImageRect(
           baked,
           Rect.fromLTWH(0, 0, baked.width.toDouble(), baked.height.toDouble()),
@@ -1084,8 +1143,9 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     final canvas = Canvas(recorder)
       ..scale(dpr)
       ..translate(-rect.left, -rect.top);
-    _drawShadows(canvas, bounds, geometry);
+    _drawShadows(canvas, bounds, geometry, baking: true);
     final picture = recorder.endRecording();
+    GlassRenderDiagnostics.count(GlassRenderMetric.shadowBakes);
     _bakedShadow = picture.toImageSync(width, height);
     picture.dispose();
     _bakedShadowRect = rect;
@@ -1112,7 +1172,8 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
           .shift(shadow.offset)
           .inflate(shadow.spreadRadius + shadow.blurRadius * 3);
 
-  void _drawShadows(Canvas canvas, Rect bounds, ui.Image geometry) {
+  void _drawShadows(Canvas canvas, Rect bounds, ui.Image geometry,
+      {bool baking = false}) {
     final src = Rect.fromLTWH(
       0,
       0,
@@ -1121,6 +1182,9 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     );
     for (final shadow in shadows) {
       if (shadow.color.a == 0) continue;
+      if (!baking) {
+        GlassRenderDiagnostics.count(GlassRenderMetric.shadowLivePasses);
+      }
 
       canvas.saveLayer(_shadowClip(bounds, shadow), Paint());
 

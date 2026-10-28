@@ -2,6 +2,12 @@
 /// offline and must never be shown as the notes of an unknown future build.
 /// The distribution service may also supply notes for a newer release.
 const musicReleaseNotes = <String, List<String>>{
+  '1.0.8': [
+    '优化玻璃折射的重复纹理采样，保留现有色散、模糊、清晰度与全部动画。',
+    '底栏与播放胶囊在稳定且绘制范围安全时共享背景读取，收展、按压形变及淡出期间自动隔离。',
+    '流畅度诊断增加应用版本、主题、显示尺寸及玻璃绘制计数，并对齐切换标记与原始帧时间。',
+    '停止诊断后等待末批帧数据收齐，便于复测页面切换与胶囊收展；实际帧率以真机测试为准。',
+  ],
   '1.0.7': [
     '底部导航调整为发现、功能、音乐库和我的，新增固定功能网格。',
     '新增酷狗一起听房间与同步播放，新增听书分类、搜索、章节播放和续播。',

@@ -15,8 +15,8 @@ import 'package:mesting_music/features/music_platform/data/platform_effects_repo
 
 final _release = AppUpdateManifest(
   packageName: 'com.mesting.music.beta',
-  versionName: '1.0.8',
-  versionCode: 29,
+  versionName: '99.0.1',
+  versionCode: 9901,
   minimumVersionCode: 1,
   mandatory: false,
   title: '发现新版本',
@@ -72,8 +72,8 @@ void main() {
   Map<String, Object?> health() => {
     'status': 'ok',
     'app_slug': 'music',
-    'version': '1.0.8',
-    'android_version_code': 29,
+    'version': '99.0.1',
+    'android_version_code': 9901,
     'file_size': apk.length,
     'sha256': 'a' * 64,
     'primary_url': _release.apkUrl.toString(),
@@ -110,7 +110,7 @@ void main() {
       client: client,
       packageName: _release.packageName,
     ).latest();
-    expect(release.versionName, '1.0.8');
+    expect(release.versionName, '99.0.1');
     expect(release.releaseNotes, ['修复未来版本示例问题', '升级前即可阅读的更新说明']);
     expect(reads, 3);
     expect(transferred, lessThan(apk.length));
@@ -151,7 +151,7 @@ void main() {
           client: client,
           packageName: _release.packageName,
         ).latest();
-        expect(result.versionCode, 29);
+        expect(result.versionCode, 9901);
         expect(result.releaseNotes, isEmpty);
         expect(reads, 1);
       }
@@ -161,8 +161,8 @@ void main() {
     'notes with a different version identity or damaged ZIP are rejected',
     () async {
       final wrongVersion = health()
-        ..['version'] = '1.0.8'
-        ..['android_version_code'] = 30;
+        ..['version'] = '99.0.1'
+        ..['android_version_code'] = 9902;
       final result = await CsnasUpdateReleaseSource(
         client: MockClient(
           (request) async => request.url.path.endsWith('/health')
@@ -182,8 +182,8 @@ void main() {
         await PublicApkReleaseNotes(damaged).load(
           AppUpdateManifest(
             packageName: _release.packageName,
-            versionName: '1.0.8',
-            versionCode: 29,
+            versionName: '99.0.1',
+            versionCode: 9901,
             minimumVersionCode: 1,
             mandatory: false,
             title: '更新',
@@ -199,7 +199,7 @@ void main() {
       );
     },
   );
-  testWidgets('installed 1.0.6 opens target 1.0.8 notes before installation', (
+  testWidgets('installed 1.0.6 opens target 99.0.1 notes before installation', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -217,7 +217,7 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('app-update-view-notes')));
     await tester.pumpAndSettle();
-    expect(find.text('Mesting Music 1.0.8'), findsOneWidget);
+    expect(find.text('Mesting Music 99.0.1'), findsOneWidget);
     expect(find.text('未来版本的在线更新内容'), findsWidgets);
     expect(find.text('Mesting Music 1.0.6'), findsNothing);
     expect(tester.takeException(), isNull);

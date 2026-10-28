@@ -1,5 +1,9 @@
 # 发布下一版应用更新
 
+## 2026-10-28 最新发布指针
+
+**1.0.8 / code29 已发布 music，见 [本版接续](SESSION-HANDOFF-2026-10-28-v1.0.8.md)。后续code须大于29，并同步随包release-notes.json与内置说明。以下旧构建示例属于历史，不重发。保留原包名、正式显示名及签名。**
+
 **2026-10-28 最新：1.0.7 / code 28 已发布；见 [本版接续](SESSION-HANDOFF-2026-10-28-v1.0.7.md)。后续code必须大于28，并同步随包release-notes.json和内置版本说明；不要重发下方旧版。**
 
 **2026-10-28 最新：1.0.6 / code 27 已发布，见 [本版接续](SESSION-HANDOFF-2026-10-28-v1.0.6.md)。下一版 code 必须大于 27；发布前同步 `assets/data/release-notes.json` 的 version、versionCode 和 releaseNotes，使 1.0.6 起的旧客户端能在升级前从目标 APK 读取说明。下文关于 1.0.5 待补发的状态属于历史，不再执行。**

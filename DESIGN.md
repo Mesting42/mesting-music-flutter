@@ -458,3 +458,6 @@ keeps three columns with taller cells. Performance work reuses full-DPR textures
 and static label subtrees, without reducing blur/refraction or replacing motion.
 Host screenshots verify composition, not Android GPU optics or 120fps; user-run
 frame diagnostics preserve that distinction.
+## 2026-10-28 1.0.8 无损性能约束
+
+保留当前材质参数、全分辨率背景采样、色散、模糊、阴影与所有动画时长／曲线／弹簧。只复用相同纹理范围的读取；底栏与胶囊仅在终点、完全不透明、真实绘制及读取范围安全时共享背景。按压缩放、重叠和过渡立即隔离，浅色阴影阻止共享时保留原画面。实际设备性能待用户复测，不能凭主机截图验收120fps。

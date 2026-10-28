@@ -60,6 +60,7 @@ class GlassBackdropGroup extends StatefulWidget {
     required this.child,
     this.enabled = true,
     this.joinEnclosing = false,
+    this.requireDisjointBounds = false,
     super.key,
   });
 
@@ -76,6 +77,10 @@ class GlassBackdropGroup extends StatefulWidget {
   /// set this, so a [GlassBackdropGroup] around several bars makes them one
   /// group.
   final bool joinEnclosing;
+
+  /// Opt-in for independent chrome peers. Includes visible shadow bounds and
+  /// rejects scales/overlap; ordinary glass groups retain their existing policy.
+  final bool requireDisjointBounds;
 
   /// The key the premium glass under [context] shares its backdrop read
   /// through, or null outside a [GlassBackdropGroup] or inside a disabled one.
@@ -101,6 +106,7 @@ class _GlassBackdropGroupState extends State<GlassBackdropGroup> {
       // state. A boundary that joins lets its members walk on up.
       child: GlassBackdropGroupBoundary(
         startsGroup: enclosing == null,
+        requireDisjointBounds: widget.requireDisjointBounds,
         child: widget.child,
       ),
     );

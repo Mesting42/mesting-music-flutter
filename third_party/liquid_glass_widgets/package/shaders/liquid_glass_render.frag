@@ -177,6 +177,14 @@ layout(location = 0) out vec4 fragColor;
 // Windows/SkSL: texture() with literal-computed UVs is legal in glslang
 // SPIR-V path; floor(), fract(), and vec2 arithmetic are all universally
 // supported. This function introduces no new platform compatibility issues.
+vec4 backdropOverFallback(vec4 bg) {
+    if (uBackgroundFallback.a > 0.0) {
+        bg.rgb += uBackgroundFallback.rgb * uBackgroundFallback.a * (1.0 - bg.a);
+        bg.a += uBackgroundFallback.a * (1.0 - bg.a);
+    }
+    return bg;
+}
+
 vec4 textureBilinear(vec2 uv, vec2 size, vec2 invSize) {
     vec2 px = uv * size - 0.5;
     vec2 f = fract(px);
@@ -204,11 +212,40 @@ vec4 textureBilinear(vec2 uv, vec2 size, vec2 invSize) {
     // draw call — so the GPU branch predictor takes it for free. In the common
     // case (no PlatformView / platformViewFallbackColor not set) this skips 4
     // MADs and a 2× MAD per sample point.
-    if (uBackgroundFallback.a > 0.0) {
-        bg.rgb += uBackgroundFallback.rgb * uBackgroundFallback.a * (1.0 - bg.a);
-        bg.a += uBackgroundFallback.a * (1.0 - bg.a);
+    return backdropOverFallback(bg);
+}
+
+// Mesting 1.0.8: small dispersion often puts all three channel samples in
+// exactly the same 2x2 footprint. Read those four RGBA texels once, keeping
+// each channel's own interpolation AND alpha-over-fallback calculation.
+// Different footprints still use the original twelve-read path. This does
+// not change aberration, resolution, edge clamping or filter quality.
+vec4 textureDispersed(vec2 redUV, vec2 greenUV, vec2 blueUV,
+                     vec2 size, vec2 invSize) {
+    vec2 rp = redUV * size - 0.5;
+    vec2 gp = greenUV * size - 0.5;
+    vec2 bp = blueUV * size - 0.5;
+    vec2 base = floor(gp);
+    vec4 r;
+    vec4 g;
+    vec4 b;
+    if (all(equal(floor(rp), base)) && all(equal(floor(bp), base))) {
+        vec4 c0 = texture(uBackgroundTexture, (base + 0.5) * invSize);
+        vec4 c1 = texture(uBackgroundTexture, (base + vec2(1.5, 0.5)) * invSize);
+        vec4 c2 = texture(uBackgroundTexture, (base + vec2(0.5, 1.5)) * invSize);
+        vec4 c3 = texture(uBackgroundTexture, (base + 1.5) * invSize);
+        vec2 rf = fract(rp);
+        vec2 gf = fract(gp);
+        vec2 bf = fract(bp);
+        r = backdropOverFallback(mix(mix(c0, c1, rf.x), mix(c2, c3, rf.x), rf.y));
+        g = backdropOverFallback(mix(mix(c0, c1, gf.x), mix(c2, c3, gf.x), gf.y));
+        b = backdropOverFallback(mix(mix(c0, c1, bf.x), mix(c2, c3, bf.x), bf.y));
+    } else {
+        r = textureBilinear(redUV, size, invSize);
+        g = textureBilinear(greenUV, size, invSize);
+        b = textureBilinear(blueUV, size, invSize);
     }
-    return bg;
+    return vec4(r.r, g.g, b.b, g.a);
 }
 
 // Nearest texel at pixel [p] (pass-relative, whole pixels) as straight RGB.
@@ -571,11 +608,7 @@ void main() {
         vec2 greenUV = screenUV + displacement * invTexSize;
         vec2 blueUV  = screenUV + blueOffset  * invTexSize;
 
-        float red         = textureBilinear(redUV, physTexSize, invTexSize).r;
-        vec4  greenSample = textureBilinear(greenUV, physTexSize, invTexSize);
-        float blue        = textureBilinear(blueUV, physTexSize, invTexSize).b;
-
-        refractColor = vec4(red, greenSample.g, blue, greenSample.a);
+        refractColor = textureDispersed(redUV, greenUV, blueUV, physTexSize, invTexSize);
     }
 
     // Un-premultiply the background sample before refraction math.

@@ -16,6 +16,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
+import '../../../glass_render_diagnostics.dart';
 import '../../renderer/fragment_shader_extensions.dart';
 import '../../renderer/liquid_glass_renderer.dart'
     show debugPaintLiquidGlassGeometry;
@@ -135,7 +136,8 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
       if (node is RenderBackdropFilter) {
         // Flutter's BackdropFilter opens a pass scoped to its own logical size.
         local = Offset.zero & node.size;
-      } else if (node is RenderBox && node.isRepaintBoundary &&
+      } else if (node is RenderBox &&
+          node.isRepaintBoundary &&
           node.layer is ImageFilterLayer) {
         // Android's Material 3 overscroll uses ImageFiltered, whose private
         // render object is not a RenderBackdropFilter. While active it creates
@@ -471,6 +473,7 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
         _geometryImage == null ||
         link._dirty ||
         !_sameTransformsAsMatte();
+    final reusedGeometry = !rebuildGeometry && !_geometryImageCapped;
     if (rebuildGeometry) {
       link._dirty = false;
       needsGeometryUpdate = false;
@@ -495,6 +498,9 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
       _updateGeometrySync(_shapesWithGeometry, boundingBox, capped: false);
     }
     _rebuiltGeometryLastPaint = rebuildGeometry;
+    if (reusedGeometry) {
+      GlassRenderDiagnostics.count(GlassRenderMetric.matteCacheHits);
+    }
 
     if (debugPaintLiquidGlassGeometry) {
       _debugPaintGeometry(context, offset);
@@ -955,6 +961,9 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
         max(1, imageSize.width.ceil()),
         max(1, imageSize.height.ceil()),
       );
+      GlassRenderDiagnostics.count(GlassRenderMetric.matteRebuilds);
+      GlassRenderDiagnostics.count(GlassRenderMetric.mattePixels,
+          amount: image.width * image.height);
 
       _clearGeometryImage();
       _geometryImage = image;

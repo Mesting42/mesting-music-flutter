@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter/rendering.dart';
 import 'dart:ui' as ui;
+import '../../glass_render_diagnostics.dart';
 
 /// A scope that provides infrastructure for glass refraction on Skia and Web.
 ///
@@ -178,8 +179,14 @@ class RenderGlassBackgroundBoundary extends RenderRepaintBoundary {
 
   ui.Image captureSnapshot(double dpr, {Duration? frame}) {
     final nextFrame = frame != null && _captureFrame != frame;
-    if (_snapshot == null || _capturedVersion != paintVersion || _capturedDpr != dpr || nextFrame) {
+    if (_snapshot == null ||
+        _capturedVersion != paintVersion ||
+        _capturedDpr != dpr ||
+        nextFrame) {
       final next = toImageSync(pixelRatio: dpr);
+      GlassRenderDiagnostics.count(GlassRenderMetric.captures);
+      GlassRenderDiagnostics.count(GlassRenderMetric.capturePixels,
+          amount: next.width * next.height);
       _snapshot?.dispose();
       _snapshot = next;
       _capturedVersion = paintVersion;

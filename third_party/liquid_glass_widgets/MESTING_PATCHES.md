@@ -103,3 +103,29 @@ while its outer bounds move. Selected tab glyph/label subtrees are retained
 through intensity transforms and invalidated for configuration/dependency
 changes. The same host scenario measures 21426 widget builds versus 22726 in
 1.0.6; it remains structural evidence rather than Android 120fps certification.
+
+## Music 1.0.8 raster work and opt-in diagnostics
+
+The dispersion shader reuses four RGBA texels only when the RGB coordinates
+share the exact same 2x2 footprint. Each channel retains its own bilinear
+fractions and alpha-over-fallback operation; different footprints retain the
+original path. Aberration, full-resolution sampling and material values stay.
+The host pixel test compiles the actual helpers for SkSL/GLES/GLES3/Vulkan and
+compares edge/alpha/footprint cases with the frozen 1.0.7 formula.
+
+The accessory and bar opt into a strict peer group only at a settled expanded
+endpoint. Geometry/keyboard/search/fade transitions close the accessory gate.
+The opt-in fade keeps a single render object and clears retained shared keys
+before changing opacity. Ordinary opacity remains a barrier. A strict group
+checks current translation-only transforms, shadow bounds and blur read outsets;
+overlapping, scaled, backed, captured or frosted surfaces stay independent.
+Retained-layer composition clears all strict peer keys if a press makes the
+group unsafe. The overlapping tab indicator retains its existing isolation.
+Light-mode shadows may prevent sharing, which is intentional to preserve pixels.
+
+`glass_render_diagnostics.dart` offers disabled-by-default, bounded counters for
+CPU paint work, matte rebuild/cache/pixels, live/baked shadows, live blur/shader
+passes and full-DPR captures. These are not GPU-pass or presented-FPS counters.
+App diagnostics aligns raw vsync and transition brackets and drains 1.2 seconds
+after Stop. Only user-run Xiaomi 14 Pro tests can establish the device speedup;
+host pump counts and pixel references do not certify sustained 120 fps.

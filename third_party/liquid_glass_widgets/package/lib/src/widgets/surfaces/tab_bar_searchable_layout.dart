@@ -10,6 +10,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
 import '../../renderer/glass_backdrop_group.dart';
+import '../../renderer/glass_backdrop_peer.dart';
 import '../../renderer/liquid_glass_renderer.dart';
 import '../../types/glass_interaction_behavior.dart';
 import '../../../types/glass_quality.dart';
@@ -1126,67 +1127,80 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
 
       // The same accessory subtree moves on both axes. Rebuilding its optical
       // layer on each geometry tick invalidates shader/layout work needlessly.
-      final accessorySurface = AnimatedOpacity(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-        opacity: widget.bottomAccessoryEnabled ? 1.0 : 0.0,
+      final accessorySurface = GlassPeerFade(
+        visible: widget.bottomAccessoryEnabled,
         child: GlassBackdropGroup(
-            enabled: false,
+            joinEnclosing: true,
             child: RepaintBoundary(child: widget.bottomAccessory!)),
       );
-      barContent = GlassTabBarAccessoryPlacementScope(
-        placement: accessoryInline
-            ? GlassTabBarAccessoryPlacement.inline
-            : GlassTabBarAccessoryPlacement.expanded,
-        // Music 1.0.5: one geometry clock owns width, height and vertical travel.
-        // Independent 200/300ms tweens used to restart at different times while
-        // scrolling reversed, and nested builders recreated each other's work.
-        // Lerp from the currently painted geometry, retaining the accessory and
-        // bar subtrees and every optical/refraction setting.
-        child: TweenAnimationBuilder<_AccessoryGeometry>(
-          tween: _AccessoryGeometryTween(
-              end: _AccessoryGeometry(
-            height:
-                (accessoryInline ? collapsedPillH : expandedH) + keyboardFloat,
-            left: accessoryInline
-                ? inlineAccessoryLeft
-                : widget.horizontalPadding,
-            right: accessoryInline
-                ? inlineAccessoryRight
-                : widget.horizontalPadding,
-            bottom: accessoryInline
-                ? (collapsedPillH - accessoryH) / 2
-                : collapsedPillH +
-                    widget.bottomAccessorySpacing -
-                    (searching ? pillH - collapsedPillH : 0),
-          )),
-          duration: GlassAccessibilityData.of(context).reduceMotion
-              ? Duration.zero
-              : const Duration(milliseconds: 300),
-          curve: Curves.easeOutCubic,
-          child: accessorySurface,
-          builder: (context, geometry, accessory) => SizedBox(
-            height: geometry.height,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned(
-                  left: geometry.left,
-                  right: geometry.right,
-                  bottom: geometry.bottom,
-                  height: accessoryH,
-                  child: accessory!,
-                ),
-                Positioned(
-                    bottom: 0, left: 0, right: 0,
-                    // The accessory's animated outer height must not change
-                    // the tab/search LayoutBuilder constraints on every tick.
-                    // A fixed, bottom-aligned viewport retains the live optics
-                    // and allows the inner pill to keep its own height tween.
-                    height: math.max(pillH, collapsedPillH) + keyboardFloat,
-                    child: Align(alignment: Alignment.bottomCenter,
-                      child: innerBarContent)),
-              ],
+      final targetGeometry = _AccessoryGeometry(
+        height: (accessoryInline ? collapsedPillH : expandedH) + keyboardFloat,
+        left: accessoryInline ? inlineAccessoryLeft : widget.horizontalPadding,
+        right:
+            accessoryInline ? inlineAccessoryRight : widget.horizontalPadding,
+        bottom: accessoryInline
+            ? (collapsedPillH - accessoryH) / 2
+            : collapsedPillH +
+                widget.bottomAccessorySpacing -
+                (searching ? pillH - collapsedPillH : 0),
+      );
+      barContent = GlassBackdropGroup(
+        requireDisjointBounds: true,
+        child: GlassTabBarAccessoryPlacementScope(
+          placement: accessoryInline
+              ? GlassTabBarAccessoryPlacement.inline
+              : GlassTabBarAccessoryPlacement.expanded,
+          // Music 1.0.5: one geometry clock owns width, height and vertical travel.
+          // Independent 200/300ms tweens used to restart at different times while
+          // scrolling reversed, and nested builders recreated each other's work.
+          // Lerp from the currently painted geometry, retaining the accessory and
+          // bar subtrees and every optical/refraction setting.
+          child: TweenAnimationBuilder<_AccessoryGeometry>(
+            tween: _AccessoryGeometryTween(end: targetGeometry),
+            duration: GlassAccessibilityData.of(context).reduceMotion
+                ? Duration.zero
+                : const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            child: accessorySurface,
+            builder: (context, geometry, accessory) => SizedBox(
+              height: geometry.height,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    left: geometry.left,
+                    right: geometry.right,
+                    bottom: geometry.bottom,
+                    height: accessoryH,
+                    child: GlassBackdropSharingGate(
+                      enabled: !searching &&
+                          widget.bottomAccessoryEnabled &&
+                          keyboardFloat == 0 &&
+                          !_tabWCtrl.isAnimating &&
+                          !_searchWCtrl.isAnimating &&
+                          !_searchLeftCtrl.isAnimating &&
+                          !_pillScaleCtrl.isAnimating &&
+                          geometry.height == targetGeometry.height &&
+                          geometry.left == targetGeometry.left &&
+                          geometry.right == targetGeometry.right &&
+                          geometry.bottom == targetGeometry.bottom,
+                      child: accessory!,
+                    ),
+                  ),
+                  Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      // The accessory's animated outer height must not change
+                      // the tab/search LayoutBuilder constraints on every tick.
+                      // A fixed, bottom-aligned viewport retains the live optics
+                      // and allows the inner pill to keep its own height tween.
+                      height: math.max(pillH, collapsedPillH) + keyboardFloat,
+                      child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: innerBarContent)),
+                ],
+              ),
             ),
           ),
         ),
@@ -1232,18 +1246,24 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
       }
       final items = _selectedRowItems ??= [
         for (var i = 0; i < tabs.length; i++)
-          BottomBarTabItem(tab: tabs[i], selected: true,
-            selectedIconColor: resolvedSelectedIconColor,
-            unselectedIconColor: resolvedUnselectedIconColor,
-            selectedLabelColor: widget.selectedLabelColor,
-            unselectedLabelColor: widget.unselectedLabelColor,
-            selectedLabelStyle: widget.selectedLabelStyle,
-            unselectedLabelStyle: widget.unselectedLabelStyle,
-            iconSize: widget.iconSize, labelFontSize: widget.labelFontSize,
-            textStyle: widget.textStyle, iconLabelSpacing: widget.iconLabelSpacing,
-            glowDuration: widget.glowDuration, glowBlurRadius: widget.glowBlurRadius,
-            glowSpreadRadius: widget.glowSpreadRadius, glowOpacity: widget.glowOpacity,
-            onTap: null),
+          BottomBarTabItem(
+              tab: tabs[i],
+              selected: true,
+              selectedIconColor: resolvedSelectedIconColor,
+              unselectedIconColor: resolvedUnselectedIconColor,
+              selectedLabelColor: widget.selectedLabelColor,
+              unselectedLabelColor: widget.unselectedLabelColor,
+              selectedLabelStyle: widget.selectedLabelStyle,
+              unselectedLabelStyle: widget.unselectedLabelStyle,
+              iconSize: widget.iconSize,
+              labelFontSize: widget.labelFontSize,
+              textStyle: widget.textStyle,
+              iconLabelSpacing: widget.iconLabelSpacing,
+              glowDuration: widget.glowDuration,
+              glowBlurRadius: widget.glowBlurRadius,
+              glowSpreadRadius: widget.glowSpreadRadius,
+              glowOpacity: widget.glowOpacity,
+              onTap: null),
       ];
       final scale = ui.lerpDouble(1.0, widget.magnification, intensity) ?? 1.0;
       final currentTabFloat = ((alignment.x + 1) / 2) * tabs.length;
