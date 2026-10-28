@@ -230,27 +230,37 @@ class _LocalMusicPageState extends ConsumerState<LocalMusicPage> {
                     onChanged: (value) => setState(() => _query = value),
                   ),
                   const SizedBox(height: 18),
-                  Wrap(
-                    spacing: 9,
-                    runSpacing: 10,
-                    children: [
-                      _ImportButton(
-                        label: '扫描手机',
-                        icon: CupertinoIcons.search_circle,
-                        onPressed: busy ? null : controller.scan,
-                        blue: state.library.entries.isEmpty,
+                  // Keep related imports beside each other. Normal phone
+                  // widths fit all three; narrow/large-text layouts can scroll
+                  // this row without wrapping folder import onto a new line.
+                  SingleChildScrollView(
+                    key: const ValueKey('local-import-actions'),
+                    scrollDirection: Axis.horizontal,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          _ImportButton(
+                            label: '扫描手机',
+                            icon: CupertinoIcons.search_circle,
+                            onPressed: busy ? null : controller.scan,
+                            blue: state.library.entries.isEmpty,
+                          ),
+                          const SizedBox(width: 8),
+                          _ImportButton(
+                            label: '导入文件',
+                            icon: CupertinoIcons.doc,
+                            onPressed: busy ? null : controller.importFiles,
+                          ),
+                          const SizedBox(width: 8),
+                          _ImportButton(
+                            label: '导入文件夹',
+                            icon: CupertinoIcons.folder,
+                            onPressed: busy ? null : controller.importDirectory,
+                          ),
+                        ],
                       ),
-                      _ImportButton(
-                        label: '导入文件',
-                        icon: CupertinoIcons.doc,
-                        onPressed: busy ? null : controller.importFiles,
-                      ),
-                      _ImportButton(
-                        label: '导入文件夹',
-                        icon: CupertinoIcons.folder,
-                        onPressed: busy ? null : controller.importDirectory,
-                      ),
-                    ],
+                    ),
                   ),
                   if (state.error.isNotEmpty) ...[
                     const SizedBox(height: 18),
@@ -506,12 +516,13 @@ class _ImportButton extends StatelessWidget {
   Widget build(BuildContext context) => BetaGlassButton(
     label: label,
     height: 46,
-    horizontalPadding: 14,
+    horizontalPadding: 11,
+    fontSize: 13.5,
     blue: blue,
     onPressed: onPressed,
     child: Row(
       mainAxisSize: MainAxisSize.min,
-      children: [Icon(icon, size: 19), const SizedBox(width: 7), Text(label)],
+      children: [Icon(icon, size: 18), const SizedBox(width: 6), Text(label)],
     ),
   );
 }

@@ -263,6 +263,7 @@ class PlatformExploreSongsPage extends ConsumerStatefulWidget {
 
 class _ExploreSongsPageState extends ConsumerState<PlatformExploreSongsPage> {
   final _tracks = <Track>[];
+  final _collections = <PlatformExploreItem>[];
   int _page = 0;
   bool _busy = false, _more = true;
   String? _error;
@@ -289,7 +290,15 @@ class _ExploreSongsPageState extends ConsumerState<PlatformExploreSongsPage> {
       final repository = ref.read(platformExploreRepositoryProvider);
       final resolved =
           _resolvedItem ?? await repository.resolveScene(widget.item);
-      final fresh = await repository.tracks(resolved, page: _page + 1);
+      final isCollectionScene =
+          resolved.kind == PlatformExploreKind.scene &&
+          resolved.sceneContent == PlatformSceneContent.collections;
+      final fresh = isCollectionScene
+          ? const <Track>[]
+          : await repository.tracks(resolved, page: _page + 1);
+      final collections = isCollectionScene
+          ? await repository.sceneCollections(resolved, page: _page + 1)
+          : const <PlatformExploreItem>[];
       if (!mounted ||
           ref.read(platformAccountProvider).value?.userId != owner ||
           ref.read(platformAccountProvider).value?.token != token) {
@@ -299,11 +308,17 @@ class _ExploreSongsPageState extends ConsumerState<PlatformExploreSongsPage> {
         final ids = _tracks.map((e) => e.id).toSet();
         final additions = fresh.where((e) => ids.add(e.id)).toList();
         _tracks.addAll(additions);
+        final collectionIds = _collections.map((item) => item.id).toSet();
+        final newCollections = collections
+            .where((item) => collectionIds.add(item.id))
+            .toList();
+        _collections.addAll(newCollections);
         _page++;
-        _more =
-            widget.item.kind != PlatformExploreKind.theme &&
-            fresh.length >= 30 &&
-            additions.isNotEmpty;
+        _more = isCollectionScene
+            ? collections.length >= 30 && newCollections.isNotEmpty
+            : widget.item.kind != PlatformExploreKind.theme &&
+                  fresh.length >= 30 &&
+                  additions.isNotEmpty;
         _owner = owner;
         _token = token;
         _loaded = true;
@@ -325,6 +340,8 @@ class _ExploreSongsPageState extends ConsumerState<PlatformExploreSongsPage> {
         child: const EditorialEmpty('账号已变化，请返回后重新打开'),
       );
     }
+    final collectionScene =
+        _resolvedItem?.sceneContent == PlatformSceneContent.collections;
     return PlatformPageFrame(
       title: widget.item.title,
       child: AutomaticSongPaging(
@@ -332,9 +349,46 @@ class _ExploreSongsPageState extends ConsumerState<PlatformExploreSongsPage> {
         onLoadMore: _load,
         child: ListView.builder(
           padding: const EdgeInsets.only(bottom: 190),
-          itemCount: _tracks.length + 1,
+          itemCount:
+              (collectionScene ? _collections.length : _tracks.length) + 1,
           itemBuilder: (context, index) {
-            if (index < _tracks.length) {
+            if (collectionScene && index < _collections.length) {
+              final collection = _collections[index];
+              return ListTile(
+                key: ValueKey('scene-collection-${collection.id}'),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 22,
+                  vertical: 10,
+                ),
+                leading: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: ArtworkImage(
+                    uri: collection.cover,
+                    width: 58,
+                    height: 58,
+                  ),
+                ),
+                title: Text(
+                  collection.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: collection.subtitle.isEmpty
+                    ? null
+                    : Text(
+                        collection.subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => PlatformExploreSongsPage(item: collection),
+                  ),
+                ),
+              );
+            }
+            if (!collectionScene && index < _tracks.length) {
               return EditorialTrackRow(
                 track: _tracks[index],
                 contextTracks: _tracks,
@@ -344,8 +398,9 @@ class _ExploreSongsPageState extends ConsumerState<PlatformExploreSongsPage> {
             if (_error != null) {
               return TextButton(onPressed: _load, child: Text(_error!));
             }
-            if (_tracks.isEmpty && !_more) {
-              return const EditorialEmpty('平台暂未返回歌曲');
+            if ((collectionScene ? _collections.isEmpty : _tracks.isEmpty) &&
+                !_more) {
+              return EditorialEmpty(collectionScene ? '平台暂未返回歌单' : '平台暂未返回歌曲');
             }
             return const SizedBox(height: 24);
           },

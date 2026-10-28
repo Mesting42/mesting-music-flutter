@@ -73,7 +73,8 @@ class BetaGlassButton extends StatelessWidget {
                 }
                 onPressed!();
               },
-              enabled: true,
+              enabled: interactive,
+              fadeWhenDisabled: false,
               excludeFromSemantics: true,
               canRequestFocus: interactive,
               height: height,
@@ -91,7 +92,7 @@ class BetaGlassButton extends StatelessWidget {
               glowOpacity: emphasized ? .12 : null,
               settings: emphasized
                   ? betaBlueActionGlass
-                  : betaMusicPillGlass(context),
+                  : betaNeutralActionGlass(context),
               shape: LiquidRoundedRectangle(borderRadius: height / 2),
               child: Padding(
                 padding: width == height

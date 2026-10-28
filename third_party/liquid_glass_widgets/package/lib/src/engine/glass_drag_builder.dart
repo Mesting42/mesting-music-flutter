@@ -9,11 +9,14 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter/gestures.dart';
 import '../../types/interaction_notification.dart';
 
 class GlassDragBuilder extends StatefulWidget {
   const GlassDragBuilder({
     required this.builder,
+    this.enabled = true,
+    this.cancelOnDrag = false,
     this.behavior = HitTestBehavior.opaque,
     this.suppressInteractionOnChildren = true,
     this.child,
@@ -21,6 +24,8 @@ class GlassDragBuilder extends StatefulWidget {
   });
 
   final HitTestBehavior behavior;
+  final bool enabled;
+  final bool cancelOnDrag;
   final bool suppressInteractionOnChildren;
   final ValueWidgetBuilder<Offset?> builder;
   final Widget? child;
@@ -69,6 +74,17 @@ class _GlassDragBuilderState extends State<GlassDragBuilder> {
   Offset? _lastExposedOffset;
 
   bool _shouldIgnoreCurrentPointer = false;
+  int? _activePointer;
+
+  @override
+  void didUpdateWidget(covariant GlassDragBuilder oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.enabled) {
+      _rawOffset = null;
+      _lastExposedOffset = null;
+      _dragEngaged = false;
+    }
+  }
 
   bool get isDragging => _rawOffset != null;
 
@@ -103,12 +119,14 @@ class _GlassDragBuilderState extends State<GlassDragBuilder> {
       child: Listener(
         behavior: widget.behavior,
         onPointerDown: (event) {
+          if (!widget.enabled || _activePointer != null) return;
           if (widget.suppressInteractionOnChildren &&
               _shouldIgnoreCurrentPointer) {
             _shouldIgnoreCurrentPointer = false;
             return;
           }
           if (!mounted) return;
+          _activePointer = event.pointer;
           setState(() {
             _dragEngaged = false;
             _rawOffset = Offset.zero;
@@ -116,10 +134,28 @@ class _GlassDragBuilderState extends State<GlassDragBuilder> {
           });
         },
         onPointerMove: (event) {
-          if (_rawOffset == null) return;
+          if (!widget.enabled ||
+              event.pointer != _activePointer ||
+              _rawOffset == null) {
+            return;
+          }
           if (!mounted) return;
 
           final newRaw = _rawOffset! + event.delta;
+          final touchSlop =
+              MediaQuery.maybeOf(context)?.gestureSettings.touchSlop ??
+                  kTouchSlop;
+          if (widget.cancelOnDrag && newRaw.distance > touchSlop) {
+            // A raw Listener still receives moves after a ListView/swipe wins
+            // the gesture arena. End this press once, and ignore its remaining
+            // moves until lift-off; never restart the spring during scrolling.
+            setState(() {
+              _rawOffset = null;
+              _lastExposedOffset = null;
+              _dragEngaged = false;
+            });
+            return;
+          }
           _rawOffset = newRaw;
 
           if (!_dragEngaged) {
@@ -140,6 +176,8 @@ class _GlassDragBuilderState extends State<GlassDragBuilder> {
           });
         },
         onPointerUp: (event) {
+          if (event.pointer != _activePointer) return;
+          _activePointer = null;
           _shouldIgnoreCurrentPointer = false;
           if (!mounted) return;
           setState(() {
@@ -149,6 +187,8 @@ class _GlassDragBuilderState extends State<GlassDragBuilder> {
           });
         },
         onPointerCancel: (event) {
+          if (event.pointer != _activePointer) return;
+          _activePointer = null;
           _shouldIgnoreCurrentPointer = false;
           if (!mounted) return;
           setState(() {

@@ -352,14 +352,13 @@ void _betaEntryTests() {
         find.descendant(of: submit, matching: find.text('登录')),
         findsOneWidget,
       );
-      expect(
-        tester
-            .widget<GlassButton>(
-              find.descendant(of: submit, matching: find.byType(GlassButton)),
-            )
-            .enabled,
-        true,
+      final submitGlass = tester.widget<GlassButton>(
+        find.descendant(of: submit, matching: find.byType(GlassButton)),
       );
+      // Real disabled interaction now retains optics independently; keeping
+      // the inner button enabled is no longer needed to avoid opacity fade.
+      expect(submitGlass.enabled, false);
+      expect(submitGlass.fadeWhenDisabled, false);
       await capture(tester, 'beta11-phone-code-pending');
       await tester.tap(action);
       await tester.pump();

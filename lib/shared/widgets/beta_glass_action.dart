@@ -5,6 +5,13 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import '../../features/experience/presentation/beta_bottom_bar.dart';
 import '../../core/haptics/app_haptics.dart';
 
+/// Neutral controls use clear-body optics. Adaptive body normalization can
+/// turn the lens into a grey fill as the sampled scroll background changes.
+/// Only body compositing differs from the navigation/player material; blur,
+/// refraction, lighting and the touch spring retain their existing settings.
+LiquidGlassSettings betaNeutralActionGlass(BuildContext context) =>
+    betaMusicPillGlass(context).copyWith(bodyMode: GlassBodyMode.clear);
+
 /// Stable blue action glass. Adaptive body tint preserves background luminance,
 /// which turns this blue almost cyan over light scrolling content. Clear body
 /// uses alpha tint while retaining the renderer's specular, lens and refraction.
@@ -81,7 +88,8 @@ class BetaGlassAction extends StatelessWidget {
                       onTap: activate,
                       // Match BetaGlassButton: disabled is a neutral material,
                       // not a translucent blue lens carrying a white icon.
-                      enabled: true,
+                      enabled: interactive,
+                      fadeWhenDisabled: false,
                       excludeFromSemantics: true,
                       canRequestFocus: interactive,
                       width: compact ? 36 : 48,
@@ -93,7 +101,7 @@ class BetaGlassAction extends StatelessWidget {
                       shape: const LiquidRoundedRectangle(borderRadius: 24),
                       settings: emphasized
                           ? betaBlueActionGlass
-                          : betaMusicPillGlass(context),
+                          : betaNeutralActionGlass(context),
                       child: loading
                           ? CupertinoActivityIndicator(color: foreground)
                           : Icon(

@@ -97,6 +97,8 @@ class LiquidStretch extends StatelessWidget {
   /// [interactionScale], and [stretch].
   const LiquidStretch({
     required this.child,
+    this.enabled = true,
+    this.cancelOnDrag = false,
     this.interactionScale = 1.05,
     this.pressGrowth,
     this.stretch = .5,
@@ -169,6 +171,11 @@ class LiquidStretch extends StatelessWidget {
   /// The child widget to apply the stretch effect to.
   final Widget child;
 
+  /// Button owners cancel both the optical press and the spring when a page
+  /// drag takes over. Other free-drag glass surfaces keep their current policy.
+  final bool enabled;
+  final bool cancelOnDrag;
+
   /// The axis to constrain the stretch to. If null, stretches in both axes.
   final Axis? axis;
 
@@ -238,6 +245,8 @@ class LiquidStretch extends StatelessWidget {
     // keeps the tree structure stable throughout the animation.
 
     return GlassDragBuilder(
+      enabled: enabled,
+      cancelOnDrag: cancelOnDrag,
       behavior: hitTestBehavior,
       suppressInteractionOnChildren: suppressInteractionOnChildren,
       builder: (context, value, child) {

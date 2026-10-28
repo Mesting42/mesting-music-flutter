@@ -1,13 +1,15 @@
 param(
-    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$VersionName = '1.0.9',
-    [ValidateRange(30, 2147483647)][int]$VersionCode = 30,
+    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$VersionName = '1.0.10',
+    [ValidateRange(31, 2147483647)][int]$VersionCode = 31,
     [string]$FlutterSdkRoot = $env:MESTING_BETA_FLUTTER_ROOT
 )
 $ErrorActionPreference = 'Stop'
 # The notes travel inside the APK for older clients to inspect via bounded
 # Range reads. Refuse a future release whose text still names an older build.
 $musicNotesPath = Join-Path $PSScriptRoot '../assets/data/release-notes.json'
-$musicReleaseNotes = Get-Content -LiteralPath $musicNotesPath -Raw | ConvertFrom-Json
+# Windows PowerShell 5 otherwise decodes BOM-less Chinese JSON as the system
+# code page. Release metadata always uses UTF-8, independent of the host shell.
+$musicReleaseNotes = Get-Content -LiteralPath $musicNotesPath -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($musicReleaseNotes.version -ne $VersionName -or $musicReleaseNotes.versionCode -ne $VersionCode -or @($musicReleaseNotes.releaseNotes).Count -eq 0) {
     throw 'Update assets/data/release-notes.json to match this public version and Android code before building.'
 }

@@ -52,7 +52,7 @@ abstract interface class ListeningPlatformGateway {
     int count,
   );
   Future<int?> gradeSeconds(PlatformSession identity);
-  Future<bool> reportGrade(PlatformSession identity, int total, int delta);
+  Future<bool> reportGrade(PlatformSession identity, int baseline, int delta);
   Future<bool> reportEvent(
     PlatformSession identity,
     Map<String, Object?> payload,
@@ -242,7 +242,7 @@ class KugouListeningRepository implements ListeningPlatformGateway {
   @override
   Future<bool> reportGrade(
     PlatformSession identity,
-    int total,
+    int baseline,
     int delta,
   ) async {
     final uuid = await _registeredUuid();
@@ -252,7 +252,9 @@ class KugouListeningRepository implements ListeningPlatformGateway {
         expectedSession: identity,
         query: {
           'uuid': uuid,
-          'd_sec': '$total',
+          // d_sec is the separately observed server baseline. The expected
+          // post-write target is journal evidence, never an input baseline.
+          'd_sec': '$baseline',
           'diff_sec': '$delta',
           'y_type': '0',
           'm_type': '0',
@@ -276,7 +278,10 @@ class KugouListeningRepository implements ListeningPlatformGateway {
           'mixsongid': '${payload['recordingId']}',
           'event': event,
           if (event == 'end') 'duration': '${payload['heardMs']}',
-          if (event == 'end') 'state': '${payload['reason'] ?? '切歌'}',
+          // Retain detailed local reasons in the journal, but use the two
+          // CSCC states emitted by the upstream client on the wire.
+          if (event == 'end')
+            'state': payload['reason'] == '完整播放' ? '完整播放' : '中断播放',
           'device_model': device.model,
           'system_version': device.systemVersion,
           'screen_width': '${device.width}',

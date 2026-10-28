@@ -92,7 +92,8 @@ class _Repository implements LocalMusicRepository {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => SharedPreferences.setMockInitialValues({}));
-  const export = bool.fromEnvironment('EXPORT_V107_LOCAL');
+  const followupExport = bool.fromEnvironment('EXPORT_FOLLOWUP_LOCAL');
+  const export = bool.fromEnvironment('EXPORT_V107_LOCAL') || followupExport;
   setUpAll(() async {
     await LiquidGlassWidgets.initialize();
     if (export) {
@@ -397,7 +398,9 @@ void main() {
         format: ui.ImageByteFormat.png,
       ))!.buffer.asUint8List();
       final directory = Directory(
-        '.codex-artifacts/2026-10-28-release107/local-music',
+        followupExport
+            ? '.codex-artifacts/2026-10-28-followup-ui-sync/screens/local-music'
+            : '.codex-artifacts/2026-10-28-release107/local-music',
       );
       await directory.create(recursive: true);
       await File('${directory.path}/$name.png').writeAsBytes(bytes);
@@ -416,6 +419,41 @@ void main() {
       expect(repository.scans, 0);
       expect(tester.takeException(), isNull);
       await capture(tester, 'empty-light-320-large');
+    },
+  );
+
+  testWidgets('file and folder import remain side by side at phone width', (
+    tester,
+  ) async {
+    await mount(tester, _Repository(), width: 390);
+    final file = tester.getCenter(find.text('导入文件'));
+    final folder = tester.getCenter(find.text('导入文件夹'));
+    expect(folder.dy, closeTo(file.dy, 1));
+    expect(folder.dx, greaterThan(file.dx));
+    expect(
+      tester.getBottomRight(find.text('导入文件夹')).dx,
+      lessThanOrEqualTo(370),
+    );
+    await capture(tester, 'import-actions-390');
+  });
+
+  testWidgets(
+    'large text keeps folder import beside file import and horizontally reachable',
+    (tester) async {
+      final repository = _Repository();
+      await mount(tester, repository, width: 320, scale: 1.6);
+      expect(
+        tester.getCenter(find.text('导入文件夹')).dy,
+        tester.getCenter(find.text('导入文件')).dy,
+      );
+      await tester.ensureVisible(find.text('导入文件夹'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('导入文件夹'));
+      await tester.pumpAndSettle();
+      expect(repository.directories, 1);
+      expect(repository.files, 0);
+      expect(repository.scans, 0);
+      expect(tester.takeException(), isNull);
     },
   );
 

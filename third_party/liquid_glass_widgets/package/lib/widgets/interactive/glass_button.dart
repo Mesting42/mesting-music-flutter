@@ -159,8 +159,9 @@ class GlassButton extends StatefulWidget {
     this.glowOpacity,
     this.glowHitTestBehavior = HitTestBehavior.opaque,
     this.enabled = true,
+    this.fadeWhenDisabled = true,
     this.style = GlassButtonStyle.filled,
-    this.persistPressOnDrag = true,
+    this.persistPressOnDrag = false,
     this.anchorStretch = true,
     this.anchorStretchSettings,
     this.alignment = Alignment.center,
@@ -221,8 +222,9 @@ class GlassButton extends StatefulWidget {
     this.glowOpacity,
     this.glowHitTestBehavior = HitTestBehavior.opaque,
     this.enabled = true,
+    this.fadeWhenDisabled = true,
     this.style = GlassButtonStyle.filled,
-    this.persistPressOnDrag = true,
+    this.persistPressOnDrag = false,
     this.anchorStretch = true,
     this.anchorStretchSettings,
     this.alignment = Alignment.center,
@@ -278,6 +280,11 @@ class GlassButton extends StatefulWidget {
   ///
   /// Defaults to true.
   final bool enabled;
+
+  /// Interaction and optical opacity are independent. Branded wrappers may
+  /// keep a full-strength disabled lens while retaining disabled hit testing,
+  /// focus, semantics and immediate press cancellation.
+  final bool fadeWhenDisabled;
 
   /// Semantic label for accessibility.
   ///
@@ -499,16 +506,16 @@ class GlassButton extends StatefulWidget {
   /// Whether the pressed glass distortion persists while the finger is held
   /// down, even if dragged far away from the button.
   ///
-  /// - `true` (default): The distortion and glow stay active for the entire
+  /// - `true`: The distortion and glow stay active for the entire
   ///   duration the finger is on screen, matching iOS 26 toolbar/navigation
   ///   buttons (Weather app, Maps, etc.). The button stretches with a jelly
   ///   feel and maintains its pressed visual state until the finger lifts.
   ///
-  /// - `false`: The distortion cancels when the finger moves beyond the tap
+  /// - `false` (default): The distortion cancels when the finger moves beyond the tap
   ///   tolerance (~18 logical pixels), matching iOS 26 lock screen buttons
   ///   (camera, torch) that snap back if you drag away.
   ///
-  /// Defaults to true.
+  /// Defaults to false so new buttons inside scrolling pages cancel safely.
   final bool persistPressOnDrag;
 
   /// Whether the stretch anchors the button in place.
@@ -634,6 +641,17 @@ class _GlassButtonState extends State<GlassButton>
       parent: _saturationController,
       curve: Curves.easeOut,
     );
+  }
+
+  @override
+  void didUpdateWidget(covariant GlassButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A request can disable the button before pointer-up. Clear the press
+    // immediately so re-enabling it cannot resurrect an old highlight.
+    if (!widget.enabled ||
+        oldWidget.persistPressOnDrag != widget.persistPressOnDrag) {
+      _saturationController.value = 0;
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -959,6 +977,8 @@ class _GlassButtonState extends State<GlassButton>
         (effectiveQuality == GlassQuality.premium && hasStretch);
 
     final stretchContent = LiquidStretch(
+      enabled: widget.enabled,
+      cancelOnDrag: !widget.persistPressOnDrag,
       // A fixed factor when one is given; otherwise the native sizing.
       interactionScale: effectiveInteractionScale ?? 1.0,
       pressGrowth: effectiveInteractionScale == null
@@ -984,7 +1004,7 @@ class _GlassButtonState extends State<GlassButton>
         skipBoundary ? stretchContent : RepaintBoundary(child: stretchContent);
 
     // Apply opacity when disabled
-    final innerWidget = widget.enabled
+    final innerWidget = widget.enabled || !widget.fadeWhenDisabled
         ? stretchWidget
         : Opacity(
             opacity: 0.5,

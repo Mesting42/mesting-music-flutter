@@ -55,8 +55,16 @@ const betaGuidePages = <({String title, String body, List<String> tags})>[
 ];
 
 class BetaOnboardingPage extends ConsumerStatefulWidget {
-  const BetaOnboardingPage({required this.onFinish, super.key});
+  const BetaOnboardingPage({
+    required this.onFinish,
+    this.replay = false,
+    super.key,
+  });
   final VoidCallback onFinish;
+
+  /// Reopening the guide is dismissible from every page; first-run onboarding
+  /// retains its existing skip-to-last flow and completion bookkeeping.
+  final bool replay;
   @override
   ConsumerState<BetaOnboardingPage> createState() => BetaOnboardingPageState();
 }
@@ -168,10 +176,12 @@ class BetaOnboardingPageState extends ConsumerState<BetaOnboardingPage>
                           ),
                           BetaGlassButton(
                             height: 42,
-                            onPressed: _index == betaGuidePages.length - 1
+                            onPressed: widget.replay
+                                ? widget.onFinish
+                                : _index == betaGuidePages.length - 1
                                 ? null
                                 : _skipToLast,
-                            child: const Text('跳过'),
+                            child: Text(widget.replay ? '关闭' : '跳过'),
                           ),
                         ],
                       ),

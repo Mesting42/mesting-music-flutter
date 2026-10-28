@@ -232,6 +232,7 @@ class SettingsPage extends ConsumerWidget {
                               betaEntryRoute(
                                 Builder(
                                   builder: (guideContext) => BetaOnboardingPage(
+                                    replay: true,
                                     onFinish: () =>
                                         Navigator.of(guideContext).pop(),
                                   ),

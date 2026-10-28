@@ -62,6 +62,7 @@ class FakeGateway implements ListeningPlatformGateway {
   List<OfficialHistoryFact> facts = [];
   final events = <Map<String, Object?>>[];
   final historyPayloads = <Map<String, Object>>[];
+  final gradePayloads = <Map<String, int>>[];
   @override
   Future<void> prepare(PlatformSession identity) async {}
   @override
@@ -94,6 +95,7 @@ class FakeGateway implements ListeningPlatformGateway {
     int delta,
   ) async {
     gradeWrites++;
+    gradePayloads.add({'baseline': target, 'delta': delta});
     if (confirmGrade) total += delta;
     return true;
   }
@@ -355,6 +357,7 @@ void main() {
         await put('grade:first', 'grade', {'heardMs': 1500});
         await worker.flush();
         expect(gateway.gradeWrites, 1);
+        expect(gateway.gradePayloads.single, {'baseline': 850, 'delta': 1});
         expect(
           (await store.entry('kugou:12345', 'grade:first'))!.state,
           ListeningSyncState.accepted,
@@ -366,6 +369,7 @@ void main() {
         gateway.confirmGrade = true;
         await worker.flush();
         expect(gateway.gradeWrites, 2);
+        expect(gateway.gradePayloads.last, {'baseline': 851, 'delta': 3});
         expect(gateway.total, 854);
         expect(
           (await store.entry('kugou:12345', 'grade:first'))!.state,
@@ -653,7 +657,7 @@ void main() {
       );
       await repository.prepare(identity);
       expect(await repository.gradeSeconds(identity), 850);
-      await repository.reportGrade(identity, 855, 5);
+      await repository.reportGrade(identity, 850, 5);
       await repository.reportEvent(identity, {
         'event': 'end',
         'recordingId': '7654321',
@@ -662,11 +666,13 @@ void main() {
       });
       expect(requests[1].url.queryParameters['uuid'], 'a' * 32);
       expect(requests[2].url.queryParameters['diff_sec'], '5');
+      expect(requests[2].url.queryParameters['d_sec'], '850');
       expect(
         requests[3].url.queryParameters['device_model'],
         'synthetic-model',
       );
       expect(requests[3].url.queryParameters['duration'], '5000');
+      expect(requests[3].url.queryParameters['state'], '中断播放');
       expect(
         requests.every(
           (r) => r.headers['authorization']!.contains('userid=12345'),

@@ -16,6 +16,10 @@ enum PlatformExploreKind {
   final String label, path;
 }
 
+/// Scene tags declare either audio rows (6) or collections (1). They require
+/// different provider routes; preserving this type prevents false load errors.
+enum PlatformSceneContent { tracks, collections }
+
 class PlatformExploreItem {
   const PlatformExploreItem({
     required this.id,
@@ -26,10 +30,12 @@ class PlatformExploreItem {
     this.subtitle = '',
     this.moduleId = '',
     this.tag = '',
+    this.sceneContent = PlatformSceneContent.tracks,
   });
   final String id, title, cover, rankCid;
   final String subtitle, moduleId, tag;
   final PlatformExploreKind kind;
+  final PlatformSceneContent sceneContent;
 }
 
 /// Mirrors md3Music's MusicExploreSections and provider field parsing. No
@@ -78,6 +84,22 @@ class PlatformExploreRepository {
             return '';
           }
 
+          // The live scene catalogue already carries its first audio module.
+          // Keep this server-provided seed instead of discarding it and then
+          // guessing which module/tag belongs to the named scene on opening.
+          final sceneSeed = kind == PlatformExploreKind.scene
+              ? _sceneSeed(MusicPlatformApi.objectMap(row['music_tag']))
+              : null;
+          var cover = PlatformArtwork.fromPayload(row);
+          if (kind == PlatformExploreKind.scene && cover.isEmpty) {
+            // Some real scenes have an empty `pic` and a valid official icon.
+            // Do not replace them with artwork from an unrelated song/module.
+            for (final key in ['icon', 'bg_pic', 'title_pic']) {
+              cover = PlatformArtwork.normalize(row[key]);
+              if (cover.isNotEmpty) break;
+            }
+          }
+
           return PlatformExploreItem(
             id: text(switch (kind) {
               PlatformExploreKind.playlist => [
@@ -110,7 +132,7 @@ class PlatformExploreRepository {
               'scene_name',
               'theme_name',
             ]),
-            cover: PlatformArtwork.fromPayload(row),
+            cover: cover,
             kind: kind,
             rankCid: text(['rank_cid']),
             subtitle: text([
@@ -119,12 +141,41 @@ class PlatformExploreRepository {
               'intro',
               'description',
             ]),
-            moduleId: text(['module_id']),
-            tag: text(['tag']),
+            moduleId: sceneSeed?.moduleId ?? text(['module_id']),
+            tag: sceneSeed?.tag ?? text(['tag']),
+            sceneContent: sceneSeed?.content ?? PlatformSceneContent.tracks,
           );
         })
         .where((item) => item.title.isNotEmpty && item.id.isNotEmpty)
         .toList();
+  }
+
+  /// Keep the established audio-first view where available. A scene declaring
+  /// only collections must open those real playlists rather than fabricating
+  /// tracks or sending its collection tag to the audio endpoint.
+  static ({String moduleId, String tag, PlatformSceneContent content})?
+  _sceneSeed(Map<String, dynamic> module) {
+    final id = '${module['module_id'] ?? module['id'] ?? ''}'.trim();
+    if (id.isEmpty) return null;
+    final tags = PlatformCatalog.rows(
+      module['module_extra'] ?? module['extra'],
+    );
+    for (final type in ['6', '1']) {
+      for (final tag in tags) {
+        if ('${tag['content_type'] ?? tag['types'] ?? ''}' != type) continue;
+        final tagId = '${tag['tag_id'] ?? tag['id'] ?? ''}'.trim();
+        if (tagId.isNotEmpty) {
+          return (
+            moduleId: id,
+            tag: tagId,
+            content: type == '6'
+                ? PlatformSceneContent.tracks
+                : PlatformSceneContent.collections,
+          );
+        }
+      }
+    }
+    return null;
   }
 
   /// Scene catalogues use both flat and grouped envelopes. Only real named
@@ -165,14 +216,17 @@ class PlatformExploreRepository {
     }
     final payload = await api.get('/scene/module', query: {'id': item.id});
     final data = MusicPlatformApi.objectMap(payload['data']);
-    for (final module in PlatformCatalog.rows(data['content'])) {
+    final content = data['content'];
+    // Current /scene/module groups music/discuss/banner beneath `content`.
+    // Older responses used a flat list. Only enter the explicit music branch;
+    // recursively scanning `info` would mistake scene metadata for a module.
+    final modules = content is Map
+        ? PlatformCatalog.rows(content['music'])
+        : PlatformCatalog.rows(content);
+    for (final module in modules) {
       if ('${module['module_type'] ?? ''}' != '2') continue;
-      final moduleId = '${module['module_id'] ?? module['id'] ?? ''}'.trim();
-      if (moduleId.isEmpty) continue;
-      for (final tag in PlatformCatalog.rows(module['extra'])) {
-        if ('${tag['content_type'] ?? tag['types'] ?? ''}' != '6') continue;
-        final tagId = '${tag['tag_id'] ?? tag['id'] ?? ''}'.trim();
-        if (tagId.isEmpty) continue;
+      final seed = _sceneSeed(module);
+      if (seed != null) {
         return PlatformExploreItem(
           id: item.id,
           title: item.title,
@@ -180,8 +234,9 @@ class PlatformExploreRepository {
           kind: item.kind,
           subtitle: item.subtitle,
           rankCid: item.rankCid,
-          moduleId: moduleId,
-          tag: tagId,
+          moduleId: seed.moduleId,
+          tag: seed.tag,
+          sceneContent: seed.content,
         );
       }
     }
@@ -190,6 +245,10 @@ class PlatformExploreRepository {
 
   Future<List<Track>> tracks(PlatformExploreItem item, {int page = 1}) async {
     item = await resolveScene(item);
+    if (item.kind == PlatformExploreKind.scene &&
+        item.sceneContent == PlatformSceneContent.collections) {
+      throw const MusicPlatformException('此专区提供歌单，请先选择歌单');
+    }
     final path = switch (item.kind) {
       PlatformExploreKind.rank => '/rank/audio',
       PlatformExploreKind.album => '/album/songs',
@@ -220,5 +279,41 @@ class PlatformExploreRepository {
         },
       ),
     );
+  }
+
+  /// Scene collection IDs are already global `collection_*` identifiers.
+  /// Preserve them verbatim; the unrelated numeric specialid is not a global
+  /// collection ID and cannot replace it when opening the playlist's songs.
+  Future<List<PlatformExploreItem>> sceneCollections(
+    PlatformExploreItem scene, {
+    int page = 1,
+  }) async {
+    scene = await resolveScene(scene);
+    if (scene.kind != PlatformExploreKind.scene ||
+        scene.sceneContent != PlatformSceneContent.collections) {
+      throw const MusicPlatformException('此场景未提供歌单');
+    }
+    final payload = await api.get(
+      '/scene/collection/list',
+      query: {'tag_id': scene.tag, 'page': '$page', 'pagesize': '30'},
+    );
+    return PlatformCatalog.rows(payload)
+        .where(
+          (row) =>
+              '${row['content_type'] ?? 1}' == '1' &&
+              '${row['is_publish'] ?? 1}' != '0',
+        )
+        .map(
+          (row) => PlatformExploreItem(
+            id: '${row['global_collection_id'] ?? row['content_id'] ?? row['id'] ?? ''}',
+            title: '${row['title'] ?? row['name'] ?? ''}',
+            cover: PlatformArtwork.fromPayload(row),
+            kind: PlatformExploreKind.playlist,
+            subtitle:
+                '${MusicPlatformApi.objectMap(row['author_info'])['user_name'] ?? ''}',
+          ),
+        )
+        .where((item) => item.id.isNotEmpty && item.title.isNotEmpty)
+        .toList();
   }
 }

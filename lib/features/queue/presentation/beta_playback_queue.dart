@@ -34,7 +34,6 @@ class _BetaPlaybackQueueState extends ConsumerState<BetaPlaybackQueue> {
     final colors = Theme.of(context).colorScheme;
     final ink = immersive ? Colors.white : colors.onSurface;
     final muted = immersive ? Colors.white70 : colors.onSurfaceVariant;
-    final accent = immersive ? const Color(0xFF8AC2FF) : colors.primary;
     Future<void> act(
       Future<void> Function() operation, [
       String Function()? text,
@@ -75,12 +74,12 @@ class _BetaPlaybackQueueState extends ConsumerState<BetaPlaybackQueue> {
             width: 46,
             height: 38,
             decoration: BoxDecoration(
-              color: (selected ? accent : ink).withValues(
-                alpha: selected ? .17 : .07,
-              ),
+              // The glyph communicates the mode. Keep the same neutral
+              // surface/ink across every shuffle and repeat state.
+              color: ink.withValues(alpha: .08),
               borderRadius: BorderRadius.circular(13),
             ),
-            child: Icon(icon, color: selected ? accent : ink, size: 23),
+            child: Icon(icon, color: ink, size: 23),
           ),
         ),
       ),

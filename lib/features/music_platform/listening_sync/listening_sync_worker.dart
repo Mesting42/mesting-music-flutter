@@ -299,7 +299,7 @@ class ListeningSyncWorker {
     try {
       final accepted = await gateway.reportGrade(
         identity,
-        batch.number('target'),
+        batch.number('baseline'),
         batch.number('diffSec'),
       );
       await store.change(

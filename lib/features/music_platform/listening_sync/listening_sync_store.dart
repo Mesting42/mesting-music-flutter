@@ -348,6 +348,7 @@ class ListeningSyncStore {
       ...first.payload,
       'heardMs': milliseconds,
       'diffSec': seconds,
+      'protocol': 'kugou-lite-baseline-delta-v1',
       'baseline': baseline,
       'target': baseline + seconds,
       'sources': fresh.map((r) => r.id).toList(),

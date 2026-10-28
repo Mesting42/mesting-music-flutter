@@ -138,3 +138,18 @@ objects, and synchronizes focus with the outer layout after the frame. The
 same persistent glass field can therefore serve music and audiobook searches
 without leaking typed text, focus, or recreating the bar's motion controllers.
 Only input ownership changes; existing optics and morph parameters are kept.
+
+## 2026-10-28 page button scroll cancellation (local, unreleased)
+
+`GlassButton.persistPressOnDrag` defaults to false for scrolling page actions.
+The opt-in true path retains free-drag distortion. `LiquidStretch` forwards
+`cancelOnDrag` and `enabled` to `GlassDragBuilder`: crossing tap slop cancels
+the spring for that pointer until lift-off, in addition to cancelling the
+optical press. Raw drag listeners therefore cannot keep a page button inflated
+after its containing ListView takes ownership. Separate fingers cannot steal
+an active press; disabling also clears the in-flight optical animation.
+
+`fadeWhenDisabled` separates disabled interaction from lens opacity. Its true
+default preserves the package's disabled fade; Mesting's shared action/button
+wrappers choose false with genuinely disabled hit testing, focus and semantics.
+No spring timing, refraction quality, blur setting or tab-bar morph is removed.
