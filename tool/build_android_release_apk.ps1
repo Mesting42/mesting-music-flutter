@@ -1,6 +1,6 @@
 param(
-    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$VersionName = '1.0.10',
-    [ValidateRange(31, 2147483647)][int]$VersionCode = 31,
+    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$VersionName = '1.0.11',
+    [ValidateRange(32, 2147483647)][int]$VersionCode = 32,
     [string]$FlutterSdkRoot = $env:MESTING_BETA_FLUTTER_ROOT
 )
 $ErrorActionPreference = 'Stop'

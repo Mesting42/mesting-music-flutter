@@ -107,12 +107,14 @@ class AuthController extends AsyncNotifier<AuthSession?> {
     if (DistributionChannel.isBeta) {
       ref.listen(betaAccountChoiceProvider, (previous, choice) {
         if (choice == BetaAccountChoice.kugou ||
+            choice == BetaAccountChoice.netease ||
             choice == BetaAccountChoice.guest) {
           state = const AsyncData(null);
         }
       });
       final choice = ref.read(betaAccountChoiceProvider);
       if (choice == BetaAccountChoice.kugou ||
+          choice == BetaAccountChoice.netease ||
           choice == BetaAccountChoice.guest) {
         return null;
       }
@@ -124,6 +126,7 @@ class AuthController extends AsyncNotifier<AuthSession?> {
     if (DistributionChannel.isBeta &&
         {
           BetaAccountChoice.kugou,
+          BetaAccountChoice.netease,
           BetaAccountChoice.guest,
         }.contains(ref.read(betaAccountChoiceProvider))) {
       return null;
@@ -494,13 +497,19 @@ class AuthController extends AsyncNotifier<AuthSession?> {
     if (previous == null) state = const AsyncLoading();
     try {
       if (DistributionChannel.isBeta &&
-          ref.read(betaAccountChoiceProvider) == BetaAccountChoice.kugou) {
-        throw StateError('请先退出当前酷狗账号');
+          const {
+            BetaAccountChoice.kugou,
+            BetaAccountChoice.netease,
+          }.contains(ref.read(betaAccountChoiceProvider))) {
+        throw StateError('请先退出当前音乐平台账号');
       }
       final session = await request();
       if (DistributionChannel.isBeta) {
-        if (ref.read(betaAccountChoiceProvider) == BetaAccountChoice.kugou) {
-          throw StateError('当前已切换为酷狗账号，请先退出');
+        if (const {
+          BetaAccountChoice.kugou,
+          BetaAccountChoice.netease,
+        }.contains(ref.read(betaAccountChoiceProvider))) {
+          throw StateError('当前已切换为音乐平台账号，请先退出');
         }
         await ref
             .read(betaAccountChoiceProvider.notifier)

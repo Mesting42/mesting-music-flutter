@@ -357,7 +357,7 @@ class _PlatformProfileEditPageState
     final current = ref.watch(platformAccountProvider).value;
     final valid =
         _owner != null &&
-        current?.userId == _owner.userId &&
+        current?.ownerId == _owner.ownerId &&
         current?.token == _owner.token;
     final details = valid
         ? ref.watch(platformEditableProfileProvider(_owner))

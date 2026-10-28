@@ -107,7 +107,9 @@ class PlatformRewardsController extends Notifier<PlatformRewardState> {
       _generation++;
       stopAds();
     });
-    if (owner == null) return const PlatformRewardState();
+    if (owner == null || owner.platform != MusicPlatform.kugou) {
+      return const PlatformRewardState();
+    }
     final preferences = ref.read(sharedPreferencesProvider);
     final dates =
         preferences.getStringList(datesKey(owner.userId))?.toSet() ??

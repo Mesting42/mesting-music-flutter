@@ -192,6 +192,11 @@ void main() {
       await tester.pump();
       expect(find.text('酷狗昵称'), findsOneWidget);
       expect(find.text('登录或创建账号'), findsNothing);
+      await tester.scrollUntilVisible(
+        find.text('酷狗云端收藏'),
+        180,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('酷狗云端收藏'), findsOneWidget);
       await tester.pumpWidget(
         UncontrolledProviderScope(
@@ -206,9 +211,11 @@ void main() {
       expect(find.text('退出登录'), findsOneWidget);
       await container.read(platformAccountProvider.notifier).signOut();
       await tester.pump();
-      expect(find.text('手机号登录'), findsOneWidget);
-      expect(find.text('微信扫码登录'), findsOneWidget);
-      await tester.tap(find.text('其他登录方式'));
+      expect(find.text('酷狗登录'), findsOneWidget);
+      expect(find.text('网易云登录'), findsOneWidget);
+      await tester.tap(find.bySemanticsLabel('我已阅读并同意用户协议和隐私政策'));
+      await tester.pump();
+      await tester.tap(find.text('酷狗登录'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.textContaining('Mesting 账号登录'), findsNothing);

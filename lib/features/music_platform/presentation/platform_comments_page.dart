@@ -1,3 +1,6 @@
+import '../domain/platform_session.dart';
+import '../platform_backend_providers.dart';
+import '../netease/netease_comments_repository.dart';
 import '../../../shared/widgets/beta_anchored_menu.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -25,10 +28,13 @@ Future<void> openPlatformSongComments(
 ) async {
   final session = ref.read(platformAccountProvider).value;
   if (!ref.read(showPlatformFeaturesProvider) || session == null) return;
-  final repository = PlatformCommentsRepository(
-    ref.read(musicPlatformApiProvider),
-    session,
-  );
+  final repository = session.platform == MusicPlatform.netease
+      ? NeteaseCommentsRepository(
+          ref.read(musicPlatformApiProvider),
+          session,
+          ref.read(neteaseMusicRepositoryProvider),
+        )
+      : PlatformCommentsRepository(ref.read(musicPlatformApiProvider), session);
   // The source can live inside the library's nested navigator. Comments own
   // their composer and must cover the shell's persistent navigation/player.
   await Navigator.of(context, rootNavigator: true).push(
@@ -117,10 +123,16 @@ void openPlatformPlaylistComments(
           id: id,
           name: name,
         ),
-        repository: PlatformCommentsRepository(
-          ref.read(musicPlatformApiProvider),
-          session,
-        ),
+        repository: session.platform == MusicPlatform.netease
+            ? NeteaseCommentsRepository(
+                ref.read(musicPlatformApiProvider),
+                session,
+                ref.read(neteaseMusicRepositoryProvider),
+              )
+            : PlatformCommentsRepository(
+                ref.read(musicPlatformApiProvider),
+                session,
+              ),
       ),
     ),
   );
@@ -164,8 +176,8 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
 
   bool get _current =>
       ref.read(showPlatformFeaturesProvider) &&
-      ref.read(platformAccountProvider).value?.userId ==
-          widget.repository.identity.userId &&
+      ref.read(platformAccountProvider).value?.ownerId ==
+          widget.repository.identity.ownerId &&
       ref.read(platformAccountProvider).value?.token ==
           widget.repository.identity.token;
 

@@ -9,8 +9,8 @@ import '../../../shared/widgets/beta_edge_back.dart';
 import '../../legal/presentation/disclaimer_dialog.dart';
 import '../../legal/presentation/legal_documents_page.dart';
 import '../../legal/domain/legal_documents.dart';
-import '../../music_platform/music_platform_providers.dart';
-import '../../music_platform/presentation/platform_account_page.dart';
+import '../../music_platform/presentation/platform_login_options_page.dart';
+import '../../music_platform/domain/platform_session.dart';
 import '../beta_account_choice.dart';
 import '../beta_entry_flow.dart';
 import 'mesting_music_companions.dart';
@@ -53,53 +53,15 @@ class _BetaWelcomePageState extends ConsumerState<BetaWelcomePage> {
     return mounted;
   }
 
-  Future<void> _platform(PlatformLoginMethod method) async {
+  Future<void> _platform(MusicPlatform platform) async {
     if (_opening || !await _consent() || !mounted) return;
     setState(() => _opening = true);
     final result = await Navigator.of(
       context,
-    ).push<bool>(betaEntryRoute(PlatformAccountPage(initialMethod: method)));
+    ).push<bool>(betaEntryRoute(PlatformLoginOptionsPage(platform: platform)));
     if (!mounted) return;
     setState(() => _opening = false);
     if (result == true) widget.onExperience?.call();
-  }
-
-  Future<void> _other() async {
-    final choice = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      showDragHandle: true,
-      builder: (sheet) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(22, 8, 22, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                '其他登录方式',
-                style: TextStyle(fontSize: 23, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 20),
-              for (final item in [('kugou', '酷狗扫码登录'), ('qq', 'QQ 扫码登录')]) ...[
-                BetaGlassButton(
-                  onPressed: () => Navigator.pop(sheet, item.$1),
-                  child: Text(item.$2),
-                ),
-                const SizedBox(height: 12),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-    if (!mounted) return;
-    switch (choice) {
-      case 'kugou':
-        await _platform(PlatformLoginMethod.kugouQr);
-      case 'qq':
-        await _platform(PlatformLoginMethod.qqQr);
-    }
   }
 
   Future<void> _guest() async {
@@ -176,12 +138,11 @@ class _BetaWelcomePageState extends ConsumerState<BetaWelcomePage> {
                               const Spacer(flex: 3),
                               const SizedBox(height: 38),
                               BetaGlassButton(
-                                key: const ValueKey('welcome-phone-login'),
+                                key: const ValueKey('welcome-kugou-login'),
                                 blue: true,
                                 onPressed: _opening
                                     ? null
-                                    : () =>
-                                          _platform(PlatformLoginMethod.phone),
+                                    : () => _platform(MusicPlatform.kugou),
                                 child: const Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
@@ -190,53 +151,23 @@ class _BetaWelcomePageState extends ConsumerState<BetaWelcomePage> {
                                       size: 23,
                                     ),
                                     SizedBox(width: 9),
-                                    Text('手机号登录'),
+                                    Text('酷狗登录'),
                                   ],
                                 ),
                               ),
                               const SizedBox(height: 14),
                               BetaGlassButton(
-                                key: const ValueKey('welcome-wechat-login'),
+                                key: const ValueKey('welcome-netease-login'),
                                 onPressed: _opening
                                     ? null
-                                    : () => _platform(
-                                        PlatformLoginMethod.wechatQr,
-                                      ),
-                                child: const Text('微信扫码登录'),
+                                    : () => _platform(MusicPlatform.netease),
+                                child: const Text('网易云登录'),
                               ),
                               const SizedBox(height: 18),
-                              if (MediaQuery.textScalerOf(context).scale(15) >
-                                      18 ||
-                                  bounds.maxWidth < 350) ...[
-                                BetaGlassButton(
-                                  onPressed: _opening ? null : _guest,
-                                  child: const Text('游客体验'),
-                                ),
-                                const SizedBox(height: 12),
-                                BetaGlassButton(
-                                  onPressed: _opening ? null : _other,
-                                  child: const Text('其他登录方式'),
-                                ),
-                              ] else
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: BetaGlassButton(
-                                        height: 46,
-                                        onPressed: _opening ? null : _guest,
-                                        child: const Text('游客体验'),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: BetaGlassButton(
-                                        height: 46,
-                                        onPressed: _opening ? null : _other,
-                                        child: const Text('其他登录方式'),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                              BetaGlassButton(
+                                onPressed: _opening ? null : _guest,
+                                child: const Text('游客体验'),
+                              ),
                               const SizedBox(height: 24),
                               BetaConsentRow(
                                 accepted: _accepted,

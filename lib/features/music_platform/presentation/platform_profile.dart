@@ -82,7 +82,7 @@ class PlatformProfile extends ConsumerWidget {
                   icon: Icons.favorite_rounded,
                   title: '我的喜欢',
                   subtitle: ref.watch(platformAccountProvider).value != null
-                      ? '酷狗云端收藏'
+                      ? '${ref.watch(platformAccountProvider).value?.platformLabel ?? '音乐'}云端收藏'
                       : '登录后同步喜欢的音乐',
                   onTap: () => context.push('/music?view=favorites'),
                 ),
@@ -90,7 +90,7 @@ class PlatformProfile extends ConsumerWidget {
                   icon: Icons.library_music_rounded,
                   title: '我的歌单',
                   subtitle: ref.watch(platformAccountProvider).value != null
-                      ? '${ref.watch(playlistsProvider).value?.length ?? 0} 个酷狗云端歌单'
+                      ? '${ref.watch(playlistsProvider).value?.length ?? 0} 个${ref.watch(platformAccountProvider).value?.platformLabel ?? '音乐'}云端歌单'
                       : '登录后管理自己的歌单',
                   onTap: () => context.push('/music?view=playlists'),
                 ),

@@ -34,7 +34,7 @@ class _PlatformSearchLandingState extends ConsumerState<PlatformSearchLanding> {
   Future<void> _refreshHotSearch() async {
     if (_refreshing) return;
     final previous = ref.read(platformHotSearchProvider).value;
-    final owner = ref.read(platformAccountProvider).value?.userId;
+    final owner = ref.read(platformAccountProvider).value?.ownerId;
     setState(() {
       _refreshing = true;
       _refreshStatus = null;
@@ -42,7 +42,7 @@ class _PlatformSearchLandingState extends ConsumerState<PlatformSearchLanding> {
     try {
       final fresh = await ref.refresh(platformHotSearchProvider.future);
       if (!mounted ||
-          ref.read(platformAccountProvider).value?.userId != owner) {
+          ref.read(platformAccountProvider).value?.ownerId != owner) {
         return;
       }
       // Server ranks stay authoritative: identical results are a successful
@@ -286,7 +286,7 @@ class _ExploreSongsPageState extends ConsumerState<PlatformExploreSongsPage> {
     try {
       final account = await ref.read(platformAccountProvider.future);
       if (!mounted) return;
-      final owner = account?.userId, token = account?.token;
+      final owner = account?.ownerId, token = account?.token;
       final repository = ref.read(platformExploreRepositoryProvider);
       final resolved =
           _resolvedItem ?? await repository.resolveScene(widget.item);
@@ -300,7 +300,7 @@ class _ExploreSongsPageState extends ConsumerState<PlatformExploreSongsPage> {
           ? await repository.sceneCollections(resolved, page: _page + 1)
           : const <PlatformExploreItem>[];
       if (!mounted ||
-          ref.read(platformAccountProvider).value?.userId != owner ||
+          ref.read(platformAccountProvider).value?.ownerId != owner ||
           ref.read(platformAccountProvider).value?.token != token) {
         return;
       }
@@ -334,7 +334,7 @@ class _ExploreSongsPageState extends ConsumerState<PlatformExploreSongsPage> {
   @override
   Widget build(BuildContext context) {
     final account = ref.watch(platformAccountProvider).value;
-    if (_loaded && (account?.userId != _owner || account?.token != _token)) {
+    if (_loaded && (account?.ownerId != _owner || account?.token != _token)) {
       return PlatformPageFrame(
         title: widget.item.title,
         child: const EditorialEmpty('账号已变化，请返回后重新打开'),

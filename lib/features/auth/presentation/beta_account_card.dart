@@ -1,3 +1,4 @@
+import '../../music_platform/presentation/platform_login_options_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/widgets/beta_glass_controls.dart';
@@ -75,7 +76,7 @@ class BetaAccountCard extends ConsumerWidget {
                     Text(
                       signedIn
                           ? (platform != null
-                                ? '酷狗账号 · 已登录'
+                                ? '${platform.platformLabel}账号 · 已登录'
                                 : 'Mesting 账号 · 已登录')
                           : '登录后同步喜欢的音乐与歌单',
                       style: TextStyle(
@@ -90,6 +91,14 @@ class BetaAccountCard extends ConsumerWidget {
           ),
           const SizedBox(height: 22),
           if (platform != null) ...[
+            BetaGlassButton(
+              onPressed: () => Navigator.of(
+                context,
+                rootNavigator: true,
+              ).push(betaEntryRoute<void>(const MusicPlatformSwitchPage())),
+              child: const Text('切换音乐平台'),
+            ),
+            const SizedBox(height: 10),
             BetaGlassButton(
               accent: true,
               onPressed: () => Navigator.of(

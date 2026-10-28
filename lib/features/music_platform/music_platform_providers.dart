@@ -12,6 +12,8 @@ import '../../core/platform/distribution_channel.dart';
 import '../../core/performance/startup_timing_probe.dart';
 import '../auth/beta_account_choice.dart';
 import '../auth/beta_entry_flow.dart';
+import 'netease/netease_providers.dart';
+import 'netease/netease_session.dart';
 
 final musicServerProvider = Provider<MusicServer>(
   (ref) => EmbeddedMusicServer(),
@@ -43,6 +45,24 @@ final platformAccountProvider =
 class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
   Future<void> _pendingMutation = Future<void>.value();
 
+  /// Installed by the application audio binding. Keeping this boundary injected
+  /// makes authentication/storage testable without constructing a second player.
+  Future<void> Function(String ownerId)? preparePlatformSwitch;
+
+  Future<void> _prepare(String ownerId) async {
+    await preparePlatformSwitch?.call(ownerId);
+  }
+
+  void _publish(PlatformSession? session) {
+    // Kugou transports must never see a NetEase cookie or public projection.
+    ref.read(musicPlatformApiProvider).session =
+        session?.platform == MusicPlatform.netease ? null : session;
+    if (session?.platform != MusicPlatform.netease) {
+      ref.read(neteaseApiProvider).configure(null);
+    }
+    state = AsyncData(session);
+  }
+
   Future<void> _serialize(Future<void> Function() operation) {
     final result = _pendingMutation.then((_) => operation());
     // Failure must reach the caller, while releasing the queue for retries.
@@ -56,8 +76,7 @@ class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
       ref.listen(betaAccountChoiceProvider, (previous, choice) {
         if (choice == BetaAccountChoice.mesting ||
             choice == BetaAccountChoice.guest) {
-          ref.read(musicPlatformApiProvider).session = null;
-          state = const AsyncData(null);
+          _publish(null);
         }
       });
       final choice = ref.read(betaAccountChoiceProvider);
@@ -68,6 +87,15 @@ class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
     }
     final PlatformSession? session;
     try {
+      if (ref.read(betaAccountChoiceProvider) == BetaAccountChoice.netease) {
+        final saved = await ref
+            .read(neteaseSessionStoreProvider)
+            .read()
+            .timeout(const Duration(seconds: 5));
+        ref.read(musicPlatformApiProvider).session = null;
+        ref.read(neteaseApiProvider).configure(saved);
+        return saved?.identity;
+      }
       session = await ref
           .watch(platformSessionStoreProvider)
           .read()
@@ -119,8 +147,12 @@ class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
         ref.read(betaAccountChoiceProvider) == BetaAccountChoice.mesting) {
       throw const MusicPlatformException('请先退出当前 Mesting 账号');
     }
+    final hadAccount = state.value != null;
     final session = PlatformSession.fromJson(result);
     await ref.read(platformSessionStoreProvider).write(session);
+    if (state.value?.ownerId != session.ownerId) {
+      await _prepare(session.ownerId);
+    }
     if (DistributionChannel.isBeta) {
       if (ref.read(betaAccountChoiceProvider) == BetaAccountChoice.mesting) {
         throw const MusicPlatformException('当前已切换为 Mesting 账号，请先退出');
@@ -129,12 +161,65 @@ class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
           .read(betaAccountChoiceProvider.notifier)
           .select(BetaAccountChoice.kugou);
     }
-    ref.read(musicPlatformApiProvider).session = session;
-    state = AsyncData(session);
-    if (DistributionChannel.isBeta) {
+    _publish(session);
+    if (DistributionChannel.isBeta && !hadAccount) {
       ref.read(betaEntryFlowProvider.notifier).authenticated();
     }
   });
+
+  Future<void> acceptNetease(NeteaseSession session) => _serialize(() async {
+    await readyForInteractiveLogin();
+    if (ref.read(betaAccountChoiceProvider) == BetaAccountChoice.mesting) {
+      throw const MusicPlatformException('请先退出当前 Mesting 账号');
+    }
+    final hadAccount = state.value != null;
+    await ref.read(neteaseSessionStoreProvider).write(session);
+    await _prepare(session.identity.ownerId);
+    await ref
+        .read(betaAccountChoiceProvider.notifier)
+        .select(BetaAccountChoice.netease);
+    ref.read(neteaseApiProvider).configure(session);
+    _publish(session.identity);
+    if (!hadAccount) ref.read(betaEntryFlowProvider.notifier).authenticated();
+  });
+
+  /// Read the retained credential before changing anything visible. Selecting
+  /// another platform never clears either store; logout alone erases a login.
+  Future<void> switchPlatform(MusicPlatform platform) => _serialize(() async {
+    await readyForInteractiveLogin();
+    if (state.value?.platform == platform) return;
+    final netease = platform == MusicPlatform.netease
+        ? await ref.read(neteaseSessionStoreProvider).read()
+        : null;
+    final next = platform == MusicPlatform.kugou
+        ? await ref.read(platformSessionStoreProvider).read()
+        : netease?.identity;
+    if (next == null) throw const MusicPlatformException('请先登录该平台');
+    await _prepare(next.ownerId);
+    await ref
+        .read(betaAccountChoiceProvider.notifier)
+        .select(
+          platform == MusicPlatform.kugou
+              ? BetaAccountChoice.kugou
+              : BetaAccountChoice.netease,
+        );
+    ref.read(neteaseApiProvider).configure(netease);
+    _publish(next);
+  });
+
+  Future<PlatformSession?> retainedIdentity(MusicPlatform platform) async {
+    if (platform == MusicPlatform.kugou) {
+      return ref
+          .read(platformSessionStoreProvider)
+          .read()
+          .timeout(const Duration(seconds: 5));
+    }
+    return (await ref
+            .read(neteaseSessionStoreProvider)
+            .read()
+            .timeout(const Duration(seconds: 5)))
+        ?.identity;
+  }
 
   /// Refresh display metadata without re-authenticating or replaying onboarding.
   /// A profile response from a previous account cannot replace a new session.
@@ -144,34 +229,56 @@ class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
     String? avatarUrl,
   }) => _serialize(() async {
     final current = await future;
-    if (current?.userId != expected.userId ||
+    if (current?.ownerId != expected.ownerId ||
         current?.token != expected.token) {
       throw const MusicPlatformException('账号已变化，请返回后重新操作');
     }
+    if (current!.platform == MusicPlatform.netease) {
+      final saved = await ref.read(neteaseSessionStoreProvider).read();
+      if (saved == null ||
+          saved.identity.ownerId != current.ownerId ||
+          saved.credentialId != current.token) {
+        throw const MusicPlatformException('账号已变化，请重新登录');
+      }
+      final updated = NeteaseSession(
+        userId: saved.userId,
+        cookies: saved.cookies,
+        deviceId: saved.deviceId,
+        nickname: nickname ?? saved.nickname,
+        avatarUrl: avatarUrl?.isNotEmpty == true ? avatarUrl! : saved.avatarUrl,
+      );
+      await ref.read(neteaseSessionStoreProvider).write(updated);
+      _publish(updated.identity);
+      return;
+    }
     final updated = PlatformSession(
-      userId: current!.userId,
+      userId: current.userId,
       token: current.token,
       vipToken: current.vipToken,
       nickname: nickname ?? current.nickname,
       avatarUrl: avatarUrl?.isNotEmpty == true ? avatarUrl! : current.avatarUrl,
     );
     await ref.read(platformSessionStoreProvider).write(updated);
-    ref.read(musicPlatformApiProvider).session = updated;
-    state = AsyncData(updated);
+    _publish(updated);
   });
 
   Future<void> signOut() => _serialize(() async {
     await future;
     // Remove the credential before publishing guest state; failure remains
     // visible so the UI never falsely promises the credential was removed.
-    await ref.read(platformSessionStoreProvider).clear();
+    await _prepare('local');
+    if (state.value?.platform == MusicPlatform.netease) {
+      await ref.read(neteaseSessionStoreProvider).clear();
+      ref.read(neteaseApiProvider).configure(null);
+    } else {
+      await ref.read(platformSessionStoreProvider).clear();
+    }
     if (DistributionChannel.isBeta) {
       await ref
           .read(betaAccountChoiceProvider.notifier)
           .select(BetaAccountChoice.guest);
     }
-    ref.read(musicPlatformApiProvider).session = null;
-    state = const AsyncData(null);
+    _publish(null);
     if (DistributionChannel.isBeta) {
       await ref.read(betaEntryFlowProvider.notifier).welcome();
     }

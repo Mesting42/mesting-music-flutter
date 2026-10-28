@@ -1,3 +1,5 @@
+import '../features/music_platform/domain/platform_session.dart';
+import '../features/music_platform/platform_backend_providers.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -50,11 +52,33 @@ class MestingMusicApp extends ConsumerWidget {
     final musicTheme = ref.watch(effectiveMusicThemeProvider);
     final audioHandler = ref.read(audioHandlerProvider);
     if (DistributionChannel.isBeta) {
+      ref.read(platformAccountProvider.notifier).preparePlatformSwitch = ref
+          .read(playbackPersistenceControllerProvider)
+          .preparePlatformSwitch;
       final source = ref.watch(kugouMusicSourceProvider);
       audioHandler.configureTrackPlaybackResolver((track) async {
+        if (track.source == TrackSource.netease) {
+          final identity = await ref.read(platformAccountProvider.future);
+          if (identity?.platform != MusicPlatform.netease) {
+            throw const MusicPlatformException('请先切换到网易云账号播放这首歌');
+          }
+          return ref
+              .read(neteaseMusicRepositoryProvider)
+              .resolve(
+                track,
+                ref.read(platformQualityProvider).preferred,
+                requireQuality:
+                    ref.read(platformQualityProvider).switching &&
+                    ref.read(platformQualityProvider).switchingTrackId ==
+                        track.id,
+              );
+        }
         if (source is! EmbeddedKugouMusicSource ||
             track.source != TrackSource.kugou) {
           return track;
+        }
+        if (ref.read(usesNeteaseProvider)) {
+          throw const MusicPlatformException('请先切换到酷狗账号播放这首歌');
         }
         // Playback restored from disk must use the current platform account,
         // rather than a signed URL left over from a previous login/session.

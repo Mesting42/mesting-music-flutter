@@ -48,6 +48,17 @@ class PlatformCredits {
       yield LicenseEntryWithLineBreaks([
         'Administrative divisions · modood and contributors',
       ], '$regionNotice\n\n$regionLicense');
+      // The native Dart port ships the upstream MIT text offline as well as
+      // in source archives, independently of whether an account is signed in.
+      final neteaseLicense = await rootBundle.loadString(
+        'third_party/netease_protocol/LICENSE',
+      );
+      final neteaseNotice = await rootBundle.loadString(
+        'third_party/netease_protocol/NOTICE.md',
+      );
+      yield LicenseEntryWithLineBreaks([
+        'NetEaseCloudMusicApi · Binaryify and contributors',
+      ], '$neteaseNotice\n\n$neteaseLicense');
     });
   }
 }

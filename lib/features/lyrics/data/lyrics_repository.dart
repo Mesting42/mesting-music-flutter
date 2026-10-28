@@ -20,12 +20,14 @@ class LyricsRepository {
     String kugouPublicLyricsBaseUrl = 'https://lyrics.kugou.com',
     LrcParser parser = const LrcParser(),
     LyricsJsonRequest? kugouRequest,
+    LyricsJsonRequest? neteaseRequest,
   }) : _client = client,
        _kugouApiBaseUrl = _normalizeBaseUrl(kugouApiBaseUrl),
        _neteaseApiBaseUrl = _normalizeBaseUrl(neteaseApiBaseUrl),
        _kugouPublicLyricsBaseUrl = _normalizeBaseUrl(kugouPublicLyricsBaseUrl),
        _parser = parser,
-       _kugouRequest = kugouRequest;
+       _kugouRequest = kugouRequest,
+       _neteaseRequest = neteaseRequest;
 
   final http.Client _client;
   final String _kugouApiBaseUrl;
@@ -33,6 +35,7 @@ class LyricsRepository {
   final String _kugouPublicLyricsBaseUrl;
   final LrcParser _parser;
   final LyricsJsonRequest? _kugouRequest;
+  final LyricsJsonRequest? _neteaseRequest;
   final Map<String, LyricsDocument> _cache = {};
 
   Future<LyricsDocument> loadAsset(String assetPath) async {
@@ -175,16 +178,18 @@ class LyricsRepository {
   }
 
   Future<String> _loadNeteaseLyrics(Uri locator) async {
-    if (_neteaseApiBaseUrl.isEmpty) {
+    if (_neteaseRequest == null && _neteaseApiBaseUrl.isEmpty) {
       throw const LyricsUnavailableException('网易云歌词服务尚未配置');
     }
     final songId = locator.pathSegments.firstOrNull ?? '';
     if (songId.isEmpty) {
       throw const LyricsUnavailableException('网易云歌词参数不完整');
     }
-    final payload = await _getJson(
-      _endpoint(_neteaseApiBaseUrl, '/lyric/new', {'id': songId}),
-    );
+    final payload = _neteaseRequest != null
+        ? await _neteaseRequest('/lyric', {'id': songId})
+        : await _getJson(
+            _endpoint(_neteaseApiBaseUrl, '/lyric/new', {'id': songId}),
+          );
     final lrc = _asMap(payload['lrc']);
     final source = lrc?['lyric']?.toString() ?? '';
     if (source.trim().isEmpty) {

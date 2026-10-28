@@ -1,3 +1,5 @@
+import 'platform_backend_providers.dart';
+import 'netease/netease_catalog_adapters.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/models/track.dart';
@@ -5,9 +7,12 @@ import 'data/platform_catalog.dart';
 import 'music_platform_providers.dart';
 import 'platform_recommendation_providers.dart';
 
-final platformCatalogProvider = Provider<PlatformCatalog>(
-  (ref) => PlatformCatalog(ref.watch(musicPlatformApiProvider)),
-);
+final platformCatalogProvider = Provider<PlatformCatalog>((ref) {
+  final api = ref.watch(musicPlatformApiProvider);
+  return ref.watch(usesNeteaseProvider)
+      ? NeteaseCatalogAdapter(api, ref.watch(neteaseMusicRepositoryProvider))
+      : PlatformCatalog(api);
+});
 
 // Await secure local restoration, never CloudBase. Providers rebuild on account
 // change, so a former user's recommendations cannot survive a new login.

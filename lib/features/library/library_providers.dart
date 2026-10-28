@@ -10,6 +10,9 @@ import '../../shared/models/track.dart';
 import '../auth/auth_providers.dart';
 import '../auth/data/auth_repository.dart';
 import '../music_platform/music_platform_providers.dart';
+import '../music_platform/domain/platform_session.dart';
+import '../music_platform/platform_backend_providers.dart';
+import '../music_platform/netease/netease_library_repository.dart';
 import '../music_platform/data/platform_library_repository.dart';
 import 'data/library_repository.dart';
 import 'data/library_sync_api.dart';
@@ -90,6 +93,15 @@ final librarySyncApiProvider = Provider<LibrarySyncApi?>((ref) {
 final libraryRepositoryProvider = Provider<LibraryRepository>((ref) {
   if (DistributionChannel.isBeta) {
     final platform = ref.watch(platformAccountProvider).value;
+    if (platform?.platform == MusicPlatform.netease) {
+      final repository = NeteaseLibraryRepository(
+        ref.watch(appDatabaseProvider),
+        music: ref.watch(neteaseMusicRepositoryProvider),
+        identity: platform!,
+      );
+      ref.onDispose(repository.dispose);
+      return repository;
+    }
     if (platform != null) {
       final repository = PlatformLibraryRepository(
         ref.watch(appDatabaseProvider),
@@ -137,7 +149,7 @@ final libraryRepositoryProvider = Provider<LibraryRepository>((ref) {
 final activeLibraryOwnerProvider = Provider<String>((ref) {
   if (DistributionChannel.isBeta) {
     final platform = ref.watch(platformAccountProvider).value;
-    if (platform != null) return 'kugou:${platform.userId}';
+    if (platform != null) return platform.ownerId;
   }
   return ref.watch(currentUserProvider)?.uid ?? legacyLibraryOwnerId;
 });

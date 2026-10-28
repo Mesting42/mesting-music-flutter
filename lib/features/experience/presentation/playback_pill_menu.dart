@@ -31,7 +31,8 @@ Future<void> showPlaybackPillMenu(
   final fm = ref
       .read(platformRecommendationSessionProvider)
       .ownsFmTrack(track.id);
-  final platform = track.source == TrackSource.kugou;
+  final platform =
+      track.source == TrackSource.kugou || track.source == TrackSource.netease;
   final selected = await showBetaGlassPopover<String>(
     context: context,
     anchor: anchor,

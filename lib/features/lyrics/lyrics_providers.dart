@@ -1,3 +1,4 @@
+import '../music_platform/platform_backend_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'data/lyrics_repository.dart';
@@ -13,6 +14,10 @@ final lyricsRepositoryProvider = Provider<LyricsRepository>((ref) {
     client: ref.watch(musicSearchHttpClientProvider),
     kugouApiBaseUrl: OnlineMusicConfig.kugouApiBaseUrl,
     neteaseApiBaseUrl: OnlineMusicConfig.neteaseApiBaseUrl,
+    neteaseRequest: DistributionChannel.isBeta
+        ? (path, query) =>
+              ref.read(neteaseMusicRepositoryProvider).call(path, query)
+        : null,
     kugouRequest: DistributionChannel.isBeta
         ? (path, query) async {
             await ref.read(platformAccountProvider.future);

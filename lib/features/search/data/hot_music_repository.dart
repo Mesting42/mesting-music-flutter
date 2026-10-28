@@ -15,6 +15,8 @@ class HotMusicRepository {
     required List<Track> localTracks,
     DateTime Function()? now,
     this.cacheLifetime = const Duration(minutes: 30),
+    this.cacheNamespace = '',
+    this.sourceLabel = '酷狗实时榜',
   }) : _rankingLoader = rankingLoader,
        _popularRankingLoader = popularRankingLoader,
        _risingRankingLoader = risingRankingLoader,
@@ -22,7 +24,8 @@ class HotMusicRepository {
        _localTracks = List.unmodifiable(localTracks),
        _now = now ?? DateTime.now;
 
-  static const _cacheKey = 'music_hot_ranking_snapshot_v1';
+  String get _cacheKey => 'music_hot_ranking_snapshot_v1$cacheNamespace';
+  final String cacheNamespace, sourceLabel;
 
   final HotRankingLoader _rankingLoader;
   final HotRankingLoader? _popularRankingLoader;
@@ -76,7 +79,7 @@ class HotMusicRepository {
             ? recommendationTracks
             : cached?.recommendationTracks ?? const [],
         updatedAt: _now(),
-        sourceLabel: ranked.isNotEmpty ? '酷狗实时榜' : '本地热度',
+        sourceLabel: ranked.isNotEmpty ? sourceLabel : '本地热度',
       );
       await _saveCache(snapshot);
       return snapshot;

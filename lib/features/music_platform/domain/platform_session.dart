@@ -1,5 +1,7 @@
 /// A music-platform identity is independent of the Mesting CloudBase session.
 /// Credentials are serialized only into the platform's secure-storage entry.
+enum MusicPlatform { kugou, netease }
+
 class PlatformSession {
   const PlatformSession({
     required this.userId,
@@ -7,6 +9,7 @@ class PlatformSession {
     this.vipToken = '',
     this.nickname = '',
     this.avatarUrl = '',
+    this.platform = MusicPlatform.kugou,
   });
 
   final String userId;
@@ -14,6 +17,9 @@ class PlatformSession {
   final String vipToken;
   final String nickname;
   final String avatarUrl;
+  final MusicPlatform platform;
+  String get ownerId => '${platform.name}:$userId';
+  String get platformLabel => platform == MusicPlatform.netease ? '网易云' : '酷狗';
 
   static String picture(Object? value) {
     var text = '${value ?? ''}'.trim().replaceAll('{size}', '400');

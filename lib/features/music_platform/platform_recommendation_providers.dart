@@ -1,3 +1,5 @@
+import 'platform_backend_providers.dart';
+import 'netease/netease_catalog_adapters.dart';
 import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,11 +14,20 @@ final platformRecommendationsProvider = Provider<PlatformRecommendations>((
   ref,
 ) {
   final account = ref.watch(platformAccountProvider).value;
-  final repository = PlatformRecommendations(
-    ref.watch(musicPlatformApiProvider),
-    ref.watch(sharedPreferencesProvider),
-    account,
-  );
+  final api = ref.watch(musicPlatformApiProvider);
+  final preferences = ref.watch(sharedPreferencesProvider);
+  final repository = ref.watch(usesNeteaseProvider)
+      ? NeteaseRecommendationsAdapter(
+          api,
+          preferences,
+          account,
+          ref.watch(neteaseMusicRepositoryProvider),
+        )
+      : PlatformRecommendations(
+          ref.watch(musicPlatformApiProvider),
+          ref.watch(sharedPreferencesProvider),
+          account,
+        );
   ref.onDispose(repository.dispose);
   return repository;
 });

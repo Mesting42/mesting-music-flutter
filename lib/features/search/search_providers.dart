@@ -1,3 +1,5 @@
+import '../music_platform/platform_backend_providers.dart';
+import '../music_platform/netease/netease_catalog_adapters.dart';
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -60,6 +62,18 @@ final musicSearchRepositoryProvider = Provider<MusicSearchRepository>((ref) {
 
 final hotMusicRepositoryProvider = Provider<HotMusicRepository>((ref) {
   final source = ref.watch(kugouMusicSourceProvider);
+  final identity = ref.watch(platformAccountProvider).value;
+  if (DistributionChannel.isBeta && ref.watch(usesNeteaseProvider)) {
+    final music = ref.watch(neteaseMusicRepositoryProvider);
+    return HotMusicRepository(
+      rankingLoader: ({int limit = 9}) async =>
+          (await music.newSongs()).take(limit).toList(),
+      preferences: ref.watch(sharedPreferencesProvider),
+      localTracks: const [],
+      cacheNamespace: ':${identity?.ownerId}',
+      sourceLabel: '网易云新歌榜',
+    );
+  }
   return HotMusicRepository(
     rankingLoader: ({int limit = 9}) => source.hotRanking(limit: limit),
     popularRankingLoader: ({int limit = 9}) =>
@@ -95,12 +109,18 @@ final musicSearchControllerProvider =
       MusicSearchController.new,
     );
 
-final platformSearchRepositoryProvider = Provider<PlatformSearchRepository>(
-  (ref) => PlatformSearchRepository(ref.watch(musicPlatformApiProvider)),
-);
+final platformSearchRepositoryProvider = Provider<PlatformSearchRepository>((
+  ref,
+) {
+  final api = ref.watch(musicPlatformApiProvider);
+  return ref.watch(usesNeteaseProvider)
+      ? NeteaseSearchAdapter(api, ref.watch(neteaseMusicRepositoryProvider))
+      : PlatformSearchRepository(api);
+});
 
 class MusicSearchController extends Notifier<MusicSearchState> {
-  static const _recentSearchesKey = 'music_recent_searches';
+  static const _legacyRecentKey = 'music_recent_searches';
+  String _recentSearchesKey = _legacyRecentKey;
   static const _debounceDuration = Duration(milliseconds: 450);
   static const _maxRecentSearches = 8;
 
@@ -117,6 +137,14 @@ class MusicSearchController extends Notifier<MusicSearchState> {
 
   @override
   MusicSearchState build() {
+    // Rebuilding for a platform/account change invalidates in-flight pages as
+    // well as their rendered rows; public search responses are owner-bound too.
+    ++_generation;
+    _debounce?.cancel();
+    _cancelPlatform();
+    ref.watch(
+      platformAccountProvider.select((s) => (s.value?.ownerId, s.value?.token)),
+    );
     final repository = ref.read(musicSearchRepositoryProvider);
     ref.onDispose(() {
       _debounce?.cancel();
@@ -124,6 +152,23 @@ class MusicSearchController extends Notifier<MusicSearchState> {
       _cancelPlatform();
     });
     final preferences = ref.watch(sharedPreferencesProvider);
+    if (DistributionChannel.isBeta) {
+      final owner = ref.read(platformAccountProvider).value?.ownerId ?? 'guest';
+      _recentSearchesKey = '$_legacyRecentKey:${Uri.encodeComponent(owner)}';
+      // Claim the old single-platform history once, for the restored Kugou
+      // owner only. A later account must never inherit another user's queries.
+      if (owner.startsWith('kugou:') &&
+          preferences.getString('music_recent_searches_migrated_owner') ==
+              null) {
+        final legacy = preferences.getStringList(_legacyRecentKey);
+        if (legacy != null && !preferences.containsKey(_recentSearchesKey)) {
+          unawaited(preferences.setStringList(_recentSearchesKey, legacy));
+        }
+        unawaited(
+          preferences.setString('music_recent_searches_migrated_owner', owner),
+        );
+      }
+    }
     return MusicSearchState(
       recentSearches: preferences.getStringList(_recentSearchesKey) ?? const [],
     );

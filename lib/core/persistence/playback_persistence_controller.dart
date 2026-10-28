@@ -77,6 +77,15 @@ class PlaybackPersistenceController with WidgetsBindingObserver {
     return operation;
   }
 
+  /// Called before credentials change. Keep the departing owner's queue and
+  /// position; the ordinary owner binding restores the destination only after
+  /// its credentials are published. Both directions always remain paused.
+  Future<void> preparePlatformSwitch(String nextOwnerId) async {
+    await _ownerSwitch;
+    await _audioHandler.pause();
+    await saveNow();
+  }
+
   Future<void> _activateOwner(String ownerId) async {
     if (_ownerId == ownerId) return;
     _switchingOwner = true;

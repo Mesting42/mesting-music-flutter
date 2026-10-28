@@ -68,7 +68,9 @@ class _QualityDialog extends ConsumerWidget {
       platformQualityProvider.select((s) => s.switching),
     );
     final supported =
-        track.source == TrackSource.kugou && track.id.startsWith('kugou_');
+        (track.source == TrackSource.kugou && track.id.startsWith('kugou_')) ||
+        (track.source == TrackSource.netease &&
+            track.id.startsWith('netease_'));
     final actual = PlatformAudioQuality.fromCode(track.playbackQuality);
     final dark = Theme.of(context).brightness == Brightness.dark;
     final ink = dark ? Colors.white : const Color(0xFF202024);

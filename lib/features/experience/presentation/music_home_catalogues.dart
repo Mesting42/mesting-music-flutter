@@ -164,7 +164,7 @@ class _MusicHomeCataloguePageState
     });
     try {
       final account = await ref.read(platformAccountProvider.future);
-      final owner = account?.userId, token = account?.token;
+      final owner = account?.ownerId, token = account?.token;
       if (!mounted) return;
       final batch = _page == 0
           ? await ref.read(platformExploreProvider(widget.kind).future)
@@ -173,7 +173,7 @@ class _MusicHomeCataloguePageState
                 .list(widget.kind, page: _page + 1);
       if (!mounted) return;
       final current = ref.read(platformAccountProvider).value;
-      if (owner != current?.userId || token != current?.token) {
+      if (owner != current?.ownerId || token != current?.token) {
         setState(() => _error = '账号已变化，请返回后重新打开');
         return;
       }
@@ -206,7 +206,7 @@ class _MusicHomeCataloguePageState
     final account = ref.watch(platformAccountProvider).value;
     return PlatformPageFrame(
       title: musicHomeCatalogueTitle(widget.kind),
-      child: _loaded && (_owner != account?.userId || _token != account?.token)
+      child: _loaded && (_owner != account?.ownerId || _token != account?.token)
           ? const EditorialEmpty('账号已变化，请返回后重新打开')
           : AutomaticSongPaging(
               enabled: _more && !_busy && _error == null,

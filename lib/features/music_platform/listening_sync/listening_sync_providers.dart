@@ -1,3 +1,4 @@
+import '../domain/platform_session.dart';
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -51,7 +52,9 @@ final platformListeningSyncProvider = Provider<ListeningSyncCoordinator>((ref) {
   );
   void activate() => unawaited(
     coordinator.activate(
-      ref.read(platformAccountProvider).value,
+      ref.read(platformAccountProvider).value?.platform == MusicPlatform.netease
+          ? null
+          : ref.read(platformAccountProvider).value,
       enabled: ref.read(platformListeningSyncEnabledProvider),
     ),
   );
@@ -61,7 +64,7 @@ final platformListeningSyncProvider = Provider<ListeningSyncCoordinator>((ref) {
     // Profile metadata changes keep the same authentication epoch. They
     // must not manufacture another play instance or split a listening span.
     if (previous != null &&
-        before?.userId == after?.userId &&
+        before?.ownerId == after?.ownerId &&
         before?.token == after?.token) {
       return;
     }
@@ -75,7 +78,9 @@ final platformListeningSyncProvider = Provider<ListeningSyncCoordinator>((ref) {
 final platformListeningSyncSummaryProvider =
     StreamProvider<ListeningSyncSummary>((ref) {
       final session = ref.watch(platformAccountProvider).value;
-      if (session == null) return Stream.value(ListeningSyncSummary(const []));
+      if (session == null || session.platform != MusicPlatform.kugou) {
+        return Stream.value(ListeningSyncSummary(const []));
+      }
       return ref
           .watch(platformListeningSyncStoreProvider)
           .watchSummary('kugou:${session.userId}');

@@ -1,3 +1,7 @@
+import 'package:qr_flutter/qr_flutter.dart';
+import '../domain/platform_session.dart';
+import '../netease/netease_login.dart';
+import '../netease/netease_providers.dart';
 import '../../../shared/widgets/beta_text_editing.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -22,9 +26,18 @@ import 'platform_avatar.dart';
 class PlatformAccountPage extends ConsumerStatefulWidget {
   const PlatformAccountPage({
     this.initialMethod = PlatformLoginMethod.phone,
+    this.platform = MusicPlatform.kugou,
+    this.neteaseMethod = NeteaseLoginMethod.qr,
+    this.loginOnly = false,
     super.key,
   });
   final PlatformLoginMethod initialMethod;
+  final MusicPlatform platform;
+  final NeteaseLoginMethod neteaseMethod;
+
+  /// Adding the other platform must not turn its form into the active account's
+  /// management screen. Its credential is committed only on successful login.
+  final bool loginOnly;
 
   @override
   ConsumerState<PlatformAccountPage> createState() =>
@@ -34,6 +47,12 @@ class PlatformAccountPage extends ConsumerStatefulWidget {
 class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
   final _phone = TextEditingController();
   final _code = TextEditingController();
+  final _password = TextEditingController();
+  NeteaseLoginService? _neteaseLogin;
+  NeteaseQrChallenge? _neteaseChallenge;
+  bool get _isNetease => widget.platform == MusicPlatform.netease;
+  NeteaseLoginService get _netLogin =>
+      _neteaseLogin ??= NeteaseLoginService(ref.read(neteaseApiProvider));
   PlatformLoginMethod _method = PlatformLoginMethod.phone;
   PlatformQrChallenge? _challenge;
   String? _message;
@@ -50,7 +69,11 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
   @override
   void initState() {
     super.initState();
-    _method = widget.initialMethod;
+    _method = _isNetease
+        ? (widget.neteaseMethod == NeteaseLoginMethod.qr
+              ? PlatformLoginMethod.kugouQr
+              : PlatformLoginMethod.phone)
+        : widget.initialMethod;
     if (_method != PlatformLoginMethod.phone) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _select(_method);
@@ -64,6 +87,7 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
     _countdownTimer?.cancel();
     _phone.dispose();
     _code.dispose();
+    _password.dispose();
     super.dispose();
   }
 
@@ -74,6 +98,7 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
       _polling = false;
       _busyAction = 'qr';
       _challenge = null;
+      _neteaseChallenge = null;
       _message = null;
       _busy = method != PlatformLoginMethod.phone;
     });
@@ -82,6 +107,18 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
       await ref
           .read(platformAccountProvider.notifier)
           .readyForInteractiveLogin();
+      if (_isNetease) {
+        final challenge = await _netLogin.createQr();
+        if (!mounted || generation != _generation) return;
+        setState(() {
+          _neteaseChallenge = challenge;
+          _busy = false;
+          _polling = true;
+          _message = '请使用网易云音乐扫描二维码并确认';
+        });
+        unawaited(_pollNetease(challenge, generation));
+        return;
+      }
       final challenge = await _login.createQr(method);
       if (!mounted || generation != _generation) return;
       setState(() {
@@ -153,7 +190,11 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
       await ref
           .read(platformAccountProvider.notifier)
           .readyForInteractiveLogin();
-      await _login.sendCode(_phone.text.trim());
+      if (_isNetease) {
+        await _netLogin.sendCode(_phone.text.trim(), '86');
+      } else {
+        await _login.sendCode(_phone.text.trim());
+      }
       if (!mounted || generation != _generation) return;
       setState(() {
         _countdown = 60;
@@ -185,6 +226,7 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
 
   Future<void> _phoneLogin() async {
     if (_busy) return;
+    if (_isNetease) return _loginNetease();
     _busyAction = 'login';
     final phone = _phone.text.trim();
     final code = _code.text.trim();
@@ -254,15 +296,124 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
     }
   }
 
+  Future<void> _loginNetease() async {
+    final generation = _generation;
+    setState(() {
+      _busy = true;
+      _busyAction = 'login';
+      _message = null;
+    });
+    try {
+      final result = await _netLogin.login(
+        widget.neteaseMethod,
+        _phone.text.trim(),
+        widget.neteaseMethod == NeteaseLoginMethod.sms
+            ? _code.text.trim()
+            : _password.text,
+      );
+      if (!mounted || generation != _generation) return;
+      await ref.read(platformAccountProvider.notifier).acceptNetease(result);
+      if (mounted && generation == _generation) Navigator.of(context).pop(true);
+    } on Object catch (error) {
+      if (mounted && generation == _generation) {
+        setState(() => _message = _error(error));
+      }
+    } finally {
+      if (mounted && generation == _generation) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _pollNetease(
+    NeteaseQrChallenge challenge,
+    int generation,
+  ) async {
+    final expiry = DateTime.now().add(const Duration(minutes: 3));
+    while (mounted &&
+        generation == _generation &&
+        DateTime.now().isBefore(expiry)) {
+      await Future<void>.delayed(const Duration(seconds: 2));
+      if (!mounted || generation != _generation) return;
+      try {
+        final result = await _netLogin.poll(challenge);
+        if (!mounted || generation != _generation) return;
+        if (result == null) continue;
+        await ref.read(platformAccountProvider.notifier).acceptNetease(result);
+        if (mounted && generation == _generation) {
+          Navigator.of(context).pop(true);
+        }
+        return;
+      } on Object catch (error) {
+        if (mounted && generation == _generation) {
+          setState(() {
+            _message = _error(error);
+            _polling = false;
+          });
+        }
+        return;
+      }
+    }
+    if (mounted && generation == _generation) {
+      setState(() {
+        _message = '二维码已过期，请刷新';
+        _polling = false;
+      });
+    }
+  }
+
+  Widget _neteasePasswordFields() => AutofillGroup(
+    child: Column(
+      children: [
+        BetaGlassField(
+          child: TextField(
+            key: const ValueKey('netease-login-account'),
+            controller: _phone,
+            contextMenuBuilder: buildBetaEditingMenu,
+            selectionControls: mestingTextSelectionControls,
+            keyboardType: widget.neteaseMethod == NeteaseLoginMethod.email
+                ? TextInputType.emailAddress
+                : TextInputType.phone,
+            enabled: !_busy,
+            autofillHints: const [AutofillHints.username],
+            style: const TextStyle(fontSize: 18),
+            decoration: InputDecoration(
+              labelText: widget.neteaseMethod == NeteaseLoginMethod.email
+                  ? '网易邮箱'
+                  : '手机号',
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        BetaGlassField(
+          child: TextField(
+            key: const ValueKey('netease-login-password'),
+            controller: _password,
+            contextMenuBuilder: buildBetaEditingMenu,
+            selectionControls: mestingTextSelectionControls,
+            obscureText: true,
+            enableSuggestions: false,
+            autocorrect: false,
+            enabled: !_busy,
+            autofillHints: const [AutofillHints.password],
+            style: const TextStyle(fontSize: 18),
+            decoration: const InputDecoration(labelText: '密码'),
+            onSubmitted: (_) => _phoneLogin(),
+          ),
+        ),
+      ],
+    ),
+  );
+
   String _error(Object error) =>
       error is MusicPlatformException ? error.message : '音乐平台暂时不可用，请重试或返回先体验';
 
-  String _label(PlatformLoginMethod method) => switch (method) {
-    PlatformLoginMethod.phone => '手机验证码',
-    PlatformLoginMethod.kugouQr => '酷狗扫码',
-    PlatformLoginMethod.wechatQr => '微信扫码',
-    PlatformLoginMethod.qqQr => 'QQ 扫码',
-  };
+  String _label(PlatformLoginMethod method) => _isNetease
+      ? '网易云扫码'
+      : switch (method) {
+          PlatformLoginMethod.phone => '手机验证码',
+          PlatformLoginMethod.kugouQr => '酷狗扫码',
+          PlatformLoginMethod.wechatQr => '微信扫码',
+          PlatformLoginMethod.qqQr => 'QQ 扫码',
+        };
 
   Future<void> _logout() async {
     if (_busy) return;
@@ -294,12 +445,12 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
     final profile = session == null
         ? null
         : ref.watch(platformProfileProvider).value;
-    final signedIn = session != null || user != null;
+    final signedIn = !widget.loginOnly && (session != null || user != null);
     final scheme = Theme.of(context).colorScheme;
     final title = signedIn
         ? '当前账号'
         : _method == PlatformLoginMethod.phone
-        ? '手机号登录'
+        ? (_isNetease ? widget.neteaseMethod.label : '手机号登录')
         : '${_label(_method)}登录';
     final codeLabel = _countdown > 0 ? '${_countdown}s 后重试' : '获取验证码';
     return Scaffold(
@@ -354,7 +505,9 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
                                 '当前账号',
                           ),
                           subtitle: Text(
-                            session != null ? '酷狗账号 · 已登录' : 'Mesting 账号 · 已登录',
+                            session != null
+                                ? '${session.platformLabel}账号 · 已登录'
+                                : 'Mesting 账号 · 已登录',
                           ),
                         ),
                         const SizedBox(height: 24),
@@ -365,7 +518,9 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
                         ),
                       ] else if (_method == PlatformLoginMethod.phone) ...[
                         Text(
-                          '使用酷狗账号手机号，继续你的音乐。',
+                          _isNetease
+                              ? '使用网易云音乐账号，继续你的音乐。'
+                              : '使用酷狗账号手机号，继续你的音乐。',
                           style: TextStyle(
                             fontSize: 15,
                             height: 1.6,
@@ -373,59 +528,63 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
                           ),
                         ),
                         const SizedBox(height: 28),
-                        AutofillGroup(
-                          child: Column(
-                            children: [
-                              BetaGlassField(
-                                child: TextField(
-                                  contextMenuBuilder: buildBetaEditingMenu,
-                                  selectionControls:
-                                      mestingTextSelectionControls,
-                                  cursorRadius: const Radius.circular(1),
-                                  key: const ValueKey('beta11-phone-field'),
-                                  controller: _phone,
-                                  keyboardType: TextInputType.phone,
-                                  enabled: !_busy,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
-                                    LengthLimitingTextInputFormatter(11),
-                                  ],
-                                  autofillHints: const [
-                                    AutofillHints.telephoneNumberNational,
-                                  ],
-                                  style: const TextStyle(fontSize: 18),
-                                  decoration: const InputDecoration(
-                                    hintText: '手机号码',
-                                    prefixIcon: Padding(
-                                      padding: EdgeInsets.only(
-                                        left: 18,
-                                        right: 12,
+                        if (_isNetease &&
+                            widget.neteaseMethod != NeteaseLoginMethod.sms)
+                          _neteasePasswordFields()
+                        else
+                          AutofillGroup(
+                            child: Column(
+                              children: [
+                                BetaGlassField(
+                                  child: TextField(
+                                    contextMenuBuilder: buildBetaEditingMenu,
+                                    selectionControls:
+                                        mestingTextSelectionControls,
+                                    cursorRadius: const Radius.circular(1),
+                                    key: const ValueKey('beta11-phone-field'),
+                                    controller: _phone,
+                                    keyboardType: TextInputType.phone,
+                                    enabled: !_busy,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                      LengthLimitingTextInputFormatter(11),
+                                    ],
+                                    autofillHints: const [
+                                      AutofillHints.telephoneNumberNational,
+                                    ],
+                                    style: const TextStyle(fontSize: 18),
+                                    decoration: const InputDecoration(
+                                      hintText: '手机号码',
+                                      prefixIcon: Padding(
+                                        padding: EdgeInsets.only(
+                                          left: 18,
+                                          right: 12,
+                                        ),
+                                        child: Text(
+                                          '+86',
+                                          style: TextStyle(fontSize: 17),
+                                        ),
                                       ),
-                                      child: Text(
-                                        '+86',
-                                        style: TextStyle(fontSize: 17),
+                                      prefixIconConstraints: BoxConstraints(
+                                        minWidth: 66,
                                       ),
-                                    ),
-                                    prefixIconConstraints: BoxConstraints(
-                                      minWidth: 66,
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 16),
-                              _InlineCodeField(
-                                controller: _code,
-                                enabled: !_busy,
-                                label: codeLabel,
-                                loading: _busy && _busyAction == 'code',
-                                onSend: _busy || _countdown > 0
-                                    ? null
-                                    : _sendCode,
-                                onSubmitted: (_) => _phoneLogin(),
-                              ),
-                            ],
+                                const SizedBox(height: 16),
+                                _InlineCodeField(
+                                  controller: _code,
+                                  enabled: !_busy,
+                                  label: codeLabel,
+                                  loading: _busy && _busyAction == 'code',
+                                  onSend: _busy || _countdown > 0
+                                      ? null
+                                      : _sendCode,
+                                  onSubmitted: (_) => _phoneLogin(),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
                         const SizedBox(height: 18),
                         BetaGlassButton(
                           key: const ValueKey('beta11-phone-submit'),
@@ -448,6 +607,19 @@ class _PlatformAccountPageState extends ConsumerState<PlatformAccountPage> {
                         if (_busy)
                           const Center(
                             child: BetaActivityIndicator(label: '正在获取二维码'),
+                          ),
+                        if (_neteaseChallenge != null)
+                          Center(
+                            child: Container(
+                              color: Colors.white,
+                              padding: const EdgeInsets.all(12),
+                              child: QrImageView(
+                                data: _neteaseChallenge!.url,
+                                size: 220,
+                                backgroundColor: Colors.white,
+                                semanticsLabel: '网易云扫码登录二维码',
+                              ),
+                            ),
                           ),
                         if (_challenge != null)
                           Center(

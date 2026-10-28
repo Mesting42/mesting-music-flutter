@@ -1,3 +1,4 @@
+import '../../music_platform/music_platform_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -109,7 +110,7 @@ class MusicLibraryPage extends ConsumerWidget {
               icon: Icons.favorite_rounded,
               title: '我的喜欢',
               subtitle: cloud
-                  ? '酷狗云端收藏'
+                  ? '${ref.watch(platformAccountProvider).value?.platformLabel ?? '音乐'}云端收藏'
                   : '${favorites.value?.length ?? 0} 首歌曲',
               onTap: () => context.push('/music?view=favorites'),
             ),
@@ -154,7 +155,9 @@ class MusicLibraryPage extends ConsumerWidget {
                               EditorialCover(
                                 cover: list.coverAsset ?? '',
                                 title: list.name,
-                                subtitle: cloud ? '酷狗云端歌单' : '我的歌单',
+                                subtitle: cloud
+                                    ? '${ref.watch(platformAccountProvider).value?.platformLabel ?? '音乐'}云端歌单'
+                                    : '我的歌单',
                                 width: width,
                                 onTap: () => context.push(
                                   '/music/playlists/${Uri.encodeComponent(list.id)}',

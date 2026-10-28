@@ -1,9 +1,9 @@
+import 'cloud_library_repository.dart';
 import 'dart:async';
 import 'dart:io';
 
 import '../../../core/database/app_database.dart';
 import '../../../shared/models/track.dart';
-import '../../library/data/library_repository.dart';
 import '../domain/platform_session.dart';
 import 'music_platform_api.dart';
 import 'platform_catalog.dart';
@@ -11,7 +11,7 @@ import 'platform_catalog.dart';
 /// Implements the existing library boundary with the active Kugou cloud.
 /// Nothing is copied into the guest/CloudBase database or uploaded implicitly.
 /// Every operation is pinned to its original credential, including after awaits.
-class PlatformLibraryRepository extends LibraryRepository {
+class PlatformLibraryRepository extends CloudLibraryRepository {
   PlatformLibraryRepository(
     super.database, {
     required this.api,
@@ -38,9 +38,11 @@ class PlatformLibraryRepository extends LibraryRepository {
     return result;
   }
 
+  @override
   bool canManage(String id) =>
       _snapshot.any((row) => _id(row) == id && _owned(row) && !_likes(row));
 
+  @override
   Future<String> commentId(String id) async {
     final row = await _row(id);
     return '${row['global_collection_id'] ?? row['list_create_gid'] ?? ''}';

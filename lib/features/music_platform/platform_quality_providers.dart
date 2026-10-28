@@ -1,3 +1,4 @@
+import 'platform_backend_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/audio/playback_providers.dart';
@@ -42,6 +43,9 @@ class _QualityRetentions {
 final platformSongQualitiesProvider = FutureProvider.autoDispose
     .family<Set<PlatformAudioQuality>, String>((ref, id) async {
       final session = await ref.watch(platformAccountProvider.future);
+      if (id.startsWith('netease_')) {
+        return ref.watch(neteaseMusicRepositoryProvider).qualities(id);
+      }
       final payload = await ref
           .watch(musicPlatformApiProvider)
           .get(

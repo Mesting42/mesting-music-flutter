@@ -39,7 +39,8 @@ class PlaylistDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (DistributionChannel.isBeta && playlistId.startsWith('kg:')) {
+    if (DistributionChannel.isBeta &&
+        (playlistId.startsWith('kg:') || playlistId.startsWith('ne:'))) {
       return PlatformCloudPlaylistPage(id: playlistId);
     }
     final playlist = ref.watch(playlistProvider(playlistId));

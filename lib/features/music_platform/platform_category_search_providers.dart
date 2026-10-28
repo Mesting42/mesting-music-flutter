@@ -1,3 +1,5 @@
+import 'platform_backend_providers.dart';
+import 'netease/netease_catalog_adapters.dart';
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../search/search_providers.dart';
@@ -5,10 +7,12 @@ import 'music_platform_providers.dart';
 import 'data/platform_category_search.dart';
 import 'data/music_platform_api.dart';
 
-final platformCategorySearchRepositoryProvider = Provider(
-  (ref) =>
-      PlatformCategorySearchRepository(ref.watch(musicPlatformApiProvider)),
-);
+final platformCategorySearchRepositoryProvider = Provider((ref) {
+  final api = ref.watch(musicPlatformApiProvider);
+  return ref.watch(usesNeteaseProvider)
+      ? NeteaseCategoryAdapter(api, ref.watch(neteaseMusicRepositoryProvider))
+      : PlatformCategorySearchRepository(api);
+});
 
 class CategorySearchSlice {
   const CategorySearchSlice({
@@ -63,7 +67,7 @@ class CategorySearchController extends Notifier<CategorySearchState> {
       musicSearchControllerProvider.select((s) => s.query),
       (_, query) => reset(query),
     );
-    ref.listen(platformAccountProvider.select((s) => s.value?.userId), (
+    ref.listen(platformAccountProvider.select((s) => s.value?.ownerId), (
       before,
       after,
     ) {

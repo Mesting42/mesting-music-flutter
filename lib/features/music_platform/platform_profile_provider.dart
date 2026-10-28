@@ -1,3 +1,5 @@
+import 'platform_backend_providers.dart';
+import 'netease/netease_profile_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'data/platform_profile_repository.dart';
@@ -7,9 +9,14 @@ import 'music_platform_providers.dart';
 import 'domain/platform_profile.dart';
 export 'domain/platform_profile.dart';
 
-final platformProfileRepositoryProvider = Provider<PlatformProfileRepository>(
-  (ref) => PlatformProfileRepository(ref.watch(musicPlatformApiProvider)),
-);
+final platformProfileRepositoryProvider = Provider<PlatformProfileRepository>((
+  ref,
+) {
+  final api = ref.watch(musicPlatformApiProvider);
+  return ref.watch(usesNeteaseProvider)
+      ? NeteaseProfileRepository(api, ref.watch(neteaseMusicRepositoryProvider))
+      : PlatformProfileRepository(api);
+});
 final platformEditableProfileProvider = FutureProvider.autoDispose
     .family<PlatformProfileInfo, PlatformSession>(
       (ref, session) =>
@@ -28,10 +35,7 @@ final platformProfileProvider = FutureProvider<PlatformProfileInfo?>((
   if (session == null) return null;
   final fallback = PlatformProfileInfo(session.nickname, session.avatarUrl);
   try {
-    final payload = await ref
-        .watch(musicPlatformApiProvider)
-        .get('/user/detail', expectedSession: session);
-    return PlatformProfileInfo.fromJson(payload, session);
+    return await ref.watch(platformProfileRepositoryProvider).fetch(session);
   } catch (_) {
     return fallback;
   }

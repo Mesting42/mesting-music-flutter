@@ -1,3 +1,4 @@
+import 'package:mesting_music/features/music_platform/presentation/platform_login_options_page.dart';
 import 'dart:async';
 import 'package:mesting_music/shared/widgets/beta_glass_controls.dart';
 import 'dart:convert';
@@ -185,12 +186,14 @@ void _betaEntryTests() {
       'welcome has living companions, both primary entries and guest ($dark)',
       (tester) async {
         await prepare(tester, const BetaWelcomePage(), dark: dark);
-        expect(find.text('手机号登录'), findsOneWidget);
-        expect(find.text('微信扫码登录'), findsOneWidget);
+        expect(find.text('酷狗登录'), findsOneWidget);
+        expect(find.text('网易云登录'), findsOneWidget);
         expect(find.text('游客体验'), findsOneWidget);
         expect(find.byType(MestingMusicCompanions), findsOneWidget);
         await capture(tester, 'welcome-${dark ? 'dark' : 'light'}');
-        await tester.tap(find.text('其他登录方式'));
+        await tester.tap(find.bySemanticsLabel('我已阅读并同意用户协议和隐私政策'));
+        await tester.pump();
+        await tester.tap(find.text('酷狗登录'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 400));
         expect(find.textContaining('Mesting 账号登录'), findsNothing);
@@ -538,7 +541,10 @@ void _betaEntryTests() {
       );
       await tester.tap(find.bySemanticsLabel('我已阅读并同意用户协议和隐私政策'));
       await tester.pump();
-      await tester.tap(find.byKey(const ValueKey('welcome-phone-login')));
+      await tester.tap(find.byKey(const ValueKey('welcome-kugou-login')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.text('手机号登录'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.byKey(const ValueKey('beta11-phone-field')), findsOneWidget);
@@ -547,6 +553,10 @@ void _betaEntryTests() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.byType(PlatformAccountPage), findsNothing);
+      expect(find.byType(PlatformLoginOptionsPage), findsOneWidget);
+      expect(await dispatcher.didPopRoute(), true);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
       expect(find.byType(BetaWelcomePage), findsOneWidget);
       for (final title in ['用户协议', '隐私政策']) {
         await tester.tap(find.text(title).hitTestable());
@@ -561,6 +571,9 @@ void _betaEntryTests() {
         await tester.pump(const Duration(milliseconds: 400));
         expect(find.byType(BetaWelcomePage), findsOneWidget);
       }
+      await tester.tap(find.text('酷狗登录'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
       await tester.tap(find.text('微信扫码登录'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));

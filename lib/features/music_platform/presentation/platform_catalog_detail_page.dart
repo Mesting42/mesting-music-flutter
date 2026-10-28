@@ -1,3 +1,5 @@
+import '../platform_backend_providers.dart';
+import '../domain/platform_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/models/track.dart';
@@ -26,6 +28,7 @@ class _PlatformCatalogDetailPageState
   bool _busy = false, _more = true;
   int _page = 0;
   String? _error;
+  Future<List<Track>>? _neteaseTracks;
   @override
   void initState() {
     super.initState();
@@ -39,41 +42,53 @@ class _PlatformCatalogDetailPageState
       _error = null;
     });
     final api = ref.read(musicPlatformApiProvider);
-    final identity = api.session;
+    final identity = ref.read(platformAccountProvider).value;
     try {
       final hit = widget.hit;
       if (hit.kind == PlatformSearchKind.playlists && hit.globalId.isEmpty) {
         throw const MusicPlatformException('平台未返回可打开的歌单标识，请返回后重试');
       }
-      final payload = await api.get(
-        switch (hit.kind) {
-          PlatformSearchKind.artists => '/artist/audios',
-          PlatformSearchKind.albums => '/album/songs',
-          _ => '/playlist/track/all',
-        },
-        query: {
-          if (hit.kind == PlatformSearchKind.artists) 'id': hit.id,
-          if (hit.kind == PlatformSearchKind.albums) 'album_id': hit.id,
-          if (hit.kind == PlatformSearchKind.playlists)
-            'global_collection_id': hit.globalId,
-          'page': '${_page + 1}',
-          'pagesize': '30',
-        },
-        expectedSession: identity,
-      );
+      final List<Track> fresh;
+      final int rowCount;
+      if (identity?.platform == MusicPlatform.netease) {
+        final all = await (_neteaseTracks ??= ref
+            .read(neteaseMusicRepositoryProvider)
+            .categoryTracks(hit));
+        fresh = all.skip(_page * 30).take(30).toList();
+        rowCount = fresh.length;
+      } else {
+        final payload = await api.get(
+          switch (hit.kind) {
+            PlatformSearchKind.artists => '/artist/audios',
+            PlatformSearchKind.albums => '/album/songs',
+            _ => '/playlist/track/all',
+          },
+          query: {
+            if (hit.kind == PlatformSearchKind.artists) 'id': hit.id,
+            if (hit.kind == PlatformSearchKind.albums) 'album_id': hit.id,
+            if (hit.kind == PlatformSearchKind.playlists)
+              'global_collection_id': hit.globalId,
+            'page': '${_page + 1}',
+            'pagesize': '30',
+          },
+          expectedSession: identity,
+        );
+        final rows = PlatformCatalog.rows(payload);
+        fresh = PlatformCatalog.tracks(rows);
+        rowCount = rows.length;
+      }
       if (!mounted ||
-          api.session?.userId != identity?.userId ||
-          api.session?.token != identity?.token) {
+          ref.read(platformAccountProvider).value?.ownerId !=
+              identity?.ownerId ||
+          ref.read(platformAccountProvider).value?.token != identity?.token) {
         return;
       }
-      final rows = PlatformCatalog.rows(payload);
-      final fresh = PlatformCatalog.tracks(rows);
       setState(() {
         final ids = _tracks.map((t) => t.id).toSet();
         final added = fresh.where((t) => ids.add(t.id)).toList();
         _tracks.addAll(added);
         _page++;
-        _more = rows.length >= 30 && added.isNotEmpty;
+        _more = rowCount >= 30 && added.isNotEmpty;
       });
     } catch (error) {
       if (mounted) {

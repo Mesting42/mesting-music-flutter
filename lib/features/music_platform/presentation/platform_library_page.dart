@@ -1,3 +1,4 @@
+import '../music_platform_providers.dart';
 import '../../player/presentation/beta_playback_actions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +9,7 @@ import '../../../core/audio/playback_providers.dart';
 import '../../library/presentation/music_home_page.dart';
 import '../../library/library_providers.dart';
 import '../../player/presentation/music_hub_top_bar.dart';
-import '../data/platform_library_repository.dart';
+import '../data/cloud_library_repository.dart';
 import 'platform_discovery_page.dart';
 import 'platform_feedback.dart';
 import 'platform_comments_page.dart';
@@ -43,7 +44,8 @@ class PlatformLibraryPage extends ConsumerWidget {
           children: [
             MusicHubTopBar(
               title: favorites ? '我的喜欢' : '我的歌单',
-              subtitle: '酷狗云端曲库',
+              subtitle:
+                  '${ref.watch(platformAccountProvider).value?.platformLabel ?? '音乐'}云端曲库',
               showBack: true,
               onBack: () =>
                   context.canPop() ? context.pop() : context.go('/profile'),
@@ -104,7 +106,7 @@ class PlatformLibraryPage extends ConsumerWidget {
                     data: (items) => items.isEmpty
                         ? const Padding(
                             padding: EdgeInsets.all(24),
-                            child: Text('酷狗账号中还没有歌单'),
+                            child: Text('当前平台账号中还没有歌单'),
                           )
                         : MyPlaylistsCollectionView(playlists: items),
                   ),
@@ -122,7 +124,7 @@ class PlatformCloudPlaylistPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final repository = ref.watch(libraryRepositoryProvider);
-    if (repository is! PlatformLibraryRepository) {
+    if (repository is! CloudLibraryRepository) {
       return Center(
         child: TextButton(
           onPressed: () => context.go('/profile'),
@@ -132,11 +134,12 @@ class PlatformCloudPlaylistPage extends ConsumerWidget {
     }
     final playlist = ref.watch(playlistProvider(id));
     return PlatformPageFrame(
-      title: playlist.value?.name ?? '酷狗云端歌单',
-      subtitle: '酷狗云端歌单',
+      title: playlist.value?.name ?? '云端歌单',
+      subtitle:
+          '${ref.watch(platformAccountProvider).value?.platformLabel ?? ''}云端歌单',
       actions: [
         IconButton(
-          tooltip: '酷狗歌单评论',
+          tooltip: '歌单评论',
           icon: const Icon(Icons.comment_outlined),
           onPressed: () async {
             try {
@@ -199,7 +202,7 @@ class PlatformCloudPlaylistPage extends ConsumerWidget {
   Future<void> _manage(
     BuildContext context,
     WidgetRef ref,
-    PlatformLibraryRepository repository,
+    CloudLibraryRepository repository,
     UserPlaylist playlist,
     String action,
   ) async {
@@ -227,8 +230,8 @@ class PlatformCloudPlaylistPage extends ConsumerWidget {
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (dialogContext) => AlertDialog(
-            title: const Text('删除酷狗云端歌单？'),
-            content: Text('将从酷狗账号中删除「${playlist.name}」。此操作会同步到酷狗。'),
+            title: const Text('删除云端歌单？'),
+            content: Text('将从当前平台账号中删除「${playlist.name}」。此操作会同步到云端。'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext, false),
