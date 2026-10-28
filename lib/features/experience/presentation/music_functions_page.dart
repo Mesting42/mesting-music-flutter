@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../shared/widgets/beta_bottom_search.dart';
 
 import '../../music_platform/data/platform_explore.dart';
 import '../../music_platform/data/platform_recommendations.dart';
@@ -37,11 +38,14 @@ class MusicFunctionsPage extends StatelessWidget {
         CupertinoIcons.calendar,
         () => context.push('/music?view=daily'),
       ),
-      _FunctionEntry(
-        '搜索',
-        CupertinoIcons.search,
-        () => context.push('/music/search'),
-      ),
+      _FunctionEntry('搜索', CupertinoIcons.search, () {
+        final search = BetaBottomSearchScope.maybeOf(context);
+        if (search != null) {
+          search.openMusicSearch();
+        } else {
+          context.push('/music/search');
+        }
+      }),
       _FunctionEntry(
         '排行榜',
         CupertinoIcons.chart_bar,

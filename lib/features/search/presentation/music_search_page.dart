@@ -1,6 +1,7 @@
 import '../../../shared/widgets/beta_text_editing.dart';
 import 'beta_category_search_results.dart';
 import '../../../shared/widgets/beta_edge_back.dart';
+import '../../../shared/widgets/beta_bottom_search.dart';
 import 'package:flutter/material.dart';
 import '../../../shared/widgets/beta_glass_controls.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -107,6 +108,12 @@ class _MusicSearchPageState extends ConsumerState<MusicSearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Beta's shell owns both input and results, including direct route entry.
+    // Keep this route as a compatibility address without building a second UI.
+    if (DistributionChannel.isBeta &&
+        BetaBottomSearchScope.maybeOf(context) != null) {
+      return const SizedBox.expand();
+    }
     final search = ref.watch(musicSearchControllerProvider);
     final top = MediaQuery.paddingOf(context).top;
     final tokens = context.musicThemeTokens;
@@ -283,6 +290,7 @@ class MusicSearchResultsBodyState extends ConsumerState<MusicSearchResultsBody>
     // A landing-only visit has no AnimatedBuilder; initialize before disposal.
     _motion;
   }
+
   Future<void> returnToLanding(VoidCallback clear) async {
     if (_returning) return;
     final query = ref.read(musicSearchControllerProvider).query;

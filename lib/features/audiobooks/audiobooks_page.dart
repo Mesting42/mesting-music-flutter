@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/audio/playback_providers.dart';
+import '../../core/platform/distribution_channel.dart';
+import '../../shared/widgets/beta_bottom_search.dart';
 import '../../shared/widgets/artwork_image.dart';
 import '../../shared/widgets/beta_glass_controls.dart';
 import '../music_platform/data/music_platform_api.dart';
@@ -23,7 +25,12 @@ class AudiobooksPage extends ConsumerStatefulWidget {
 }
 
 class _AudiobooksPageState extends ConsumerState<AudiobooksPage> {
-  final _search = TextEditingController();
+  late final _bottomSearch = BetaPageSearchController(
+    hintText: '搜索书名、作者',
+    onSubmitted: (_) => _submit(),
+    onCleared: _clearSearch,
+  );
+  TextEditingController get _search => _bottomSearch.text;
   final _scroll = ScrollController();
   AudiobookRepository? _repository;
   Completer<void>? _abort;
@@ -56,7 +63,7 @@ class _AudiobooksPageState extends ConsumerState<AudiobooksPage> {
     if (_abort?.isCompleted == false) {
       _abort!.complete();
     }
-    _search.dispose();
+    _bottomSearch.dispose();
     _scroll.dispose();
     super.dispose();
   }
@@ -165,244 +172,248 @@ class _AudiobooksPageState extends ConsumerState<AudiobooksPage> {
         : width < 350 || MediaQuery.textScalerOf(context).scale(14) > 21
         ? 2
         : 3;
-    return PlatformPageFrame(
-      title: '听书',
-      subtitle: '把故事听进日常',
-      actions: [
-        BetaGlassButton(
-          label: '刷新听书',
-          width: 48,
-          height: 48,
-          onPressed: _loading ? null : _refreshAll,
-          child: const Icon(CupertinoIcons.arrow_clockwise, size: 21),
-        ),
-      ],
-      child: CustomScrollView(
-        controller: _scroll,
-        slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(22, 16, 22, 22),
-            sliver: SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    key: const ValueKey('audiobooks-search'),
-                    controller: _search,
-                    textInputAction: TextInputAction.search,
-                    decoration: InputDecoration(
-                      hintText: '搜索书名、作者',
-                      prefixIcon: const Icon(CupertinoIcons.search),
-                      suffixIcon: IconButton(
-                        tooltip: '搜索听书',
-                        icon: const Icon(
-                          CupertinoIcons.arrow_right_circle_fill,
-                        ),
-                        onPressed: _submit,
-                      ),
-                    ),
-                    onSubmitted: (_) => _submit(),
-                  ),
-                  ListenableBuilder(
-                    listenable: store,
-                    builder: (context, _) {
-                      final entries = store.entries.take(3).toList();
-                      if (entries.isEmpty) return const SizedBox.shrink();
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 24),
-                          const PlatformSectionTitle('接着听'),
-                          for (final entry in entries)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: PlatformPanel(
-                                padding: const EdgeInsets.all(14),
-                                child: Row(
-                                  children: [
-                                    _BookCover(album: entry.album, size: 58),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            entry.album.name,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 5),
-                                          Text(
-                                            entry.track.title,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: Theme.of(
-                                              context,
-                                            ).textTheme.bodySmall,
-                                          ),
-                                          Text(
-                                            '已听 ${_bookTime(entry.position)}',
-                                            style: Theme.of(
-                                              context,
-                                            ).textTheme.bodySmall,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    BetaGlassButton(
-                                      label: '继续收听${entry.album.name}',
-                                      width: 46,
-                                      height: 46,
-                                      loading: _resuming,
-                                      onPressed: _resuming
-                                          ? null
-                                          : () => _resume(entry),
-                                      child: const Icon(
-                                        CupertinoIcons.play_fill,
-                                        size: 19,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  PlatformSectionTitle(
-                    _query.isEmpty ? '挑一本，慢慢听' : '“$_query”的搜索结果',
-                    subtitle: _query.isEmpty ? '酷狗免费书库' : null,
-                  ),
-                  if (_categories.isNotEmpty)
-                    SizedBox(
-                      height: 46,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _categories.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 8),
-                        itemBuilder: (context, index) {
-                          final category = _categories[index];
-                          return ChoiceChip(
-                            label: Text(category.name),
-                            selected:
-                                _query.isEmpty && _category == category.id,
-                            onSelected: (_) {
-                              FocusScope.of(context).unfocus();
-                              _search.clear();
-                              _query = '';
-                              _category = category.id;
-                              unawaited(_load());
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  if (_categoryError != null)
-                    TextButton(
-                      onPressed: _loadCategories,
-                      child: const Text('重新加载分类'),
-                    ),
-                  if (_query.isNotEmpty)
-                    TextButton(
-                      onPressed: () {
-                        _search.clear();
-                        _query = '';
-                        unawaited(_load());
-                      },
-                      child: const Text('返回书库'),
-                    ),
-                  if (_loading)
-                    const Padding(
-                      padding: EdgeInsets.all(35),
-                      child: Center(child: BetaActivityIndicator()),
-                    ),
-                  if (!_loading && _albums.isEmpty && _error == null)
-                    const _BookMessage('暂未找到相关听书内容，换一个关键词或分类试试。'),
-                ],
-              ),
-            ),
-          ),
-          if (!_loading)
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 22),
-              sliver: SliverGrid(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: columns,
-                  crossAxisSpacing: 14,
-                  mainAxisSpacing: 22,
-                  mainAxisExtent:
-                      (width - 44 - 14 * (columns - 1)) / columns +
-                      82 *
-                          (MediaQuery.textScalerOf(context).scale(14) / 14)
-                              .clamp(1.0, 1.8),
-                ),
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final album = _albums[index];
-                  return Semantics(
-                    button: true,
-                    label: '打开${album.name}',
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(14),
-                      onTap: () => _openAlbum(album),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          AspectRatio(
-                            aspectRatio: 1,
-                            child: _BookCover(album: album),
-                          ),
-                          const SizedBox(height: 9),
-                          Text(
-                            album.name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              height: 1.3,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            album.author,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }, childCount: _albums.length),
-              ),
-            ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(22, 22, 22, 160),
-            sliver: SliverToBoxAdapter(
-              child: Column(
-                children: [
-                  if (_error != null)
-                    _BookMessage(
-                      _error!,
-                      retry: () => _load(reset: _albums.isEmpty),
-                    ),
-                  if (_loadingMore) const BetaActivityIndicator(),
-                  if (!_loading && !_loadingMore && _hasMore && _error == null)
-                    TextButton(
-                      onPressed: () => _load(reset: false),
-                      child: const Text('加载更多'),
-                    ),
-                ],
-              ),
-            ),
+    return BetaBottomSearchBinding(
+      controller: _bottomSearch,
+      child: PlatformPageFrame(
+        title: '听书',
+        subtitle: '把故事听进日常',
+        actions: [
+          BetaGlassButton(
+            label: '刷新听书',
+            width: 48,
+            height: 48,
+            onPressed: _loading ? null : _refreshAll,
+            child: const Icon(CupertinoIcons.arrow_clockwise, size: 21),
           ),
         ],
+        child: CustomScrollView(
+          controller: _scroll,
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(22, 16, 22, 22),
+              sliver: SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (!DistributionChannel.isBeta)
+                      TextField(
+                        key: const ValueKey('audiobooks-search'),
+                        controller: _search,
+                        textInputAction: TextInputAction.search,
+                        decoration: InputDecoration(
+                          hintText: '搜索书名、作者',
+                          prefixIcon: const Icon(CupertinoIcons.search),
+                          suffixIcon: IconButton(
+                            tooltip: '搜索听书',
+                            icon: const Icon(
+                              CupertinoIcons.arrow_right_circle_fill,
+                            ),
+                            onPressed: _submit,
+                          ),
+                        ),
+                        onSubmitted: (_) => _submit(),
+                      ),
+                    ListenableBuilder(
+                      listenable: store,
+                      builder: (context, _) {
+                        final entries = store.entries.take(3).toList();
+                        if (entries.isEmpty) return const SizedBox.shrink();
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 24),
+                            const PlatformSectionTitle('接着听'),
+                            for (final entry in entries)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: PlatformPanel(
+                                  padding: const EdgeInsets.all(14),
+                                  child: Row(
+                                    children: [
+                                      _BookCover(album: entry.album, size: 58),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              entry.album.name,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 5),
+                                            Text(
+                                              entry.track.title,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: Theme.of(
+                                                context,
+                                              ).textTheme.bodySmall,
+                                            ),
+                                            Text(
+                                              '已听 ${_bookTime(entry.position)}',
+                                              style: Theme.of(
+                                                context,
+                                              ).textTheme.bodySmall,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      BetaGlassButton(
+                                        label: '继续收听${entry.album.name}',
+                                        width: 46,
+                                        height: 46,
+                                        loading: _resuming,
+                                        onPressed: _resuming
+                                            ? null
+                                            : () => _resume(entry),
+                                        child: const Icon(
+                                          CupertinoIcons.play_fill,
+                                          size: 19,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    PlatformSectionTitle(
+                      _query.isEmpty ? '挑一本，慢慢听' : '“$_query”的搜索结果',
+                      subtitle: _query.isEmpty ? '酷狗免费书库' : null,
+                    ),
+                    if (_categories.isNotEmpty)
+                      SizedBox(
+                        height: 46,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _categories.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            final category = _categories[index];
+                            return ChoiceChip(
+                              label: Text(category.name),
+                              selected:
+                                  _query.isEmpty && _category == category.id,
+                              onSelected: (_) {
+                                FocusScope.of(context).unfocus();
+                                _search.clear();
+                                _query = '';
+                                _bottomSearch.hasResults = false;
+                                _category = category.id;
+                                unawaited(_load());
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    if (_categoryError != null)
+                      TextButton(
+                        onPressed: _loadCategories,
+                        child: const Text('重新加载分类'),
+                      ),
+                    if (_query.isNotEmpty)
+                      TextButton(
+                        onPressed: _bottomSearch.clearResults,
+                        child: const Text('返回书库'),
+                      ),
+                    if (_loading)
+                      const Padding(
+                        padding: EdgeInsets.all(35),
+                        child: Center(child: BetaActivityIndicator()),
+                      ),
+                    if (!_loading && _albums.isEmpty && _error == null)
+                      const _BookMessage('暂未找到相关听书内容，换一个关键词或分类试试。'),
+                  ],
+                ),
+              ),
+            ),
+            if (!_loading)
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 22),
+                sliver: SliverGrid(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    crossAxisSpacing: 14,
+                    mainAxisSpacing: 22,
+                    mainAxisExtent:
+                        (width - 44 - 14 * (columns - 1)) / columns +
+                        82 *
+                            (MediaQuery.textScalerOf(context).scale(14) / 14)
+                                .clamp(1.0, 1.8),
+                  ),
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final album = _albums[index];
+                    return Semantics(
+                      button: true,
+                      label: '打开${album.name}',
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () => _openAlbum(album),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AspectRatio(
+                              aspectRatio: 1,
+                              child: _BookCover(album: album),
+                            ),
+                            const SizedBox(height: 9),
+                            Text(
+                              album.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                height: 1.3,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              album.author,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }, childCount: _albums.length),
+                ),
+              ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(22, 22, 22, 160),
+              sliver: SliverToBoxAdapter(
+                child: Column(
+                  children: [
+                    if (_error != null)
+                      _BookMessage(
+                        _error!,
+                        retry: () => _load(reset: _albums.isEmpty),
+                      ),
+                    if (_loadingMore) const BetaActivityIndicator(),
+                    if (!_loading &&
+                        !_loadingMore &&
+                        _hasMore &&
+                        _error == null)
+                      TextButton(
+                        onPressed: () => _load(reset: false),
+                        child: const Text('加载更多'),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -410,6 +421,12 @@ class _AudiobooksPageState extends ConsumerState<AudiobooksPage> {
   void _submit() {
     FocusScope.of(context).unfocus();
     _query = _search.text.trim();
+    _bottomSearch.hasResults = _query.isNotEmpty;
+    unawaited(_load());
+  }
+
+  void _clearSearch() {
+    _query = '';
     unawaited(_load());
   }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/models/track.dart';
@@ -10,6 +12,7 @@ import '../../auth/presentation/beta_login_navigation.dart';
 import 'platform_design.dart';
 import 'platform_feedback.dart';
 import '../../../shared/widgets/automatic_song_paging.dart';
+import '../../../shared/widgets/mesting_loading_indicator.dart';
 import '../../player/presentation/beta_playback_actions.dart';
 
 /// Original md3Music's four discovery modules, rendered in the approved Mesting
@@ -212,6 +215,61 @@ class _PlatformRecommendationDetailState
   String? _baseSignature;
   int _generation = 0;
   Set<String> _baseIds = {};
+  List<Track>? _initialBase;
+  bool _firstScreenReady = false, _preparingFirstScreen = false;
+  String? _initialError;
+
+  /// The FM preview is a small upstream batch, not a complete detail page.
+  /// Stage enough unique recordings for the viewport, then publish once. A
+  /// bounded loop and the no-progress check also handle exhausted/duplicate
+  /// recommendations without an endless spinner or changing upstream order.
+  Future<void> _prepareFirstScreen(List<Track> base, int minimum) async {
+    final generation = _generation;
+    final repository = ref.read(platformRecommendationsProvider);
+    final station = ref.read(platformFmStationProvider);
+    final staged = <Track>[];
+    final ids = base.map((track) => track.id).toSet();
+    var more = base.isNotEmpty;
+    try {
+      for (
+        var request = 0;
+        ids.length < minimum && more && request < 6;
+        request++
+      ) {
+        final next = await repository.personalFm(
+          station,
+          first: false,
+          anchor: staged.lastOrNull ?? base.lastOrNull,
+        );
+        if (!mounted || generation != _generation) return;
+        final additions = next.where((track) => ids.add(track.id)).toList();
+        staged.addAll(additions);
+        more = additions.isNotEmpty;
+      }
+      if (!mounted || generation != _generation) return;
+      setState(() {
+        _extra.addAll(staged);
+        _more = more;
+        _firstScreenReady = true;
+      });
+    } catch (_) {
+      if (mounted && generation == _generation) {
+        setState(() => _initialError = '推荐暂时无法读取');
+      }
+    } finally {
+      if (mounted && generation == _generation) {
+        _preparingFirstScreen = false;
+      }
+    }
+  }
+
+  void _resetFirstScreen() {
+    _initialBase = null;
+    _firstScreenReady = false;
+    _preparingFirstScreen = false;
+    _initialError = null;
+  }
+
   Future<void> _load() async {
     if (_loading || !_more) return;
     final generation = _generation;
@@ -225,7 +283,7 @@ class _PlatformRecommendationDetailState
           ? await repository.personalFm(
               ref.read(platformFmStationProvider),
               first: false,
-              anchor: _extra.lastOrNull,
+              anchor: _extra.lastOrNull ?? _initialBase?.lastOrNull,
             )
           : await repository.discover(more: true);
       if (!mounted || generation != _generation) return;
@@ -264,14 +322,59 @@ class _PlatformRecommendationDetailState
       _loading = false;
       _extra.clear();
       _more = true;
+      _resetFirstScreen();
     }
     return PlatformPageFrame(
       title: widget.title,
       child: value.when(
-        loading: () => const PlatformFeedbackState(loading: true),
+        skipLoadingOnRefresh: false,
+        loading: () => const _RecommendationLoading(),
         error: (_, _) =>
             EditorialEmpty('推荐暂时无法读取', onRetry: () => ref.invalidate(provider)),
         data: (base) {
+          if (widget.kind == PlatformRecommendationKind.fm &&
+              !identical(base, _initialBase)) {
+            _generation++;
+            _extra.clear();
+            _loading = false;
+            _more = true;
+            _resetFirstScreen();
+            _initialBase = base;
+          }
+          if (widget.kind == PlatformRecommendationKind.fm &&
+              !_firstScreenReady) {
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                if (_initialError != null) {
+                  return EditorialEmpty(
+                    _initialError!,
+                    onRetry: () {
+                      setState(() {
+                        _generation++;
+                        _resetFirstScreen();
+                      });
+                      ref.invalidate(provider);
+                    },
+                  );
+                }
+                if (!_preparingFirstScreen) {
+                  _preparingFirstScreen = true;
+                  // Rows are at least 70dp (52dp artwork + 18dp padding).
+                  // Reserve the same 180dp as the list for floating controls.
+                  // At larger text sizes fewer rows fit, so this is conservative.
+                  final minimum = ((constraints.maxHeight - 180) / 70)
+                      .ceil()
+                      .clamp(1, 40);
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && identical(_initialBase, base)) {
+                      unawaited(_prepareFirstScreen(base, minimum));
+                    }
+                  });
+                }
+                return const _RecommendationLoading();
+              },
+            );
+          }
           final merged = <String, Track>{
             for (final t in [...base, ..._extra]) t.id: t,
           };
@@ -284,11 +387,13 @@ class _PlatformRecommendationDetailState
                 _loading = false;
                 _extra.clear();
                 _more = true;
+                _resetFirstScreen();
               });
               ref.invalidate(provider);
               await ref.read(provider.future);
             },
             child: AutomaticSongPaging(
+              fillInitialViewport: widget.kind != PlatformRecommendationKind.fm,
               enabled:
                   widget.kind != null && _more && !_loading && _error == null,
               onLoadMore: _load,
@@ -305,7 +410,7 @@ class _PlatformRecommendationDetailState
                     );
                   }
                   if (_loading) {
-                    return const PlatformFeedbackState(loading: true);
+                    return const _RecommendationLoading();
                   }
                   if (_error != null) {
                     return TextButton(onPressed: _load, child: Text(_error!));
@@ -320,4 +425,14 @@ class _PlatformRecommendationDetailState
       ),
     );
   }
+}
+
+/// List loading keeps the page's own background visible, including the footer.
+class _RecommendationLoading extends StatelessWidget {
+  const _RecommendationLoading();
+  @override
+  Widget build(BuildContext context) => const Padding(
+    padding: EdgeInsets.symmetric(vertical: 32),
+    child: Center(child: MestingLoadingIndicator(semanticLabel: '正在加载音乐内容')),
+  );
 }

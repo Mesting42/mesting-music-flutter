@@ -29,6 +29,7 @@ import 'package:mesting_music/features/music_platform/domain/platform_session.da
 import 'package:mesting_music/features/themes/app_theme.dart';
 import 'package:mesting_music/features/themes/music_theme_preset.dart';
 import 'package:mesting_music/shared/models/track.dart';
+import 'package:mesting_music/shared/widgets/beta_bottom_search.dart';
 
 const _hash = '0123456789abcdef0123456789abcdef';
 const _identity = PlatformSession(
@@ -690,11 +691,13 @@ void main() {
       await tester.tap(find.text('玄幻异界'));
       await tester.pumpAndSettle();
       expect(books.category, '1097');
-      await tester.enterText(
-        find.byKey(const ValueKey('audiobooks-search')),
-        '山海',
-      );
-      await tester.testTextInput.receiveAction(TextInputAction.search);
+      // This fixture isolates book business states. The shared glass field's
+      // real input/keyboard flow is covered by search_menu_fm_regression_test.
+      final search = tester
+          .widget<BetaBottomSearchBinding>(find.byType(BetaBottomSearchBinding))
+          .controller;
+      search.text.text = '山海';
+      search.submit('山海');
       await tester.pumpAndSettle();
       expect(books.lastSearch, '山海');
       books.fail = true;

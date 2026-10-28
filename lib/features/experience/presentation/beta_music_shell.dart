@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import '../../../shared/widgets/beta_edge_back.dart';
 import '../../../shared/widgets/beta_text_editing.dart';
 import '../../../shared/widgets/beta_glass_action.dart';
+import '../../../shared/widgets/beta_bottom_search.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/performance/frame_timing_probe.dart';
 
@@ -61,13 +63,49 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
   final _pageBackHistory = BetaPageBackHistory();
   bool _historyScheduled = false;
   bool _searchBeforeOverlay = false;
+  late final _pageSearchHost = BetaBottomSearchHost(
+    location: widget.location,
+    openMusicSearch: () => _search(true),
+  );
+  bool _pageSearchScheduled = false;
+  bool _closingSearchRoute = false;
+  bool get _routedSearch => Uri.parse(widget.location).path == '/music/search';
+  // A music overlay can outlive a covered Navigator route. Until that overlay
+  // closes it retains its own input, even if a page registration becomes current.
+  BetaPageSearchController? get _pageSearch =>
+      _searching || _routedSearch ? null : _pageSearchHost.current;
+  bool get _anySearch => _searching || (_pageSearch?.active ?? false);
   late int _selected = musicBottomNavigationIndexForLocation(widget.location);
 
   @override
   void initState() {
     super.initState();
     _searchMotion.addStatusListener(_searchStatus);
+    _pageSearchHost.addListener(_pageSearchChanged);
+    if (_routedSearch) {
+      _searching = _hasOpenedSearch = true;
+      _searchMotion.value = 1;
+    }
     _scheduleBackHistory();
+  }
+
+  void _pageSearchChanged() {
+    // Binding/unbinding is a child lifecycle event. Coalesce changes until
+    // after build/layout so a page never dirties its building shell ancestor.
+    if (!mounted || _pageSearchScheduled) return;
+    if (SchedulerBinding.instance.schedulerPhase !=
+        SchedulerPhase.persistentCallbacks) {
+      setState(() => _focused = _pageSearch?.focus.hasFocus ?? _focus.hasFocus);
+      _scheduleBackHistory();
+      return;
+    }
+    _pageSearchScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _pageSearchScheduled = false;
+      if (!mounted) return;
+      setState(() => _focused = _pageSearch?.focus.hasFocus ?? _focus.hasFocus);
+      _scheduleBackHistory();
+    });
   }
 
   // Only mount/hide source pages at transition boundaries. Per-frame motion
@@ -89,6 +127,11 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
   };
 
   void _backSearch() {
+    final page = _pageSearch;
+    if (page?.active == true) {
+      page!.hasResults ? page.clearResults() : page.setActive(false);
+      return;
+    }
     final search = ref.read(musicSearchControllerProvider);
     if (search.query.isNotEmpty) {
       void clear() {
@@ -110,6 +153,8 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
   void dispose() {
     _backHistory.clear();
     _pageBackHistory.clear();
+    _pageSearchHost.removeListener(_pageSearchChanged);
+    _pageSearchHost.dispose();
     _compact.dispose();
     _searchMotion.dispose();
     _searchText.dispose();
@@ -121,6 +166,10 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
   void didUpdateWidget(covariant BetaMusicShell oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.location != oldWidget.location) {
+      _closingSearchRoute = false;
+      _pageSearchHost.current?.focus.unfocus();
+      _pageSearchHost.location = widget.location;
+      _focused = false;
       FrameTimingProbe.markTransition('page_change');
       if (widget.location == '/player') {
         // Reset synchronously before the bar's next paint. A post-frame reset
@@ -150,6 +199,9 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
       } else {
         _searching = false;
       }
+      // Keep legacy/deep-link routes on the exact same search surface and
+      // glass field as the bottom button; the old top field stays unmounted.
+      if (_routedSearch) _searching = _hasOpenedSearch = true;
       _focus.unfocus();
       _searching ? _searchMotion.forward() : _searchMotion.reverse();
       _scheduleBackHistory();
@@ -157,6 +209,37 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
   }
 
   void _search(bool active) {
+    final page = _pageSearch;
+    if (page != null && !_routedSearch) {
+      _mini = false;
+      page.setActive(active);
+      return;
+    }
+    if (!active && _routedSearch) {
+      if (_closingSearchRoute) return;
+      _closingSearchRoute = true;
+      _searchBeforeOverlay = false;
+      _focus.unfocus();
+      // Local history can call onClose while Navigator is inside didPop.
+      // Remove the synthetic entries, then leave the real route after that
+      // transaction. canPop now describes actual navigation, not search's own
+      // local history; rapid close gestures cannot pop a second destination.
+      _backHistory.clear();
+      _pageBackHistory.clear();
+      final location = widget.location;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || widget.location != location) return;
+        final parent = betaMusicBackDestination(
+          location,
+          tabRoot: betaMusicRoutes[widget.navigationOwner ?? _selected],
+        );
+        context.canPop()
+            ? context.pop()
+            : context.go(parent ?? betaMusicRoutes[_selected]);
+      });
+      WidgetsBinding.instance.ensureVisualUpdate();
+      return;
+    }
     setState(() {
       _searching = active;
       if (!active) _mini = false;
@@ -181,15 +264,17 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
       );
       _pageBackHistory.synchronize(
         route: route,
-        enabled: destination != null,
+        enabled: destination != null && !_closingSearchRoute,
         onBack: () {
           if (mounted && destination != null) context.go(destination);
         },
       );
       _backHistory.synchronize(
         route: route,
-        visible: _searching,
-        hasResults: ref.read(musicSearchControllerProvider).query.isNotEmpty,
+        visible: _anySearch && !_routedSearch && !_closingSearchRoute,
+        hasResults: _pageSearch?.active == true
+            ? _pageSearch!.hasResults
+            : ref.read(musicSearchControllerProvider).query.isNotEmpty,
         onClose: () => _search(false),
         onClear: _backSearch,
       );
@@ -200,6 +285,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
   /// Destination navigation ends a search; overlays only suspend its view.
   /// Clearing the query cancels all five category generations but keeps history.
   void _endSearch() {
+    _pageSearchHost.current?.setActive(false);
     _searchText.clear();
     ref.read(musicSearchControllerProvider.notifier).setQuery('');
     _searchBeforeOverlay = false;
@@ -216,7 +302,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
 
   bool _scroll(ScrollNotification notification) {
     if (!widget.chromeVisible ||
-        _searching ||
+        _anySearch ||
         notification.depth != 0 ||
         notification.metrics.axis != Axis.vertical) {
       return false;
@@ -259,6 +345,8 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
       (_, value) => _scheduleBackHistory(),
     );
     final selected = widget.navigationOwner ?? _selected;
+    final pageSearch = _pageSearch;
+    final searching = _anySearch;
     final hasTrack = ref.watch(
       currentMediaItemProvider.select((s) => s.value != null),
     );
@@ -268,10 +356,10 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
       tabRoot: betaMusicRoutes[selected],
     );
     final shell = PopScope(
-      canPop: !_searching && backDestination == null,
+      canPop: !searching && backDestination == null,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        if (_searching) {
+        if (searching) {
           _backSearch();
         } else if (backDestination != null) {
           // GoRouter tries the nested content stack first. This callback is
@@ -371,17 +459,17 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
                 valueListenable: _compact,
                 builder: (context, compact, _) => BetaMusicBottomBar(
                   selectedIndex: selected,
-                  isSearchActive: compact || _searching,
-                  inline: compact && !_searching,
+                  isSearchActive: compact || searching,
+                  inline: compact && !searching,
                   accessory: hasTrack
-                      ? FloatingPlaybackPill(compact: compact && !_searching)
+                      ? FloatingPlaybackPill(compact: compact && !searching)
                       : null,
                   accessoryEnabled: !_focused,
                   onTabSelected: (index) {
                     appHaptic(context, AppHapticEvent.selection);
                     if (index == selected &&
                         _mini &&
-                        !_searching &&
+                        !searching &&
                         _rootTab(widget.location) != null) {
                       _mini = false;
                       return;
@@ -394,12 +482,13 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
                     contextMenuBuilder: buildBetaEditingMenu,
                     selectionControls: betaTextSelectionControls,
                     cursorColor: betaEditingBlue(context),
-                    controller: _searchText,
-                    focusNode: _focus,
+                    controller: pageSearch?.text ?? _searchText,
+                    focusNode: pageSearch?.focus ?? _focus,
+                    textInputAction: TextInputAction.search,
                     autoFocusOnExpand: false,
                     showsCancelButton: true,
-                    expandWhenActive: !compact || _searching,
-                    hintText: '搜索歌曲、歌手',
+                    expandWhenActive: !compact || searching,
+                    hintText: pageSearch?.hintText ?? '搜索歌曲、歌手',
                     onSearchToggle: (active) {
                       appHaptic(context, AppHapticEvent.selection);
                       _search(active);
@@ -407,16 +496,20 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
                     onSearchFocusChanged: (focused) {
                       if (mounted) setState(() => _focused = focused);
                     },
-                    onChanged: (text) => ref
-                        .read(musicSearchControllerProvider.notifier)
-                        .setQuery(text),
-                    onSubmitted: _submit,
+                    onChanged:
+                        pageSearch?.changed ??
+                        (text) => ref
+                            .read(musicSearchControllerProvider.notifier)
+                            .setQuery(text),
+                    onSubmitted: pageSearch?.submit ?? _submit,
                     trailingBuilder: (context) => BetaGlassAction(
                       label: '搜索',
                       compact: true,
                       icon: Icons.arrow_upward_rounded,
                       blue: true,
-                      onPressed: () => _submit(_searchText.text),
+                      onPressed: () => pageSearch != null
+                          ? pageSearch.submit(pageSearch.text.text)
+                          : _submit(_searchText.text),
                     ),
                     cancelButtonSemanticLabel: '关闭搜索',
                     clearButtonSemanticLabel: '清空搜索',
@@ -456,14 +549,18 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
     // Embedded search is a shell state, not a child route. Register directly
     // with Router's dispatcher so Android edge/system Back reaches that state
     // before the nested navigator attempts to leave its root page.
-    if (Router.maybeOf(context) == null) return shell;
+    final scopedShell = BetaBottomSearchScope(
+      host: _pageSearchHost,
+      child: shell,
+    );
+    if (Router.maybeOf(context) == null) return scopedShell;
     return BackButtonListener(
       onBackButtonPressed: () async {
-        if (!_searching) return false;
+        if (!_anySearch) return false;
         _backSearch();
         return true;
       },
-      child: shell,
+      child: scopedShell,
     );
   }
 }

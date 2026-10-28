@@ -828,8 +828,8 @@ class SearchPill extends StatefulWidget {
 }
 
 class SearchPillState extends State<SearchPill> {
-  late final TextEditingController _controller;
-  late final FocusNode _focusNode;
+  late TextEditingController _controller;
+  late FocusNode _focusNode;
   bool _ownsController = false;
   bool _ownsFocusNode = false;
 
@@ -877,6 +877,35 @@ class SearchPillState extends State<SearchPill> {
   @override
   void didUpdateWidget(covariant SearchPill oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // A persistent bar can serve a page-specific search session. Rebind only
+    // input ownership; retaining this State preserves all glass/morph springs.
+    // Caller-owned controllers/nodes must never be disposed by the pill.
+    if (oldWidget.config.controller != widget.config.controller) {
+      _controller.removeListener(_onTextChanged);
+      if (_ownsController) _controller.dispose();
+      _ownsController = widget.config.controller == null;
+      _controller = widget.config.controller ?? TextEditingController();
+      _hasText = _controller.text.isNotEmpty;
+      _controller.addListener(_onTextChanged);
+    }
+    if (oldWidget.config.focusNode != widget.config.focusNode) {
+      final wasFocused = _hasFocus;
+      _focusNode.removeListener(_onFocusChanged);
+      _focusNode.unfocus();
+      if (_ownsFocusNode) _focusNode.dispose();
+      _ownsFocusNode = widget.config.focusNode == null;
+      _focusNode = widget.config.focusNode ?? FocusNode();
+      _hasFocus = _focusNode.hasFocus;
+      _focusNode.addListener(_onFocusChanged);
+      if (wasFocused != _hasFocus) {
+        final node = _focusNode;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && identical(node, _focusNode)) {
+            widget.onFocusChanged?.call(_focusNode.hasFocus);
+          }
+        });
+      }
+    }
     if (!oldWidget.isActive &&
         widget.isActive &&
         widget.config.autoFocusOnExpand) {

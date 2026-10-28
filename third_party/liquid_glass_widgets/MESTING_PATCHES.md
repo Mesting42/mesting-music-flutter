@@ -129,3 +129,12 @@ passes and full-DPR captures. These are not GPU-pass or presented-FPS counters.
 App diagnostics aligns raw vsync and transition brackets and drains 1.2 seconds
 after Stop. Only user-run Xiaomi 14 Pro tests can establish the device speedup;
 host pump counts and pixel references do not certify sustained 120 fps.
+
+## 2026-10-28 page-scoped search input (local, unreleased)
+
+`SearchPillState` rebinds external text/focus owners when its configuration
+changes. It removes listeners from the previous owner, preserves caller-owned
+objects, and synchronizes focus with the outer layout after the frame. The
+same persistent glass field can therefore serve music and audiobook searches
+without leaking typed text, focus, or recreating the bar's motion controllers.
+Only input ownership changes; existing optics and morph parameters are kept.

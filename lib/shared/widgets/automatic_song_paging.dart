@@ -7,11 +7,17 @@ class AutomaticSongPaging extends StatefulWidget {
     required this.enabled,
     required this.onLoadMore,
     required this.child,
+    this.fillInitialViewport = true,
     super.key,
   });
   final bool enabled;
   final Future<void> Function() onLoadMore;
   final Widget child;
+
+  /// Detail pages that prepare a complete first screen can wait for an actual
+  /// scroll before requesting another batch. Existing catalogue behavior is
+  /// unchanged unless the owner explicitly opts out of layout-time filling.
+  final bool fillInitialViewport;
   @override
   State<AutomaticSongPaging> createState() => _AutomaticSongPagingState();
 }
@@ -57,7 +63,7 @@ class _AutomaticSongPagingState extends State<AutomaticSongPaging> {
         onNotification: (event) {
           if (event.depth == 0 && event.metrics.axis == Axis.vertical) {
             _metrics = event.metrics;
-            _schedule();
+            if (widget.fillInitialViewport) _schedule();
           }
           return false;
         },
@@ -65,7 +71,11 @@ class _AutomaticSongPagingState extends State<AutomaticSongPaging> {
           onNotification: (event) {
             if (event.depth == 0 && event.metrics.axis == Axis.vertical) {
               _metrics = event.metrics;
-              _schedule();
+              if (widget.fillInitialViewport ||
+                  event is ScrollUpdateNotification &&
+                      (event.scrollDelta ?? 0) > 0) {
+                _schedule();
+              }
             }
             return false;
           },

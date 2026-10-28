@@ -8,6 +8,7 @@ import '../../core/haptics/app_haptics.dart';
 const betaMenuOpenDuration = Duration(milliseconds: 400);
 const betaMenuCloseDuration = Duration(milliseconds: 240);
 const double betaMenuAnchorGap = 8;
+const double _menuSeparationProgress = .72;
 
 /// The pill's actual optical material, shared by playback and editing menus.
 /// Every popover owns one premium layer; nested surfaces would lose refraction.
@@ -43,7 +44,7 @@ class BetaGlassMenuSurface extends StatelessWidget {
 /// never rebuilds its rows, the source page, or the audio owner. In Impeller the
 /// grouped SDFs blend before separating; Skia keeps the same bounded geometry
 /// and the package's existing optical fallback. No opacity wraps live glass.
-class BetaLiquidMenu extends StatelessWidget {
+class BetaLiquidMenu extends StatefulWidget {
   const BetaLiquidMenu({
     required this.animation,
     required this.layout,
@@ -55,12 +56,49 @@ class BetaLiquidMenu extends StatelessWidget {
   final Widget child;
 
   @override
+  State<BetaLiquidMenu> createState() => _BetaLiquidMenuState();
+}
+
+class _BetaLiquidMenuState extends State<BetaLiquidMenu> {
+  bool _connected = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _connected = widget.animation.value < _menuSeparationProgress;
+    widget.animation.addListener(_connectionChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant BetaLiquidMenu oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.animation != widget.animation) {
+      oldWidget.animation.removeListener(_connectionChanged);
+      widget.animation.addListener(_connectionChanged);
+    }
+    _connected = widget.animation.value < _menuSeparationProgress;
+  }
+
+  void _connectionChanged() {
+    final connected = widget.animation.value < _menuSeparationProgress;
+    // Only rebuild at the separation boundary. Motion ticks continue to be
+    // render transforms, and the menu rows retain their existing elements.
+    if (connected != _connected) setState(() => _connected = connected);
+  }
+
+  @override
+  void dispose() {
+    widget.animation.removeListener(_connectionChanged);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final reduced = MediaQuery.disableAnimationsOf(context);
     final settings = betaMusicPillGlass(context);
     final foreground = reduced
         ? kAlwaysCompleteAnimation
-        : animation.drive(
+        : widget.animation.drive(
             CurveTween(
               curve: const Interval(.22, .76, curve: Curves.easeOutCubic),
             ),
@@ -71,22 +109,29 @@ class BetaLiquidMenu extends StatelessWidget {
       blendAmount: 16,
       child: _LiquidMenuMotion(
         key: const ValueKey('beta105-liquid-menu-flow'),
-        animation: animation,
-        layout: layout,
+        animation: widget.animation,
+        layout: widget.layout,
         reduced: reduced,
         children: [
           BetaGlassMenuSurface(
             grouped: true,
-            child: FadeTransition(opacity: foreground, child: child),
+            child: FadeTransition(opacity: foreground, child: widget.child),
           ),
           for (final part in ['source', 'neck'])
             IgnorePointer(
-              child: GlassContainer(
-                key: ValueKey('beta105-liquid-$part'),
-                quality: GlassQuality.premium,
-                shape: const LiquidOval(),
-                child: const SizedBox.square(dimension: 32),
-              ),
+              // A .001px oval is still an SDF primitive: smooth union can
+              // turn it into a visible dot and a bump along the menu rim.
+              // Detach the two optical surfaces after separation, rather
+              // than merely scaling them down. Reverse reattaches them at
+              // the same boundary, preserving the liquid return trajectory.
+              child: !_connected || reduced
+                  ? const SizedBox.square(dimension: 32)
+                  : GlassContainer(
+                      key: ValueKey('beta105-liquid-$part'),
+                      quality: GlassQuality.premium,
+                      shape: const LiquidOval(),
+                      child: const SizedBox.square(dimension: 32),
+                    ),
             ),
         ],
       ),
@@ -201,7 +246,9 @@ class _RenderLiquidMenu extends RenderBox
 
     // The seam thins to zero before the menu reaches its final gap. The reverse
     // trajectory reconnects the meniscus before the menu merges into its source.
-    final join = reduced ? 0.0 : (1 - raw / .72).clamp(0.0, 1.0);
+    final join = reduced
+        ? 0.0
+        : (1 - raw / _menuSeparationProgress).clamp(0.0, 1.0);
     final source = start.center;
     final edge = Offset(
       source.dx.clamp(

@@ -2,6 +2,12 @@
 /// offline and must never be shown as the notes of an unknown future build.
 /// The distribution service may also supply notes for a newer release.
 const musicReleaseNotes = <String, List<String>>{
+  '1.0.9': [
+    '听书与功能页搜索统一使用底部玻璃搜索框，保留收展、输入与键盘交互。',
+    '修复播放器更多菜单展开后的残留小点与上沿凸起，保留液态展开和收起动画。',
+    '私人 FM 首屏歌曲加载齐全后一次显示，后续下滑再加载，移除加载动画底色。',
+    '修复不同搜索场景的输入与焦点隔离，以及旧搜索入口和返回页面时的状态恢复。',
+  ],
   '1.0.8': [
     '优化玻璃折射的重复纹理采样，保留现有色散、模糊、清晰度与全部动画。',
     '底栏与播放胶囊在稳定且绘制范围安全时共享背景读取，收展、按压形变及淡出期间自动隔离。',

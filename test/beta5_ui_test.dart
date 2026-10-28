@@ -906,6 +906,18 @@ void main() {
           dark: dark,
           capture: 'settings-$suffix',
         );
+        // New settings entries can place licenses below the first viewport.
+        // Verify the destination by scrolling its real content into view.
+        await tester.scrollUntilVisible(
+          find.byKey(const ValueKey('settings-open-source')),
+          240,
+          scrollable: find
+              .descendant(
+                of: find.byType(SettingsPage),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
         expect(
           find.byKey(const ValueKey('settings-open-source')),
           findsOneWidget,
@@ -1047,7 +1059,7 @@ void main() {
             .inline,
         false,
       );
-      final navigationLabel = tester.element(find.text('首页').last);
+      final navigationLabel = tester.element(find.text('发现').last);
       final navigationText = DefaultTextStyle.of(navigationLabel).style;
       expect(navigationText.fontFamily, isNot('monospace'));
       expect(navigationText.decoration, isNot(TextDecoration.underline));
@@ -1514,7 +1526,15 @@ void main() {
           );
           await tester.pump();
           expect(handler.toggles, 1, reason: 'viewport=$sample');
-          await tester.tap(find.byIcon(Icons.home_rounded).hitTestable().first);
+          await tester.tap(
+            find
+                .descendant(
+                  of: find.byType(BetaMusicBottomBar),
+                  matching: find.text('发现'),
+                )
+                .hitTestable()
+                .first,
+          );
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 500));
           expect(
@@ -2376,9 +2396,11 @@ void main() {
           ),
         );
         Future<void> settle() async {
-          await tester.pump();
-          await tester.pump(const Duration(milliseconds: 600));
-          await tester.pump();
+          // Route completion, local history and native Back reporting each
+          // schedule frames. Advance frame-sized steps rather than one jump.
+          for (var frame = 0; frame < 8; frame++) {
+            await tester.pump(const Duration(milliseconds: 100));
+          }
         }
 
         await settle();
@@ -2434,7 +2456,7 @@ void main() {
             production.appRouter.routeInformationProvider.value.uri.path,
             '/music/recommend',
           );
-          expect(androidHandlesBack, false);
+          expect(androidHandlesBack, false, reason: 'returned from $path');
         }
         for (final destination in {
           '/music?view=daily': '/music/recommend',
@@ -2455,7 +2477,11 @@ void main() {
             production.appRouter.routeInformationProvider.value.uri.toString(),
             destination.value,
           );
-          expect(androidHandlesBack, false);
+          expect(
+            androidHandlesBack,
+            false,
+            reason: 'returned from ${destination.key}',
+          );
         }
         expect(tester.takeException(), isNull);
       } finally {
