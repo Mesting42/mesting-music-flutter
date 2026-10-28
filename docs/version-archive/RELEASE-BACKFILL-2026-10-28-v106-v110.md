@@ -1,6 +1,6 @@
 # Mesting Music 1.0.6～1.0.10 Git / GitHub 归档
 
-日期：2026-10-28（Asia/Shanghai）。归档提交已从原始交付准备；远端发布状态以实际标签、Release及最终验收记录为准。
+日期：2026-10-28（Asia/Shanghai）。五版Git与GitHub归档已完成。
 
 用户确认逐版补齐提交、标签和正式Release，将beta推进到最新源码，保留main与旧历史。提交创建于本次，不回填开发日期；原APK／源码ZIP未重新编译、签名或压缩。
 

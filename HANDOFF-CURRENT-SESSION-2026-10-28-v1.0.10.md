@@ -1,7 +1,7 @@
 # 当前会话接续：Mesting Music 1.0.10
 
 <!-- current-git-archive-state -->
-**后续Git归档补记：** 1.0.6～1.0.10五版冻结源码已核验并准备归档提交；GitHub附件发布进行中，最终状态以Release和验收证据为准。 最新接续见 [跨电脑总交接](HANDOFF-CURRENT-SESSION-2026-10-28-GITHUB-CONTINUE.md)；下方冻结时的未提交／HEAD字段保留原事实，不能当成当前远端状态。
+**后续Git归档补记：** 1.0.6～1.0.10五版Git提交、标签与正式GitHub Release均已补齐，1.0.10为最新正式版。 最新接续见 [跨电脑总交接](HANDOFF-CURRENT-SESSION-2026-10-28-GITHUB-CONTINUE.md)；下方冻结时的未提交／HEAD字段保留原事实，不能当成当前远端状态。
 <!-- /current-git-archive-state -->
 日期：2026-10-28（Asia/Shanghai），工程根 `D:/AnLi`。
 

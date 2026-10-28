@@ -2,7 +2,7 @@
 
 **新会话先读 [跨电脑总交接](HANDOFF-CURRENT-SESSION-2026-10-28-GITHUB-CONTINUE.md) 与 [接续入口](docs/CONTINUE-BETA.md)。**
 
-> **当前正式产品版：1.0.10 / code31。** 1.0.6～1.0.10五版冻结源码已核验并准备归档提交；GitHub附件发布进行中，最终状态以Release和验收证据为准。 [本版修改](docs/fixes-2026-10-28-v1.0.10.md) · [GitHub Release](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.10) · [music下载](https://download.csnas.asia/music/download)。维护分支为beta；完整源码含已获分发授权的SDK，原LICENSE与第三方声明保留。签名材料私下转移。以下Beta.19与stable介绍为历史产品背景。
+> **当前正式产品版：1.0.10 / code31。** 1.0.6～1.0.10五版Git提交、标签与正式GitHub Release均已补齐，1.0.10为最新正式版。 [本版修改](docs/fixes-2026-10-28-v1.0.10.md) · [GitHub Release](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.10) · [music下载](https://download.csnas.asia/music/download)。维护分支为beta；完整源码含已获分发授权的SDK，原LICENSE与第三方声明保留。签名材料私下转移。以下Beta.19与stable介绍为历史产品背景。
 
 ## Beta.19 本次更新
 
