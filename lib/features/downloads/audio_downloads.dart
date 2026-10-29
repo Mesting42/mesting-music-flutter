@@ -449,12 +449,7 @@ final audioDownloadManagerProvider = Provider<AudioDownloadManager>((ref) {
         try {
           final payload = await music.call('/song/download/url/v1', {
             'id': NeteaseMusicRepository.songId(track.id),
-            'level': switch (quality.code) {
-              'flac' => 'lossless',
-              'high' => 'hires',
-              '320' => 'exhigh',
-              _ => 'standard',
-            },
+            'level': quality.neteaseLevel,
           });
           row = NeteaseMusicRepository.object(payload['data']);
         } catch (error) {

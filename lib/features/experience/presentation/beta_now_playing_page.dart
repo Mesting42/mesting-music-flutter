@@ -522,16 +522,17 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
             ),
         ],
         [
-          const PlayerMenuAction(
+          PlayerMenuAction(
             'equalizer',
-            '均衡器',
+            track.source == TrackSource.netease ? '本地均衡器' : '均衡器',
             CupertinoIcons.slider_horizontal_3,
           ),
-          PlayerMenuAction(
-            'effects',
-            track.source == TrackSource.netease ? '本地音效' : '音效',
-            CupertinoIcons.waveform,
-          ),
+          if (track.source != TrackSource.netease)
+            PlayerMenuAction(
+              'effects',
+              track.source == TrackSource.netease ? '本地音效' : '音效',
+              CupertinoIcons.waveform,
+            ),
           const PlayerMenuAction('mv', '观看 MV', CupertinoIcons.play_rectangle),
           const PlayerMenuAction(
             'sleep-timer',

@@ -108,9 +108,11 @@ class NeteaseLibraryRepository extends CloudLibraryRepository {
     id: _id(row),
     name: '${row['name'] ?? '网易云歌单'}',
     description: '${row['description'] ?? ''}',
-    coverAsset: normalizeArtworkUri(
-      '${row['coverImgUrl'] ?? row['picUrl'] ?? row['coverUrl'] ?? ''}',
-    ),
+    coverAsset: firstArtworkUri([
+      row['coverImgUrl'],
+      row['picUrl'],
+      row['coverUrl'],
+    ]),
     createdAt: DateTime.fromMillisecondsSinceEpoch(
       int.tryParse('${row['createTime']}') ?? 0,
     ),

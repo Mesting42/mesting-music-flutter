@@ -128,11 +128,13 @@ class EditorialSection extends StatelessWidget {
     this.title, {
     this.onTap,
     this.actionLabel = '查看全部',
+    this.fontWeight = FontWeight.w800,
     super.key,
   });
   final String title;
   final VoidCallback? onTap;
   final String actionLabel;
+  final FontWeight fontWeight;
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(22, 28, 16, 14),
@@ -144,7 +146,7 @@ class EditorialSection extends StatelessWidget {
             style: TextStyle(
               color: context.musicThemeTokens.textPrimary,
               fontSize: 23,
-              fontWeight: FontWeight.w800,
+              fontWeight: fontWeight,
               letterSpacing: -.4,
             ),
           ),

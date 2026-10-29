@@ -1,4 +1,5 @@
 import '../../../shared/models/track.dart';
+import '../../../shared/utils/media_uri.dart';
 import '../data/music_platform_api.dart';
 import 'netease_music_repository.dart';
 
@@ -500,7 +501,7 @@ class NeteaseFeaturesRepository {
       id: kind == NeteaseEntity.category
           ? '${r['name']}'
           : (track?.platformSongId ??
-                '${r['id'] ?? r['userId'] ?? r['songId'] ?? ''}'),
+                '${r['id'] ?? r['vid'] ?? r['userId'] ?? r['songId'] ?? ''}'),
       name:
           track?.title ??
           NeteaseMusicRepository.clean(
@@ -510,7 +511,14 @@ class NeteaseFeaturesRepository {
       track: track,
       cover:
           track?.coverAsset ??
-          '${r['coverImgUrl'] ?? r['picUrl'] ?? r['avatarUrl'] ?? r['img1v1Url'] ?? r['cover'] ?? ''}',
+          firstArtworkUri([
+            r['coverImgUrl'],
+            r['coverUrl'],
+            r['picUrl'],
+            r['avatarUrl'],
+            r['img1v1Url'],
+            r['cover'],
+          ]),
       subtitle:
           track?.artist ??
           NeteaseMusicRepository.clean(

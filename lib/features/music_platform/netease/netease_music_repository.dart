@@ -276,6 +276,12 @@ class NeteaseMusicRepository {
       if (row['h'] != null) PlatformAudioQuality.high,
       if (row['sq'] != null) PlatformAudioQuality.lossless,
       if (row['hr'] != null) PlatformAudioQuality.hiRes,
+      if (row['m'] != null) PlatformAudioQuality.higher,
+      if (row['je'] != null) PlatformAudioQuality.jyEffect,
+      if (row['sk'] != null) PlatformAudioQuality.sky,
+      if (row['jm'] != null) PlatformAudioQuality.jyMaster,
+      if (row['db'] != null) PlatformAudioQuality.dolby,
+      if (row['vivid'] != null) PlatformAudioQuality.vivid,
     };
   }
 
@@ -287,12 +293,7 @@ class NeteaseMusicRepository {
   }) async {
     if (track.source != TrackSource.netease) return track;
     if (api.session == null) throw const MusicPlatformException('请先登录网易云账号');
-    final level = switch (quality) {
-      PlatformAudioQuality.standard => 'standard',
-      PlatformAudioQuality.high => 'exhigh',
-      PlatformAudioQuality.lossless => 'lossless',
-      PlatformAudioQuality.hiRes => 'hires',
-    };
+    final level = quality.neteaseLevel;
     final payload = await call('/song/url', {
       'id': songId(track.id),
       'level': level,
@@ -306,13 +307,8 @@ class NeteaseMusicRepository {
         uri.host.isEmpty) {
       throw const MusicPlatformException('网易云暂未提供播放权限，请核对账号会员或版权范围');
     }
-    final delivered = switch ('${row['level']}') {
-      'standard' => '128',
-      'higher' || 'exhigh' => '320',
-      'lossless' => 'flac',
-      'hires' => 'high',
-      _ => '',
-    };
+    final delivered =
+        PlatformAudioQuality.fromNeteaseLevel(row['level'])?.code ?? '';
     if (requireQuality && delivered != quality.code) {
       throw const MusicPlatformException('网易云未返回所选音质，已保留原音源');
     }

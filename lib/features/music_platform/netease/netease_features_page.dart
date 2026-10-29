@@ -515,7 +515,9 @@ class _NeteaseFeaturesPageState extends ConsumerState<NeteaseFeaturesPage> {
                         );
                       }
                       return _items.isEmpty
-                          ? const EditorialEmpty('网易云暂未返回内容')
+                          ? EditorialEmpty(
+                              '暂无${widget.title ?? NeteaseFeaturesRepository.titles[widget.feed] ?? '内容'}',
+                            )
                           : const SizedBox(height: 24);
                     }
                     final item = _items[index - 1];

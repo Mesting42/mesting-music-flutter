@@ -59,6 +59,9 @@ final platformSongQualitiesProvider = FutureProvider.autoDispose
               PlatformAudioQuality.lossless,
               PlatformAudioQuality.hiRes,
             ],
+            // These are official-only attempts; strict replacement rejects
+            // downgrades and never substitutes another provider's FLAC for them.
+            ...PlatformAudioQuality.values.where((q) => q.neteaseOnly),
           };
         }
         return ref.watch(neteaseMusicRepositoryProvider).qualities(id);
@@ -95,16 +98,31 @@ class PlatformQualityState {
 /// The audio handler owns source replacement and stale-command protection.
 class PlatformQualityController extends Notifier<PlatformQualityState> {
   static const preferenceKey = 'beta_platform_audio_quality';
+  String get _key => ref.read(usesNeteaseProvider)
+      ? '${preferenceKey}_netease'
+      : preferenceKey;
   @override
-  PlatformQualityState build() => PlatformQualityState(
-    PlatformAudioQuality.fromCode(
-          ref.watch(sharedPreferencesProvider).getString(preferenceKey),
-        ) ??
-        PlatformAudioQuality.standard,
-  );
+  PlatformQualityState build() {
+    // Rebuild even when switching between two users of the same platform, so
+    // an old in-flight quality change cannot leave the new account busy.
+    ref.watch(platformAccountProvider.select((a) => a.value?.ownerId));
+    final netease = ref.watch(usesNeteaseProvider);
+    final prefs = ref.watch(sharedPreferencesProvider);
+    final saved = PlatformAudioQuality.fromCode(
+      prefs.getString(netease ? '${preferenceKey}_netease' : preferenceKey) ??
+          prefs.getString(preferenceKey),
+    );
+    return PlatformQualityState(
+      saved == null || (!netease && saved.neteaseOnly)
+          ? PlatformAudioQuality.standard
+          : saved,
+    );
+  }
 
   Future<bool> select(PlatformAudioQuality quality) async {
     if (state.switching) return false;
+    final owner = ref.read(platformAccountProvider).value?.ownerId;
+    final preference = _key;
     final previous = state.preferred;
     var saved = previous;
     state = PlatformQualityState(
@@ -118,7 +136,11 @@ class PlatformQualityController extends Notifier<PlatformQualityState> {
           .refreshCurrentSource();
       // A cancelled/stale request is not an applied choice. Read the audio owner
       // synchronously: the StreamProvider may still hold the previous item.
-      if (!applied) return false;
+      if (!applied ||
+          !ref.mounted ||
+          ref.read(platformAccountProvider).value?.ownerId != owner) {
+        return false;
+      }
       final handler = ref.read(audioHandlerProvider);
       final actual = handler.trackForId(handler.mediaItem.value?.id ?? '');
       if (actual?.playbackQuality != quality.code) {
@@ -126,11 +148,14 @@ class PlatformQualityController extends Notifier<PlatformQualityState> {
       }
       await ref
           .read(sharedPreferencesProvider)
-          .setString(preferenceKey, quality.code);
+          .setString(preference, quality.code);
       saved = quality;
       return true;
     } finally {
-      if (ref.mounted) state = PlatformQualityState(saved);
+      if (ref.mounted &&
+          ref.read(platformAccountProvider).value?.ownerId == owner) {
+        state = PlatformQualityState(saved);
+      }
     }
   }
 }

@@ -5,6 +5,8 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
+import android.provider.MediaStore
+import android.os.Build
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -71,6 +73,8 @@ class OfflineAudioStorageBridge(private val activity: Activity, messenger: Binar
         }
     }
     fun onActivityResult(request: Int, code: Int, data: Intent?): Boolean {
+        // Browsing cannot change the saved directory or consume export state.
+        if (request == BROWSE_REQUEST) return true
         if (request != REQUEST) return false
         val pair = pending ?: return true
         pending = null
@@ -123,16 +127,59 @@ class OfflineAudioStorageBridge(private val activity: Activity, messenger: Binar
     private fun openDirectory(call: MethodCall, result: MethodChannel.Result) {
         try {
             val item = call.argument<String>("uri")?.let(Uri::parse)
-            val tree = if (item != null) { if (DocumentsContract.isTreeUri(item)) item else null } else directory()
-            val folder = if (tree != null) DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
-                else Uri.parse("content://com.android.externalstorage.documents/document/primary%3AMusic%2FMesting%20Music")
-            activity.startActivity(Intent(Intent.ACTION_VIEW).apply {
+            val folder = folderFor(item) ?: run {
+                result.error("permission", "保存位置暂不可用，请重新授权目录，或导出这首歌", null)
+                return
+            }
+            val view = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(folder, DocumentsContract.Document.MIME_TYPE_DIR)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                putExtra("android.provider.extra.INITIAL_URI", folder)
-            })
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PREFIX_URI_PERMISSION)
+            }
+            try {
+                activity.startActivity(view)
+            } catch (error: Exception) {
+                if (error !is android.content.ActivityNotFoundException && error !is SecurityException) throw error
+                // Some ROMs omit directory ACTION_VIEW. Their system document
+                // browser can still show this real folder offline. A selected
+                // document is ignored, never saved as a new download location.
+                activity.startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "audio/*"
+                    putExtra(DocumentsContract.EXTRA_INITIAL_URI, folder)
+                }, BROWSE_REQUEST)
+            }
             result.success(null)
+        } catch (_: SecurityException) {
+            result.error("permission", "保存目录授权已失效，请重新授权目录，或导出这首歌", null)
         } catch (_: Exception) { result.error("file_manager", "系统文件管理器无法打开该文件夹，可使用导出选择保存位置", null) }
+    }
+
+    /** Locate a song's original folder, not the latest selected destination.
+     * SAF grants retain their provider; old MediaStore songs retain their real
+     * volume and relative path. No file is moved and no network is accessed. */
+    private fun folderFor(item: Uri?): Uri? {
+        val source = item ?: directory() ?: return null
+        if (DocumentsContract.isTreeUri(source)) {
+            val root = DocumentsContract.buildTreeDocumentUri(source.authority, DocumentsContract.getTreeDocumentId(source))
+            if (activity.contentResolver.persistedUriPermissions.none { it.uri == root && it.isReadPermission }) return null
+            return DocumentsContract.buildDocumentUriUsingTree(root, DocumentsContract.getTreeDocumentId(root))
+        }
+        if (source.authority == "com.android.externalstorage.documents") {
+            val id = DocumentsContract.getDocumentId(source)
+            val parent = id.substringBeforeLast('/', "")
+            if (parent.isNotEmpty()) return DocumentsContract.buildDocumentUri(source.authority, parent)
+        }
+        if (source.authority == "media" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            activity.contentResolver.query(source, arrayOf(MediaStore.MediaColumns.RELATIVE_PATH, MediaStore.MediaColumns.VOLUME_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val relative = cursor.getString(0)?.trim('/') ?: return null
+                    val volume = cursor.getString(1) ?: return null
+                    val storage = if (volume == "external" || volume == "external_primary") "primary" else volume
+                    return DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", "$storage:$relative")
+                }
+            }
+        }
+        return null
     }
     private fun work(result: MethodChannel.Result, action: () -> Any?) {
         worker.execute {
@@ -151,5 +198,8 @@ class OfflineAudioStorageBridge(private val activity: Activity, messenger: Binar
         pending = null
         worker.shutdown()
     }
-    companion object { private const val REQUEST = 7132 }
+    companion object {
+        private const val REQUEST = 7132
+        private const val BROWSE_REQUEST = 7133
+    }
 }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../downloads/audio_download_storage.dart';
 
 import '../../../shared/widgets/music_notice.dart';
 import '../../../core/audio/mesting_audio_handler.dart';
@@ -13,6 +15,10 @@ void showPlatformFailure(BuildContext context, Object error) {
         ? error.message
         : error is PlaybackContinuationException
         ? error.message
+        : error is DownloadStorageException
+        ? error.message
+        : error is PlatformException
+        ? error.message ?? '设备操作未完成，请检查系统授权后重试'
         : '请检查网络后重试',
   );
 }

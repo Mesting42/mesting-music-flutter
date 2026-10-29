@@ -61,6 +61,7 @@ class _ArtworkImageState extends State<ArtworkImage> {
   int _networkRetry = 0;
   File? _persistentNetworkFile;
   String? _persistentNetworkIdentity;
+  bool _persistentNetworkFailed = false;
 
   @override
   void initState() {
@@ -116,7 +117,31 @@ class _ArtworkImageState extends State<ArtworkImage> {
       if (persistentImage != null) {
         final file = _persistentNetworkFile;
         if (file == null) {
-          return SizedBox(width: widget.width, height: widget.height);
+          if (!_persistentNetworkFailed) {
+            return _ArtworkPlaceholder(
+              width: widget.width,
+              height: widget.height,
+            );
+          }
+          // A failed disk cache must not leave a permanently empty cover. Let
+          // Flutter load the same public image directly while the bounded cache
+          // retry runs; this also works when app-private storage is unavailable.
+          return Image.network(
+            uri,
+            width: widget.width,
+            height: widget.height,
+            cacheWidth: cacheWidth,
+            cacheHeight: cacheHeight,
+            fit: widget.fit,
+            errorBuilder: errorBuilder,
+            frameBuilder: (context, child, frame, synchronous) =>
+                synchronous || frame != null
+                ? child
+                : _ArtworkPlaceholder(
+                    width: widget.width,
+                    height: widget.height,
+                  ),
+          );
         }
         return Image.file(
           file,
@@ -241,6 +266,7 @@ class _ArtworkImageState extends State<ArtworkImage> {
 
   void _resetPersistentNetworkImage() {
     _persistentNetworkFile = null;
+    _persistentNetworkFailed = false;
     final config = _persistentNetworkConfig;
     _persistentNetworkIdentity = config == null
         ? null
@@ -268,9 +294,13 @@ class _ArtworkImageState extends State<ArtworkImage> {
     ) {
       if (!mounted || identity != _persistentNetworkIdentity) return;
       if (file != null) {
-        setState(() => _persistentNetworkFile = file);
+        setState(() {
+          _persistentNetworkFile = file;
+          _persistentNetworkFailed = false;
+        });
         return;
       }
+      setState(() => _persistentNetworkFailed = true);
       _schedulePersistentNetworkRetry();
     });
   }

@@ -297,6 +297,27 @@ class NeteaseFullRepository {
             expectedCredential: isolated ? null : credential,
           );
     checkOwner();
+    if (route == '/song/purchased') {
+      // The bought-song endpoint may contain only songId/price records. Hydrate
+      // them before presentation instead of rendering a bare "数量 0" fact or
+      // dropping real purchases that do not carry a title in this response.
+      final entries = NeteaseMusicRepository.rows(result['data']);
+      final ids = entries
+          .map((r) => '${r['songId'] ?? r['id'] ?? ''}')
+          .where((id) => RegExp(r'^\d+$').hasMatch(id))
+          .toSet()
+          .take(500)
+          .toList();
+      if (ids.isNotEmpty) {
+        final detail = await music.call('/song/detail', {'ids': ids});
+        checkOwner();
+        return _publicResult({
+          ...result,
+          'data': null,
+          'songs': detail['songs'],
+        });
+      }
+    }
     if ({'/song/url', '/song/url/v1', '/song/download/url'}.contains(route)) {
       final media = NeteaseMusicRepository.rows(
         result['data'] is List ? result['data'] : [result['data']],

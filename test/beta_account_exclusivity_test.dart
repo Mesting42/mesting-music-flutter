@@ -285,7 +285,12 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(find.text('酷狗昵称'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('settings-account-management')),
+        findsOneWidget,
+      );
+      expect(find.text('酷狗账号 · 已登录'), findsOneWidget);
+      expect(find.text('酷狗昵称'), findsNothing);
       expect(find.text('登录 / 注册'), findsNothing);
       expect(find.text('账号与绑定'), findsNothing);
       expect(tester.takeException(), null);

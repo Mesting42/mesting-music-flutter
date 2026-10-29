@@ -52,7 +52,7 @@ Future<void> showPlatformQualityPicker(
           ? '平台当前提供试听片段'
           : actual == null
           ? '已切换音源，音质待平台确认'
-          : '已切换为${actual.label}',
+          : '已切换为${updated.source == TrackSource.netease ? actual.neteaseLabel : actual.label}',
       message: '',
     );
   } catch (error) {
@@ -108,7 +108,7 @@ class _QualityDialog extends ConsumerWidget {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Text(
-                      '可尝试以下音质，切换结果以音源实际文件为准',
+                      '网易云音质 · 可用档位因歌曲、账号与设备而异，切换以实际文件为准',
                       style: TextStyle(color: ink, fontSize: 12),
                     ),
                   ),
@@ -140,9 +140,12 @@ class _QualityDialog extends ConsumerWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             for (final quality
-                                in PlatformAudioQuality.values.where(
-                                  available.contains,
-                                ))
+                                in (track.source == TrackSource.netease
+                                        ? PlatformAudioQuality.neteaseOrder
+                                        : PlatformAudioQuality.values.where(
+                                            (q) => !q.neteaseOnly,
+                                          ))
+                                    .where(available.contains))
                               Padding(
                                 padding: const EdgeInsets.only(bottom: 5),
                                 child: Material(
@@ -157,7 +160,9 @@ class _QualityDialog extends ConsumerWidget {
                                     ),
                                     minVerticalPadding: 10,
                                     title: Text(
-                                      quality.label,
+                                      track.source == TrackSource.netease
+                                          ? quality.neteaseLabel
+                                          : quality.label,
                                       style: TextStyle(
                                         color: actual == quality ? accent : ink,
                                         fontSize: 17,
@@ -221,7 +226,10 @@ class PlatformQualityButton extends ConsumerWidget {
         ? '切换中'
         : track.isPreview
         ? '试听'
-        : actual?.label ?? '音质';
+        : (track.source == TrackSource.netease
+                  ? actual?.neteaseLabel
+                  : actual?.label) ??
+              '音质';
     return CupertinoButton(
       key: const ValueKey('player-quality-button'),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),

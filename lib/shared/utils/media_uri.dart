@@ -13,3 +13,13 @@ String normalizeArtworkUri(String value) {
   }
   return text;
 }
+
+/// An empty primary DTO field must not hide a valid fallback image URL.
+String firstArtworkUri(Iterable<Object?> values) {
+  for (final value in values) {
+    if (value is String && value.trim().isNotEmpty) {
+      return normalizeArtworkUri(value);
+    }
+  }
+  return '';
+}

@@ -28,10 +28,22 @@ class AudioDownloadStorage {
 
   Future<bool> readable(String uri) async =>
       await channel.invokeMethod<bool>('readable', {'uri': uri}) ?? false;
-  Future<void> openDirectory({String? uri}) =>
-      channel.invokeMethod<void>('openDirectory', {'uri': uri});
+  Future<void> openDirectory({String? uri}) async {
+    try {
+      await channel.invokeMethod<void>('openDirectory', {'uri': uri});
+    } on PlatformException catch (error) {
+      // These are device file operations, independent of the music network.
+      throw DownloadStorageException(error.message ?? '无法打开保存位置，请检查文件夹授权');
+    }
+  }
+
   Future<void> export(String uri, Track track) => channel.invokeMethod<void>(
     'export',
     {'uri': uri, 'name': '${track.title} - ${track.artist}'},
   );
+}
+
+class DownloadStorageException implements Exception {
+  const DownloadStorageException(this.message);
+  final String message;
 }

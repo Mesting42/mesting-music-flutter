@@ -17,6 +17,7 @@ import '../netease/netease_mv_repository.dart';
 import '../netease/netease_features_page.dart';
 import '../netease/netease_features_repository.dart';
 import '../music_platform_providers.dart';
+import '../data/music_platform_api.dart';
 
 class MusicMvPage extends ConsumerStatefulWidget {
   const MusicMvPage({required this.track, this.mvId, super.key});
@@ -137,7 +138,9 @@ class _MusicMvPageState extends ConsumerState<MusicMvPage>
     });
     try {
       final urls = await ref.read(platformMvRepositoryProvider).urls(quality);
-      if (urls.isEmpty) throw StateError('No video source');
+      if (urls.isEmpty) {
+        throw const MusicPlatformException('平台暂未提供此清晰度的 MV 地址，请选择其他清晰度或稍后重试');
+      }
       for (final url in urls.take(3)) {
         final candidate = VideoPlayerController.networkUrl(url);
         try {
@@ -168,11 +171,13 @@ class _MusicMvPageState extends ConsumerState<MusicMvPage>
         }
       }
       throw StateError('Video playback unavailable');
-    } on Object {
+    } on Object catch (error) {
       if (mounted && generation == _generation) {
         setState(() {
           _loading = false;
-          _error = '该 MV 片源暂不可播放，可重试或选择其他清晰度。';
+          _error = error is MusicPlatformException
+              ? error.message
+              : '该 MV 暂未加载成功，请重试或选择其他清晰度。';
         });
       }
     }

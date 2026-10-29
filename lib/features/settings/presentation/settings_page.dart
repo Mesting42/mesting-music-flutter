@@ -1,4 +1,6 @@
-import '../../auth/presentation/beta_account_card.dart';
+import '../../music_platform/presentation/platform_account_page.dart';
+import '../../music_platform/presentation/platform_login_options_page.dart';
+import '../../auth/presentation/beta_login_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -68,23 +70,95 @@ class SettingsPage extends ConsumerWidget {
               const SizedBox(height: 24),
               const _SettingsSectionLabel('外观'),
               _SettingsSurface(
-                child: _SettingsTile(
-                  key: const ValueKey('settings-theme'),
-                  icon: Icons.palette_outlined,
-                  iconColor: const Color(0xFF745CC7),
-                  title: '装扮',
-                  subtitle: DistributionChannel.isBeta
-                      ? '启动页、播放器、背景与进度条'
-                      : '皮肤、IP 主题、图标与启动页',
-                  highlighted: true,
-                  onTap: () => showDressUpCenterSheet(context),
+                child: Column(
+                  children: [
+                    _SettingsTile(
+                      key: const ValueKey('settings-theme'),
+                      icon: Icons.palette_outlined,
+                      iconColor: const Color(0xFF745CC7),
+                      title: '装扮',
+                      subtitle: DistributionChannel.isBeta
+                          ? '启动页、播放器、背景与进度条'
+                          : '皮肤、IP 主题、图标与启动页',
+                      highlighted: true,
+                      onTap: () => showDressUpCenterSheet(context),
+                    ),
+                    if (DistributionChannel.isBeta)
+                      _SettingsTile(
+                        key: const ValueKey('settings-haptics'),
+                        icon: Icons.vibration_rounded,
+                        iconColor: const Color(0xFF527FD3),
+                        title: '震动与触感',
+                        subtitle: '关键操作反馈、强度与体验',
+                        onTap: () =>
+                            Navigator.of(context, rootNavigator: true).push(
+                              betaEntryRoute<void>(const HapticSettingsPage()),
+                            ),
+                      ),
+                    if (DistributionChannel.isBeta) const _SettingsDivider(),
+                  ],
                 ),
               ),
               const SizedBox(height: 18),
-              const _SettingsSectionLabel('账号'),
+              _SettingsSectionLabel(
+                DistributionChannel.isBeta ? '账号与同步' : '账号',
+              ),
               _SettingsSurface(
                 child: DistributionChannel.isBeta
-                    ? const BetaAccountCard()
+                    ? Column(
+                        children: [
+                          _SettingsTile(
+                            key: const ValueKey('settings-account-management'),
+                            icon: Icons.manage_accounts_outlined,
+                            iconColor: const Color(0xFF527FD3),
+                            title: '账号管理',
+                            subtitle: platform == null
+                                ? '登录音乐平台，管理当前账号'
+                                : '${platform.platformLabel}账号 · 已登录',
+                            onTap: () => platform == null
+                                ? openBetaLogin(
+                                    context,
+                                    redirect: '/music/settings',
+                                  )
+                                : Navigator.of(context).push(
+                                    betaEntryRoute<void>(
+                                      PlatformAccountPage(
+                                        platform: platform.platform,
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                          const _SettingsDivider(),
+                          _SettingsTile(
+                            icon: Icons.swap_horiz_rounded,
+                            iconColor: const Color(0xFF527FD3),
+                            title: '切换音乐平台',
+                            subtitle: '分别保留两个平台的登录与播放记录',
+                            onTap: () => Navigator.of(context).push(
+                              betaEntryRoute<void>(
+                                const MusicPlatformSwitchPage(),
+                              ),
+                            ),
+                          ),
+                          const _SettingsDivider(),
+                          _SettingsTile(
+                            icon: Icons.cloud_sync_outlined,
+                            iconColor: const Color(0xFF527FD3),
+                            title: ref.watch(usesNeteaseProvider)
+                                ? '网易云播放与同步'
+                                : '酷狗播放同步',
+                            subtitle: '播放历史、真实听歌时长与同步状态',
+                            onTap: () => Navigator.of(context).push(
+                              betaEntryRoute<void>(
+                                ref.read(usesNeteaseProvider)
+                                    ? const NeteasePlaybackSettingsPage()
+                                    : const ListeningSyncPage(),
+                              ),
+                            ),
+                          ),
+                          const _SettingsDivider(),
+                        ],
+                      )
                     : platform != null
                     ? const PlatformAccountTile()
                     : auth.isLoading && user == null
@@ -129,26 +203,10 @@ class SettingsPage extends ConsumerWidget {
                   child: Column(
                     children: [
                       _SettingsTile(
-                        icon: Icons.cloud_sync_outlined,
-                        iconColor: const Color(0xFF527FD3),
-                        title: ref.watch(usesNeteaseProvider)
-                            ? '网易云播放与同步'
-                            : '酷狗播放同步',
-                        subtitle: '播放历史、真实听歌时长与同步状态',
-                        onTap: () => Navigator.of(context).push(
-                          betaEntryRoute<void>(
-                            ref.read(usesNeteaseProvider)
-                                ? const NeteasePlaybackSettingsPage()
-                                : const ListeningSyncPage(),
-                          ),
-                        ),
-                      ),
-                      const _SettingsDivider(),
-                      _SettingsTile(
                         key: const ValueKey('settings-equalizer'),
                         icon: Icons.graphic_eq_rounded,
                         iconColor: const Color(0xFF527FD3),
-                        title: '均衡器',
+                        title: '本地均衡器',
                         subtitle: '频段增益、预设与自定义声音',
                         onTap: () =>
                             Navigator.of(context, rootNavigator: true).push(
@@ -156,19 +214,20 @@ class SettingsPage extends ConsumerWidget {
                             ),
                       ),
                       const _SettingsDivider(),
-                      _SettingsTile(
-                        key: const ValueKey('settings-effects'),
-                        icon: Icons.surround_sound_outlined,
-                        iconColor: const Color(0xFF527FD3),
-                        title: '音效',
-                        subtitle: ref.watch(usesNeteaseProvider)
-                            ? '本地均衡器与声音预设'
-                            : '社区、耳机与明星音效',
-                        onTap: () => Navigator.of(
-                          context,
-                          rootNavigator: true,
-                        ).push(betaEntryRoute<void>(const MusicEffectsPage())),
-                      ),
+                      if (!ref.watch(usesNeteaseProvider))
+                        _SettingsTile(
+                          key: const ValueKey('settings-effects'),
+                          icon: Icons.surround_sound_outlined,
+                          iconColor: const Color(0xFF527FD3),
+                          title: '音效',
+                          subtitle: ref.watch(usesNeteaseProvider)
+                              ? '本地均衡器与声音预设'
+                              : '社区、耳机与明星音效',
+                          onTap: () =>
+                              Navigator.of(context, rootNavigator: true).push(
+                                betaEntryRoute<void>(const MusicEffectsPage()),
+                              ),
+                        ),
                       const _SettingsDivider(),
                       _SettingsTile(
                         key: const ValueKey('settings-sleep-timer'),
@@ -183,7 +242,9 @@ class SettingsPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 18),
               ],
-              const _SettingsSectionLabel('应用'),
+              _SettingsSectionLabel(
+                DistributionChannel.isBeta ? '关于与更新' : '应用',
+              ),
               _SettingsSurface(
                 child: Column(
                   children: [
@@ -215,19 +276,6 @@ class SettingsPage extends ConsumerWidget {
                           : () => _checkForUpdates(context, ref),
                     ),
                     const _SettingsDivider(),
-                    if (DistributionChannel.isBeta)
-                      _SettingsTile(
-                        key: const ValueKey('settings-haptics'),
-                        icon: Icons.vibration_rounded,
-                        iconColor: const Color(0xFF527FD3),
-                        title: '震动与触感',
-                        subtitle: '关键操作反馈、强度与体验',
-                        onTap: () =>
-                            Navigator.of(context, rootNavigator: true).push(
-                              betaEntryRoute<void>(const HapticSettingsPage()),
-                            ),
-                      ),
-                    if (DistributionChannel.isBeta) const _SettingsDivider(),
                     if (DistributionChannel.isBeta)
                       _SettingsTile(
                         key: const ValueKey('settings-guide'),
@@ -482,7 +530,7 @@ class _SettingsHeader extends StatelessWidget {
               ),
               const SizedBox(height: 5),
               Text(
-                '管理装扮、账号与云端连接',
+                '外观、播放、账号与应用偏好',
                 style: TextStyle(
                   color: tokens.textSecondary,
                   fontSize: 11,

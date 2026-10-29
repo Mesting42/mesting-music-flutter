@@ -1,3 +1,4 @@
+import '../netease/netease_account_overview.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -130,7 +131,7 @@ class _BetaPersonalProfileState extends ConsumerState<BetaPersonalProfile> {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -165,9 +166,17 @@ class _BetaPersonalProfileState extends ConsumerState<BetaPersonalProfile> {
         )
         .toList();
     final scheme = Theme.of(context).colorScheme;
+    final officialLevel = ref.watch(usesNeteaseProvider) && session != null
+        ? ref.watch(neteaseAccountOverviewProvider).value?.level
+        : null;
     Widget group(String title, List<UserPlaylist> items) => SliverMainAxisGroup(
       slivers: [
-        SliverToBoxAdapter(child: EditorialSection('$title · ${items.length}')),
+        SliverToBoxAdapter(
+          child: EditorialSection(
+            '$title · ${items.length}',
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         if (items.isEmpty)
           SliverToBoxAdapter(
             child: Padding(
@@ -202,7 +211,7 @@ class _BetaPersonalProfileState extends ConsumerState<BetaPersonalProfile> {
                 item.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w600),
+                style: const TextStyle(fontWeight: FontWeight.w500),
               ),
               subtitle: Text(title == '创建的歌单' ? '我的歌单' : '收藏的歌单'),
               trailing: const Icon(CupertinoIcons.chevron_right, size: 16),
@@ -232,7 +241,7 @@ class _BetaPersonalProfileState extends ConsumerState<BetaPersonalProfile> {
                           '我的',
                           style: TextStyle(
                             fontSize: 34,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                             color: scheme.onSurface,
                           ),
                         ),
@@ -281,11 +290,21 @@ class _BetaPersonalProfileState extends ConsumerState<BetaPersonalProfile> {
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 28,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
                     const NeteaseLocalSvipBadge(),
+                    if (ref.watch(usesNeteaseProvider))
+                      TextButton(
+                        onPressed: () =>
+                            _open(const NeteaseAccountOverviewPage()),
+                        child: Text(
+                          officialLevel == null
+                              ? '查看网易云等级'
+                              : 'Lv.${officialLevel.level}',
+                        ),
+                      ),
                     const SizedBox(height: 9),
                     Text(
                       '${session.platformLabel}账号',
@@ -343,9 +362,26 @@ class _BetaPersonalProfileState extends ConsumerState<BetaPersonalProfile> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 26),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    key: const ValueKey('profile-download-storage'),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 26),
+                    leading: const Icon(CupertinoIcons.folder),
+                    title: const Text(
+                      '下载与存储',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    subtitle: const Text('下载任务、保存目录与文件管理'),
+                    trailing: const Icon(
+                      CupertinoIcons.chevron_right,
+                      size: 16,
+                    ),
+                    onTap: () => openAudioDownloads(context),
+                  ),
+                  const SizedBox(height: 10),
                   EditorialSection(
                     '我的音乐',
+                    fontWeight: FontWeight.w700,
                     actionLabel: '新建歌单',
                     onTap: session == null
                         ? null

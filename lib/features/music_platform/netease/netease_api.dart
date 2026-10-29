@@ -190,7 +190,8 @@ class NeteaseApi {
         data = {
           'ids': jsonEncode([int.parse('${q('id')}')]),
           'level': q('level', 'standard'),
-          'encodeType': 'flac',
+          'encodeType': q('level') == 'vivid' ? 'mp3' : 'flac',
+          if (q('level') == 'sky') 'immerseType': 'c51',
         };
       case '/lyric':
         path = '/api/song/lyric/v1';
@@ -431,6 +432,13 @@ class NeteaseApi {
       'deviceId': deviceId,
       '__remember_me': 'true',
       ..._cookies,
+      // This request-local client identity is required by the upstream vivid
+      // stream contract; it never mutates the retained account cookie jar.
+      if (path == '/api/song/enhance/player/url/v1' &&
+          data['level'] == 'vivid') ...{
+        'os': 'android',
+        'appver': '9.5.61',
+      },
       // Only the logging request uses the desktop logging contract. Do not
       // change the account jar or other requests' client identity.
       if (playbackLog) ...{

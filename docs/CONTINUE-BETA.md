@@ -1,3 +1,5 @@
+> 当前本机本地交付：1.0.18/code39，原签名包准备完成，未Git提交推送／未发布。先读[本版总交接](../HANDOFF-CURRENT-SESSION-2026-10-29-v1.0.18.md)。以下1.0.17为远端已归档基线。
+
 # Git/GitHub最新接续：1.0.17 / code38
 
 **Git/GitHub归档接续：1.0.13～1.0.17五版独立提交、固定标签、正式Release及65个附件已全部归档并核验，新克隆源码核对通过；远端beta以1.0.17/code38为产品基线；先读[HANDOFF-GITHUB-2026-10-29-v1.0.17.md](../HANDOFF-GITHUB-2026-10-29-v1.0.17.md)与[最终归档核验](version-archive/GITHUB-ARCHIVE-2026-10-29-v113-v117-verification.json)。本次Git/GitHub完整归档经用户明确确认；下方冻结记录保留原时点，不表示远端缺失。本机原beta/deb68e4、index和全部脏工作区保持，禁止直接拉取覆盖；新目录可从远端beta克隆。music后台未操作。**

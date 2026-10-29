@@ -1,6 +1,7 @@
 import '../../../shared/models/track.dart';
 import '../data/platform_mv_repository.dart';
 import 'netease_music_repository.dart';
+import 'netease_media_uri.dart';
 
 /// Reuses the complete MV page/controller/fullscreen transition. Only resource
 /// lookup and its quality identifier differ between the two music platforms.
@@ -56,7 +57,7 @@ class NeteaseMvRepository extends PlatformMvRepository {
         'r': int.parse(parts.last),
       }))['data'],
     );
-    final uri = Uri.tryParse('${data['url'] ?? ''}');
+    final uri = neteaseMediaUri('${data['url'] ?? ''}');
     return uri != null &&
             uri.host.isNotEmpty &&
             {'http', 'https'}.contains(uri.scheme)

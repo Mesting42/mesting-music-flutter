@@ -182,39 +182,68 @@ class _AudioDownloadsPageState extends ConsumerState<AudioDownloadsPage> {
                         },
                       ),
                       const SizedBox(height: 18),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 12,
+                      Row(
+                        key: const ValueKey('download-actions-row'),
                         children: [
-                          BetaGlassButton(
-                            key: const ValueKey('downloaded-play-all'),
-                            blue: true,
-                            loading: _busy,
-                            onPressed: completed.isEmpty || _busy
-                                ? null
-                                : () => _play(completed, all: true),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(CupertinoIcons.play_fill, size: 17),
-                                SizedBox(width: 7),
-                                Text('播放全部'),
-                              ],
+                          Expanded(
+                            child: BetaGlassButton(
+                              key: const ValueKey('downloaded-play-all'),
+                              blue: true,
+                              height: 52,
+                              horizontalPadding: 5,
+                              loading: _busy,
+                              onPressed: completed.isEmpty || _busy
+                                  ? null
+                                  : () => _play(completed, all: true),
+                              child: const Text(
+                                '播放全部',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                           ),
-                          BetaGlassButton(
-                            onPressed: _busy
-                                ? null
-                                : () => _act(() => _storage.openDirectory()),
-                            child: const Text('打开下载文件夹'),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: BetaGlassButton(
+                              label: '打开下载文件夹',
+                              height: 52,
+                              horizontalPadding: 5,
+                              onPressed: _busy
+                                  ? null
+                                  : () => _act(() => _storage.openDirectory()),
+                              child: const Text(
+                                '打开目录',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
                           ),
-                          BetaGlassButton(
-                            onPressed: _busy
-                                ? null
-                                : () => _act(() async {
-                                    await _storage.directory(choose: true);
-                                  }),
-                            child: const Text('选择下载目录'),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: BetaGlassButton(
+                              label: '选择下载目录',
+                              height: 52,
+                              horizontalPadding: 5,
+                              onPressed: _busy
+                                  ? null
+                                  : () => _act(() async {
+                                      await _storage.directory(choose: true);
+                                    }),
+                              child: const Text(
+                                '选择目录',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
                           ),
                         ],
                       ),

@@ -24,6 +24,7 @@ import '../netease_features_page.dart';
 import '../netease_features_repository.dart';
 import '../netease_playback_settings_page.dart';
 import '../netease_membership_page.dart';
+import '../netease_account_overview.dart';
 import '../netease_music_repository.dart';
 import 'netease_catalog.dart';
 import 'netease_content.dart';
@@ -351,7 +352,8 @@ class _NeteaseFullTaskPageState extends ConsumerState<NeteaseFullTaskPage> {
         'vip-info',
         'comments',
       }.contains(neteaseWorkflowKey(e)) ||
-      e.route == '/user/record';
+      e.route == '/user/record' ||
+      e.route == '/user/level';
   bool get _current =>
       ref.read(usesNeteaseProvider) &&
       ref.read(platformAccountProvider).value?.ownerId == _owner &&
@@ -578,8 +580,12 @@ class _NeteaseFullTaskPageState extends ConsumerState<NeteaseFullTaskPage> {
                         (int.tryParse('${q['limit']}') ?? 30)));
         if (e.write) {
           _notice = '平台已确认操作，请刷新相关列表查看结果';
+        } else if (_rows.isEmpty && neteaseIsCollection(e.route)) {
+          _facts.clear();
+          _notice = '暂无${neteaseTaskTitle(e).replaceAll('列表', '')}';
+          _more = false;
         } else if (_rows.isEmpty && _facts.isEmpty) {
-          _notice = '平台暂未返回可展示的内容';
+          _notice = '暂无可展示的内容';
         }
       });
     } catch (error) {
@@ -636,6 +642,9 @@ class _NeteaseFullTaskPageState extends ConsumerState<NeteaseFullTaskPage> {
       );
     }
     final key = neteaseWorkflowKey(e);
+    if (e.route == '/batch' || e.route == '/user/level') {
+      return const NeteaseAccountOverviewPage();
+    }
     if (e.route.startsWith('/send/') && e.route != '/send/text') {
       return NeteaseShareMessagePage(
         kind: e.route.split('/').last,

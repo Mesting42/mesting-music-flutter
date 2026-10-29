@@ -773,6 +773,9 @@ Future<Track> resolveNeteaseTrack({
   NeteaseTrackSource selectedSource = NeteaseTrackSource.automatic,
   Future<void>? abortTrigger,
 }) async {
+  if (quality.neteaseOnly && requireQuality && selectedSource.adapter != null) {
+    throw const MusicPlatformException('此档位仅由网易云官方音源提供，请选择自动或网易云官方');
+  }
   if (selectedSource.adapter != null) {
     final selected = await fallback.resolve(
       track.copyWith(playbackQuality: quality.code),
@@ -803,6 +806,9 @@ Future<Track> resolveNeteaseTrack({
   }
   if (!current()) throw const MusicPlatformException('播放请求已取消或账号已变化');
   if (original != null && !original.isPreview) return original;
+  if (quality.neteaseOnly && requireQuality) {
+    throw failure ?? const MusicPlatformException('网易云未提供所选档位的完整音频，已保留原音源');
+  }
   if (failure is MusicPlatformException &&
       {'301', '302', '415', '405', '460'}.contains(failure.code)) {
     throw failure;

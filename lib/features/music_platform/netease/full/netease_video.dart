@@ -6,6 +6,7 @@ import '../../../../core/audio/playback_interruption.dart';
 import '../../../../core/audio/playback_providers.dart';
 import '../../../../shared/widgets/beta_glass_controls.dart';
 import '../../music_platform_providers.dart';
+import '../netease_media_uri.dart';
 
 /// Video shares the existing music interruption owner. A music command or an
 /// account change wins over video; closing a stale video cannot resume music.
@@ -45,7 +46,7 @@ class _NeteaseVideoViewState extends ConsumerState<NeteaseVideoView>
   }
 
   Future<void> _load() async {
-    final uri = Uri.tryParse(widget.url);
+    final uri = neteaseMediaUri(widget.url);
     if (uri == null ||
         !{'http', 'https'}.contains(uri.scheme) ||
         uri.userInfo.isNotEmpty) {
@@ -57,7 +58,7 @@ class _NeteaseVideoViewState extends ConsumerState<NeteaseVideoView>
     }
     final video = VideoPlayerController.networkUrl(uri);
     try {
-      await video.initialize();
+      await video.initialize().timeout(const Duration(seconds: 20));
       if (!mounted || !widget.isCurrent()) {
         await video.dispose();
         return;

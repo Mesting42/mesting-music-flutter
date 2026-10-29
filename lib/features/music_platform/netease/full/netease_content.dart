@@ -3,6 +3,20 @@ import '../../../../shared/models/track.dart';
 import '../netease_music_repository.dart';
 import 'netease_catalog.dart';
 
+/// Collection totals are metadata, not content. An empty successful list must
+/// remain empty even when the server also returns count: 0.
+bool neteaseIsCollection(String route) =>
+    route.endsWith('/sublist') ||
+    {
+      '/song/purchased',
+      '/digitalAlbum/purchased',
+      '/user/playlist',
+      '/user/dj',
+      '/dj/sublist',
+      '/user/follows',
+      '/user/followeds',
+    }.contains(route);
+
 /// Protocol responses end at this boundary. Screens consume music entities,
 /// messages and labelled facts; account/transport maps are never rendered.
 class NeteaseContentRow {
