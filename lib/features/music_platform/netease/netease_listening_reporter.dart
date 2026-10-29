@@ -37,6 +37,7 @@ class NeteaseListeningReporter with WidgetsBindingObserver {
           seeking: feed.isSeeking,
           speed: state.speed,
         );
+        _startWhenReady();
         if (state.completed) _finish();
       }),
     );
@@ -54,6 +55,7 @@ class NeteaseListeningReporter with WidgetsBindingObserver {
       _timer = Timer.periodic(const Duration(seconds: 5), (_) => checkpoint());
     }
     _track(feed.currentTrack);
+    _initialTrack = false;
     _schedule(_recover);
   }
   final ListeningAudioFeed feed;
@@ -69,6 +71,8 @@ class NeteaseListeningReporter with WidgetsBindingObserver {
   String? _event;
   Future<void> _tail = Future.value();
   bool _disposed = false;
+  bool _started = false;
+  bool _initialTrack = true;
   final String owner;
   void _schedule(Future<void> Function() action) {
     _tail = _tail.then((_) => action()).catchError((Object _) {});
@@ -85,6 +89,7 @@ class NeteaseListeningReporter with WidgetsBindingObserver {
     }
     _event =
         'netease-play:${clock.now.microsecondsSinceEpoch}:${song.platformSongId}';
+    _started = false;
     _counter = ActualListeningCounter(clock)
       ..update(
         playing: feed.currentState.playing,
@@ -92,13 +97,50 @@ class NeteaseListeningReporter with WidgetsBindingObserver {
         seeking: feed.isSeeking,
         speed: feed.currentState.speed,
       );
+    // Metadata can change before the old audio source reports loading. Wait
+    // for the new track's playback-state event; a repeat is already audible.
+    if (_initialTrack || repeat) _startWhenReady();
+  }
+
+  void _startWhenReady() {
+    final song = _song, event = _event;
+    final state = feed.currentState;
+    if (_disposed ||
+        _started ||
+        song == null ||
+        event == null ||
+        !state.playing ||
+        !state.ready ||
+        feed.isSeeking ||
+        !current()) {
+      return;
+    }
+    _started = true;
+    _schedule(() async {
+      if (!current()) return;
+      await store.put(
+        owner: owner,
+        id: '$event:start',
+        kind: 'netease-startplay',
+        payload: {
+          'id': NeteaseMusicRepository.songId(song.id),
+          'title': song.title,
+        },
+        now: clock.now,
+        state: ListeningSyncState.queued,
+      );
+      await _sendQueued();
+    });
   }
 
   void checkpoint() {
     final song = _song, event = _event, counter = _counter;
     if (song == null || event == null || counter == null) return;
     final heard = counter.sample();
-    _schedule(() => _save(event, song, heard, close: false));
+    _schedule(() async {
+      await _save(event, song, heard, close: false);
+      if (current()) await _verifyRecent();
+    });
   }
 
   void _finish() {
@@ -151,7 +193,7 @@ class NeteaseListeningReporter with WidgetsBindingObserver {
     if (!current()) return;
     final rows = await store.entries(
       owner,
-      kinds: {'netease-scrobble'},
+      kinds: {'netease-scrobble', 'netease-startplay'},
       states: {ListeningSyncState.open},
     );
     for (final row in rows) {
@@ -170,7 +212,7 @@ class NeteaseListeningReporter with WidgetsBindingObserver {
   Future<void> _sendQueued() async {
     final rows = await store.entries(
       owner,
-      kinds: {'netease-scrobble'},
+      kinds: {'netease-scrobble', 'netease-startplay'},
       states: {ListeningSyncState.queued},
     );
     for (final row in rows) {
@@ -184,7 +226,12 @@ class NeteaseListeningReporter with WidgetsBindingObserver {
         continue;
       }
       try {
-        await music.call('/scrobble', row.payload);
+        await music.reportPlayback(
+          id: '${row.payload['id']}',
+          started: row.kind == 'netease-startplay',
+          seconds: row.number('time'),
+          sourceId: '${row.payload['sourceid'] ?? 0}',
+        );
         await store.change(
           row,
           ListeningSyncState.accepted,
@@ -201,6 +248,57 @@ class NeteaseListeningReporter with WidgetsBindingObserver {
           expected: ListeningSyncState.dispatched,
         );
       }
+    }
+  }
+
+  /// Log receipt is insufficient evidence of cloud indexing. Verify with the
+  /// account's read API, allowing a few checkpoints for eventual consistency.
+  /// These are read retries only; neither start nor duration writes are resent.
+  Future<void> _verifyRecent() async {
+    if (!current()) return;
+    final entries = await store.entries(
+      owner,
+      kinds: {'netease-startplay'},
+      states: {ListeningSyncState.accepted},
+    );
+    final pending = entries
+        .where(
+          (row) =>
+              row.payload['cloudConfirmed'] != true &&
+              row.number('verificationAttempts') < 3,
+        )
+        .take(10)
+        .toList();
+    if (pending.isEmpty || !current()) return;
+    try {
+      final result = await music.call('/record/recent/song', {'limit': 100});
+      if (!current()) return;
+      final recent = NeteaseMusicRepository.rows(
+        NeteaseMusicRepository.object(result['data'])['list'],
+      );
+      for (final row in pending) {
+        final found = recent.any((item) {
+          final data = NeteaseMusicRepository.object(item['data']);
+          final song = NeteaseMusicRepository.object(data['song']);
+          final id = '${song['id'] ?? data['id'] ?? item['id'] ?? ''}';
+          final played = int.tryParse('${item['playTime']}') ?? 0;
+          return id == '${row.payload['id']}' &&
+              played >= row.createdAt.millisecondsSinceEpoch - 2000;
+        });
+        await store.change(
+          row,
+          row.state,
+          clock.now,
+          expected: row.state,
+          payload: {
+            ...row.payload,
+            'cloudConfirmed': found,
+            'verificationAttempts': row.number('verificationAttempts') + 1,
+          },
+        );
+      }
+    } catch (_) {
+      /* Keep receipt and cloud confirmation distinct on read errors. */
     }
   }
 
@@ -252,7 +350,8 @@ final neteaseListeningReporterProvider = Provider<NeteaseListeningReporter?>((
       !ref.watch(neteaseListeningEnabledProvider)) {
     return null;
   }
-  final music = ref.watch(neteaseMusicRepositoryProvider);
+  ref.watch(neteaseMusicRepositoryProvider.select((m) => m.credential));
+  final music = ref.read(neteaseMusicRepositoryProvider);
   final reporter = NeteaseListeningReporter(
     feed: HandlerListeningAudioFeed(ref.watch(audioHandlerProvider)),
     music: music,
@@ -277,6 +376,12 @@ final neteaseListeningJournalProvider =
           .watch(platformListeningSyncStoreProvider)
           .watch(account.ownerId)
           .map(
-            (rows) => rows.where((r) => r.kind == 'netease-scrobble').toList(),
+            (rows) => rows
+                .where(
+                  (r) =>
+                      r.kind == 'netease-scrobble' ||
+                      r.kind == 'netease-startplay',
+                )
+                .toList(),
           );
     });

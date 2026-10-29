@@ -129,6 +129,9 @@ function stmt(n) {
   }
 }
 function group(route) {
+  if(route==='/related/playlist'||route==='/song/order/update')return ['音乐库','歌单与收藏'];
+  if(route==='/hug/comment')return ['功能','评论与云村'];
+  if(route==='/scrobble')return ['我的','播放与同步'];
   if(route==='/inner/version')return ['我的','兼容信息'];
   if(route==='/batch')return ['音乐库','资料与收藏概览'];
   if(route.startsWith('/listentogether/'))return ['功能','一起听'];

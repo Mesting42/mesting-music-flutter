@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,13 +10,48 @@ import '../../music_platform_providers.dart';
 import '../../platform_backend_providers.dart';
 import '../../presentation/platform_design.dart';
 import '../netease_music_repository.dart';
+import 'netease_manual_routes.dart';
+
+class NeteasePickedEntity {
+  const NeteasePickedEntity(this.id, this.name, [this.raw = const {}]);
+  final String id, name;
+  final Map<String, dynamic> raw;
+}
+
+String neteaseEntityLabel(String kind) =>
+    const {
+      'song': '歌曲',
+      'playlist': '歌单',
+      'album': '专辑',
+      'artist': '歌手',
+      'user': '朋友',
+      'mv': 'MV',
+      'podcast': '播客',
+      'program': '节目',
+      'style': '曲风',
+      'event': '动态',
+      'yunbeiTask': '云贝任务',
+      'vipTask': '会员任务',
+      'musicianTask': '音乐人任务',
+      'cloudSong': '云盘歌曲',
+      'video': '视频',
+      'radio': '电台',
+      'podcastCategory': '播客分类',
+      'topic': '话题',
+    }[kind] ??
+    '内容';
 
 /// IDs remain an advanced option in task forms, but normal users can choose a
 /// real song, collection or person. The picker returns an ID only; it neither
 /// changes playback nor writes account data.
 class NeteaseEntityPicker extends ConsumerStatefulWidget {
-  const NeteaseEntityPicker({required this.kind, super.key});
+  const NeteaseEntityPicker({
+    required this.kind,
+    this.includeDetails = false,
+    super.key,
+  });
   final String kind;
+  final bool includeDetails;
   @override
   ConsumerState<NeteaseEntityPicker> createState() =>
       _NeteaseEntityPickerState();
@@ -46,6 +82,16 @@ class _NeteaseEntityPickerState extends ConsumerState<NeteaseEntityPicker> {
   bool _busy = false;
   int _epoch = 0, _page = 0;
   bool _more = false;
+  bool get _onlineSearch => {
+    'song',
+    'playlist',
+    'album',
+    'artist',
+    'user',
+    'mv',
+    'podcast',
+    'video',
+  }.contains(widget.kind);
   bool get _current =>
       ref.read(usesNeteaseProvider) &&
       ref.read(platformAccountProvider).value?.ownerId == _owner &&
@@ -56,6 +102,7 @@ class _NeteaseEntityPickerState extends ConsumerState<NeteaseEntityPicker> {
     final account = ref.read(platformAccountProvider).value;
     _owner = account?.ownerId;
     _token = account?.token;
+    Future.microtask(_load);
   }
 
   @override
@@ -66,7 +113,7 @@ class _NeteaseEntityPickerState extends ConsumerState<NeteaseEntityPicker> {
   }
 
   Future<void> _load({bool next = false}) async {
-    if (_busy || !_current || _search.text.trim().isEmpty) return;
+    if (_busy || !_current) return;
     final epoch = ++_epoch;
     final page = next ? _page : 0;
     setState(() {
@@ -75,20 +122,130 @@ class _NeteaseEntityPickerState extends ConsumerState<NeteaseEntityPicker> {
       if (!next) _rows.clear();
     });
     try {
+      final music = ref.read(neteaseMusicRepositoryProvider);
+      final searching = _search.text.trim().isNotEmpty && _onlineSearch;
       final (type, field) = switch (widget.kind) {
         'playlist' => (1000, 'playlists'),
         'album' => (10, 'albums'),
         'artist' => (100, 'artists'),
         'user' => (1002, 'userprofiles'),
+        'mv' => (1004, 'mvs'),
+        'podcast' => (1009, 'djRadios'),
+        'video' => (1014, 'videos'),
         _ => (1, 'songs'),
       };
-      final payload = await ref.read(neteaseMusicRepositoryProvider).call(
-        '/search',
-        {'keywords': _search.text.trim(), 'type': type, 'offset': page * 30},
-      );
+      final (route, fields) = switch (widget.kind) {
+        'playlist' => ('/user/playlist', ['playlist']),
+        'album' => ('/album/sublist', ['data']),
+        'artist' => ('/artist/sublist', ['data']),
+        'user' => ('/user/follows', ['follow']),
+        'mv' => ('/mv/first', ['data']),
+        'podcast' => ('/dj/sublist', ['djRadios']),
+        'radio' => ('/dj/sublist', ['djRadios']),
+        'video' => ('/video/timeline/recommend', ['datas']),
+        'program' => ('/program/recommend', ['programs']),
+        'style' => ('/style/list', ['data']),
+        'topic' => ('/hot/topic', ['hot']),
+        'podcastCategory' => ('/dj/catelist', ['categories']),
+        'event' => ('/user/event', ['events']),
+        'yunbeiTask' => ('/yunbei/tasks/todo', ['data']),
+        'vipTask' => ('/vip/tasks', ['data']),
+        'musicianTask' => ('/musician/tasks/new', ['data']),
+        'cloudSong' => ('/user/cloud', ['data']),
+        _ => ('/recommend/songs', ['data', 'dailySongs']),
+      };
+      final query = <String, Object?>{
+        'uid': music.api.session!.userId,
+        'limit': 30,
+        'offset': page * 30,
+      };
+      late Map<String, dynamic> payload;
+      if (searching) {
+        payload = await music.call('/search', {
+          'keywords': _search.text.trim(),
+          'type': type,
+          'offset': page * 30,
+        });
+      } else {
+        final c = neteaseCompleteContract(route, query);
+        payload = c == null
+            ? await music.call(route, query)
+            : await music.api.request(
+                c.path,
+                c.data,
+                weapi: c.weapi,
+                expectedCredential: music.credential,
+              );
+      }
       if (!mounted || epoch != _epoch || !_current) return;
-      final result = NeteaseMusicRepository.object(payload['result']);
-      final rows = NeteaseMusicRepository.rows(result[field]);
+      Object? data = searching
+          ? NeteaseMusicRepository.object(payload['result'])[field]
+          : payload;
+      if (!searching) {
+        for (final key in fields) {
+          data = NeteaseMusicRepository.object(data)[key];
+        }
+      }
+      final rows = <Map<String, dynamic>>[];
+      void collect(Object? value) {
+        if (value is List) {
+          for (final item in value) {
+            collect(item);
+          }
+          return;
+        }
+        if (value is! Map) return;
+        var row = Map<String, dynamic>.from(value);
+        if (row['data'] is Map) {
+          row = {...row, ...NeteaseMusicRepository.object(row['data'])};
+        }
+        if (row['json'] is String) {
+          try {
+            final event = NeteaseMusicRepository.object(
+              jsonDecode('${row['json']}'),
+            );
+            row['name'] ??= event['msg'];
+          } catch (_) {
+            /* ordinary text */
+          }
+        }
+        final raw = NeteaseMusicRepository.object(
+          row['simpleSong'] ?? row['program'],
+        );
+        final id =
+            row['id'] ??
+            row['userId'] ??
+            row['tagId'] ??
+            row['actId'] ??
+            row['actid'] ??
+            row['vid'] ??
+            row['userTaskId'] ??
+            row['taskId'];
+        final name =
+            row['name'] ??
+            row['nickname'] ??
+            row['tagName'] ??
+            row['taskName'] ??
+            row['title'] ??
+            raw['name'];
+        if (id != null && name != null) {
+          rows.add({...row, 'id': id, 'name': name});
+        }
+        for (final key in [
+          'children',
+          'tags',
+          'tasks',
+          'taskList',
+          'list',
+          'data',
+          'unGet',
+          'get',
+        ]) {
+          if (row[key] is List || row[key] is Map) collect(row[key]);
+        }
+      }
+
+      collect(data);
       setState(() {
         final ids = _rows.map((r) => '${r['id'] ?? r['userId']}').toSet();
         _rows.addAll(rows.where((r) => ids.add('${r['id'] ?? r['userId']}')));
@@ -107,15 +264,16 @@ class _NeteaseEntityPickerState extends ConsumerState<NeteaseEntityPicker> {
   @override
   Widget build(BuildContext context) {
     ref.watch(platformAccountProvider);
-    final label =
-        const {
-          'song': '歌曲',
-          'playlist': '歌单',
-          'album': '专辑',
-          'artist': '歌手',
-          'user': '用户',
-        }[widget.kind] ??
-        '内容';
+    final label = neteaseEntityLabel(widget.kind);
+    final visible = _onlineSearch
+        ? _rows
+        : _rows
+              .where(
+                (r) => '${r['name'] ?? r['nickname']}'.toLowerCase().contains(
+                  _search.text.trim().toLowerCase(),
+                ),
+              )
+              .toList();
     return BetaPageSearchLayout(
       controller: _bottomSearch,
       child: PlatformPageFrame(
@@ -137,9 +295,9 @@ class _NeteaseEntityPickerState extends ConsumerState<NeteaseEntityPicker> {
                   Expanded(
                     child: ListView.builder(
                       padding: const EdgeInsets.only(bottom: 30),
-                      itemCount: _rows.length + 1,
+                      itemCount: visible.length + 1,
                       itemBuilder: (context, index) {
-                        if (index == _rows.length) {
+                        if (index == visible.length) {
                           return _more
                               ? Padding(
                                   padding: const EdgeInsets.all(22),
@@ -157,7 +315,10 @@ class _NeteaseEntityPickerState extends ConsumerState<NeteaseEntityPicker> {
                                 )
                               : const SizedBox.shrink();
                         }
-                        final row = _rows[index];
+                        if (index >= visible.length) {
+                          return const SizedBox.shrink();
+                        }
+                        final row = visible[index];
                         final album = NeteaseMusicRepository.object(
                           row['al'] ?? row['album'],
                         );
@@ -189,7 +350,13 @@ class _NeteaseEntityPickerState extends ConsumerState<NeteaseEntityPicker> {
                           subtitle: subtitle.isEmpty ? null : Text(subtitle),
                           onTap: () => Navigator.pop(
                             context,
-                            '${row['id'] ?? row['userId']}',
+                            widget.includeDetails
+                                ? NeteasePickedEntity(
+                                    '${row['id'] ?? row['userId']}',
+                                    '${row['name'] ?? row['nickname'] ?? '已选内容'}',
+                                    row,
+                                  )
+                                : '${row['id'] ?? row['userId']}',
                           ),
                         );
                       },

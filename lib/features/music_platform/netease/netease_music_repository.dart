@@ -1,3 +1,4 @@
+import 'dart:convert';
 import '../../../shared/models/track.dart';
 import '../data/music_platform_api.dart';
 import '../data/platform_category_search.dart';
@@ -12,6 +13,42 @@ class NeteaseMusicRepository {
   NeteaseMusicRepository(this.api) : credential = api.session?.credentialId;
   final NeteaseApi api;
   final String? credential;
+
+  /// `startplay` updates recent plays; the separate `play` event carries only
+  /// actual elapsed seconds. A 200 response is receipt, not proof of indexing.
+  /// Contract evidence: api-enhanced issue 167 and Kumone's recent-play fix.
+  Future<Map<String, dynamic>> reportPlayback({
+    required String id,
+    required bool started,
+    int seconds = 0,
+    String sourceId = '0',
+  }) => api.request(
+    '/api/feedback/weblog',
+    {
+      'logs': jsonEncode([
+        {
+          'action': started ? 'startplay' : 'play',
+          'json': {
+            'id': id,
+            'type': 'song',
+            'mainsite': '1',
+            'mainsiteWeb': '1',
+            'content': 'id=$sourceId',
+            if (!started) ...{
+              'time': seconds,
+              'end': 'playend',
+              'wifi': 0,
+              'download': 0,
+              'source': 'list',
+              'sourceId': sourceId,
+            },
+          },
+        },
+      ]),
+    },
+    playbackLog: true,
+    expectedCredential: credential,
+  );
 
   Future<Map<String, dynamic>> call(
     String route, [
@@ -278,7 +315,12 @@ class NeteaseMusicRepository {
     if (requireQuality && delivered != quality.code) {
       throw const MusicPlatformException('网易云未返回所选音质，已保留原音源');
     }
-    final preview = row['freeTrialInfo'] is Map;
+    final deliveredMs = int.tryParse('${row['time']}') ?? 0;
+    final preview =
+        row['freeTrialInfo'] is Map ||
+        (deliveredMs > 0 &&
+            deliveredMs <= 90000 &&
+            track.duration.inMilliseconds > deliveredMs + 2000);
     return track.copyWith(
       audioAsset: url,
       playbackQuality: delivered,

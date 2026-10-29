@@ -30,6 +30,13 @@ class NeteasePlaybackSettingsPage extends ConsumerWidget {
               r.state == ListeningSyncState.dispatched,
         )
         .length;
+    final confirmed = rows
+        .where(
+          (r) =>
+              r.kind == 'netease-startplay' &&
+              r.payload['cloudConfirmed'] == true,
+        )
+        .length;
     return PlatformPageFrame(
       title: '网易云播放与同步',
       child: ListView(
@@ -57,7 +64,7 @@ class NeteasePlaybackSettingsPage extends ConsumerWidget {
           ),
           SwitchListTile.adaptive(
             title: const Text('网易云播放记录上报'),
-            subtitle: const Text('仅记录真实播放时间，暂停、缓冲与拖动进度不计入'),
+            subtitle: const Text('实际开始播放后同步最近播放；时长仅累计真实收听，暂停、缓冲与拖动不计入'),
             value: ref.watch(neteaseListeningEnabledProvider),
             onChanged: (value) async {
               try {
@@ -72,7 +79,7 @@ class NeteasePlaybackSettingsPage extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Text(
-              '接口已接收 $accepted 条 · 结果未确认 $uncertain 条\n接口接收不代表网易云官方累计时长已入账。未确认的请求不会自动重复发送。',
+              '接口已接收 $accepted 条 · 云端最近播放已确认 $confirmed 条 · 请求结果未确认 $uncertain 条\n云端记录可能延迟；累计听歌时长以网易云处理为准。未确认的写入不会自动重复发送。',
             ),
           ),
           for (final feed in [

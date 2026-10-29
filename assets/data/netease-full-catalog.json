@@ -780,8 +780,8 @@
       "route": "/song/order/update",
       "title": "调整歌曲顺序",
       "url": "https://binaryify.github.io/NeteaseCloudMusicApi/#/?id=%e8%b0%83%e6%95%b4%e6%ad%8c%e6%9b%b2%e9%a1%ba%e5%ba%8f",
-      "tab": "功能",
-      "category": "歌曲与歌词",
+      "tab": "音乐库",
+      "category": "歌单与收藏",
       "params": [
         {
           "key": "pid",
@@ -1611,8 +1611,8 @@
       "route": "/related/playlist",
       "title": "相关歌单推荐",
       "url": "https://binaryify.github.io/NeteaseCloudMusicApi/#/?id=%e7%9b%b8%e5%85%b3%e6%ad%8c%e5%8d%95%e6%8e%a8%e8%8d%90",
-      "tab": "功能",
-      "category": "视频与MV",
+      "tab": "音乐库",
+      "category": "歌单与收藏",
       "params": [
         {
           "key": "id",
@@ -2666,8 +2666,8 @@
       "route": "/hug/comment",
       "title": "抱一抱评论",
       "url": "https://binaryify.github.io/NeteaseCloudMusicApi/#/?id=%e6%8a%b1%e4%b8%80%e6%8a%b1%e8%af%84%e8%ae%ba",
-      "tab": "发现",
-      "category": "音乐探索",
+      "tab": "功能",
+      "category": "评论与云村",
       "params": [
         {
           "key": "type",
@@ -3530,8 +3530,8 @@
       "route": "/scrobble",
       "title": "听歌打卡",
       "url": "https://binaryify.github.io/NeteaseCloudMusicApi/#/?id=%e5%90%ac%e6%ad%8c%e6%89%93%e5%8d%a1",
-      "tab": "发现",
-      "category": "音乐探索",
+      "tab": "我的",
+      "category": "播放与同步",
       "params": [
         {
           "key": "id",

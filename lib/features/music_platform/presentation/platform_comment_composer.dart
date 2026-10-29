@@ -17,6 +17,8 @@ class PlatformCommentComposer extends StatelessWidget {
     required this.keyboardVisible,
     this.reply,
     this.onCancelReply,
+    this.hintText,
+    this.sendLabel = '发送评论',
     super.key,
   });
   final TextEditingController controller;
@@ -27,6 +29,11 @@ class PlatformCommentComposer extends StatelessWidget {
   final bool keyboardVisible;
   final String? reply;
   final VoidCallback? onCancelReply;
+
+  /// Chat uses exactly the same optical surfaces as comments; only the copy
+  /// changes. Keep the renderer and keyboard behaviour in this one component.
+  final String? hintText;
+  final String sendLabel;
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
@@ -76,7 +83,8 @@ class PlatformCommentComposer extends StatelessWidget {
                     textInputAction: TextInputAction.newline,
                     style: const TextStyle(fontSize: 16, height: 1.4),
                     decoration: InputDecoration(
-                      hintText: reply == null ? '写下你的评论…' : '回复评论…',
+                      hintText:
+                          hintText ?? (reply == null ? '写下你的评论…' : '回复评论…'),
                       counterText: '',
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(
@@ -99,7 +107,7 @@ class PlatformCommentComposer extends StatelessWidget {
               enabled: !sending,
               liveRegion: sending,
               excludeSemantics: true,
-              label: sending ? '正在发送' : '发送评论',
+              label: sending ? '正在发送' : sendLabel,
               child: Tooltip(
                 message: '发送',
                 child: ExcludeFocus(

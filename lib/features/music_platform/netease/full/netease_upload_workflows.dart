@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'package:crypto/crypto.dart';
 import '../netease_api.dart';
 import '../../data/music_platform_api.dart';
 
@@ -80,6 +81,65 @@ class NeteaseUploadWorkflows {
       throw const MusicPlatformException('图片上传未完成，请重试');
     }
     return allocation['docId'] as Object;
+  }
+
+  /// Private pictures use the eapi allocation contract (including digest and
+  /// file size), then `picinfo` on private/send. Upload credentials cannot
+  /// redirect a music cookie or authorize an arbitrary upload host.
+  Future<({String id, String format})> chatPicture(Uint8List bytes) async {
+    _check();
+    final png = bytes.length > 8 && bytes[0] == 0x89 && bytes[1] == 0x50;
+    final jpeg = bytes.length > 3 && bytes[0] == 0xff && bytes[1] == 0xd8;
+    if ((!png && !jpeg) || bytes.length > 10 * 1024 * 1024) {
+      throw const MusicPlatformException('请选择10MB以内的PNG或JPEG图片');
+    }
+    final format = png ? 'png' : 'jpeg';
+    final token = MusicPlatformApi.objectMap(
+      (await _request('/api/nos/token/alloc', {
+        'filename': 'message.${png ? 'png' : 'jpg'}',
+        'local': 'false',
+        'nos_product': 0,
+        'fileSize': bytes.length,
+        'type': 'image',
+        'md5': md5.convert(bytes).toString(),
+        'ext': '.${png ? 'png' : 'jpg'}',
+      }))['result'],
+    );
+    _check();
+    final key = '${token['objectKey'] ?? ''}';
+    final bucket = '${token['bucket'] ?? 'yyimgs'}';
+    final id = '${token['docId'] ?? ''}';
+    if (!{'yyimgs', 'cloudmusic'}.contains(bucket) ||
+        key.isEmpty ||
+        key.contains('..') ||
+        !RegExp(r'^\d+$').hasMatch(id) ||
+        token['token'] == null) {
+      throw const MusicPlatformException('未取得有效的图片上传凭证');
+    }
+    final upload =
+        http.Request(
+            'POST',
+            Uri.https('nosup-hz1.127.net', '/$bucket/$key', {
+              'version': '1.0',
+              'offset': '0',
+              'complete': 'true',
+            }),
+          )
+          ..followRedirects = false
+          ..headers.addAll({
+            'x-nos-token': '${token['token']}',
+            'Content-Type': 'image/$format',
+          })
+          ..bodyBytes = bytes;
+    final response = await api.client
+        .send(upload)
+        .timeout(const Duration(seconds: 45));
+    await response.stream.drain<void>();
+    _check();
+    if (response.statusCode != 200) {
+      throw const MusicPlatformException('图片上传未完成，尚未发送');
+    }
+    return (id: id, format: format);
   }
 
   Future<void> voice(

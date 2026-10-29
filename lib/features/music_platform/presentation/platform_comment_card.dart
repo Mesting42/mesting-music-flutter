@@ -12,6 +12,7 @@ class PlatformCommentCard extends StatelessWidget {
     this.onThread,
     this.onDelete,
     this.onReaction,
+    this.onHug,
     super.key,
   });
   final PlatformComment comment;
@@ -19,6 +20,7 @@ class PlatformCommentCard extends StatelessWidget {
   final VoidCallback? onThread;
   final VoidCallback? onDelete;
   final VoidCallback? onReaction;
+  final VoidCallback? onHug;
   @override
   Widget build(BuildContext context) {
     final tokens = context.musicThemeTokens;
@@ -123,6 +125,8 @@ class PlatformCommentCard extends StatelessWidget {
                         label: Text('${comment.likes}'),
                       ),
                     TextButton(onPressed: onReply, child: const Text('回复')),
+                    if (onHug != null)
+                      TextButton(onPressed: onHug, child: const Text('抱一抱')),
                     if (onThread != null)
                       TextButton.icon(
                         onPressed: onThread,

@@ -1,6 +1,7 @@
 import '../domain/platform_session.dart';
 import '../platform_backend_providers.dart';
 import '../netease/netease_comments_repository.dart';
+import '../netease/netease_comment_hugs_page.dart';
 import '../../../shared/widgets/beta_anchored_menu.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -388,7 +389,11 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
       },
     );
     return PlatformPageFrame(
-      title: widget.thread == null ? '酷狗评论' : '评论回复',
+      title: widget.thread != null
+          ? '评论回复'
+          : widget.repository.identity.platform == MusicPlatform.netease
+          ? '网易云评论'
+          : '酷狗评论',
       subtitle: widget.resource.name,
       child: !_current
           ? const Center(child: Text('账号已变化，请返回当前账号页面'))
@@ -517,6 +522,28 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
                                   key: ValueKey('comment-reveal-${comment.id}'),
                                   child: PlatformCommentCard(
                                     comment: comment,
+                                    onHug:
+                                        widget.repository
+                                                is NeteaseCommentsRepository &&
+                                            !_writing
+                                        ? () =>
+                                              Navigator.of(
+                                                context,
+                                                rootNavigator: true,
+                                              ).push(
+                                                MaterialPageRoute<void>(
+                                                  builder: (_) =>
+                                                      NeteaseCommentHugsPage(
+                                                        repository:
+                                                            widget.repository
+                                                                as NeteaseCommentsRepository,
+                                                        resource:
+                                                            widget.resource,
+                                                        comment: comment,
+                                                      ),
+                                                ),
+                                              )
+                                        : null,
                                     onReaction:
                                         widget.repository
                                                 is NeteaseCommentsRepository &&

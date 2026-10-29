@@ -31,7 +31,7 @@ class _MusicEqualizerPageState extends ConsumerState<MusicEqualizerPage> {
     final controller = ref.watch(musicEqualizerProvider);
     final scheme = Theme.of(context).colorScheme;
     return MusicFeaturePage(
-      title: '均衡器',
+      title: ref.watch(usesNeteaseProvider) ? '本地均衡器' : '均衡器',
       child: ListenableBuilder(
         listenable: controller,
         builder: (context, _) {
@@ -40,6 +40,11 @@ class _MusicEqualizerPageState extends ConsumerState<MusicEqualizerPage> {
           return BetaGlassScrollBody(
             padding: const EdgeInsets.fromLTRB(22, 12, 22, 40),
             children: [
+              if (ref.watch(usesNeteaseProvider))
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 16),
+                  child: Text('音效由 Mesting Music 在本机处理，当前未接入网易云官方音效。'),
+                ),
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(

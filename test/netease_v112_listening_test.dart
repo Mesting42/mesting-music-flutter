@@ -70,12 +70,14 @@ void main() {
       feed.setTrack(null);
       await reporter.settle();
       final rows = await store.entries('netease:7');
-      expect(rows.single.number('time'), 6);
-      expect(rows.single.state, ListeningSyncState.accepted);
-      expect(requests, 1);
+      final duration = rows.singleWhere((r) => r.kind == 'netease-scrobble');
+      expect(duration.number('time'), 6);
+      expect(duration.state, ListeningSyncState.accepted);
+      expect(rows.where((r) => r.kind == 'netease-startplay'), hasLength(1));
+      expect(requests, 2);
       reporter.dispose();
       await reporter.settle();
-      expect(requests, 1);
+      expect(requests, 2);
     },
   );
   test(
@@ -93,7 +95,7 @@ void main() {
         }),
       )..configure(session);
       feed.setTrack(song);
-      feed.setState(true, true);
+      feed.setState(false, true);
       final reporter = NeteaseListeningReporter(
         feed: feed,
         music: NeteaseMusicRepository(api),
@@ -104,6 +106,7 @@ void main() {
         automaticTimers: false,
       );
       await reporter.settle();
+      feed.setState(true, true);
       clock.elapse(4000);
       current = false;
       api.configure(null);

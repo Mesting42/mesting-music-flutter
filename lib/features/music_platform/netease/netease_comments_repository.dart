@@ -15,6 +15,9 @@ class NeteaseCommentsRepository extends PlatformCommentsRepository {
         PlatformCommentKind.album => 'R_AL_3_',
         PlatformCommentKind.mv => 'R_MV_5_',
         PlatformCommentKind.podcast => 'A_DJ_1_',
+        PlatformCommentKind.video => 'R_VI_62_',
+        PlatformCommentKind.event => 'A_EV_2_',
+        PlatformCommentKind.radio => 'A_DR_14_',
       }}${resource.id}';
 
   @override
@@ -103,6 +106,37 @@ class NeteaseCommentsRepository extends PlatformCommentsRepository {
       'like': !comment.liked,
     });
   }
+
+  Future<void> hug(
+    PlatformCommentResource resource,
+    PlatformComment comment,
+  ) async {
+    await music.api.request(
+      '/api/v2/resource/comments/hug/listener',
+      {
+        'targetUserId': comment.userId,
+        'commentId': comment.id,
+        'threadId': _thread(resource),
+      },
+      expectedCredential: music.credential,
+    );
+  }
+
+  Future<Map<String, dynamic>> hugs(
+    PlatformCommentResource resource,
+    PlatformComment comment, {
+    int page = 1,
+    String cursor = '-1',
+    String idCursor = '-1',
+  }) => music.api.request('/api/v2/resource/comments/hug/list', {
+    'targetUserId': comment.userId,
+    'commentId': comment.id,
+    'threadId': _thread(resource),
+    'pageNo': page,
+    'cursor': cursor,
+    'idCursor': idCursor,
+    'pageSize': 30,
+  }, expectedCredential: music.credential);
 
   @override
   Future<void> send(

@@ -10,7 +10,7 @@ import 'netease_crypto.dart';
 import 'netease_session.dart';
 import 'netease_extended_routes.dart';
 
-/// Embedded HTTPS transport. Only the two upstream music hosts receive cookies;
+/// Embedded HTTPS transport. Only fixed upstream music hosts receive cookies;
 /// no loopback process, external API deployment, or JavaScript runtime is used.
 /// Route/payload contracts are pinned to @neteaseapireborn/api 4.29.7 (MIT).
 class NeteaseApi {
@@ -406,11 +406,17 @@ class NeteaseApi {
     bool allowBusinessError = false,
     String? expectedCredential,
     Map<String, String> additionalHeaders = const {},
+    bool playbackLog = false,
   }) async {
     if (!path.startsWith('/api/') ||
         path.contains('?') ||
         path.contains('..')) {
       throw ArgumentError('Invalid NetEase protocol path');
+    }
+    if (playbackLog && (path != '/api/feedback/weblog' || weapi)) {
+      throw ArgumentError(
+        'Playback logging requires the fixed eapi weblog path',
+      );
     }
     final generation = _generation;
     if (expectedCredential != null &&
@@ -425,6 +431,14 @@ class NeteaseApi {
       'deviceId': deviceId,
       '__remember_me': 'true',
       ..._cookies,
+      // Only the logging request uses the desktop logging contract. Do not
+      // change the account jar or other requests' client identity.
+      if (playbackLog) ...{
+        'os': 'osx',
+        'appver': '3.1.10.5100',
+        'osver': '15.5',
+        'channel': 'netease',
+      },
     };
     final header = <String, String>{
       ...cookie,
@@ -443,14 +457,20 @@ class NeteaseApi {
         ? NeteaseCrypto.weapi(payload)
         : NeteaseCrypto.eapi(path, payload);
     final uri = Uri.https(
-      weapi ? 'music.163.com' : 'interface.music.163.com',
+      playbackLog
+          ? 'clientlog.music.163.com'
+          : weapi
+          ? 'music.163.com'
+          : 'interface.music.163.com',
       '/${weapi ? 'weapi' : 'eapi'}/${path.substring(5)}',
     );
     final req = http.AbortableRequest('POST', uri, abortTrigger: abortTrigger)
       ..followRedirects = false
       ..headers.addAll({
         'Referer': 'https://music.163.com/',
-        'User-Agent': weapi
+        'User-Agent': playbackLog
+            ? 'NeteaseMusic/3.1.10.5100 (Macintosh; OS X 15.5)'
+            : weapi
             ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36'
             : 'NeteaseMusic/9.0.65.240416212826(9006053); Dalvik/2.1.0',
         'Cookie': (weapi ? cookie : header).entries
@@ -487,7 +507,7 @@ class NeteaseApi {
         throw MusicPlatformException(message, code: '$code');
       }
       final setCookie = response.headers['set-cookie'];
-      if (setCookie != null) {
+      if (setCookie != null && !playbackLog) {
         for (final item in setCookie.split(RegExp(r',(?=\s*[^;,=\s]+=)'))) {
           final pair = item.split(';').first.trim();
           final at = pair.indexOf('=');

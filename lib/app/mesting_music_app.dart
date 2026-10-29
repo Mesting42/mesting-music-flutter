@@ -2,6 +2,7 @@ import '../features/music_platform/domain/platform_session.dart';
 import '../features/music_platform/platform_backend_providers.dart';
 import '../features/music_platform/netease/netease_fallback.dart';
 import '../features/music_platform/netease/netease_listening_reporter.dart';
+import '../features/music_platform/netease/together/netease_together_controller.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -109,6 +110,7 @@ class MestingMusicApp extends ConsumerWidget {
       ref.watch(audiobookProgressBindingProvider);
       ref.watch(platformListeningSyncProvider);
       ref.watch(neteaseListeningReporterProvider);
+      ref.watch(neteaseTogetherControllerProvider);
     }
     final radioController = DistributionChannel.isBeta
         ? null

@@ -46,7 +46,18 @@ class NeteaseFullRepository {
       }.contains(key),
     );
     for (final field in endpoint.parameters.where((p) => p.required)) {
-      if (!{'imgFile', 'songFile'}.contains(field.key) &&
+      if (endpoint.route == '/voice/upload' &&
+          field.key == 'coverImgId' &&
+          q['imgFile'] is Uint8List) {
+        continue;
+      }
+      if (!{
+            'imgFile',
+            'songFile',
+            'desc',
+            'signature',
+            'tags',
+          }.contains(field.key) &&
           (q[field.key] == null || '${q[field.key]}'.trim().isEmpty)) {
         throw MusicPlatformException('请填写${field.label}');
       }
@@ -118,7 +129,14 @@ class NeteaseFullRepository {
         await NeteaseUploadWorkflows(
           api,
           credential,
-        ).voice(Map<Object?, Object?>.from(file), q);
+        ).voice(Map<Object?, Object?>.from(file), {
+          ...q,
+          if (q['imgFile'] is Uint8List)
+            'coverImgId': await NeteaseUploadWorkflows(
+              api,
+              credential,
+            ).picture(q['imgFile'] as Uint8List),
+        });
       }
       checkOwner();
       return {'code': 200, 'message': '上传已完成，请刷新内容列表确认'};

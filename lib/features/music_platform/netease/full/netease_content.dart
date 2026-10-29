@@ -289,6 +289,31 @@ class NeteaseContent {
             'url',
             'urls',
             'encodeType',
+            'id',
+            'ids',
+            'uid',
+            'userId',
+            'threadId',
+            'roomId',
+            'inviterId',
+            'songId',
+            'artistId',
+            'albumId',
+            'videoId',
+            'voiceId',
+            'voiceListId',
+            'resourceId',
+            'taskId',
+            'tagId',
+            'commentId',
+            'province',
+            'city',
+            'birthday',
+            'gender',
+            'offset',
+            'limit',
+            'cursor',
+            'version',
           }.contains('${e.key}')) {
             continue;
           }
@@ -302,6 +327,9 @@ class NeteaseContent {
               labels['${e.key}'] ?? neteaseFieldLabels['${e.key}']!,
               () => e.value is bool
                   ? (e.value == true ? '是' : '否')
+                  : {'time', 'date', 'expireTime'}.contains('${e.key}') &&
+                        int.tryParse('${e.value}') != null
+                  ? _date(e.value)
                   : clean(e.value),
             );
           }
@@ -328,5 +356,14 @@ class NeteaseContent {
           data['hasMore'] == true,
       cursor: cursor,
     );
+  }
+
+  static String _date(Object? value) {
+    final stamp = int.tryParse('$value') ?? 0;
+    if (stamp <= 0) return '暂未提供';
+    final date = DateTime.fromMillisecondsSinceEpoch(
+      stamp < 100000000000 ? stamp * 1000 : stamp,
+    );
+    return '${date.year}年${date.month}月${date.day}日';
   }
 }

@@ -6,6 +6,8 @@ import '../../auth/presentation/beta_login_navigation.dart';
 import 'player_queue_panel.dart';
 import 'dart:ui';
 import 'dart:async';
+import '../../../shared/models/track.dart';
+import '../../music_platform/netease/full/netease_together_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -446,6 +448,13 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
           }
           return;
         }
+        if (value == 'netease-together') {
+          await Navigator.of(
+            context,
+            rootNavigator: true,
+          ).push(betaEntryRoute<void>(const NeteaseTogetherPage()));
+          return;
+        }
         final style = PlayerVisualStyle.values.firstWhere(
           (style) => style.name == value,
         );
@@ -469,6 +478,12 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
           ),
           const PlayerMenuAction('quality', '音质选择', CupertinoIcons.waveform),
           const PlayerMenuAction('comments', '歌曲评论', CupertinoIcons.text_quote),
+          if (track.source == TrackSource.netease)
+            const PlayerMenuAction(
+              'netease-together',
+              '一起听',
+              CupertinoIcons.person_2,
+            ),
           if (track.isRemote)
             const PlayerMenuAction(
               'download',
@@ -501,7 +516,11 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
             '均衡器',
             CupertinoIcons.slider_horizontal_3,
           ),
-          const PlayerMenuAction('effects', '音效', CupertinoIcons.waveform),
+          PlayerMenuAction(
+            'effects',
+            track.source == TrackSource.netease ? '本地音效' : '音效',
+            CupertinoIcons.waveform,
+          ),
           const PlayerMenuAction('mv', '观看 MV', CupertinoIcons.play_rectangle),
           const PlayerMenuAction(
             'sleep-timer',

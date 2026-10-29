@@ -9,6 +9,7 @@ import '../data/music_platform_api.dart';
 import '../domain/platform_audio_quality.dart';
 import '../music_platform_providers.dart';
 import '../platform_backend_providers.dart';
+import 'netease_music_repository.dart';
 
 final neteaseFallbackEnabledProvider =
     NotifierProvider<NeteaseFallbackSetting, bool>(NeteaseFallbackSetting.new);
@@ -109,10 +110,14 @@ class BugpkNeteaseFallback implements NeteaseFallbackSource {
         rows is List && rows.isNotEmpty ? rows.first : rows,
       );
       if ('${row['id']}' != id || row['freeTrialInfo'] is Map) return null;
-      final url = Uri.tryParse('${row['url'] ?? ''}');
-      if (url == null ||
-          url.scheme != 'https' ||
-          !url.host.endsWith('.music.126.net')) {
+      final supplied = Uri.tryParse('${row['url'] ?? ''}');
+      if (supplied == null) return null;
+      final url = await _audioUrl(supplied, id);
+      if (url == null) return null;
+      final duration = int.tryParse('${row['time']}') ?? 0;
+      if (duration > 0 &&
+          duration <= 90000 &&
+          candidate.duration.inMilliseconds > duration + 2000) {
         return null;
       }
       final delivered = switch ('${row['level']}') {
@@ -131,6 +136,43 @@ class BugpkNeteaseFallback implements NeteaseFallbackSource {
     });
     _tail = result.then<void>((_) {}, onError: (Object _) {});
     return result;
+  }
+
+  /// The provider also returns official outer links. Resolve those anonymously
+  /// with redirects disabled, validate every hop, and upgrade only known music
+  /// CDN HTTP redirects to HTTPS. An arbitrary third-party location is rejected.
+  Future<Uri?> _audioUrl(Uri uri, String songId) async {
+    for (var hop = 0; hop < 3; hop++) {
+      if (uri.userInfo.isNotEmpty || !{'http', 'https'}.contains(uri.scheme)) {
+        return null;
+      }
+      if (uri.host.endsWith('.music.126.net')) {
+        return uri.replace(scheme: 'https');
+      }
+      if (uri.host != 'music.163.com' ||
+          uri.path != '/song/media/outer/url' ||
+          (uri.queryParameters['id'] ?? '').replaceFirst(
+                RegExp(r'\.mp3$'),
+                '',
+              ) !=
+              songId) {
+        return null;
+      }
+      final request = http.Request('GET', uri.replace(scheme: 'https'))
+        ..followRedirects = false
+        ..headers['Range'] = 'bytes=0-1023';
+      final response = await client
+          .send(request)
+          .timeout(const Duration(seconds: 8));
+      final location = response.headers['location'];
+      await response.stream.take(1).drain<void>();
+      if (![301, 302, 303, 307, 308].contains(response.statusCode) ||
+          location == null) {
+        return null;
+      }
+      uri = uri.resolve(location);
+    }
+    return null;
   }
 }
 
@@ -229,7 +271,11 @@ class AnonymousKuwoFallback implements NeteaseFallbackSource {
 
 /// Probe only the first response chunk. Reject HTML/JSON errors and never
 /// download an entire file just to decide whether playback can start.
-Future<bool> probeAudio(http.Client client, String url) async {
+Future<bool> probeAudio(
+  http.Client client,
+  String url, {
+  int minimumBytes = 0,
+}) async {
   final uri = Uri.tryParse(url);
   if (uri == null ||
       !{'http', 'https'}.contains(uri.scheme) ||
@@ -245,10 +291,30 @@ Future<bool> probeAudio(http.Client client, String url) async {
     return false;
   }
   final type = response.headers['content-type'] ?? '';
+  final total = int.tryParse(
+    RegExp(
+          r'/(\d+)$',
+        ).firstMatch(response.headers['content-range'] ?? '')?.group(1) ??
+        (response.statusCode == 200
+            ? response.headers['content-length'] ?? ''
+            : ''),
+  );
+  if (total != null && minimumBytes > 0 && total < minimumBytes) {
+    await response.stream.take(1).drain<void>();
+    return false;
+  }
   final prefix = await response.stream.first.timeout(
     const Duration(seconds: 8),
   );
   if (prefix.isEmpty || type.contains('text/') || type.contains('json')) {
+    return false;
+  }
+  final opening = utf8
+      .decode(prefix.take(48).toList(), allowMalformed: true)
+      .trimLeft();
+  if (opening.startsWith('<') ||
+      opening.startsWith('{') ||
+      opening.startsWith('[')) {
     return false;
   }
   return type.contains('audio') ||
@@ -264,6 +330,7 @@ class NeteaseFallbackResolver {
   Future<Track?> resolve(
     Track original, {
     required bool Function() current,
+    String? requiredQuality,
   }) async {
     for (final source in sources) {
       if (!current()) return null;
@@ -286,7 +353,22 @@ class NeteaseFallbackResolver {
           if (!current()) return null;
           if (resolved == null ||
               resolved.isPreview ||
-              !await probeAudio(client, resolved.audioAsset)) {
+              (requiredQuality != null &&
+                  resolved.playbackQuality != requiredQuality) ||
+              !await probeAudio(
+                client,
+                resolved.audioAsset,
+                minimumBytes:
+                    original.duration.inSeconds > 60 &&
+                        {'128', '320'}.contains(resolved.playbackQuality)
+                    ? (original.duration.inSeconds *
+                              int.parse(resolved.playbackQuality) *
+                              1000 /
+                              8 *
+                              .4)
+                          .round()
+                    : 0,
+              )) {
             continue;
           }
           if (!current()) return null;
@@ -333,6 +415,28 @@ Future<Track> resolveNeteasePlayback(
       ref.context.mounted &&
       ref.read(usesNeteaseProvider) &&
       ref.read(neteaseMusicRepositoryProvider).credential == credential;
+  return resolveNeteaseTrack(
+    music: music,
+    fallback: ref.read(neteaseFallbackResolverProvider),
+    allowFallback: ref.read(neteaseFallbackEnabledProvider),
+    current: current,
+    track: track,
+    quality: quality,
+    requireQuality: requireQuality,
+  );
+}
+
+/// Playback and quality changes share the same source decision. Keeping the
+/// decision independent of WidgetRef makes queue/autoplay failure cases testable.
+Future<Track> resolveNeteaseTrack({
+  required NeteaseMusicRepository music,
+  required NeteaseFallbackResolver fallback,
+  required bool allowFallback,
+  required bool Function() current,
+  required Track track,
+  required PlatformAudioQuality quality,
+  bool requireQuality = false,
+}) async {
   Track? original;
   Object? failure;
   try {
@@ -345,25 +449,26 @@ Future<Track> resolveNeteasePlayback(
     failure = error;
   }
   if (!current()) throw const MusicPlatformException('账号已变化，请重新播放');
-  if (requireQuality) {
-    if (original != null) return original;
-    throw failure!;
-  }
   if (original != null && !original.isPreview) return original;
   if (failure is MusicPlatformException &&
       {'301', '302', '415', '405', '460'}.contains(failure.code)) {
     throw failure;
   }
-  if (ref.read(neteaseFallbackEnabledProvider)) {
-    final fallback = await ref
-        .read(neteaseFallbackResolverProvider)
-        .resolve(
-          track.copyWith(playbackQuality: quality.code),
-          current: current,
-        );
-    if (fallback != null) return fallback;
+  if (allowFallback) {
+    final resolved = await fallback.resolve(
+      track.copyWith(playbackQuality: quality.code),
+      current: current,
+      requiredQuality: requireQuality ? quality.code : null,
+    );
+    if (resolved != null) return resolved;
   }
   if (!current()) throw const MusicPlatformException('账号已变化，请重新播放');
-  if (original != null) return original;
+  if (original != null) {
+    return original.copyWith(
+      availabilityMessage: allowFallback
+          ? '网易云试听片段 · 备用音源暂未提供完整版本'
+          : '网易云试听片段 · 备用音源已关闭',
+    );
+  }
   throw failure ?? const MusicPlatformException('未找到同一录音版本的可播放音源');
 }
