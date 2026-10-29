@@ -167,7 +167,16 @@ void main() {
           ),
         ),
       );
-      expect(await source.resolve(recording()), isNull);
+      await expectLater(
+        source.resolve(recording()),
+        throwsA(
+          isA<NeteaseSourceFailure>().having(
+            (e) => e.reason,
+            'reason',
+            'wrong_song_id',
+          ),
+        ),
+      );
     },
   );
   test('containers use audio bytes rather than incorrect CDN Content-Type', () {

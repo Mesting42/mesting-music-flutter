@@ -456,7 +456,16 @@ void main() {
         headers: {'location': 'https://foreign.test/audio.mp3'},
       );
     });
-    expect(await BugpkNeteaseFallback(client).resolve(song), isNull);
+    await expectLater(
+      BugpkNeteaseFallback(client).resolve(song),
+      throwsA(
+        isA<NeteaseSourceFailure>().having(
+          (e) => e.reason,
+          'reason',
+          'redirect_not_audio',
+        ),
+      ),
+    );
     expect(calls, 2);
   });
   test(

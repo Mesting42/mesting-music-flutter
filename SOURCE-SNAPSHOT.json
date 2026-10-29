@@ -1,14 +1,14 @@
 {
-  "version": "1.0.15",
-  "versionCode": 36,
+  "version": "1.0.16",
+  "versionCode": 37,
   "baseCommit": "deb68e4b4bad84d422085e4567d556b4441b5e48",
   "status": "local_working_source_snapshot_not_a_git_release",
   "published": false,
   "signingMaterialIncluded": false,
   "externalVerificationExcludedToAvoidSelfReference": [
-    "release/Mesting-Music-v1.0.15-SHA256.txt",
-    "release/Mesting-Music-v1.0.15-source-verification.json",
-    "release/Mesting-Music-v1.0.15-source.sha256"
+    "release/Mesting-Music-v1.0.16-SHA256.txt",
+    "release/Mesting-Music-v1.0.16-source-verification.json",
+    "release/Mesting-Music-v1.0.16-source.sha256"
   ],
   "previousSnapshotMetadata": {
     "workingTreePath": "SOURCE-SNAPSHOT.json",
@@ -75,8 +75,8 @@
     },
     {
       "path": "AGENTS.md",
-      "size": 8562,
-      "sha256": "f481b57b338478009f2d031e038e8b184e84c8291ad2a8bca330ec1cd94e9333"
+      "size": 9149,
+      "sha256": "fa414cda3d27ee1519f4a2d1b540ac33e7d9f8db3fc567cbb640a73651e9b5e4"
     },
     {
       "path": "BETA_ARCHIVE.md",
@@ -85,8 +85,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 15591,
-      "sha256": "e8ce67df663ce1aeffb0615f7d1f22bc673dbcee8e7fb0948a20682f27c62b58"
+      "size": 16759,
+      "sha256": "7560ed2c5b0911dd4a15f5612496308876af14eb502acb0deda0925e612d1d0b"
     },
     {
       "path": "DESIGN.md",
@@ -174,6 +174,11 @@
       "sha256": "2aa236981478bbef6f1a9c2caac691cb043509bfbc0d5ab78b7dea845a398102"
     },
     {
+      "path": "HANDOFF-CURRENT-SESSION-2026-10-29-v1.0.16.md",
+      "size": 637,
+      "sha256": "0520412ddafb820d004e774f034f4d3a9ea7784e49903a29e3c6956d44eb6404"
+    },
+    {
       "path": "HANDOFF-SESSION-2026-10-28-TO-NEW-CHAT.md",
       "size": 17621,
       "sha256": "c2019cb5cb5460625e02e61545b9e1e4fc2ac638254ebef4e2a1a63d7ae59b2f"
@@ -182,6 +187,11 @@
       "path": "HANDOFF-SESSION-2026-10-29-LOCAL-ANLI-TO-NEW-CHAT.md",
       "size": 13171,
       "sha256": "e003d5cff5d12027ae47d7e4c6d4de5ddb2b495378fbbe39664b6ab52b58dee5"
+    },
+    {
+      "path": "HANDOFF-SESSION-2026-10-29-v1.0.15-TO-NEW-CHAT.md",
+      "size": 16851,
+      "sha256": "e217ec7ca8230d40e86faeee6396a2ccdf4807b787758ca56cdb4e9b0e921439"
     },
     {
       "path": "Mesting-Music-v1.0.2-source.zip.sha256",
@@ -294,6 +304,11 @@
       "sha256": "c6605ce528a1443d026413a0395471e0d598f8a5527432a30675a514a77119c0"
     },
     {
+      "path": "android/app/src/main/kotlin/com/mesting/mesting_music/AppExitDiagnostics.kt",
+      "size": 1957,
+      "sha256": "d624952fc489848d3f2525889bce354a4cdcf92e6b476929a79ac386eaf09ba5"
+    },
+    {
       "path": "android/app/src/main/kotlin/com/mesting/mesting_music/AudioOutputBridge.kt",
       "size": 11374,
       "sha256": "b727eb2d8808bf4e7a683057f6949da8ec78e0ce0bd343225cd8417848953e09"
@@ -325,8 +340,8 @@
     },
     {
       "path": "android/app/src/main/kotlin/com/mesting/mesting_music/MainActivity.kt",
-      "size": 52642,
-      "sha256": "98d5c40b48afc9eefb8b7ce4f74cdc8304f7c4901d074717aad438b7d0df03ca"
+      "size": 52730,
+      "sha256": "0f840b7208cd4b9f5474080916844fcbd08c7ac3abf3a3a91de60baa303627bd"
     },
     {
       "path": "android/app/src/main/kotlin/com/mesting/mesting_music/MediaVolumeBridge.kt",
@@ -825,8 +840,8 @@
     },
     {
       "path": "assets/data/release-notes.json",
-      "size": 1037,
-      "sha256": "db0016f817d7d97ed93d81badef4cdf930052038ca70f016eed3703407dca1b8"
+      "size": 1068,
+      "sha256": "c804ba072133701ce0ee645a646b2b27fbbab8f065a626b1f7981a04863f1469"
     },
     {
       "path": "assets/images/player/netease-style-tonearm.png",
@@ -1430,8 +1445,8 @@
     },
     {
       "path": "docs/CONTINUE-BETA.md",
-      "size": 3549,
-      "sha256": "ab148f767aba8a066a7123d6a0c20cd5e6a9b2fc3c4a8c9944040b284461b3f2"
+      "size": 4042,
+      "sha256": "8a08e6d9a44fee09fcd3661dfc698e9bb3da0b824b8e44f09e7f27715f382fab"
     },
     {
       "path": "docs/INSTALL-v1.0.11.md",
@@ -1459,6 +1474,11 @@
       "sha256": "74ad9cd65713bfa2f1aaf2932c4e8ade36ee7760ab7a6fe633617bd6a4a475b0"
     },
     {
+      "path": "docs/INSTALL-v1.0.16.md",
+      "size": 1559,
+      "sha256": "b3fb8fdfeb8380772bb1559f21284feab8f51ff3bdb4c8d27301a153f2d2571b"
+    },
+    {
       "path": "docs/MD3MUSIC_BETA.md",
       "size": 110348,
       "sha256": "cb3c43e7919fe856dd4ff0621647a3395635bb56d6508ce5bc25035b2def6021"
@@ -1477,6 +1497,11 @@
       "path": "docs/NETEASE-SOURCES-2026-10-29-v1.0.15.md",
       "size": 5098,
       "sha256": "e05e2a7b7893963730f73cbc192412633b94bb3aeb1a7d5bf09b8b68744c0eab"
+    },
+    {
+      "path": "docs/NETEASE-SOURCES-2026-10-29-v1.0.16.md",
+      "size": 4411,
+      "sha256": "7118722dd1d7d321b84745c1827f92abe7dee6b0efca8d86406f778b3dde2bce"
     },
     {
       "path": "docs/NETEASE-UX-2026-10-29-v1.0.14.md",
@@ -1614,6 +1639,11 @@
       "sha256": "cccc6c2f28a6ac2e0b5aa3de9f9f9105d55208b6e254385a8f18491dbf8c19d2"
     },
     {
+      "path": "docs/SESSION-HANDOFF-2026-10-29-v1.0.16.md",
+      "size": 2570,
+      "sha256": "bf76fab8719dad92f1011e6f06461b045b03fedfbca03654ec36b022a83540ba"
+    },
+    {
       "path": "docs/apk-downloads.md",
       "size": 8915,
       "sha256": "9cb0aa3c77afc5d3ccb37ce32a82a6dfe7504e945f33ee7ab68a76ae9477d89e"
@@ -1744,6 +1774,11 @@
       "sha256": "931db1d91f5c3f24cef401ec8759e3cffe9bb55d1b4dd278f9ae589b51e8e5d4"
     },
     {
+      "path": "docs/fixes-2026-10-29-v1.0.16.md",
+      "size": 842,
+      "sha256": "3062d2524e4b058007a18feaee9b9d6647b86650934bdc0459135b7bb96d5245"
+    },
+    {
       "path": "docs/historical-releases-1.0.0-to-1.0.37.md",
       "size": 9994,
       "sha256": "1948bc26332ba4db203f6845fbc3960d127637506491838ade00cfa347256708"
@@ -1792,6 +1827,11 @@
       "path": "docs/validation-2026-10-29-v1.0.15.json",
       "size": 10059,
       "sha256": "6aec9e0672fcd6c85572203a7683d528b542c4408fc4c0215a9e1fdc81433dc3"
+    },
+    {
+      "path": "docs/validation-2026-10-29-v1.0.16.json",
+      "size": 24265,
+      "sha256": "38ad18a57637dce0118741f07373f2eda5cf3be3229c1eb95e71598b1705593b"
     },
     {
       "path": "docs/validation-netease-full-2026-10-29.json",
@@ -2310,8 +2350,8 @@
     },
     {
       "path": "lib/core/audio/mesting_audio_handler.dart",
-      "size": 73037,
-      "sha256": "44a63bacd7a6b86e9b09bcffc4bdd36416b00571e44e8df2b0cfe71b770d190b"
+      "size": 74074,
+      "sha256": "7e12575f84a746e8c9cd723795be384f25e6553df193eaccffd36b0a406a7f69"
     },
     {
       "path": "lib/core/audio/music_equalizer.dart",
@@ -2377,6 +2417,11 @@
       "path": "lib/core/database/app_database.g.dart",
       "size": 197824,
       "sha256": "2f17ade20183f4cb6b254f3c75a9802d86a22ced83b2b56b7e992395372bb68b"
+    },
+    {
+      "path": "lib/core/diagnostics/app_exit_diagnostics.dart",
+      "size": 1823,
+      "sha256": "d76011800699c62904c0a9167da8cd78c111d8d1c3fa9069f537b9fb5fd720f9"
     },
     {
       "path": "lib/core/errors/user_facing_error.dart",
@@ -2500,8 +2545,8 @@
     },
     {
       "path": "lib/features/app_update/domain/release_history.dart",
-      "size": 10559,
-      "sha256": "438ec4d9453ab79cd37abcef24df609e8d19d0edca4c854b55134756f5a8ce00"
+      "size": 11571,
+      "sha256": "418c6a8c1b3aa754d6e971ff0d8106e155216954f33bb07a56415fcfa33f0fa5"
     },
     {
       "path": "lib/features/app_update/presentation/app_update_coordinator.dart",
@@ -3199,14 +3244,29 @@
       "sha256": "cc19b3e0e4772aed23aa4084a478ab2f5e9b0ff9efe3e355b15e9550eefcd463"
     },
     {
+      "path": "lib/features/music_platform/netease/fallback/netease_audio_probe.dart",
+      "size": 10123,
+      "sha256": "6544f2574edebd27b49db0857364bbdb3948b59fa69971fb0c93349d04e98520"
+    },
+    {
       "path": "lib/features/music_platform/netease/fallback/netease_fallback_source.dart",
-      "size": 1794,
-      "sha256": "3fd612248e09c9e67da45626e8875da33ca1438bf0a959ebbbbf2c03bdefba7a"
+      "size": 3104,
+      "sha256": "a0828e833fbd15166f144221c6d7015d97268ff6d8cd4072c41804b3807e1d1a"
+    },
+    {
+      "path": "lib/features/music_platform/netease/fallback/netease_kuwo_source.dart",
+      "size": 3805,
+      "sha256": "d14acb037bb71f128e5f346c995855d9954e84f908f9fddbde56b3073d301f57"
     },
     {
       "path": "lib/features/music_platform/netease/fallback/netease_public_sources.dart",
-      "size": 13451,
-      "sha256": "bf34a6677bf1991b3de8c9240fa156a17c04ce7940b163bfe205712e0c947a91"
+      "size": 18123,
+      "sha256": "3880ac3b67749a13bd694d9b6e4cd4f1a0b37a69c2af29c9c1955e8bcf364391"
+    },
+    {
+      "path": "lib/features/music_platform/netease/fallback/netease_source_transport.dart",
+      "size": 3101,
+      "sha256": "bfa04baa5f1cadf320ba5f9dca39c455357aab18d3b4c397c8a4b6a39a3b1453"
     },
     {
       "path": "lib/features/music_platform/netease/full/netease_catalog.dart",
@@ -3325,8 +3385,8 @@
     },
     {
       "path": "lib/features/music_platform/netease/netease_fallback.dart",
-      "size": 22938,
-      "sha256": "a269178e757000b04db317ed0586abc88dbf3e27fb70b6b0dcf46cd373d8b877"
+      "size": 28873,
+      "sha256": "08098ca32260dad48ab613d307459a2b9afd79ed7f7e84347b9f8fdf1968f5fa"
     },
     {
       "path": "lib/features/music_platform/netease/netease_features_page.dart",
@@ -3360,8 +3420,8 @@
     },
     {
       "path": "lib/features/music_platform/netease/netease_music_repository.dart",
-      "size": 11544,
-      "sha256": "f7d026e1e1b7e7c14f7ee9866ac8b947e2de3c718d05a55bce9a7275e1bb34b1"
+      "size": 11590,
+      "sha256": "92e0236346780a950a9cce0a7cf5da3f90b796d9b202fc9d2b0c04f05a99fbc6"
     },
     {
       "path": "lib/features/music_platform/netease/netease_mv_repository.dart",
@@ -4469,6 +4529,11 @@
       "sha256": "a936f063b69acacaff8f0fa4780025ba329a9839ad4d84bbbbb92406533c0d60"
     },
     {
+      "path": "release/Mesting-Music-v1.0.15-SHA256.txt",
+      "size": 478,
+      "sha256": "33077d353ee8a18739f6331b46458528ca4945016f1a10a8a4f75d7d8e25adeb"
+    },
+    {
       "path": "release/Mesting-Music-v1.0.15-publish.json",
       "size": 1650,
       "sha256": "ac978f4088fed9449a2fb9a8354242626d82fedbfea99b38907f0774fc577f76"
@@ -4479,6 +4544,16 @@
       "sha256": "c160e42c194973813fd357c1eeea8089bcbde21e50a8808f785548b251353954"
     },
     {
+      "path": "release/Mesting-Music-v1.0.15-source-verification.json",
+      "size": 655,
+      "sha256": "d0289e124a8ac40e5fbed8e429477e4fc091d2cb808c8b5929109c329e79c7ae"
+    },
+    {
+      "path": "release/Mesting-Music-v1.0.15-source.sha256",
+      "size": 100,
+      "sha256": "a9faf1ebe47f7c80e6dd82b9dafb1eecc099f005a8f5b2629c1c7d9ee9f63a39"
+    },
+    {
       "path": "release/Mesting-Music-v1.0.15-verification.json",
       "size": 1984,
       "sha256": "ae17cae84b1126d89bb7c5dc56c90158534ebf96c329ad1c6b9f5d39f3533682"
@@ -4487,6 +4562,26 @@
       "path": "release/Mesting-Music-v1.0.15.apk.sha256",
       "size": 93,
       "sha256": "a62286530afa1babf35b8f7df72258dfbec7614d189727eb89dd2ec0c40743dd"
+    },
+    {
+      "path": "release/Mesting-Music-v1.0.16-publish.json",
+      "size": 1681,
+      "sha256": "72e89467c949001b972354c67dbd77719e0d8998f96673480bc8ffc02f15c1fe"
+    },
+    {
+      "path": "release/Mesting-Music-v1.0.16-release-notes.txt",
+      "size": 935,
+      "sha256": "1bb38c7f80af1b5bfc546c4d4a9748bf0097a6a941216d8ec4786bf50aa46e4c"
+    },
+    {
+      "path": "release/Mesting-Music-v1.0.16-verification.json",
+      "size": 2035,
+      "sha256": "d7bbffb086ce68ea630de44e874cad4e91844a4d83bc2322a244a822a31a2bc6"
+    },
+    {
+      "path": "release/Mesting-Music-v1.0.16.apk.sha256",
+      "size": 93,
+      "sha256": "cffdccdb566d193ca59a212a57df7bb4e755d5d58510c61b98d80886dafbb888"
     },
     {
       "path": "release/Mesting-Music-v1.0.2-source-verification.json",
@@ -5215,8 +5310,8 @@
     },
     {
       "path": "test/netease_v112_fallback_download_test.dart",
-      "size": 8889,
-      "sha256": "267cbc3b63a21b034d037b3c774dc0400d114357daa52ed47e89b96b6538ebb8"
+      "size": 9070,
+      "sha256": "274ea7c532881a0b6c9af03a4bad44b2795c09f4f2d132573b1ffbbd7a0801a3"
     },
     {
       "path": "test/netease_v112_listening_test.dart",
@@ -5230,8 +5325,8 @@
     },
     {
       "path": "test/netease_v114_workflows_test.dart",
-      "size": 21358,
-      "sha256": "afa068afcfdaacbf9527a4b8a10b325b3faba6e848c2d791796dd4654885a373"
+      "size": 21526,
+      "sha256": "2859542bfc7a53307b191246e53d377606f365956272e56f6b194e22a5b692a8"
     },
     {
       "path": "test/netease_v115_sources_test.dart",
@@ -5242,6 +5337,11 @@
       "path": "test/netease_v115_ui_test.dart",
       "size": 9984,
       "sha256": "0b4ee1543e39a2147d1fc928ad1d259cdb829d8ece95ab6060198918a3e35a1f"
+    },
+    {
+      "path": "test/netease_v116_recovery_test.dart",
+      "size": 22112,
+      "sha256": "7217736424841502d8304fe50e3cec11dd8cb6cff014ffbdb8981e1ef2304c2a"
     },
     {
       "path": "test/now_playing_transition_test.dart",
@@ -8315,8 +8415,8 @@
     },
     {
       "path": "third_party/unblock_netease/NOTICE.md",
-      "size": 1785,
-      "sha256": "2e5997d4b547180df7397e706b37e32137a7d406e6f00370f71c3977c35b2747"
+      "size": 2461,
+      "sha256": "be4ad02dae2a2f4380608d286abf8e53ac6bcb9a9746ac440d014f007b1af492"
     },
     {
       "path": "third_party/unblock_netease/README.md",
@@ -8337,6 +8437,11 @@
       "path": "third_party/unblock_netease/upstream/bilivideo.js",
       "size": 4946,
       "sha256": "25505c4ec3b82e92ab3d0d40b9aeb1d3353aa51c845cf358b9bcc400e431cf0d"
+    },
+    {
+      "path": "third_party/unblock_netease/upstream/kuwo.js",
+      "size": 3076,
+      "sha256": "cdce0e243049a225671fa87d813d8d8becf7f39491a2f2295f6e9eb0c9bb2352"
     },
     {
       "path": "third_party/unblock_netease/upstream/match.js",
@@ -8366,12 +8471,12 @@
     {
       "path": "tool/build_android_md3_beta_apk.ps1",
       "size": 2961,
-      "sha256": "2d9b13a686ac0c7aa78a6708cedbe6b2ceadd6b9ccc007597b7dc07d3b117fe1"
+      "sha256": "1d16ef06524a93eb74756dff99b8014c86654d25defe4d81b930b521c507e6d9"
     },
     {
       "path": "tool/build_android_release_apk.ps1",
       "size": 1337,
-      "sha256": "5f878cc232a971e1fea556c3fae9af286ea48c9546e1e86209f8824067317eff"
+      "sha256": "8a62c5e72e7ff9e781e74bf9b9ba41f1c1531840cbcdb942780cda12fd7eb8b3"
     },
     {
       "path": "tool/build_md3_beta_native.ps1",

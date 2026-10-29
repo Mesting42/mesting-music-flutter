@@ -283,6 +283,7 @@ class NeteaseMusicRepository {
     Track track,
     PlatformAudioQuality quality, {
     bool requireQuality = false,
+    Future<void>? abortTrigger,
   }) async {
     if (track.source != TrackSource.netease) return track;
     if (api.session == null) throw const MusicPlatformException('请先登录网易云账号');
@@ -295,7 +296,7 @@ class NeteaseMusicRepository {
     final payload = await call('/song/url', {
       'id': songId(track.id),
       'level': level,
-    });
+    }, abortTrigger);
     final values = rows(payload['data']);
     final row = values.isEmpty ? <String, dynamic>{} : values.first;
     final url = '${row['url'] ?? ''}';

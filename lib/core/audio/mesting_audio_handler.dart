@@ -411,7 +411,16 @@ class MestingAudioHandler extends BaseAudioHandler
     ];
     final resolver = _trackPlaybackResolver;
     if (resolver != null) {
-      final active = await resolver(orderedTracks.first);
+      final Track active;
+      try {
+        active = await resolver(orderedTracks.first);
+      } catch (_) {
+        // A newer tap/pause can cancel the previous HTTP lookup. Ignore that
+        // stale failure just as we ignore a stale success; the live command
+        // retains its own error reporting and audio state.
+        if (!isCurrent()) return false;
+        rethrow;
+      }
       if (!isCurrent()) {
         return false;
       }
@@ -1208,6 +1217,23 @@ class MestingAudioHandler extends BaseAudioHandler
     } catch (error, stack) {
       if (completion != null && !completion.isCompleted) {
         completion.completeError(error, stack);
+      } else if (automatic) {
+        // Completion and recovery run without a UI awaiting their Future.
+        // A failed network lookup here used to rethrow into the root isolate.
+        // Manual commands still propagate errors to their initiating control.
+        developer.log(
+          'automatic-advance-failed',
+          name: 'MestingAudio',
+          error: error,
+          stackTrace: stack,
+        );
+        playbackState.add(
+          playbackState.value.copyWith(
+            processingState: AudioProcessingState.error,
+            playing: false,
+            errorMessage: '下一首音源解析失败，请重新选择歌曲',
+          ),
+        );
       } else if (!_continueAfterExplicitQueue) {
         rethrow;
       } else {

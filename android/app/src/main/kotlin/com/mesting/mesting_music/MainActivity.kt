@@ -161,6 +161,7 @@ open class MainActivity : AudioServiceActivity() {
             SYSTEM_CHANNEL,
         ).setMethodCallHandler { call, result ->
             when (call.method) {
+                "getRecentAppExits" -> result.success(AppExitDiagnostics.recent(this))
                 "getListeningDeviceInfo" -> {
                     // Runtime screen/device fields for this app's own signed
                     // playback events. No identifier or credential is logged.
