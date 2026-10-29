@@ -1,3 +1,5 @@
+import '../netease/fallback/netease_source_picker.dart';
+import '../../../shared/widgets/beta_popup_menu_button.dart';
 import '../../player/presentation/beta_playback_actions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -184,11 +186,13 @@ class _TrackList extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           FavoriteToggleButton(track: track, compact: true),
-          PopupMenuButton<String>(
+          BetaPopupMenuButton<String>(
             tooltip: '歌曲操作',
             icon: const Icon(Icons.more_horiz),
             itemBuilder: (_) => [
               const PopupMenuItem(value: 'add', child: Text('加入歌单')),
+              if (track.source == TrackSource.netease && !track.hasLocalAudio)
+                const PopupMenuItem(value: 'source', child: Text('选择音乐来源')),
               if (ref.read(showPlatformFeaturesProvider))
                 const PopupMenuItem(value: 'comments', child: Text('酷狗歌曲评论')),
               if (playlistId != null)
@@ -196,6 +200,10 @@ class _TrackList extends ConsumerWidget {
             ],
             onSelected: (action) async {
               if (!context.mounted) return;
+              if (action == 'source') {
+                await showNeteaseTrackSources(context, ref, track);
+                return;
+              }
               if (action == 'add') {
                 await showAddToPlaylistSheet(context, ref, track);
               }

@@ -193,11 +193,11 @@ void main() {
       expect(find.text('酷狗昵称'), findsOneWidget);
       expect(find.text('登录或创建账号'), findsNothing);
       await tester.scrollUntilVisible(
-        find.text('酷狗云端收藏'),
+        find.text('我喜欢的音乐'),
         180,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(find.text('酷狗云端收藏'), findsOneWidget);
+      expect(find.text('我喜欢的音乐'), findsOneWidget);
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,

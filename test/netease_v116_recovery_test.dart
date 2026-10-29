@@ -633,8 +633,8 @@ void main() {
             handler.playbackState.value.processingState ==
             AudioProcessingState.error,
       );
-      expect(handler.mediaItem.value!.id, 'one');
-      // Explicit commands still let their UI surface the same source failure.
+      expect(handler.mediaItem.value!.id, 'two');
+      // The failed selection stays visible with its error. Explicit commands still let their UI surface the same source failure.
       await expectLater(handler.skipToNext(), throwsStateError);
     },
   );

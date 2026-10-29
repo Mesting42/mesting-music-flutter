@@ -22,11 +22,12 @@ class CategorySearchSlice {
     this.more = true,
     this.loading = false,
     this.error,
+    this.stale = false,
   });
   final List<PlatformSearchHit> items;
   final int page;
   final int? total;
-  final bool more, loading;
+  final bool more, loading, stale;
   final String? error;
 }
 
@@ -71,15 +72,30 @@ class CategorySearchController extends Notifier<CategorySearchState> {
       before,
       after,
     ) {
-      if (before != after) reset(state.query);
+      if (before != after) reset(state.query, retainResults: false);
     });
     return CategorySearchState(ref.read(musicSearchControllerProvider).query);
   }
 
-  void reset(String query) {
+  void reset(String query, {bool retainResults = true}) {
     ++_generation;
     _cancel();
-    state = CategorySearchState(query);
+    final previous = state;
+    state = CategorySearchState(
+      query,
+      selected: query.isEmpty ? PlatformSearchKind.songs : previous.selected,
+      pages: {
+        if (retainResults && query.isNotEmpty)
+          for (final entry in previous.pages.entries)
+            entry.key: CategorySearchSlice(
+              items: entry.value.items,
+              stale: true,
+            ),
+      },
+    );
+    if (query.isNotEmpty && state.selected != PlatformSearchKind.songs) {
+      unawaited(Future<void>.microtask(loadMore));
+    }
   }
 
   Future<void> select(PlatformSearchKind kind) async {
@@ -88,7 +104,8 @@ class CategorySearchController extends Notifier<CategorySearchState> {
       selected: kind,
       pages: state.pages,
     );
-    if (kind != PlatformSearchKind.songs && !state.pages.containsKey(kind)) {
+    if (kind != PlatformSearchKind.songs &&
+        (!state.pages.containsKey(kind) || state.current.stale)) {
       await loadMore();
     }
   }
@@ -97,6 +114,7 @@ class CategorySearchController extends Notifier<CategorySearchState> {
     final kind = state.selected;
     if (kind == PlatformSearchKind.songs || state.query.isEmpty) return;
     final old = state.current;
+    final retained = old.stale ? const <PlatformSearchHit>[] : old.items;
     if (old.loading || !old.more) return;
     final generation = _generation;
     final query = state.query;
@@ -119,17 +137,18 @@ class CategorySearchController extends Notifier<CategorySearchState> {
         total: old.total,
         more: old.more,
         loading: true,
+        stale: old.stale,
       ),
     );
     try {
       final result = await ref
           .read(platformCategorySearchRepositoryProvider)
           .search(query, kind, page: old.page + 1, abortTrigger: abort.future);
-      final seen = old.items.map((e) => e.id).toSet();
+      final seen = retained.map((e) => e.id).toSet();
       final added = result.items.where((e) => seen.add(e.id)).toList();
       put(
         CategorySearchSlice(
-          items: [...old.items, ...added],
+          items: [...retained, ...added],
           page: old.page + 1,
           total: result.total,
           more: result.hasMore && added.isNotEmpty,
@@ -143,6 +162,7 @@ class CategorySearchController extends Notifier<CategorySearchState> {
           total: old.total,
           more: old.more,
           error: error is MusicPlatformException ? error.message : '加载未完成，请重试',
+          stale: old.stale,
         ),
       );
     } finally {

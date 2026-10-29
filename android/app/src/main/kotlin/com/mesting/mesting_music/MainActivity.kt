@@ -61,7 +61,7 @@ open class MainActivity : AudioServiceActivity() {
     private var hapticFeedbackBridge: HapticFeedbackBridge? = null
     private var localMusicBridge: LocalMusicBridge? = null
     private var neteaseCloudFileBridge: NeteaseCloudFileBridge? = null
-    private var musicDownloadBridge: MusicDownloadBridge? = null
+    private var musicDownloadBridge: OfflineAudioStorageBridge? = null
     private var requestedSurfaceHz = 0f
     private val refreshSurfaceCallbacks = java.util.WeakHashMap<SurfaceHolder, SurfaceHolder.Callback>()
     private lateinit var lyricsChannel: MethodChannel
@@ -106,7 +106,7 @@ open class MainActivity : AudioServiceActivity() {
         neteaseCloudFileBridge?.dispose()
         neteaseCloudFileBridge = NeteaseCloudFileBridge(this, flutterEngine.dartExecutor.binaryMessenger)
         musicDownloadBridge?.dispose()
-        musicDownloadBridge = MusicDownloadBridge(this, flutterEngine.dartExecutor.binaryMessenger) { uri -> localMusicBridge?.indexDownloaded(uri) }
+        musicDownloadBridge = OfflineAudioStorageBridge(this, flutterEngine.dartExecutor.binaryMessenger)
         if (!flutterEngine.plugins.has(MusicEqualizerPlugin::class.java)) {
             flutterEngine.plugins.add(MusicEqualizerPlugin())
         }

@@ -55,7 +55,26 @@ class _MusicSearchPageState extends ConsumerState<MusicSearchPage> {
   bool _hasSubmitted = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Composition can end without changing text. A value listener observes
+    // that commit too; TextField.onChanged alone misses it on some keyboards.
+    _textController.addListener(_editingChanged);
+  }
+
+  void _editingChanged() {
+    final value = _textController.value;
+    ref
+        .read(musicSearchControllerProvider.notifier)
+        .setQuery(
+          value.text,
+          composing: value.composing.isValid && !value.composing.isCollapsed,
+        );
+  }
+
+  @override
   void dispose() {
+    _textController.removeListener(_editingChanged);
     _bottomSearch.dispose();
     super.dispose();
   }
@@ -81,7 +100,7 @@ class _MusicSearchPageState extends ConsumerState<MusicSearchPage> {
         if (!isEmpty) _hasSubmitted = false;
       });
     }
-    ref.read(musicSearchControllerProvider.notifier).setQuery(value);
+    _editingChanged();
   }
 
   void _closeSearch() {

@@ -1,3 +1,4 @@
+import '../shared/widgets/beta_scroll_behavior.dart';
 import '../features/music_platform/domain/platform_session.dart';
 import '../features/music_platform/platform_backend_providers.dart';
 import '../features/music_platform/netease/netease_fallback.dart';
@@ -60,6 +61,7 @@ class MestingMusicApp extends ConsumerWidget {
           .preparePlatformSwitch;
       final source = ref.watch(kugouMusicSourceProvider);
       audioHandler.configureTrackPlaybackResolver((track) async {
+        if (track.hasLocalAudio) return track;
         if (track.source == TrackSource.netease) {
           final identity = await ref.read(platformAccountProvider.future);
           if (identity?.platform != MusicPlatform.netease) {
@@ -153,9 +155,13 @@ class MestingMusicApp extends ConsumerWidget {
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       title: DistributionChannel.isBeta ? 'Mesting Music' : 'Mesting 音乐',
       debugShowCheckedModeBanner: false,
+      scrollBehavior: DistributionChannel.isBeta
+          ? const BetaScrollBehavior()
+          : null,
       theme: buildMestingTheme(musicTheme),
       routerConfig: appRouter,
       builder: (context, child) => SystemBackCoordinator(
+        canPop: appRouter.canPop,
         child: FirstLaunchDisclaimerCoordinator(
           child: FirstLaunchAuthCoordinator(
             betaBackDispatcher: appRouter.backButtonDispatcher,

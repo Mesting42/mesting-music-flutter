@@ -1,3 +1,4 @@
+import '../utils/media_uri.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -21,7 +22,7 @@ const _legacyArtworkAssetAliases = <String, String>{
 };
 
 String canonicalArtworkUri(String value) =>
-    _legacyArtworkAssetAliases[value] ?? value;
+    normalizeArtworkUri(_legacyArtworkAssetAliases[value] ?? value);
 
 class ArtworkImage extends StatefulWidget {
   const ArtworkImage({

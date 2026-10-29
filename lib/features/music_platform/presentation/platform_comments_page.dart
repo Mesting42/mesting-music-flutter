@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import '../domain/platform_session.dart';
 import '../platform_backend_providers.dart';
 import '../netease/netease_comments_repository.dart';
@@ -322,17 +323,18 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
   }
 
   Future<void> _delete(PlatformComment comment) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showCupertinoDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => CupertinoAlertDialog(
         title: Text('删除这条${widget.repository.identity.platformLabel}评论？'),
         content: Text('将删除你在${widget.repository.identity.platformLabel}发布的评论。'),
         actions: [
-          TextButton(
+          CupertinoDialogAction(
             onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('取消'),
           ),
-          FilledButton(
+          CupertinoDialogAction(
+            isDestructiveAction: true,
             onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('删除'),
           ),

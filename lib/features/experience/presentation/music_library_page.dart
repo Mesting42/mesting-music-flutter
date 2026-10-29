@@ -111,9 +111,9 @@ class MusicLibraryPage extends ConsumerWidget {
           if (view == null) ...[
             _LibraryLink(
               icon: Icons.download_rounded,
-              title: '下载管理',
-              subtitle: '下载进度与已保存的音乐',
-              onTap: () => openAudioDownloads(context),
+              title: '已下载',
+              subtitle: '离线播放、导出与下载任务',
+              onTap: () => openAudioDownloads(context, downloadedOnly: true),
             ),
             if (ref.watch(usesNeteaseProvider)) const NeteaseLibraryLinks(),
             _LibraryLink(

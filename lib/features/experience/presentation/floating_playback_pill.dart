@@ -1,3 +1,5 @@
+import 'package:audio_service/audio_service.dart';
+import '../../../shared/widgets/beta_glass_controls.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -75,6 +77,11 @@ class _FloatingPlaybackPillState extends ConsumerState<FloatingPlaybackPill> {
     }
     final playing = ref.watch(
       playbackStateProvider.select((value) => value.value?.playing ?? false),
+    );
+    final busy = ref.watch(
+      playbackStateProvider.select(
+        (value) => value.value?.processingState == AudioProcessingState.loading,
+      ),
     );
     final handler = ref.watch(audioHandlerProvider);
     final foreground = Theme.of(context).colorScheme.onSurface;
@@ -214,15 +221,24 @@ class _FloatingPlaybackPillState extends ConsumerState<FloatingPlaybackPill> {
                       ),
                     ),
                   ),
-                  control(
-                    label: playing ? '暂停' : '播放',
-                    icon: playing
-                        ? CupertinoIcons.pause_fill
-                        : CupertinoIcons.play_fill,
-                    // Consult the live fade state so another tap can cancel
-                    // Pause before the shared transport finishes its fade.
-                    onTap: () => action(handler.togglePlayPause),
-                  ),
+                  if (busy)
+                    const SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: Center(
+                        child: BetaActivityIndicator(label: '正在加载所选歌曲'),
+                      ),
+                    )
+                  else
+                    control(
+                      label: playing ? '暂停' : '播放',
+                      icon: playing
+                          ? CupertinoIcons.pause_fill
+                          : CupertinoIcons.play_fill,
+                      // Consult the live fade state so another tap can cancel
+                      // Pause before the shared transport finishes its fade.
+                      onTap: () => action(handler.togglePlayPause),
+                    ),
                   control(
                     label: '下一首',
                     icon: CupertinoIcons.forward_end_fill,

@@ -1,3 +1,4 @@
+import '../../../../shared/widgets/beta_choice_field.dart';
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -91,10 +92,7 @@ class NeteaseFullNavigation extends ConsumerWidget {
                               ? const NeteaseMessagesPage()
                               : category == '一起听'
                               ? const NeteaseTogetherPage()
-                              : NeteaseFullHubPage(
-                                  tab: tab,
-                                  category: category,
-                                ),
+                              : neteaseCategoryDestination(all, tab, category),
                         ),
                       ),
                   ],
@@ -106,6 +104,29 @@ class NeteaseFullNavigation extends ConsumerWidget {
       },
     );
   }
+}
+
+/// Singleton categories open their real workflow directly. Multi-task hubs
+/// remain lists, preserving the meaning of Back without an empty wrapper.
+Widget neteaseCategoryDestination(
+  List<NeteaseEndpoint> all,
+  String tab,
+  String category,
+) {
+  final workflows = <String, NeteaseEndpoint>{};
+  for (final entry in all.where(
+    (e) => e.tab == tab && e.category == category,
+  )) {
+    workflows.putIfAbsent(neteaseWorkflowKey(entry), () => entry);
+  }
+  if (workflows.length == 1) {
+    final entry = workflows.values.single;
+    if (neteaseWorkflowKey(entry) == 'playback-settings') {
+      return const NeteasePlaybackSettingsPage();
+    }
+    return NeteaseFullTaskPage(endpoint: entry);
+  }
+  return NeteaseFullHubPage(tab: tab, category: category);
 }
 
 IconData _categoryIcon(String category) => switch (category) {
@@ -1090,7 +1111,7 @@ class _NeteaseFullTaskPageState extends ConsumerState<NeteaseFullTaskPage> {
     String? validate(String? value) =>
         p.required && (value ?? '').trim().isEmpty ? '请填写${p.label}' : null;
     if (options != null) {
-      return DropdownButtonFormField<String>(
+      return BetaChoiceField<String>(
         initialValue: options.containsKey(_fields[p.key]!.text)
             ? _fields[p.key]!.text
             : null,

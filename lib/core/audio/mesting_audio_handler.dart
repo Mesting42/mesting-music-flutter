@@ -56,6 +56,12 @@ class MestingAudioHandler extends BaseAudioHandler
     _player.playbackEventStream.listen(
       _broadcastState,
       onError: (Object error, StackTrace stackTrace) {
+        // Source preparation owns its own failure. Native events from the
+        // previous stream must not auto-skip a newly visible selection.
+        if (_pendingQueueEpoch != null ||
+            mediaItem.value?.id != _loadedTrackId) {
+          return;
+        }
         unawaited(
           _handlePlaybackFailure(
             error,
@@ -70,7 +76,7 @@ class MestingAudioHandler extends BaseAudioHandler
     _player.durationStream.listen(_handleDuration);
     _player.processingStateStream.listen((state) {
       if (state == ProcessingState.completed) {
-        if (_sleepStoppedAtCompletion) return;
+        if (_sleepStoppedAtCompletion || _pendingQueueEpoch != null) return;
         final completedTrack = trackForId(mediaItem.value?.id ?? '');
         if (_completionGate.takeCompletion() && completedTrack != null) {
           _completedTrackController.add(completedTrack);
@@ -155,6 +161,11 @@ class MestingAudioHandler extends BaseAudioHandler
   // make stale results harmless instead of allowing them to replace a newer
   // user-selected queue or restored session.
   int _queueLoadEpoch = 0;
+  // Logical selection is visible while transport is still resolving. Mask old
+  // native events so they cannot become progress/history for the new song.
+  int? _pendingQueueEpoch;
+  String? _loadedTrackId;
+  String? _resolutionError;
   int _userCommandEpoch = 0;
   // Separate transport intent from serialized Next taps and queue edits. A
   // delayed source lookup must never undo a later Pause, Stop or Seek command.
@@ -201,6 +212,12 @@ class MestingAudioHandler extends BaseAudioHandler
     final current = trackForId(mediaItem.value?.id ?? '');
     final resolver = _trackPlaybackResolver;
     if (current == null || resolver == null) return false;
+    if (_resolutionError != null || current.id != _loadedTrackId) {
+      await playSingleTrack(current);
+      return mediaItem.value?.id == current.id &&
+          _loadedTrackId == current.id &&
+          _resolutionError == null;
+    }
     _markUserCommand('changeQuality');
     final command = _userCommandEpoch;
     final epoch = _queueLoadEpoch;
@@ -306,7 +323,12 @@ class MestingAudioHandler extends BaseAudioHandler
   Stream<String> get userCommandStream => _userCommandController.stream;
 
   PlaybackMode get playbackMode => _mode;
-  Duration get currentPosition => _player.position;
+  Duration get currentPosition =>
+      _pendingQueueEpoch == null &&
+          _resolutionError == null &&
+          mediaItem.value?.id == _loadedTrackId
+      ? _player.position
+      : Duration.zero;
   int get currentIndex => _player.currentIndex ?? 0;
   @visibleForTesting
   int get debugAudioSourceCount => _player.sequence.length;
@@ -377,9 +399,15 @@ class MestingAudioHandler extends BaseAudioHandler
     int? requiredUserCommandEpoch,
     int? requiredTransportIntentEpoch,
   }) async {
-    final loadEpoch = ++_queueLoadEpoch;
     final transportEpoch =
         requiredTransportIntentEpoch ?? _transportIntentEpoch;
+    // A delayed, already superseded command must not invalidate the newer load.
+    if (transportEpoch != _transportIntentEpoch ||
+        (requiredUserCommandEpoch != null &&
+            requiredUserCommandEpoch != _userCommandEpoch)) {
+      return false;
+    }
+    final loadEpoch = ++_queueLoadEpoch;
     bool isCurrent() =>
         loadEpoch == _queueLoadEpoch &&
         transportEpoch == _transportIntentEpoch &&
@@ -387,10 +415,13 @@ class MestingAudioHandler extends BaseAudioHandler
             requiredUserCommandEpoch == _userCommandEpoch);
     if (!isCurrent()) return false;
     _cancelPlaybackStartGuard();
+    _resolutionError = null;
     for (final track in tracks) {
       _knownTracks[track.id] = track;
     }
     if (tracks.isEmpty) {
+      _pendingQueueEpoch = null;
+      _loadedTrackId = null;
       _tracks = <Track>[];
       queue.add(const <MediaItem>[]);
       _upcomingMediaItems = const <MediaItem>[];
@@ -409,68 +440,99 @@ class MestingAudioHandler extends BaseAudioHandler
       ...tracks.skip(safeIndex + 1),
       ...tracks.take(safeIndex),
     ];
-    final resolver = _trackPlaybackResolver;
-    if (resolver != null) {
-      final Track active;
-      try {
-        active = await resolver(orderedTracks.first);
-      } catch (_) {
-        // A newer tap/pause can cancel the previous HTTP lookup. Ignore that
-        // stale failure just as we ignore a stale success; the live command
-        // retains its own error reporting and audio state.
-        if (!isCurrent()) return false;
-        rethrow;
-      }
-      if (!isCurrent()) {
-        return false;
-      }
-      orderedTracks[0] = active;
-      _knownTracks[active.id] = active;
-    }
-    final mediaItems = await Future.wait(orderedTracks.map(_mediaItemFor));
-    if (!isCurrent()) {
-      _trace('load-stale-before-source epoch=$loadEpoch');
-      return false;
-    }
-
-    final activeSource = await _audioSourceFor(
-      orderedTracks.first,
-      mediaItems.first,
-    );
-    if (!isCurrent()) {
-      _trace('load-stale-after-source-resolution epoch=$loadEpoch');
-      return false;
-    }
-    // Commit metadata only after all asynchronous source preparation succeeds.
-    _tracks = orderedTracks;
-    queue.add(mediaItems);
-    _upcomingMediaItems = mediaItems.skip(1).toList(growable: false);
-    mediaItem.add(mediaItems.first);
+    _pendingQueueEpoch = loadEpoch;
     _resetConsumptionConfirmation();
     _completionGate.reset();
-    await _player.setAudioSources(
-      <AudioSource>[activeSource],
-      preload: preload,
-      initialIndex: 0,
-      initialPosition: initialPosition,
-    );
-    if (!isCurrent()) {
-      _trace('load-stale-after-source epoch=$loadEpoch');
-      return false;
-    }
+    // Stop is issued before any network work. Publish loading before changing
+    // identity so listening reporters never attribute the old audio to it.
+    final stopped = _player.stop();
+    _broadcastState(_player.playbackEvent);
+    _tracks = orderedTracks;
+    final selectedItems = orderedTracks.map((t) => t.toMediaItem()).toList();
+    queue.add(selectedItems);
+    _upcomingMediaItems = selectedItems.skip(1).toList(growable: false);
+    mediaItem.add(selectedItems.first);
     _publishUpcomingQueue();
-    // The native engine has one active source. Its index often stays at zero,
-    // so distinct currentIndex events cannot own the logical playback history.
-    if (_continueAfterExplicitQueue) {
+    try {
+      await stopped;
+      if (!isCurrent()) return false;
+      final resolver = _trackPlaybackResolver;
+      if (resolver != null) {
+        final Track active;
+        try {
+          active = await resolver(orderedTracks.first);
+        } catch (_) {
+          // A newer tap/pause can cancel the previous HTTP lookup. Ignore that
+          // stale failure just as we ignore a stale success; the live command
+          // retains its own error reporting and audio state.
+          if (!isCurrent()) return false;
+          rethrow;
+        }
+        if (!isCurrent()) {
+          return false;
+        }
+        orderedTracks[0] = active;
+        _knownTracks[active.id] = active;
+      }
+      final mediaItems = await Future.wait(orderedTracks.map(_mediaItemFor));
+      if (!isCurrent()) {
+        _trace('load-stale-before-source epoch=$loadEpoch');
+        return false;
+      }
+
+      final activeSource = await _audioSourceFor(
+        orderedTracks.first,
+        mediaItems.first,
+      );
+      if (!isCurrent()) {
+        _trace('load-stale-after-source-resolution epoch=$loadEpoch');
+        return false;
+      }
+      // Refine the selected metadata with the resolved source, keeping its identity.
+      _tracks = orderedTracks;
+      queue.add(mediaItems);
+      _upcomingMediaItems = mediaItems.skip(1).toList(growable: false);
+      mediaItem.add(mediaItems.first);
+      await _player.setAudioSources(
+        <AudioSource>[activeSource],
+        preload: preload,
+        initialIndex: 0,
+        initialPosition: initialPosition,
+      );
+      if (!isCurrent()) {
+        _trace('load-stale-after-source epoch=$loadEpoch');
+        return false;
+      }
+      _pendingQueueEpoch = null;
+      _loadedTrackId = orderedTracks.first.id;
+      _handleDuration(_player.duration);
+      _broadcastState(_player.playbackEvent);
+      _publishUpcomingQueue();
+      // The native engine has one active source. Its index often stays at zero,
+      // so distinct currentIndex events cannot own the logical playback history.
       _recordPlaybackHistory(orderedTracks.first);
+      await _applyPlaybackOrder();
+      _scheduleConsumptionConfirmation();
+      _trace(
+        'load-current id=${mediaItems.first.id} '
+        'upcoming=${_upcomingMediaItems.length} sourceCount=${_player.sequence.length}',
+      );
+      return true;
+    } catch (_) {
+      if (isCurrent()) {
+        _pendingQueueEpoch = null;
+        _resolutionError = '歌曲加载失败，请重试或选择其他音源';
+        playbackState.add(
+          playbackState.value.copyWith(
+            processingState: AudioProcessingState.error,
+            playing: false,
+            updatePosition: Duration.zero,
+            errorMessage: '歌曲加载失败，请重试或选择其他音源',
+          ),
+        );
+      }
+      rethrow;
     }
-    await _applyPlaybackOrder();
-    _scheduleConsumptionConfirmation();
-    _trace(
-      'load-current id=${mediaItems.first.id} '
-      'upcoming=${_upcomingMediaItems.length} sourceCount=${_player.sequence.length}',
-    );
-    return true;
   }
 
   Future<MediaItem> _mediaItemFor(Track track) async {
@@ -558,7 +620,11 @@ class MestingAudioHandler extends BaseAudioHandler
   }
 
   void _handleCurrentIndex(int? index) {
-    if (_refreshingSource) return;
+    if (_refreshingSource ||
+        _pendingQueueEpoch != null ||
+        mediaItem.value?.id != _loadedTrackId) {
+      return;
+    }
     final items = queue.value;
     if (index == null || index < 0 || index >= items.length) return;
     final current = items[index];
@@ -589,7 +655,9 @@ class MestingAudioHandler extends BaseAudioHandler
 
   void _scheduleConsumptionConfirmation() {
     final currentId = mediaItem.value?.id;
-    if (!_player.playing ||
+    if (_pendingQueueEpoch != null ||
+        _player.processingState != ProcessingState.ready ||
+        !_player.playing ||
         currentId == null ||
         currentId == _confirmedConsumedMediaId ||
         _consumptionTimer != null) {
@@ -661,6 +729,9 @@ class MestingAudioHandler extends BaseAudioHandler
   }
 
   void _handleDuration(Duration? duration) {
+    if (_pendingQueueEpoch != null || mediaItem.value?.id != _loadedTrackId) {
+      return;
+    }
     final current = mediaItem.value;
     if (current == null || duration == null || current.duration == duration) {
       return;
@@ -826,6 +897,10 @@ class MestingAudioHandler extends BaseAudioHandler
   }
 
   void _broadcastState(PlaybackEvent event) {
+    final bound =
+        _pendingQueueEpoch == null &&
+        _resolutionError == null &&
+        mediaItem.value?.id == _loadedTrackId;
     _scheduleConsumptionConfirmation();
     if (_lastLoggedPlaying != _player.playing ||
         _lastLoggedProcessingState != _player.processingState) {
@@ -868,16 +943,23 @@ class MestingAudioHandler extends BaseAudioHandler
           MediaAction.seekBackward,
         },
         androidCompactActionIndices: const [1, 2, 3],
-        processingState: switch (_player.processingState) {
-          ProcessingState.idle => AudioProcessingState.idle,
-          ProcessingState.loading => AudioProcessingState.loading,
-          ProcessingState.buffering => AudioProcessingState.buffering,
-          ProcessingState.ready => AudioProcessingState.ready,
-          ProcessingState.completed => AudioProcessingState.completed,
-        },
-        playing: _player.playing,
-        updatePosition: _player.position,
-        bufferedPosition: _player.bufferedPosition,
+        processingState: _resolutionError != null
+            ? AudioProcessingState.error
+            : _pendingQueueEpoch != null
+            ? AudioProcessingState.loading
+            : !bound
+            ? AudioProcessingState.idle
+            : switch (_player.processingState) {
+                ProcessingState.idle => AudioProcessingState.idle,
+                ProcessingState.loading => AudioProcessingState.loading,
+                ProcessingState.buffering => AudioProcessingState.buffering,
+                ProcessingState.ready => AudioProcessingState.ready,
+                ProcessingState.completed => AudioProcessingState.completed,
+              },
+        playing: bound && _player.playing,
+        errorMessage: _resolutionError,
+        updatePosition: bound ? _player.position : Duration.zero,
+        bufferedPosition: bound ? _player.bufferedPosition : Duration.zero,
         speed: _player.speed,
         queueIndex: mediaItem.value == null ? null : 0,
         repeatMode: switch (_order.repeat) {
@@ -952,6 +1034,10 @@ class MestingAudioHandler extends BaseAudioHandler
       await _applyPlaybackOrder();
     }
     _consecutiveLoadFailures = 0;
+    if (_resolutionError != null || mediaItem.value?.id != _loadedTrackId) {
+      final applied = await _loadQueue(_tracks);
+      if (!applied) return;
+    }
     _startPlayer();
   }
 
@@ -1104,8 +1190,12 @@ class MestingAudioHandler extends BaseAudioHandler
         return;
       }
 
-      if (!forward && _playbackHistory.length > 1) {
-        final current = trackForId(mediaItem.value?.id ?? '');
+      if (!forward &&
+          _playbackHistory.length > 1 &&
+          (!_explicitPlaybackContext || _continueAfterExplicitQueue)) {
+        // An interrupted selection can be visible before it owns a source.
+        // History still belongs to the last successfully bound recording.
+        final current = trackForId(_loadedTrackId ?? mediaItem.value?.id ?? '');
         final previous = _playbackHistory[_playbackHistory.length - 2];
         await playSingleTrack(
           previous,
@@ -1115,7 +1205,8 @@ class MestingAudioHandler extends BaseAudioHandler
         );
         // Commit the history cursor only after the recording changes. A Pause
         // during lookup leaves both the live source and its history intact.
-        advanced = mediaItem.value?.id == previous.id;
+        advanced =
+            mediaItem.value?.id == previous.id && _loadedTrackId == previous.id;
         if (advanced && _playbackHistory.last.id == current?.id) {
           _playbackHistory.removeLast();
         }
@@ -1804,6 +1895,7 @@ class MestingAudioHandler extends BaseAudioHandler
       );
     _explicitPlaybackContext = !recommendationContext;
     _markUserCommand('replaceQueue');
+    final transportEpoch = _transportIntentEpoch;
     _consecutiveLoadFailures = 0;
     if (tracks.isNotEmpty) {
       _replacePlaybackContext(tracks);
@@ -1814,6 +1906,7 @@ class MestingAudioHandler extends BaseAudioHandler
       tracks,
       initialIndex: initialIndex,
       initialPosition: initialPosition,
+      requiredTransportIntentEpoch: transportEpoch,
     );
     if (!applied) return;
     if (_order.shuffle) {
@@ -1998,6 +2091,7 @@ class MestingAudioHandler extends BaseAudioHandler
       'cancelPauseFade',
     }.contains(command)) {
       _transportIntentEpoch++;
+      _pendingQueueEpoch = null;
     }
     if (command != 'skipNext' &&
         command != 'skipPrevious' &&

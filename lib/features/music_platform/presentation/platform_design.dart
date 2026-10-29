@@ -179,7 +179,13 @@ class PlatformPageFrame extends StatelessWidget {
                   ],
                 ),
               ),
-              Expanded(child: child),
+              // Keep an opaque backdrop in the same scroll compositing pass.
+              Expanded(
+                child: ColoredBox(
+                  color: Theme.of(context).colorScheme.surface,
+                  child: child,
+                ),
+              ),
             ],
           ),
         ),

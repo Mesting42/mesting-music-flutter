@@ -62,8 +62,18 @@ class _ApplePlayerControlsState extends ConsumerState<ApplePlayerControls> {
     final playback = ref.watch(playbackStateProvider).value;
     final playing = playback?.playing ?? false;
     final busy = playback?.processingState == AudioProcessingState.loading;
-    final position = ref.watch(positionProvider).value ?? Duration.zero;
-    final duration = ref.watch(durationProvider).value ?? track.duration;
+    final sourceReady =
+        playback?.processingState == AudioProcessingState.ready ||
+        playback?.processingState == AudioProcessingState.buffering ||
+        playback?.processingState == AudioProcessingState.completed;
+    final measuredPosition = ref.watch(positionProvider).value;
+    final measuredDuration = ref.watch(durationProvider).value;
+    final position = sourceReady
+        ? measuredPosition ?? Duration.zero
+        : Duration.zero;
+    final duration = sourceReady
+        ? measuredDuration ?? track.duration
+        : track.duration;
     final maximum = duration.inMilliseconds.toDouble().clamp(
       1.0,
       double.infinity,

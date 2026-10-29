@@ -200,7 +200,8 @@ void main() {
         }
         if (entry.key == 'profile') {
           expect(find.text('签到与会员'), findsNothing);
-          expect(find.text('网易云每日签到'), findsOneWidget);
+          expect(find.text('签到'), findsOneWidget);
+          expect(find.text('我喜欢的音乐'), findsOneWidget);
         }
         await capture(tester, '${entry.key}-${dark ? 'dark' : 'light'}');
       });

@@ -36,9 +36,6 @@ class _BetaCategorySearchResultsState
     final selected = ref.watch(
       categorySearchProvider.select((s) => s.selected),
     );
-    final query = ref.watch(
-      musicSearchControllerProvider.select((s) => s.query),
-    );
     final ink = Theme.of(context).colorScheme.onSurface;
     final accent = BetaAppearance.accent(Theme.of(context).brightness);
     return PageStorage(
@@ -107,7 +104,7 @@ class _BetaCategorySearchResultsState
             child: PlayerContentTransition(
               direction: _direction,
               child: _CategoryPane(
-                key: ValueKey('$query-${selected.name}'),
+                key: ValueKey(selected.name),
                 kind: selected,
               ),
             ),
@@ -140,8 +137,26 @@ class _CategoryPaneState extends ConsumerState<_CategoryPane> {
     );
     if (widget.kind == PlatformSearchKind.songs) {
       final songs = ref.watch(musicSearchControllerProvider);
-      if (songs.isLoading) return const Center(child: BetaActivityIndicator());
-      return AppleSearchResults(state: songs, controller: _scroll);
+      return Stack(
+        children: [
+          if (!songs.isLoading || songs.hasResults)
+            Positioned.fill(
+              child: AppleSearchResults(state: songs, controller: _scroll),
+            ),
+          if (songs.isLoading)
+            Align(
+              alignment: songs.hasResults
+                  ? Alignment.topRight
+                  : Alignment.center,
+              child: const Padding(
+                padding: EdgeInsets.all(18),
+                child: BetaActivityIndicator(
+                  key: ValueKey('search-query-progress'),
+                ),
+              ),
+            ),
+        ],
+      );
     }
     final categoryState = ref.watch(categorySearchProvider);
     final active = categoryState.selected == widget.kind;

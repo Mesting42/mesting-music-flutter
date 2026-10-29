@@ -2387,6 +2387,7 @@ void main() {
               routerConfig: production.appRouter,
               theme: buildMestingTheme(musicThemePresetById('classic')),
               builder: (context, child) => SystemBackCoordinator(
+                canPop: production.appRouter.canPop,
                 child: BetaEntryCoordinator(
                   backDispatcher: production.appRouter.backButtonDispatcher,
                   child: child!,

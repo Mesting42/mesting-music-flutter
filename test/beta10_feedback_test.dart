@@ -1,3 +1,4 @@
+import 'package:mesting_music/core/platform/distribution_channel.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -129,9 +130,13 @@ void main() {
             final width = tester.getSize(trigger).width;
             await tester.tap(trigger);
             await tester.pump();
-            await tester.pump(const Duration(milliseconds: 350));
+            await tester.pump(const Duration(milliseconds: 500));
             final item = find.byWidgetPredicate(
-              (w) => w is PopupMenuItem<String> && w.value == entry.$2,
+              (w) => DistributionChannel.isBeta
+                  ? w is ListTile &&
+                        w.title is Text &&
+                        (w.title as Text).data == entry.$2
+                  : w is PopupMenuItem<String> && w.value == entry.$2,
             );
             expect(tester.getSize(item).width, closeTo(width, .1));
             expect(tester.takeException(), isNull);
@@ -145,7 +150,7 @@ void main() {
             );
             await tester.tap(find.text(entry.$2).last);
             await tester.pump();
-            await tester.pump(const Duration(milliseconds: 350));
+            await tester.pump(const Duration(milliseconds: 500));
             expect(selected, entry.$2);
           }
           await tester.pumpWidget(const SizedBox());

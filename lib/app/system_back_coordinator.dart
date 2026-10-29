@@ -10,7 +10,9 @@ import 'package:flutter/widgets.dart';
 /// even though no Dart route changed. NavigationNotification alone therefore
 /// cannot restore system edge Back: republish its latest value on resume.
 class SystemBackCoordinator extends StatefulWidget {
-  const SystemBackCoordinator({required this.child, super.key});
+  const SystemBackCoordinator({required this.child, this.canPop, super.key});
+
+  final bool Function()? canPop;
 
   final Widget child;
 
@@ -31,7 +33,11 @@ class _SystemBackCoordinatorState extends State<SystemBackCoordinator>
   void _synchronize() {
     final canHandlePop = _canHandlePop;
     if (!mounted || canHandlePop == null) return;
-    unawaited(SystemNavigator.setFrameworkHandlesBack(canHandlePop));
+    unawaited(
+      SystemNavigator.setFrameworkHandlesBack(
+        widget.canPop?.call() ?? canHandlePop,
+      ),
+    );
   }
 
   @override
@@ -49,8 +55,13 @@ class _SystemBackCoordinatorState extends State<SystemBackCoordinator>
       NotificationListener<NavigationNotification>(
         onNotification: (notification) {
           _canHandlePop = notification.canHandlePop;
-          // WidgetsApp still owns normal route-change reporting. This boundary
-          // only adds synchronization when the native window resumes.
+          // Notifications from a covered nested route can arrive after pop.
+          // Query the live router's root + shell stacks after the frame rather
+          // than OR-ing a stale notification into the current Back state.
+          if (widget.canPop != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) => _synchronize());
+          }
+          // Keep WidgetsApp's normal aggregation and local-history reporting.
           return false;
         },
         child: widget.child,

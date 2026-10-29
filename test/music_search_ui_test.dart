@@ -23,7 +23,7 @@ class _ReadySearchController extends MusicSearchController {
   MusicSearchState build() => const MusicSearchState();
 
   @override
-  void setQuery(String rawQuery) {
+  void setQuery(String rawQuery, {bool composing = false}) {
     state = MusicSearchState(
       query: rawQuery.trim(),
       onlineTracks: [testTracks.first],

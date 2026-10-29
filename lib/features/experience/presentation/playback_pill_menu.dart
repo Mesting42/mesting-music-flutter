@@ -1,3 +1,4 @@
+import '../../music_platform/netease/fallback/netease_source_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -120,8 +121,14 @@ Future<void> showPlaybackPillMenu(
             if (platform)
               action('comments', '歌曲评论', CupertinoIcons.text_bubble),
             if (platform) action('quality', '音质', CupertinoIcons.waveform),
+            if (track.source == TrackSource.netease && !track.hasLocalAudio)
+              action(
+                'choose-source',
+                '选择音乐来源',
+                CupertinoIcons.antenna_radiowaves_left_right,
+              ),
             if (track.isRemote)
-              action('download', '下载到本地音乐', CupertinoIcons.arrow_down_circle),
+              action('download', '下载音乐', CupertinoIcons.arrow_down_circle),
             if (mode != null)
               action('mode', '播放模式 · ${mode.label}', CupertinoIcons.repeat),
             if (fm) ...[
@@ -145,6 +152,8 @@ Future<void> showPlaybackPillMenu(
   }
   try {
     switch (selected) {
+      case 'choose-source':
+        await showNeteaseTrackSources(context, ref, track);
       case 'download':
         await enqueueAudioDownload(context, ref, track);
       case 'favorite':

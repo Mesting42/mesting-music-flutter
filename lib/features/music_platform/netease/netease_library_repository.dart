@@ -1,3 +1,4 @@
+import '../../../shared/utils/media_uri.dart';
 import '../data/cloud_library_repository.dart';
 import 'dart:async';
 
@@ -96,6 +97,7 @@ class NeteaseLibraryRepository extends CloudLibraryRepository {
       identity.userId;
   bool _likes(Map<String, dynamic> row) =>
       _owned(row) && '${row['specialType']}' == '5';
+  String? get likedPlaylistId => _snapshot.where(_likes).map(_id).firstOrNull;
   @override
   bool canManage(String id) =>
       _snapshot.any((r) => _id(r) == id && _owned(r) && !_likes(r));
@@ -106,7 +108,9 @@ class NeteaseLibraryRepository extends CloudLibraryRepository {
     id: _id(row),
     name: '${row['name'] ?? '网易云歌单'}',
     description: '${row['description'] ?? ''}',
-    coverAsset: '${row['coverImgUrl'] ?? ''}',
+    coverAsset: normalizeArtworkUri(
+      '${row['coverImgUrl'] ?? row['picUrl'] ?? row['coverUrl'] ?? ''}',
+    ),
     createdAt: DateTime.fromMillisecondsSinceEpoch(
       int.tryParse('${row['createTime']}') ?? 0,
     ),

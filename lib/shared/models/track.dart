@@ -72,7 +72,11 @@ class Track {
   final Map<String, String> audioHeaders;
   final int audioBitrate;
 
-  bool get isRemote => source != TrackSource.local;
+  /// A saved recording keeps its original platform identity for library and
+  /// listening synchronization, while its transport can be entirely offline.
+  bool get hasLocalAudio =>
+      audioAsset.startsWith('content://') || audioAsset.startsWith('file://');
+  bool get isRemote => source != TrackSource.local && !hasLocalAudio;
   String get resolvedLyricsAsset {
     final value = lyricsAsset.trim();
     if (value.isNotEmpty) return value;
@@ -144,7 +148,12 @@ class Track {
 
   MediaItem toMediaItem({Uri? artUri}) {
     final resolvedArtwork =
-        artUri ?? (isRemote ? Uri.tryParse(coverAsset) : null);
+        artUri ??
+        ((isRemote ||
+                coverAsset.startsWith('http') ||
+                coverAsset.startsWith('file://'))
+            ? Uri.tryParse(coverAsset)
+            : null);
     return MediaItem(
       id: id,
       title: title,

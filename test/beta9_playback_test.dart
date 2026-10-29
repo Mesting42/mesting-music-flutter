@@ -249,7 +249,9 @@ void main() {
       }
       resolving.complete(song('B'));
       await next;
-      expect(handler.mediaItem.value!.id, 'kugou_A');
+      // The new selection is visible immediately; transport cancellation
+      // prevents its delayed lookup from starting playback.
+      expect(handler.mediaItem.value!.id, 'kugou_B');
       expect(player.active, false);
       expect(player.loads, loads);
       if (command == 'seek') expect(player.at, const Duration(seconds: 37));
@@ -273,7 +275,8 @@ void main() {
       await handler.pause();
       resolving.complete(song('A'));
       await previous;
-      expect(handler.mediaItem.value!.id, 'kugou_B');
+      // Pause retains the selected identity while its source remains stopped.
+      expect(handler.mediaItem.value!.id, 'kugou_A');
       handler.configureTrackPlaybackResolver(Future.value);
       await handler.skipToPrevious();
       expect(handler.mediaItem.value!.id, 'kugou_A');

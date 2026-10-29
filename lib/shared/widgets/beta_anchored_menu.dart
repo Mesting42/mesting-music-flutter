@@ -1,3 +1,6 @@
+import '../../core/platform/distribution_channel.dart';
+import 'beta_glass_controls.dart';
+import 'beta_glass_popover.dart';
 import 'package:flutter/material.dart';
 
 /// Measures the actual, scaled trigger at open time. Menu width therefore
@@ -24,6 +27,27 @@ class _BetaAnchoredMenuState<T> extends State<BetaAnchoredMenu<T>> {
   final _anchor = GlobalKey();
   Future<void> _open() async {
     final box = _anchor.currentContext!.findRenderObject()! as RenderBox;
+    if (DistributionChannel.isBeta) {
+      final selected = await showBetaGlassPopover<T>(
+        context: context,
+        anchor: box.localToGlobal(Offset.zero) & box.size,
+        width: box.size.width,
+        builder: (menu) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final value in widget.values)
+              ListTile(
+                dense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                title: Text(widget.label(value), maxLines: 1),
+                onTap: () => Navigator.pop(menu, value),
+              ),
+          ],
+        ),
+      );
+      if (mounted && selected != null) widget.onSelected(selected);
+      return;
+    }
     final overlay =
         Navigator.of(
               context,
@@ -77,29 +101,52 @@ class _BetaAnchoredMenuState<T> extends State<BetaAnchoredMenu<T>> {
   }
 
   @override
-  Widget build(BuildContext context) => Tooltip(
-    message: widget.tooltip,
-    child: TextButton(
-      key: _anchor,
-      onPressed: _open,
-      style: TextButton.styleFrom(
-        minimumSize: const Size(90, 44),
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
-        shape: const StadiumBorder(),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            widget.label(widget.value),
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+  Widget build(BuildContext context) => DistributionChannel.isBeta
+      ? Tooltip(
+          message: widget.tooltip,
+          child: BetaGlassButton(
+            key: _anchor,
+            label: widget.tooltip,
+            height: 44,
+            onPressed: _open,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(widget.label(widget.value)),
+                const SizedBox(width: 6),
+                const Icon(Icons.expand_more_rounded, size: 18),
+              ],
+            ),
           ),
-          const SizedBox(width: 6),
-          const Icon(Icons.expand_more_rounded, size: 18),
-        ],
-      ),
-    ),
-  );
+        )
+      : Tooltip(
+          message: widget.tooltip,
+          child: TextButton(
+            key: _anchor,
+            onPressed: _open,
+            style: TextButton.styleFrom(
+              minimumSize: const Size(90, 44),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
+              backgroundColor: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerLow,
+              shape: const StadiumBorder(),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  widget.label(widget.value),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.expand_more_rounded, size: 18),
+              ],
+            ),
+          ),
+        );
 }

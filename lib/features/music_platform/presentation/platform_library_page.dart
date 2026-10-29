@@ -1,3 +1,5 @@
+import 'package:flutter/cupertino.dart';
+import '../../../shared/widgets/beta_popup_menu_button.dart';
 import '../music_platform_providers.dart';
 import '../../player/presentation/beta_playback_actions.dart';
 import 'package:flutter/material.dart';
@@ -158,7 +160,7 @@ class PlatformCloudPlaylistPage extends ConsumerWidget {
           },
         ),
         if (playlist.value != null && repository.canManage(id))
-          PopupMenuButton<String>(
+          BetaPopupMenuButton<String>(
             onSelected: (action) =>
                 _manage(context, ref, repository, playlist.value!, action),
             itemBuilder: (_) => const [
@@ -227,17 +229,18 @@ class PlatformCloudPlaylistPage extends ConsumerWidget {
         );
         ref.invalidate(playlistProvider(id));
       } else {
-        final confirmed = await showDialog<bool>(
+        final confirmed = await showCupertinoDialog<bool>(
           context: context,
-          builder: (dialogContext) => AlertDialog(
+          builder: (dialogContext) => CupertinoAlertDialog(
             title: const Text('删除云端歌单？'),
             content: Text('将从当前平台账号中删除「${playlist.name}」。此操作会同步到云端。'),
             actions: [
-              TextButton(
+              CupertinoDialogAction(
                 onPressed: () => Navigator.pop(dialogContext, false),
                 child: const Text('取消'),
               ),
-              FilledButton(
+              CupertinoDialogAction(
+                isDestructiveAction: true,
                 onPressed: () => Navigator.pop(dialogContext, true),
                 child: const Text('删除'),
               ),

@@ -1,3 +1,4 @@
+import 'beta_personal_profile.dart';
 import '../../auth/presentation/beta_account_card.dart';
 import '../../../core/platform/distribution_channel.dart';
 import 'package:flutter/material.dart';
@@ -59,83 +60,94 @@ class PlatformAccountTile extends ConsumerWidget {
 class PlatformProfile extends ConsumerWidget {
   const PlatformProfile({super.key});
   @override
-  Widget build(BuildContext context, WidgetRef ref) => PlatformStyle(
-    child: EditorialScroll(
-      children: [
-        const EditorialHeader('我的'),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 22),
-          child: PlatformAccountTile(),
-        ),
-        const SizedBox(height: 18),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 22),
-          child: ref.watch(usesNeteaseProvider)
-              ? const NeteaseAccountPanel()
-              : const PlatformRewardEntry(),
-        ),
-        const SizedBox(height: 28),
-        const EditorialSection('我的音乐'),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 22),
-          child: PlatformPanel(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            child: Column(
-              children: [
-                _ProfileLink(
-                  icon: Icons.favorite_rounded,
-                  title: '我的喜欢',
-                  subtitle: ref.watch(platformAccountProvider).value != null
-                      ? '${ref.watch(platformAccountProvider).value?.platformLabel ?? '音乐'}云端收藏'
-                      : '登录后同步喜欢的音乐',
-                  onTap: () => context.push('/music?view=favorites'),
-                ),
-                _ProfileLink(
-                  icon: Icons.library_music_rounded,
-                  title: '我的歌单',
-                  subtitle: ref.watch(platformAccountProvider).value != null
-                      ? '${ref.watch(playlistsProvider).value?.length ?? 0} 个${ref.watch(platformAccountProvider).value?.platformLabel ?? '音乐'}云端歌单'
-                      : '登录后管理自己的歌单',
-                  onTap: () => context.push('/music?view=playlists'),
-                ),
-                _ProfileLink(
-                  icon: Icons.add_rounded,
-                  title: '新建歌单',
-                  onTap: () => createPlatformPlaylist(context, ref),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 28),
-        EditorialSection(DistributionChannel.isBeta ? '应用' : '应用与外观'),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 22),
-          child: PlatformPanel(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            child: Column(
-              children: [
-                // Beta exposes appearance once, in Settings. Stable retains
-                // its existing profile navigation independently.
-                if (!DistributionChannel.isBeta)
-                  _ProfileLink(
-                    icon: Icons.palette_outlined,
-                    title: '装扮',
-                    subtitle: '启动页、播放器与外观',
-                    onTap: () => showDressUpCenterSheet(context),
+  Widget build(BuildContext context, WidgetRef ref) =>
+      DistributionChannel.isBeta
+      ? const BetaPersonalProfile()
+      : PlatformStyle(
+          child: EditorialScroll(
+            children: [
+              const EditorialHeader('我的'),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 22),
+                child: PlatformAccountTile(),
+              ),
+              const SizedBox(height: 18),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 22),
+                child: ref.watch(usesNeteaseProvider)
+                    ? const NeteaseAccountPanel()
+                    : const PlatformRewardEntry(),
+              ),
+              const SizedBox(height: 28),
+              const EditorialSection('我的音乐'),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 22),
+                child: PlatformPanel(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
                   ),
-                _ProfileLink(
-                  icon: Icons.tune_rounded,
-                  title: '设置',
-                  onTap: () => context.push('/music/settings'),
+                  child: Column(
+                    children: [
+                      _ProfileLink(
+                        icon: Icons.favorite_rounded,
+                        title: '我的喜欢',
+                        subtitle:
+                            ref.watch(platformAccountProvider).value != null
+                            ? '${ref.watch(platformAccountProvider).value?.platformLabel ?? '音乐'}云端收藏'
+                            : '登录后同步喜欢的音乐',
+                        onTap: () => context.push('/music?view=favorites'),
+                      ),
+                      _ProfileLink(
+                        icon: Icons.library_music_rounded,
+                        title: '我的歌单',
+                        subtitle:
+                            ref.watch(platformAccountProvider).value != null
+                            ? '${ref.watch(playlistsProvider).value?.length ?? 0} 个${ref.watch(platformAccountProvider).value?.platformLabel ?? '音乐'}云端歌单'
+                            : '登录后管理自己的歌单',
+                        onTap: () => context.push('/music?view=playlists'),
+                      ),
+                      _ProfileLink(
+                        icon: Icons.add_rounded,
+                        title: '新建歌单',
+                        onTap: () => createPlatformPlaylist(context, ref),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 28),
+              EditorialSection(DistributionChannel.isBeta ? '应用' : '应用与外观'),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 22),
+                child: PlatformPanel(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  child: Column(
+                    children: [
+                      // Beta exposes appearance once, in Settings. Stable retains
+                      // its existing profile navigation independently.
+                      if (!DistributionChannel.isBeta)
+                        _ProfileLink(
+                          icon: Icons.palette_outlined,
+                          title: '装扮',
+                          subtitle: '启动页、播放器与外观',
+                          onTap: () => showDressUpCenterSheet(context),
+                        ),
+                      _ProfileLink(
+                        icon: Icons.tune_rounded,
+                        title: '设置',
+                        onTap: () => context.push('/music/settings'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
-    ),
-  );
+        );
 }
 
 class _ProfileLink extends StatelessWidget {

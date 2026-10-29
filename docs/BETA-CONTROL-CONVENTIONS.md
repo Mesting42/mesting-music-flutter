@@ -26,3 +26,10 @@
 现有回归入口是 `test/followup_controls_regression_test.dart`，包含真实诊断页和两类公共按钮的滚动取消、不可用状态、直接控件与包装控件的中途禁用，以及显式自由拖动的兼容检查。
 
 本地音乐的导入操作采用同排布局；常规手机宽度完整显示，窄屏／大字号横向滚动，保持文本缩放与可达性，不缩放整行文字来强行塞入。
+
+
+## 1.0.17 公共滚动与菜单约定
+
+Beta使用`BetaScrollBehavior`提供弹性越界滚动，避免Material拉伸指示器把玻璃放入无法取样Scaffold的独立ImageFilter层。不得通过降低玻璃质量或取消普通按钮弹簧修复灰底；页面在必要时提供同层背景。首选`PlatformPageFrame`保持页面标题、返回和背景一致。
+
+选择表单使用`BetaChoiceField`，图标更多菜单使用`BetaPopupMenuButton`，排序／范围使用`BetaAnchoredMenu`的玻璃分支；加载、禁用必须与真正命中状态一致。新内容页使用`betaContentRoute`或已配置公共转场的Material路由，不能另写退出应用回调。`test/netease_v117_ui_test.dart`覆盖新个人页、已下载播放全部、逐曲来源置灰与三级返回；原有按住拖动、禁用和UID保存用例仍保留。

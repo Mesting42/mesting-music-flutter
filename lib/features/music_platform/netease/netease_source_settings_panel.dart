@@ -1,3 +1,4 @@
+import '../../../shared/widgets/beta_choice_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -67,7 +68,7 @@ class _NeteaseSourceSettingsPanelState
         const SizedBox(height: 6),
         const Text('官方 → 新音源 → BugPk。以下策略只作用于新音源，官方完整音频始终优先。'),
         const SizedBox(height: 12),
-        DropdownButtonFormField<NeteaseSourceStrategy>(
+        BetaChoiceField<NeteaseSourceStrategy>(
           initialValue: options.strategy,
           isExpanded: true,
           decoration: const InputDecoration(labelText: '新音源选择策略'),
@@ -94,7 +95,7 @@ class _NeteaseSourceSettingsPanelState
           value: options.lossless,
           onChanged: _busy ? null : (v) => _save(options.copyWith(lossless: v)),
         ),
-        DropdownButtonFormField<int>(
+        BetaChoiceField<int>(
           initialValue: options.minimumBitrate,
           isExpanded: true,
           decoration: const InputDecoration(labelText: '备用音源最低码率'),

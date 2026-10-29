@@ -1,3 +1,4 @@
+import 'netease_track_sources.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
@@ -332,6 +333,7 @@ class NeteaseFallbackResolver {
     Track original, {
     required bool Function() current,
     String? requiredQuality,
+    String? onlySource,
     Future<void>? abortTrigger,
   }) async {
     final clients = <NeteaseFallbackSource, NeteaseSourceClient>{};
@@ -355,7 +357,9 @@ class NeteaseFallbackResolver {
         original,
         current: () => !cancelled && current(),
         requiredQuality: requiredQuality,
-        activeSources: [...sources, ...clients.keys],
+        activeSources: [...sources, ...clients.keys]
+            .where((source) => onlySource == null || source.label == onlySource)
+            .toList(),
         clients: clients,
         cacheProbeClient: cacheProbe,
       );
@@ -373,7 +377,7 @@ class NeteaseFallbackResolver {
     String? requiredQuality,
   }) async {
     final key =
-        '${original.id}|${original.title}|${original.artist}|${original.album}|${original.duration.inMilliseconds}|${original.playbackQuality}|$requiredQuality';
+        '${original.id}|${original.title}|${original.artist}|${original.album}|${original.duration.inMilliseconds}|${original.playbackQuality}|$requiredQuality|${activeSources.map((s) => s.label).join(',')}';
     final cached = options.cache ? _cache[key] : null;
     if (cached != null && cached.until.isAfter(DateTime.now()) && current()) {
       try {
@@ -746,6 +750,9 @@ Future<Track> resolveNeteasePlayback(
       track: track,
       quality: quality,
       requireQuality: requireQuality,
+      selectedSource:
+          ref.read(neteaseTrackSourcesProvider)[track.id] ??
+          NeteaseTrackSource.automatic,
       abortTrigger: request.abort,
     );
   } finally {
@@ -763,8 +770,25 @@ Future<Track> resolveNeteaseTrack({
   required Track track,
   required PlatformAudioQuality quality,
   bool requireQuality = false,
+  NeteaseTrackSource selectedSource = NeteaseTrackSource.automatic,
   Future<void>? abortTrigger,
 }) async {
+  if (selectedSource.adapter != null) {
+    final selected = await fallback.resolve(
+      track.copyWith(playbackQuality: quality.code),
+      current: current,
+      requiredQuality: requireQuality ? quality.code : null,
+      onlySource: selectedSource.adapter,
+      abortTrigger: abortTrigger,
+    );
+    if (!current()) throw const MusicPlatformException('播放请求已取消或账号已变化');
+    if (selected == null) {
+      throw MusicPlatformException(
+        '${selectedSource.label}暂未提供这首歌的完整版本，请重新检测或选择自动',
+      );
+    }
+    return selected;
+  }
   Track? original;
   Object? failure;
   try {
@@ -782,6 +806,10 @@ Future<Track> resolveNeteaseTrack({
   if (failure is MusicPlatformException &&
       {'301', '302', '415', '405', '460'}.contains(failure.code)) {
     throw failure;
+  }
+  if (selectedSource == NeteaseTrackSource.official) {
+    if (original != null && !original.isPreview) return original;
+    throw failure ?? const MusicPlatformException('网易云官方当前未提供完整音频');
   }
   if (allowFallback) {
     final resolved = await fallback.resolve(

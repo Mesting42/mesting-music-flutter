@@ -1,3 +1,5 @@
+import 'netease_message_reads.dart';
+import '../../../../core/persistence/app_preferences.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -149,16 +151,67 @@ class NeteaseMessageNotice {
   }
 }
 
-final neteaseMessagesRepositoryProvider = Provider<NeteaseMessagesRepository>(
-  (ref) => NeteaseMessagesRepository(ref.watch(neteaseMusicRepositoryProvider)),
-);
+final neteaseMessagesRepositoryProvider = Provider<NeteaseMessagesRepository>((
+  ref,
+) {
+  final music = ref.watch(neteaseMusicRepositoryProvider);
+  final prefs = ref.watch(sharedPreferencesProvider);
+  final key = 'netease_message_read_v1:${music.api.session?.userId ?? "guest"}';
+  Map<String, int> seen = {};
+  try {
+    seen = Map<String, int>.from(
+      jsonDecode(prefs.getString(key) ?? '{}') as Map,
+    );
+  } catch (_) {
+    /* Bad cursors never hide messages. */
+  }
+  final reads = NeteaseMessageReads(
+    restored: seen,
+    persist: (value) async {
+      await prefs.setString(key, jsonEncode(value));
+    },
+  );
+  ref.onDispose(reads.close);
+  return NeteaseMessagesRepository(music, reads: reads);
+});
+
+final neteaseMessageReadRevisionProvider = StreamProvider<int>((ref) async* {
+  final reads = ref.watch(neteaseMessagesRepositoryProvider).reads;
+  var revision = 0;
+  yield revision;
+  await for (final _ in reads.changes) {
+    yield ++revision;
+  }
+});
 
 /// Every operation uses the account snapshot retained by the music repository.
 /// Sends are explicit, single attempts; failed requests are reconciled by
 /// reading history before the UI permits a deliberate resend.
 class NeteaseMessagesRepository {
-  NeteaseMessagesRepository(this.music);
+  NeteaseMessagesRepository(this.music, {NeteaseMessageReads? reads})
+    : reads = reads ?? NeteaseMessageReads();
   final NeteaseMusicRepository music;
+  final NeteaseMessageReads reads;
+  final _rawConversations = <String, NeteaseConversation>{};
+  NeteaseConversation visibleConversation(NeteaseConversation value) =>
+      NeteaseConversation(
+        value.peer,
+        value.last,
+        reads.includes(value.peer.id, value.last.time) ? 0 : value.unread,
+      );
+  Map<String, int> visibleCounts(Map<String, int> raw) {
+    final suppressed = _rawConversations.values
+        .where((c) => reads.includes(c.peer.id, c.last.time))
+        .fold<int>(0, (n, c) => n + c.unread);
+    return {
+      ...raw,
+      'privateMsgCount': ((raw['privateMsgCount'] ?? 0) - suppressed).clamp(
+        0,
+        2147483647,
+      ),
+    };
+  }
+
   String get self => music.api.session?.userId ?? '';
   void check() {
     if (music.credential == null ||
@@ -187,10 +240,15 @@ class NeteaseMessagesRepository {
       'limit': 30,
       'total': 'true',
     });
-    return NeteaseMusicRepository.rows(r['msgs'])
+    final rows = NeteaseMusicRepository.rows(r['msgs'])
         .map((row) => NeteaseConversation.parse(row, self))
         .where((c) => c.peer.id.isNotEmpty)
         .toList();
+    if (offset == 0) _rawConversations.clear();
+    for (final value in rows) {
+      _rawConversations[value.peer.id] = value;
+    }
+    return rows;
   }
 
   Future<List<NeteaseChatMessage>> history(

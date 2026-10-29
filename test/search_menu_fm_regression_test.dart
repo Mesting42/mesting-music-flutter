@@ -57,7 +57,8 @@ class _Search extends MusicSearchController {
   @override
   MusicSearchState build() => const MusicSearchState();
   @override
-  void setQuery(String query) => state = MusicSearchState(query: query);
+  void setQuery(String query, {bool composing = false}) =>
+      state = MusicSearchState(query: query);
   @override
   Future<void> submit(String query) async => setQuery(query);
 }

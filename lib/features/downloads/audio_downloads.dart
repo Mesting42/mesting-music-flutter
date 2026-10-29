@@ -1,14 +1,14 @@
+import '../music_platform/netease/netease_track_sources.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import '../../shared/models/track.dart';
 import '../../core/persistence/app_preferences.dart';
-import '../local_music/local_music_providers.dart';
+import 'audio_download_storage.dart';
 import '../music_platform/data/music_platform_api.dart';
 import '../music_platform/data/embedded_kugou_music_source.dart';
 import '../music_platform/domain/platform_session.dart';
@@ -44,6 +44,7 @@ class AudioDownloadTask {
   final AudioDownloadPhase phase;
   final int received, total;
   AudioDownloadTask copy({
+    Track? track,
     AudioDownloadPhase? phase,
     int? received,
     int? total,
@@ -52,7 +53,7 @@ class AudioDownloadTask {
   }) => AudioDownloadTask(
     id: id,
     owner: owner,
-    track: track,
+    track: track ?? this.track,
     phase: phase ?? this.phase,
     received: received ?? this.received,
     total: total ?? this.total,
@@ -329,6 +330,10 @@ class AudioDownloadManager extends ChangeNotifier {
       _replace(
         task.copy(
           phase: AudioDownloadPhase.completed,
+          track: task.track.copyWith(
+            playbackQuality: media.playbackQuality,
+            audioBitrate: media.audioBitrate,
+          ),
           received: received,
           total: received,
           uri: uri,
@@ -354,6 +359,22 @@ class AudioDownloadManager extends ChangeNotifier {
     client.close();
     super.dispose();
   }
+}
+
+/// URI-backed playback bypasses platform parsing, even after an app restart.
+Track downloadedPlaybackTrack(AudioDownloadTask task) {
+  if (task.phase != AudioDownloadPhase.completed || task.uri.isEmpty) {
+    throw const MusicPlatformException('歌曲尚未下载完成');
+  }
+  final uri = Uri.tryParse(task.uri);
+  if (uri == null || !{'content', 'file'}.contains(uri.scheme)) {
+    throw const MusicPlatformException('下载文件地址不可用，请重新下载');
+  }
+  return task.track.copyWith(
+    audioAsset: task.uri,
+    audioHeaders: const {},
+    isPreview: false,
+  );
 }
 
 final audioDownloadManagerProvider = Provider<AudioDownloadManager>((ref) {
@@ -404,6 +425,25 @@ final audioDownloadManagerProvider = Provider<AudioDownloadManager>((ref) {
       if (track.source == TrackSource.netease &&
           ref.read(usesNeteaseProvider)) {
         final music = ref.read(neteaseMusicRepositoryProvider);
+        final selected =
+            ref.read(neteaseTrackSourcesProvider)[track.id] ??
+            NeteaseTrackSource.automatic;
+        if (selected != NeteaseTrackSource.automatic) {
+          final credential = music.credential;
+          return resolveNeteaseTrack(
+            music: music,
+            fallback: ref.read(neteaseFallbackResolverProvider),
+            allowFallback: true,
+            current: () =>
+                ref.mounted &&
+                ref.read(usesNeteaseProvider) &&
+                ref.read(neteaseMusicRepositoryProvider).credential ==
+                    credential,
+            track: track,
+            quality: quality,
+            selectedSource: selected,
+          );
+        }
         Object? failure;
         Map<String, dynamic> row = {};
         try {
@@ -460,24 +500,7 @@ final audioDownloadManagerProvider = Provider<AudioDownloadManager>((ref) {
       }
       throw const MusicPlatformException('请使用当前平台的在线歌曲下载');
     },
-    publish: (file, track, extension, mime) async {
-      final name =
-          '${track.title.take(100)} - ${track.artist.take(50)}.$extension';
-      final uri = await const MethodChannel('com.mesting.music/audio_download')
-          .invokeMethod<String>('publish', {
-            'path': file.path,
-            'name': name,
-            'title': track.title,
-            'artist': track.artist,
-            'album': track.album,
-            'mime': mime,
-          });
-      if (uri == null) throw const MusicPlatformException('保存未完成');
-      if (ref.mounted) {
-        await ref.read(localMusicControllerProvider.notifier).load();
-      }
-      return uri;
-    },
+    publish: const AudioDownloadStorage().publish,
   );
   ref.listen(platformAccountProvider, (before, after) {
     if (before?.value?.ownerId != after.value?.ownerId ||
@@ -488,7 +511,3 @@ final audioDownloadManagerProvider = Provider<AudioDownloadManager>((ref) {
   ref.onDispose(manager.dispose);
   return manager;
 });
-
-extension on String {
-  String take(int count) => length > count ? substring(0, count) : this;
-}

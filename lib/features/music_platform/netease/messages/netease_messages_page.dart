@@ -191,11 +191,15 @@ class _NeteaseMessagesPageState extends _MessageState<NeteaseMessagesPage> {
     ref.watch(neteaseMessagesRepositoryProvider);
     ref.watch(usesNeteaseProvider);
     if (!current) return stale();
-    final list = _conversations.where(
-      (c) => '${c.peer.name} ${c.last.text}'.toLowerCase().contains(
-        _filter.toLowerCase(),
-      ),
-    );
+    ref.watch(neteaseMessageReadRevisionProvider);
+    final counts = repository.visibleCounts(_counts);
+    final list = _conversations
+        .map(repository.visibleConversation)
+        .where(
+          (c) => '${c.peer.name} ${c.last.text}'.toLowerCase().contains(
+            _filter.toLowerCase(),
+          ),
+        );
     return BetaPageSearchLayout(
       controller: _search,
       child: PlatformPageFrame(
@@ -225,7 +229,7 @@ class _NeteaseMessagesPageState extends _MessageState<NeteaseMessagesPage> {
                   '关注你的朋友',
                   CupertinoIcons.person_fill,
                   const Color(0xFFFF4D63),
-                  _counts['newFollowerCount'] ?? 0,
+                  counts['newFollowerCount'] ?? 0,
                   NeteaseNoticeKind.fans,
                 ),
                 _category(
@@ -233,8 +237,7 @@ class _NeteaseMessagesPageState extends _MessageState<NeteaseMessagesPage> {
                   '查看评论、回复和提及',
                   CupertinoIcons.chat_bubble_text_fill,
                   const Color(0xFF289AD9),
-                  (_counts['commentCount'] ?? 0) +
-                      (_counts['forwardCount'] ?? 0),
+                  (counts['commentCount'] ?? 0) + (counts['forwardCount'] ?? 0),
                   NeteaseNoticeKind.comments,
                 ),
                 _category(
@@ -242,7 +245,7 @@ class _NeteaseMessagesPageState extends _MessageState<NeteaseMessagesPage> {
                   '互动与平台通知',
                   CupertinoIcons.hand_thumbsup_fill,
                   const Color(0xFFFFB634),
-                  _counts['noticeCount'] ?? 0,
+                  counts['noticeCount'] ?? 0,
                   NeteaseNoticeKind.notices,
                 ),
                 const Divider(indent: 22, endIndent: 22),
@@ -539,6 +542,7 @@ class _NeteaseChatPageState extends _MessageState<NeteaseChatPage> {
   void initState() {
     super.initState();
     _share = widget.share;
+    _scroll.addListener(_displayedLatest);
     Future.microtask(_load);
     _poll = Timer.periodic(const Duration(seconds: 8), (_) {
       if (foreground &&
@@ -557,6 +561,18 @@ class _NeteaseChatPageState extends _MessageState<NeteaseChatPage> {
     _picture = null;
     _scroll.dispose();
     super.dispose();
+  }
+
+  void _displayedLatest() {
+    if (!current ||
+        !foreground ||
+        !(ModalRoute.of(context)?.isCurrent ?? false) ||
+        !_scroll.hasClients ||
+        _scroll.offset > 80 ||
+        _messages.isEmpty) {
+      return;
+    }
+    repository.reads.displayed(widget.peer.id, _messages.first.time);
   }
 
   Future<void> _load({bool older = false, bool quiet = false}) async {
@@ -584,6 +600,7 @@ class _NeteaseChatPageState extends _MessageState<NeteaseChatPage> {
         if (older || !quiet) _more = rows.length >= 30;
         _uncertain = false;
       });
+      WidgetsBinding.instance.addPostFrameCallback((_) => _displayedLatest());
     } catch (e) {
       if (current && !quiet) setState(() => _error = '$e');
     } finally {

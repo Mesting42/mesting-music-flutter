@@ -1,3 +1,5 @@
+import '../../../shared/widgets/beta_popup_menu_button.dart';
+import '../../music_platform/netease/fallback/netease_source_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -195,18 +197,18 @@ class _SearchSongRow extends ConsumerWidget {
                         ),
                       ),
                       FavoriteToggleButton(track: track, compact: true),
-                      PopupMenuButton<String>(
+                      BetaPopupMenuButton<String>(
                         tooltip: '歌曲操作',
                         icon: Icon(
                           CupertinoIcons.ellipsis,
                           size: 21,
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        clipBehavior: Clip.antiAlias,
                         onSelected: (action) async {
+                          if (action == 'source') {
+                            await showNeteaseTrackSources(context, ref, track);
+                            return;
+                          }
                           if (action == 'comments') {
                             await openPlatformSongComments(context, ref, track);
                             return;
@@ -230,6 +232,11 @@ class _SearchSongRow extends ConsumerWidget {
                           }
                         },
                         itemBuilder: (_) => [
+                          if (track.source == TrackSource.netease)
+                            const PopupMenuItem(
+                              value: 'source',
+                              child: Text('选择音乐来源'),
+                            ),
                           if (ref.read(showPlatformFeaturesProvider) &&
                               track.source == TrackSource.kugou)
                             const PopupMenuItem(

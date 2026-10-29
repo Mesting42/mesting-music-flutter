@@ -1,3 +1,4 @@
+import '../../music_platform/netease/fallback/netease_source_picker.dart';
 import '../../music_platform/presentation/platform_quality_button.dart';
 import '../../music_platform/presentation/platform_comments_page.dart';
 import '../../music_platform/music_platform_providers.dart';
@@ -398,6 +399,10 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
           );
           return;
         }
+        if (value == 'choose-source') {
+          await showNeteaseTrackSources(context, ref, track);
+          return;
+        }
         if (value == 'download') {
           await enqueueAudioDownload(context, ref, track);
           return;
@@ -478,6 +483,12 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
           ),
           const PlayerMenuAction('quality', '音质选择', CupertinoIcons.waveform),
           const PlayerMenuAction('comments', '歌曲评论', CupertinoIcons.text_quote),
+          if (track.source == TrackSource.netease && !track.hasLocalAudio)
+            const PlayerMenuAction(
+              'choose-source',
+              '选择音乐来源',
+              CupertinoIcons.antenna_radiowaves_left_right,
+            ),
           if (track.source == TrackSource.netease)
             const PlayerMenuAction(
               'netease-together',
@@ -487,7 +498,7 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
           if (track.isRemote)
             const PlayerMenuAction(
               'download',
-              '下载到本地音乐',
+              '下载音乐',
               CupertinoIcons.arrow_down_circle,
             ),
           if (track.isRemote)

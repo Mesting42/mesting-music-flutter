@@ -1,3 +1,4 @@
+import 'beta_edge_back.dart';
 import 'package:flutter/material.dart';
 
 /// The opaque surface moves with the content. A stationary full-screen cover
@@ -37,7 +38,7 @@ class BetaPageMotion extends StatelessWidget {
 }
 
 Route<T> betaContentRoute<T>(Widget page) => PageRouteBuilder<T>(
-  pageBuilder: (_, _, _) => page,
+  pageBuilder: (_, _, _) => BetaEdgeBack(child: page),
   transitionDuration: const Duration(milliseconds: 360),
   reverseTransitionDuration: const Duration(milliseconds: 320),
   transitionsBuilder: (context, animation, _, child) =>
@@ -58,6 +59,6 @@ class BetaPageTransitionsBuilder extends PageTransitionsBuilder {
   ) => BetaPageMotion(
     animation: animation,
     linear: route.popGestureInProgress,
-    child: child,
+    child: BetaEdgeBack(child: child),
   );
 }

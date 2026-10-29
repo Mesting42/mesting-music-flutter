@@ -140,6 +140,7 @@ class MusicSearchController extends Notifier<MusicSearchState> {
     // Rebuilding for a platform/account change invalidates in-flight pages as
     // well as their rendered rows; public search responses are owner-bound too.
     ++_generation;
+    _scheduledQuery = null;
     _debounce?.cancel();
     _cancelPlatform();
     ref.watch(
@@ -174,34 +175,38 @@ class MusicSearchController extends Notifier<MusicSearchState> {
     );
   }
 
-  void setQuery(String rawQuery) {
+  String? _scheduledQuery;
+
+  /// A composing IME value is not a committed query. Invalidate the previous
+  /// request immediately, but keep its visible results until the debounce ends.
+  void setQuery(String rawQuery, {bool composing = false}) {
     final query = rawQuery.trim();
+    if (!composing && _scheduledQuery == query) return;
     _debounce?.cancel();
-    _generation += 1;
+    _scheduledQuery = composing ? null : query;
+    final generation = ++_generation;
     _cancelPlatform();
     ref.read(musicSearchRepositoryProvider).cancelActiveSearch();
-
+    if (composing) return;
     if (query.isEmpty) {
-      state = state.copyWith(
-        query: '',
-        localTracks: const [],
-        onlineTracks: const [],
-        warnings: const [],
-        isLoading: false,
-        fromCache: false,
-        clearError: true,
-        hasMore: false,
-        isLoadingMore: false,
-        clearTotal: true,
-        clearMoreError: true,
-      );
+      state = MusicSearchState(recentSearches: state.recentSearches);
       return;
     }
+    // Stable keeps its existing immediate preview/loading contract. Beta
+    // publishes a committed query only after the typing interval has elapsed.
+    if (!DistributionChannel.isBeta) _beginQuery(query);
+    _debounce = Timer(_debounceDuration, () {
+      if (!ref.mounted || generation != _generation) return;
+      if (DistributionChannel.isBeta) _beginQuery(query);
+      unawaited(_search(query, generation));
+    });
+  }
 
+  void _beginQuery(String query) {
     state = state.copyWith(
       query: query,
-      localTracks: const [],
-      onlineTracks: const [],
+      localTracks: DistributionChannel.isBeta ? null : const [],
+      onlineTracks: DistributionChannel.isBeta ? null : const [],
       isLoading: true,
       fromCache: false,
       clearError: true,
@@ -211,8 +216,6 @@ class MusicSearchController extends Notifier<MusicSearchState> {
       clearTotal: true,
       clearMoreError: true,
     );
-    final generation = _generation;
-    _debounce = Timer(_debounceDuration, () => _search(query, generation));
   }
 
   Future<void> submit(String rawQuery) async {
@@ -224,19 +227,8 @@ class MusicSearchController extends Notifier<MusicSearchState> {
     _generation += 1;
     _cancelPlatform();
     ref.read(musicSearchRepositoryProvider).cancelActiveSearch();
-    state = state.copyWith(
-      query: query,
-      localTracks: const [],
-      onlineTracks: const [],
-      isLoading: true,
-      fromCache: false,
-      clearError: true,
-      warnings: const [],
-      hasMore: false,
-      isLoadingMore: false,
-      clearTotal: true,
-      clearMoreError: true,
-    );
+    _scheduledQuery = query;
+    _beginQuery(query);
     await _search(query, _generation);
   }
 

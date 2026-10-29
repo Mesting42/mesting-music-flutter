@@ -1,3 +1,4 @@
+import '../../music_platform/netease/fallback/netease_source_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import '../../downloads/audio_downloads_page.dart';
@@ -209,6 +210,8 @@ class EditorialCover extends StatelessWidget {
                   else
                     ArtworkImage(
                       uri: cover,
+                      retryOnNetworkError: true,
+                      persistentNetworkCacheKey: 'editorial-cover:$cover',
                       width: width,
                       height: height ?? width * (feature ? 1.13 : 1),
                       fit: BoxFit.cover,
@@ -352,12 +355,20 @@ class EditorialTrackRow extends ConsumerWidget {
             builder: (c) => CupertinoActionSheet(
               title: Text(track.title),
               actions: [
+                if (track.source == TrackSource.netease)
+                  CupertinoActionSheetAction(
+                    onPressed: () {
+                      Navigator.pop(c);
+                      showNeteaseTrackSources(context, ref, track);
+                    },
+                    child: const Text('选择音乐来源'),
+                  ),
                 CupertinoActionSheetAction(
                   onPressed: () {
                     Navigator.pop(c);
                     enqueueAudioDownload(context, ref, track);
                   },
-                  child: const Text('下载到本地音乐'),
+                  child: const Text('下载音乐'),
                 ),
                 if (track.source == TrackSource.netease)
                   CupertinoActionSheetAction(
