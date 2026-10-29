@@ -1,4 +1,4 @@
-# Mesting Music 1.0.17 冻结源码归档
+# Mesting Music 1.0.13～1.0.17 Git / GitHub 归档
 
 日期：2026-10-29（Asia/Shanghai）。用户确认逐版完整归档，保留main及旧版本历史。
 
