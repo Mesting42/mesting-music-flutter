@@ -1,6 +1,6 @@
 # 跨电脑接续：Mesting Music 1.0.17 / code38
 
-日期：2026-10-29。五版源码已核验，提交与附件正在归档；以最终核验JSON及远端为准。 远端维护入口beta，main与旧历史保留。
+日期：2026-10-29。五版Git标签和正式GitHub Release已完成，所有附件SHA-256与服务端digest已核对。 远端维护入口beta，main与旧历史保留。
 
 | 版本 / code | 标签与Release | 固定源码提交 |
 | --- | --- | --- |
@@ -36,3 +36,5 @@ Flutter3.41.9 / Dart3.11.5，Java/Kotlin17，min24/target36，NDK28.2.13676358�
 ## 本机保留
 
 D:/AnLi原beta工作区仍保留归档前HEAD deb68e4、原index与全部文件字节，不切分支、不reset／clean／stash。归档提交与标签已写入本地Git对象库，另有codex/archive-1.0.13-1.0.17引用；远端beta已指向新归档链。该本地脏工作区不能直接拉取覆盖；新电脑或新的干净目录从远端beta克隆即可接续。未经新授权不访问手机／ADB，不关闭保留的music网页，不继续桌面内存优化。
+
+本轮验收记录见[公开附件及新克隆核验](docs/version-archive/GITHUB-ARCHIVE-2026-10-29-v113-v117-verification.json)。5版共65个附件通过GitHub公开接口回读，37个已有Release及原main／旧标签保持；从网络独立克隆并逐文件核对全部原ZIP条目，运行源码与1.0.17冻结版一致。

@@ -1,8 +1,8 @@
 # Git/GitHub最新接续：1.0.17 / code38
 
-**Git/GitHub归档接续：本轮完整归档1.0.13～1.0.17，远端beta以1.0.17为产品基线；先读[HANDOFF-GITHUB-2026-10-29-v1.0.17.md](../HANDOFF-GITHUB-2026-10-29-v1.0.17.md)与本轮归档核验。冻结记录保留原时点；music后台未操作。**
+**Git/GitHub归档接续：1.0.13～1.0.17五版独立提交、固定标签、正式Release及65个附件已全部归档并核验，新克隆源码核对通过；远端beta以1.0.17/code38为产品基线；先读[HANDOFF-GITHUB-2026-10-29-v1.0.17.md](../HANDOFF-GITHUB-2026-10-29-v1.0.17.md)与[最终归档核验](version-archive/GITHUB-ARCHIVE-2026-10-29-v113-v117-verification.json)。本次Git/GitHub完整归档经用户明确确认；下方冻结记录保留原时点，不表示远端缺失。本机原beta/deb68e4、index和全部脏工作区保持，禁止直接拉取覆盖；新目录可从远端beta克隆。music后台未操作。**
 
-# 当前接续：Mesting Music 1.0.17 / code38
+## 1.0.17冻结时的本地准备（历史记录）
 
 原签名本地交付准备完成，先读[本版接续](SESSION-HANDOFF-2026-10-29-v1.0.17.md)及[实现边界](UX-PLAYBACK-2026-10-29-v1.0.17.md)。本轮不新增酷狗账号音源或双平台签到。保留旧冻结产物与脏工作区，用户自行安装发布，不访问手机／账号／后台，不提交推送。
 
