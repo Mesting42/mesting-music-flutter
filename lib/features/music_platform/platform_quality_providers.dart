@@ -7,6 +7,8 @@ import 'domain/platform_audio_quality.dart';
 import 'data/platform_quality_catalog.dart';
 import 'music_platform_providers.dart';
 import 'data/music_platform_api.dart';
+import 'netease/netease_playback_options.dart';
+import 'netease/netease_fallback.dart';
 
 /// Only successful provider states are retained. Each state still watches the
 /// account future, so logout/login/token replacement invalidates its catalog.
@@ -44,6 +46,21 @@ final platformSongQualitiesProvider = FutureProvider.autoDispose
     .family<Set<PlatformAudioQuality>, String>((ref, id) async {
       final session = await ref.watch(platformAccountProvider.future);
       if (id.startsWith('netease_')) {
+        // Local SVIP exposes attempts, not invented server capabilities. A
+        // choice is committed only after the audio handler resolves that tier.
+        final local = ref.watch(neteaseLocalSvipProvider);
+        final fallback = ref.watch(neteaseFallbackEnabledProvider);
+        final options = ref.watch(neteasePlaybackOptionsProvider);
+        if (local && fallback) {
+          return {
+            PlatformAudioQuality.standard,
+            PlatformAudioQuality.high,
+            if (options.lossless) ...[
+              PlatformAudioQuality.lossless,
+              PlatformAudioQuality.hiRes,
+            ],
+          };
+        }
         return ref.watch(neteaseMusicRepositoryProvider).qualities(id);
       }
       final payload = await ref

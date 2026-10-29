@@ -35,6 +35,8 @@ class Track {
     this.availabilityMessage = '',
     this.platformSongId = '',
     this.playbackQuality = '',
+    this.audioHeaders = const {},
+    this.audioBitrate = 0,
   }) : _sourceTitle = title;
 
   final String id;
@@ -64,6 +66,11 @@ class Track {
   /// Actual quality returned by the platform, not the user's requested tier.
   /// Optional so older saved tracks and other sources remain compatible.
   final String playbackQuality;
+
+  /// Anonymous CDN playback requirements only. Platform cookies and tokens
+  /// must never be placed here: tracks also travel through history/media items.
+  final Map<String, String> audioHeaders;
+  final int audioBitrate;
 
   bool get isRemote => source != TrackSource.local;
   String get resolvedLyricsAsset {
@@ -104,6 +111,8 @@ class Track {
       'availabilityMessage': availabilityMessage,
       'platformSongId': platformSongId,
       'playbackQuality': playbackQuality,
+      'audioHeaders': publicAudioHeaders(audioHeaders),
+      'audioBitrate': audioBitrate,
     };
   }
 
@@ -128,6 +137,8 @@ class Track {
       availabilityMessage: json['availabilityMessage'] as String? ?? '',
       platformSongId: json['platformSongId'] as String? ?? '',
       playbackQuality: json['playbackQuality'] as String? ?? '',
+      audioHeaders: publicAudioHeaders(json['audioHeaders']),
+      audioBitrate: json['audioBitrate'] as int? ?? 0,
     );
   }
 
@@ -152,6 +163,8 @@ class Track {
         'availabilityMessage': availabilityMessage,
         'platformSongId': platformSongId,
         'playbackQuality': playbackQuality,
+        'audioHeaders': publicAudioHeaders(audioHeaders),
+        'audioBitrate': audioBitrate,
       },
     );
   }
@@ -165,6 +178,8 @@ class Track {
     String? availabilityMessage,
     String? platformSongId,
     String? playbackQuality,
+    Map<String, String>? audioHeaders,
+    int? audioBitrate,
   }) {
     return Track(
       id: id,
@@ -183,6 +198,25 @@ class Track {
       availabilityMessage: availabilityMessage ?? this.availabilityMessage,
       platformSongId: platformSongId ?? this.platformSongId,
       playbackQuality: playbackQuality ?? this.playbackQuality,
+      audioHeaders: audioHeaders ?? this.audioHeaders,
+      audioBitrate: audioBitrate ?? this.audioBitrate,
     );
   }
+}
+
+/// Allow only public media headers across persistence and playback boundaries.
+/// Explicitly excludes Cookie/Authorization and rejects header injection.
+Map<String, String> publicAudioHeaders(Object? value) {
+  if (value is! Map) return const {};
+  return Map.unmodifiable({
+    for (final entry in value.entries)
+      if ({
+            'referer',
+            'user-agent',
+            'origin',
+          }.contains('${entry.key}'.toLowerCase()) &&
+          entry.value is String &&
+          !RegExp(r'[\r\n]').hasMatch(entry.value as String))
+        '${entry.key}': entry.value as String,
+  });
 }

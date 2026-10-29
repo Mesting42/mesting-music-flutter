@@ -59,6 +59,18 @@ class PlatformCredits {
       yield LicenseEntryWithLineBreaks([
         'NetEaseCloudMusicApi · Binaryify and contributors',
       ], '$neteaseNotice\n\n$neteaseLicense');
+      final unblockNotice = await rootBundle.loadString(
+        'third_party/unblock_netease/NOTICE.md',
+      );
+      final unblockLicense = await rootBundle.loadString(
+        'third_party/unblock_netease/COPYING.LESSER',
+      );
+      final gplTerms = await rootBundle.loadString(
+        'third_party/unblock_netease/COPYING',
+      );
+      yield LicenseEntryWithLineBreaks([
+        'UnblockNeteaseMusic · native source adapters',
+      ], '$unblockNotice\n\n$unblockLicense\n\n$gplTerms');
     });
   }
 }

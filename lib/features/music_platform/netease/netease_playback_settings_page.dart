@@ -8,6 +8,7 @@ import 'netease_features_page.dart';
 import 'netease_features_repository.dart';
 import 'netease_fallback.dart';
 import 'netease_listening_reporter.dart';
+import 'netease_source_settings_panel.dart';
 
 class NeteasePlaybackSettingsPage extends ConsumerWidget {
   const NeteasePlaybackSettingsPage({super.key});
@@ -59,9 +60,10 @@ class NeteasePlaybackSettingsPage extends ConsumerWidget {
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
             child: Text(
-              '优先使用当前网易云账号原音源；备用解析使用 BugPk，其次尝试酷狗、酷我公开音源。仅发送歌曲信息，不发送账号凭据。实际音质以音源返回为准。',
+              '优先使用当前网易云账号完整音源，再尝试新音源，最后使用 BugPk。补源仅发送歌曲信息，不发送账号凭据。实际音质以返回文件为准。',
             ),
           ),
+          const NeteaseSourceSettingsPanel(),
           SwitchListTile.adaptive(
             title: const Text('网易云播放记录上报'),
             subtitle: const Text('实际开始播放后同步最近播放；时长仅累计真实收听，暂停、缓冲与拖动不计入'),

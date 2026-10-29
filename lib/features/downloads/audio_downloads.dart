@@ -90,6 +90,7 @@ class AudioDownloadTask {
 }
 
 typedef ResolveDownload = Future<String> Function(Track track);
+typedef ResolveDownloadMedia = Future<Track> Function(Track track);
 typedef PublishDownload =
     Future<String> Function(
       File file,
@@ -103,15 +104,20 @@ typedef PublishDownload =
 class AudioDownloadManager extends ChangeNotifier {
   AudioDownloadManager({
     required this.client,
-    required this.resolve,
+    this.resolve,
+    this.resolveMedia,
     required this.publish,
     required this.currentOwner,
     required this.directory,
     required this.persist,
     List<AudioDownloadTask> restored = const [],
-  }) : _tasks = [...restored];
+  }) : assert((resolve == null) != (resolveMedia == null)),
+       _tasks = [...restored];
   final http.Client client;
-  final ResolveDownload resolve;
+  // Preserve URL-only embedders while letting typed native sources carry their
+  // public CDN headers. Exactly one resolver owns a given download manager.
+  final ResolveDownload? resolve;
+  final ResolveDownloadMedia? resolveMedia;
   final PublishDownload publish;
   final String? Function() currentOwner;
   final Future<Directory> Function() directory;
@@ -239,7 +245,13 @@ class AudioDownloadManager extends ChangeNotifier {
     File? partial;
     try {
       _replace(task.copy(phase: AudioDownloadPhase.downloading));
-      final url = Uri.parse(await resolve(task.track));
+      final media = resolveMedia != null
+          ? await resolveMedia!(task.track)
+          : task.track.copyWith(
+              audioAsset: await resolve!(task.track),
+              audioHeaders: const {},
+            );
+      final url = Uri.parse(media.audioAsset);
       if (!_current(task)) return;
       if (!{'https', 'http'}.contains(url.scheme) ||
           url.host.isEmpty ||
@@ -250,7 +262,10 @@ class AudioDownloadManager extends ChangeNotifier {
       await root.create(recursive: true);
       partial = File('${root.path}/${task.id}.part');
       final response = await client
-          .send(http.AbortableRequest('GET', url, abortTrigger: _abort!.future))
+          .send(
+            http.AbortableRequest('GET', url, abortTrigger: _abort!.future)
+              ..headers.addAll(publicAudioHeaders(media.audioHeaders)),
+          )
           .timeout(const Duration(seconds: 20));
       if (response.statusCode != 200) {
         await response.stream.take(1).drain<void>();
@@ -384,24 +399,37 @@ final audioDownloadManagerProvider = Provider<AudioDownloadManager>((ref) {
         throw const MusicPlatformException('下载记录未保存');
       }
     },
-    resolve: (track) async {
+    resolveMedia: (track) async {
       final quality = ref.read(platformQualityProvider).preferred;
       if (track.source == TrackSource.netease &&
           ref.read(usesNeteaseProvider)) {
         final music = ref.read(neteaseMusicRepositoryProvider);
-        final payload = await music.call('/song/download/url/v1', {
-          'id': NeteaseMusicRepository.songId(track.id),
-          'level': switch (quality.code) {
-            'flac' => 'lossless',
-            'high' => 'hires',
-            '320' => 'exhigh',
-            _ => 'standard',
-          },
-        });
-        final row = NeteaseMusicRepository.object(payload['data']);
+        Object? failure;
+        Map<String, dynamic> row = {};
+        try {
+          final payload = await music.call('/song/download/url/v1', {
+            'id': NeteaseMusicRepository.songId(track.id),
+            'level': switch (quality.code) {
+              'flac' => 'lossless',
+              'high' => 'hires',
+              '320' => 'exhigh',
+              _ => 'standard',
+            },
+          });
+          row = NeteaseMusicRepository.object(payload['data']);
+        } catch (error) {
+          if (error is MusicPlatformException &&
+              {'301', '302', '415', '405', '460'}.contains(error.code)) {
+            rethrow;
+          }
+          failure = error;
+        }
         if ('${row['url'] ?? ''}'.startsWith('http') &&
             row['freeTrialInfo'] == null) {
-          return '${row['url']}';
+          return track.copyWith(
+            audioAsset: '${row['url']}',
+            audioHeaders: const {},
+          );
         }
         if (ref.read(neteaseFallbackEnabledProvider)) {
           final credential = music.credential;
@@ -415,9 +443,9 @@ final audioDownloadManagerProvider = Provider<AudioDownloadManager>((ref) {
                     ref.read(neteaseMusicRepositoryProvider).credential ==
                         credential,
               );
-          if (fallback != null) return fallback.audioAsset;
+          if (fallback != null) return fallback;
         }
-        throw const MusicPlatformException('网易云未返回完整下载地址');
+        throw failure ?? const MusicPlatformException('网易云未返回完整下载地址');
       }
       if (track.source == TrackSource.kugou &&
           ref.read(platformAccountProvider).value?.platform ==
@@ -426,7 +454,7 @@ final audioDownloadManagerProvider = Provider<AudioDownloadManager>((ref) {
         if (source is EmbeddedKugouMusicSource) {
           final resolved = await source.resolveTrack(track, quality: quality);
           if (resolved.isPlayable && !resolved.isPreview) {
-            return resolved.audioAsset;
+            return resolved;
           }
         }
       }

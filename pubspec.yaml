@@ -134,6 +134,9 @@ flutter:
     - third_party/audio_glyphs/NOTICE.md
     - third_party/netease_protocol/LICENSE
     - third_party/netease_protocol/NOTICE.md
+    - third_party/unblock_netease/COPYING
+    - third_party/unblock_netease/COPYING.LESSER
+    - third_party/unblock_netease/NOTICE.md
     - third_party/netease_protocol/afp/afp.js
     - third_party/netease_protocol/afp/afp.wasm.js
     - third_party/netease_protocol/afp/LICENSE

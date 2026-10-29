@@ -22,6 +22,7 @@ import '../../domain/platform_session.dart';
 import '../netease_features_page.dart';
 import '../netease_features_repository.dart';
 import '../netease_playback_settings_page.dart';
+import '../netease_membership_page.dart';
 import '../netease_music_repository.dart';
 import 'netease_catalog.dart';
 import 'netease_content.dart';
@@ -326,6 +327,7 @@ class _NeteaseFullTaskPageState extends ConsumerState<NeteaseFullTaskPage> {
         'profile-edit',
         'account-login',
         'playback-settings',
+        'vip-info',
         'comments',
       }.contains(neteaseWorkflowKey(e)) ||
       e.route == '/user/record';
@@ -625,6 +627,7 @@ class _NeteaseFullTaskPageState extends ConsumerState<NeteaseFullTaskPage> {
     if (key == 'search') return const MusicSearchPage();
     if (key == 'profile-edit') return const PlatformProfileEditPage();
     if (key == 'playback-settings') return const NeteasePlaybackSettingsPage();
+    if (key == 'vip-info') return const NeteaseMembershipPage();
     if (key == 'account-login') {
       return const PlatformAccountPage(platform: MusicPlatform.netease);
     }

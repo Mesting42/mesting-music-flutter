@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/persistence/app_preferences.dart';
@@ -10,6 +11,10 @@ import '../domain/platform_audio_quality.dart';
 import '../music_platform_providers.dart';
 import '../platform_backend_providers.dart';
 import 'netease_music_repository.dart';
+import 'netease_playback_options.dart';
+import 'fallback/netease_fallback_source.dart';
+import 'fallback/netease_public_sources.dart';
+export 'fallback/netease_fallback_source.dart';
 
 final neteaseFallbackEnabledProvider =
     NotifierProvider<NeteaseFallbackSetting, bool>(NeteaseFallbackSetting.new);
@@ -26,47 +31,10 @@ class NeteaseFallbackSetting extends Notifier<bool> {
   }
 }
 
-/// Strict, deliberately conservative matching. Version words are never removed
-/// from titles/albums; unknown durations cannot establish the same recording.
-/// Missing evidence rejects a candidate rather than silently playing a cover.
-bool isSameNeteaseRecording(Track original, Track candidate) {
-  String normalize(String s) =>
-      s.toLowerCase().replaceAll(RegExp(r'[\s\p{P}\p{S}]', unicode: true), '');
-  Set<String> artists(String value) => value
-      .split(RegExp(r'\s*(?:/|&|、|,|，|;|；)\s*'))
-      .map(normalize)
-      .where((a) => a.isNotEmpty)
-      .toSet();
-  if (normalize(original.title).isEmpty ||
-      normalize(original.title) != normalize(candidate.title)) {
-    return false;
-  }
-  final a = artists(original.artist), b = artists(candidate.artist);
-  if (a.isEmpty || a.length != b.length || !a.containsAll(b)) return false;
-  if (original.duration <= Duration.zero ||
-      candidate.duration <= Duration.zero ||
-      (original.duration - candidate.duration).inMilliseconds.abs() > 2000) {
-    return false;
-  }
-  // A known album is part of the identity, particularly for live/re-recordings.
-  if (original.album.isNotEmpty &&
-      (candidate.album.isEmpty ||
-          normalize(original.album) != normalize(candidate.album))) {
-    return false;
-  }
-  return true;
-}
-
-abstract interface class NeteaseFallbackSource {
-  String get label;
-  Future<List<Track>> search(Track original);
-  Future<Track?> resolve(Track candidate);
-}
-
 /// Exact NetEase IDs avoid cross-platform title matching. This public service
 /// is anonymous: only a song ID and requested quality leave the device.
 /// Calls are serialized at >=1s intervals per the provider's published limit.
-class BugpkNeteaseFallback implements NeteaseFallbackSource {
+class BugpkNeteaseFallback implements NeteaseExactIdSource {
   BugpkNeteaseFallback(this.client);
   final http.Client client;
   Future<void> _tail = Future.value();
@@ -130,6 +98,15 @@ class BugpkNeteaseFallback implements NeteaseFallbackSource {
       // Some provider responses silently downgrade. Keep the delivered tier.
       return candidate.copyWith(
         audioAsset: url.toString(),
+        audioHeaders: const {},
+        audioBitrate:
+            int.tryParse('${row['br']}') ??
+            switch ('${row['level']}') {
+              'standard' => 128000,
+              'higher' => 192000,
+              'exhigh' => 320000,
+              _ => 0,
+            },
         isPreview: false,
         playbackQuality: delivered,
       );
@@ -188,7 +165,12 @@ class AnonymousKugouFallback implements NeteaseFallbackSource {
       source.search('${original.title} ${original.artist}', limit: 12);
   @override
   Future<Track?> resolve(Track candidate) async {
-    final result = await source.resolveTrack(candidate);
+    final result = await source.resolveTrack(
+      candidate,
+      quality:
+          PlatformAudioQuality.fromCode(candidate.playbackQuality) ??
+          PlatformAudioQuality.high,
+    );
     return result.isPreview ? null : result;
   }
 }
@@ -275,6 +257,8 @@ Future<bool> probeAudio(
   http.Client client,
   String url, {
   int minimumBytes = 0,
+  Map<String, String> headers = const {},
+  bool requireLossless = false,
 }) async {
   final uri = Uri.tryParse(url);
   if (uri == null ||
@@ -284,7 +268,13 @@ Future<bool> probeAudio(
     return false;
   }
   final response = await client
-      .send(http.Request('GET', uri)..headers['Range'] = 'bytes=0-1023')
+      .send(
+        http.Request('GET', uri)
+          ..headers.addAll({
+            ...publicAudioHeaders(headers),
+            'Range': 'bytes=0-1023',
+          }),
+      )
       .timeout(const Duration(seconds: 8));
   if (response.statusCode != 200 && response.statusCode != 206) {
     await response.stream.take(1).drain<void>();
@@ -317,73 +307,252 @@ Future<bool> probeAudio(
       opening.startsWith('[')) {
     return false;
   }
+  final flac =
+      prefix.length >= 4 && String.fromCharCodes(prefix.take(4)) == 'fLaC';
+  if (requireLossless && !flac) return false;
   return type.contains('audio') ||
+      flac ||
+      (prefix.length >= 8 &&
+          String.fromCharCodes(prefix.skip(4).take(4)) == 'ftyp') ||
+      (prefix.length >= 4 && String.fromCharCodes(prefix.take(4)) == 'OggS') ||
       type.contains('octet-stream') ||
       (prefix.length >= 3 && String.fromCharCodes(prefix.take(3)) == 'ID3') ||
       (prefix.length > 1 && prefix[0] == 0xff && prefix[1] & 0xe0 == 0xe0);
 }
 
+class NeteaseFallbackDiagnostics extends ChangeNotifier {
+  final List<Map<String, Object?>> _rows = [];
+  List<Map<String, Object?>> get rows => List.unmodifiable(_rows);
+  String get json => const JsonEncoder.withIndent('  ').convert(_rows);
+  // Deliberately excludes URLs, song names, account IDs and exception strings.
+  void record(String source, String outcome, int elapsedMs, {int bitrate = 0}) {
+    _rows.add({
+      'time': DateTime.now().toUtc().toIso8601String(),
+      'source': source,
+      'result': outcome,
+      'elapsedMs': elapsedMs,
+      if (bitrate > 0) 'bitrate': bitrate,
+    });
+    if (_rows.length > 80) _rows.removeAt(0);
+    notifyListeners();
+  }
+
+  void clear() {
+    _rows.clear();
+    notifyListeners();
+  }
+}
+
+final neteaseFallbackDiagnosticsProvider = Provider<NeteaseFallbackDiagnostics>(
+  (ref) {
+    final value = NeteaseFallbackDiagnostics();
+    ref.onDispose(value.dispose);
+    return value;
+  },
+);
+
 class NeteaseFallbackResolver {
-  const NeteaseFallbackResolver(this.sources, this.client);
+  NeteaseFallbackResolver(
+    this.sources,
+    this.client, {
+    this.options = const NeteasePlaybackOptions(),
+    this.diagnostics,
+    this.sourceTimeout = const Duration(seconds: 10),
+    this.groupTimeout = const Duration(seconds: 20),
+  });
   final List<NeteaseFallbackSource> sources;
   final http.Client client;
+  final NeteasePlaybackOptions options;
+  final NeteaseFallbackDiagnostics? diagnostics;
+  final Duration sourceTimeout, groupTimeout;
+  final Map<String, ({Track track, DateTime until})> _cache = {};
+  void clearCache() => _cache.clear();
   Future<Track?> resolve(
     Track original, {
     required bool Function() current,
     String? requiredQuality,
   }) async {
-    for (final source in sources) {
-      if (!current()) return null;
+    final key =
+        '${original.id}|${original.title}|${original.artist}|${original.album}|${original.duration.inMilliseconds}|${original.playbackQuality}|$requiredQuality';
+    final cached = options.cache ? _cache[key] : null;
+    if (cached != null && cached.until.isAfter(DateTime.now()) && current()) {
       try {
-        final candidates = await source
-            .search(original)
-            .timeout(const Duration(seconds: 12));
-        if (!current()) return null;
+        if (await probeAudio(
+              client,
+              cached.track.audioAsset,
+              headers: cached.track.audioHeaders,
+            ) &&
+            current()) {
+          return cached.track;
+        }
+      } catch (_) {
+        /* Expired CDN URLs are resolved again, never replayed. */
+      }
+      _cache.remove(key);
+    }
+    if (!current()) return null;
+    final groupWatch = Stopwatch()..start();
+    Future<Track?> attempt(
+      NeteaseFallbackSource source, {
+      bool terminal = false,
+    }) async {
+      if (!current() || (!terminal && groupWatch.elapsed >= groupTimeout)) {
+        return null;
+      }
+      final watch = Stopwatch()..start();
+      var alive = true;
+      bool valid() =>
+          alive && current() && (terminal || groupWatch.elapsed < groupTimeout);
+      Future<Track?> work() async {
+        final candidates = await source.search(original);
+        if (!valid()) return null;
         for (final candidate
             in candidates
                 .where(
                   (c) =>
-                      source is BugpkNeteaseFallback ||
-                      isSameNeteaseRecording(original, c),
+                      source is NeteaseExactIdSource ||
+                      isSameNeteaseRecording(
+                        original,
+                        c,
+                        allowMissingAlbum:
+                            source is NeteasePublicMetadataSource,
+                      ),
                 )
                 .take(2)) {
-          final resolved = await source
-              .resolve(candidate)
-              .timeout(const Duration(seconds: 12));
-          if (!current()) return null;
+          if (!valid()) return null;
+          final wanted =
+              requiredQuality ??
+              (!terminal &&
+                      options.strategy ==
+                          NeteaseSourceStrategy.highestQuality &&
+                      options.lossless
+                  ? 'flac'
+                  : original.playbackQuality);
+          final resolved = await source.resolve(
+            candidate.copyWith(
+              // A new provider must establish its own media requirements;
+              // history may still carry a previous provider's header/bitrate.
+              audioHeaders: const {},
+              audioBitrate: 0,
+              playbackQuality: options.lossless
+                  ? wanted
+                  : ({'flac', 'high'}.contains(wanted) ? '320' : wanted),
+            ),
+          );
+          if (!valid()) return null;
           if (resolved == null ||
               resolved.isPreview ||
               (requiredQuality != null &&
-                  resolved.playbackQuality != requiredQuality) ||
-              !await probeAudio(
-                client,
-                resolved.audioAsset,
-                minimumBytes:
-                    original.duration.inSeconds > 60 &&
-                        {'128', '320'}.contains(resolved.playbackQuality)
-                    ? (original.duration.inSeconds *
-                              int.parse(resolved.playbackQuality) *
-                              1000 /
-                              8 *
-                              .4)
-                          .round()
-                    : 0,
-              )) {
+                  resolved.playbackQuality != requiredQuality)) {
             continue;
           }
-          if (!current()) return null;
+          final bitrate = resolved.audioBitrate > 0
+              ? resolved.audioBitrate
+              : (int.tryParse(resolved.playbackQuality) ?? 0) * 1000;
+          if (options.minimumBitrate > 0 &&
+              !{'flac', 'high'}.contains(resolved.playbackQuality) &&
+              bitrate < options.minimumBitrate) {
+            continue;
+          }
+          if (!await probeAudio(
+            client,
+            resolved.audioAsset,
+            headers: resolved.audioHeaders,
+            requireLossless: {
+              'flac',
+              'high',
+            }.contains(resolved.playbackQuality),
+            minimumBytes: original.duration.inSeconds > 60 && bitrate > 0
+                ? (original.duration.inSeconds * bitrate / 8 * .4).round()
+                : 0,
+          )) {
+            continue;
+          }
+          if (!valid()) return null;
           return original.copyWith(
             audioAsset: resolved.audioAsset,
+            audioHeaders: publicAudioHeaders(resolved.audioHeaders),
+            audioBitrate: bitrate,
             isPreview: false,
             playbackQuality: resolved.playbackQuality,
             availabilityMessage: '备用音源 · ${source.label}',
           );
         }
+        return null;
+      }
+
+      try {
+        final result = await work().timeout(sourceTimeout);
+        if (options.diagnostics && current()) {
+          diagnostics?.record(
+            source.label,
+            result == null ? 'unavailable_or_not_same_recording' : 'ready',
+            watch.elapsedMilliseconds,
+            bitrate: result?.audioBitrate ?? 0,
+          );
+        }
+        return result;
       } catch (_) {
-        /* One unavailable provider must not stop the remaining sources. */
+        if (options.diagnostics && current()) {
+          diagnostics?.record(
+            source.label,
+            'request_failed_or_timed_out',
+            watch.elapsedMilliseconds,
+          );
+        }
+        return null;
+      } finally {
+        alive = false;
       }
     }
-    return null;
+
+    final newer = sources.where((s) => s is! BugpkNeteaseFallback).toList();
+    Track? result;
+    if (options.strategy == NeteaseSourceStrategy.ordered) {
+      for (final source in newer) {
+        result = await attempt(source);
+        if (result != null || !current()) break;
+      }
+    } else {
+      // At most two metadata/media probes at once. BugPk is a separate final
+      // stage, so a high bitrate there cannot override a working new source.
+      var cursor = 0;
+      final ready = <Track>[];
+      Future<void> worker() async {
+        while (cursor < newer.length &&
+            current() &&
+            groupWatch.elapsed < groupTimeout) {
+          final source = newer[cursor++];
+          final found = await attempt(source);
+          if (found != null) ready.add(found);
+        }
+      }
+
+      await Future.wait([worker(), worker()]);
+      int rank(Track track) => switch (track.playbackQuality) {
+        'high' => 20000000,
+        'flac' => 10000000,
+        _ => track.audioBitrate,
+      };
+      ready.sort((a, b) => rank(b).compareTo(rank(a)));
+      result = ready.firstOrNull;
+    }
+    if (!current()) return null;
+    if (result == null) {
+      for (final source in sources.whereType<BugpkNeteaseFallback>()) {
+        result = await attempt(source, terminal: true);
+        if (result != null || !current()) break;
+      }
+    }
+    if (!current()) return null;
+    if (result != null && options.cache) {
+      if (_cache.length >= 32) _cache.remove(_cache.keys.first);
+      _cache[key] = (
+        track: result,
+        until: DateTime.now().add(const Duration(seconds: 45)),
+      );
+    }
+    return result;
   }
 }
 
@@ -391,16 +560,33 @@ final neteaseFallbackResolverProvider = Provider<NeteaseFallbackResolver>((
   ref,
 ) {
   final client = http.Client();
+  // A session epoch owns its own anonymous caches, even though no credential
+  // is sent to these adapters. Account switches dispose all pending I/O.
+  ref.watch(
+    platformAccountProvider.select((a) => (a.value?.ownerId, a.value?.token)),
+  );
+  final options = ref.watch(neteasePlaybackOptionsProvider);
   ref.onDispose(client.close);
   final api = MusicPlatformApi(
     server: ref.watch(musicServerProvider),
     client: client,
   );
-  return NeteaseFallbackResolver([
-    BugpkNeteaseFallback(client),
-    AnonymousKugouFallback(EmbeddedKugouMusicSource(client, api)),
-    AnonymousKuwoFallback(client),
-  ], client);
+  return NeteaseFallbackResolver(
+    [
+      if (options.enabledSources.contains(NeteasePublicSource.kugou))
+        AnonymousKugouFallback(EmbeddedKugouMusicSource(client, api)),
+      if (options.enabledSources.contains(NeteasePublicSource.kuwo))
+        AnonymousKuwoFallback(client),
+      if (options.enabledSources.contains(NeteasePublicSource.bilibili))
+        BilibiliAudioSource(client),
+      if (options.enabledSources.contains(NeteasePublicSource.bilivideo))
+        BilibiliVideoSource(client),
+      BugpkNeteaseFallback(client),
+    ],
+    client,
+    options: options,
+    diagnostics: ref.watch(neteaseFallbackDiagnosticsProvider),
+  );
 });
 
 Future<Track> resolveNeteasePlayback(

@@ -20,6 +20,7 @@ import '../presentation/platform_recommendations_page.dart';
 import '../../experience/presentation/music_home_catalogues.dart';
 import 'netease_cloud_upload.dart';
 import 'netease_features_repository.dart';
+import 'netease_membership_page.dart';
 import '../data/platform_comments_repository.dart';
 import '../presentation/platform_comments_page.dart';
 import 'netease_comments_repository.dart';
@@ -690,6 +691,15 @@ class _NeteaseAccountPanelState extends ConsumerState<NeteaseAccountPanel> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        BetaGlassButton(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const NeteaseMembershipPage(),
+            ),
+          ),
+          child: const Text('我的会员 · 本地 SVIP'),
+        ),
+        const SizedBox(height: 12),
         BetaGlassButton(
           onPressed: _busy
               ? null

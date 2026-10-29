@@ -323,6 +323,8 @@ class NeteaseMusicRepository {
             track.duration.inMilliseconds > deliveredMs + 2000);
     return track.copyWith(
       audioAsset: url,
+      audioHeaders: const {},
+      audioBitrate: int.tryParse('${row['br']}') ?? 0,
       playbackQuality: delivered,
       isPreview: preview,
       availabilityMessage: preview ? '网易云试听片段' : '网易云音乐',

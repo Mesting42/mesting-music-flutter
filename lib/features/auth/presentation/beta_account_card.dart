@@ -10,6 +10,7 @@ import '../../music_platform/presentation/platform_profile_edit_page.dart';
 import '../auth_providers.dart';
 import 'beta_login_navigation.dart';
 import 'beta_welcome_page.dart';
+import '../../music_platform/netease/netease_membership_page.dart';
 
 /// Shared account presentation; never creates a second credential store or
 /// advertises unavailable Mesting registration/social capabilities.
@@ -73,6 +74,7 @@ class BetaAccountCard extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 6),
+                    const NeteaseLocalSvipBadge(),
                     Text(
                       signedIn
                           ? (platform != null

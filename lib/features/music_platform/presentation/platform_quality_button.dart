@@ -11,6 +11,7 @@ import '../../themes/beta_appearance.dart';
 import '../domain/platform_audio_quality.dart';
 import '../platform_quality_providers.dart';
 import 'platform_feedback.dart';
+import '../netease/netease_playback_options.dart';
 
 class _QualitySelection {
   const _QualitySelection(this.trackId, this.tier);
@@ -102,6 +103,15 @@ class _QualityDialog extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 18),
+                if (track.source == TrackSource.netease &&
+                    ref.watch(neteaseLocalSvipProvider))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      '可尝试以下音质，切换结果以音源实际文件为准',
+                      style: TextStyle(color: ink, fontSize: 12),
+                    ),
+                  ),
                 if (qualities != null)
                   AnimatedSize(
                     duration: MediaQuery.disableAnimationsOf(context)

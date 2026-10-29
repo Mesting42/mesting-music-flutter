@@ -517,11 +517,19 @@ class MestingAudioHandler extends BaseAudioHandler
       if (_directRemoteSourceIds.contains(track.id)) {
         _currentSourceFromCache = false;
         _trace('source-remote id=${track.id} strategy=direct');
-        return AudioSource.uri(remoteUri, tag: item);
+        return AudioSource.uri(
+          remoteUri,
+          headers: publicAudioHeaders(track.audioHeaders),
+          tag: item,
+        );
       }
       // Existing pinned audio/cache or schema migration API; covered by regression tests.
       // ignore: experimental_member_use
-      final cachingSource = LockCachingAudioSource(remoteUri, tag: item);
+      final cachingSource = LockCachingAudioSource(
+        remoteUri,
+        headers: publicAudioHeaders(track.audioHeaders),
+        tag: item,
+      );
       _remoteCachingSources[track.id] = cachingSource;
       final resolved = await cachingSource.resolve();
       _currentSourceFromCache = !identical(resolved, cachingSource);
