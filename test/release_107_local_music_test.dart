@@ -499,7 +499,7 @@ void main() {
       );
       await mount(tester, repository);
       await tester.enterText(
-        find.byKey(const ValueKey('local-music-search')),
+        find.byType(EditableText),
         '夜航',
       );
       await tester.pump(const Duration(milliseconds: 400));
@@ -516,7 +516,7 @@ void main() {
       expect(find.text('随身音乐'), findsOneWidget);
       expect(find.text('下载音乐'), findsNothing);
       await tester.enterText(
-        find.byKey(const ValueKey('local-music-search')),
+        find.byType(EditableText),
         '不存在',
       );
       await tester.pump(const Duration(milliseconds: 400));

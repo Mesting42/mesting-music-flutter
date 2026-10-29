@@ -8,6 +8,8 @@ import '../../../core/audio/playback_providers.dart';
 import '../../../shared/utils/duration_format.dart';
 import '../../../shared/widgets/artwork_image.dart';
 import '../../../shared/widgets/beta_glass_controls.dart';
+import '../../../shared/widgets/beta_bottom_search.dart';
+import '../../../shared/widgets/beta_page_search_layout.dart';
 import '../../../shared/widgets/music_notice.dart';
 import '../../music_platform/presentation/platform_design.dart';
 import '../../player/presentation/beta_playback_actions.dart';
@@ -25,6 +27,22 @@ class LocalMusicPage extends ConsumerStatefulWidget {
 }
 
 class _LocalMusicPageState extends ConsumerState<LocalMusicPage> {
+  late final _bottomSearch = BetaPageSearchController(
+    hintText: '搜索歌曲、歌手或专辑',
+    onSubmitted: _filter,
+    onCleared: () => _filter(''),
+    onChanged: _filter,
+  );
+  void _filter(String value) {
+    if (mounted) setState(() => _query = value);
+  }
+
+  @override
+  void dispose() {
+    _bottomSearch.dispose();
+    super.dispose();
+  }
+
   String _view = 'songs';
   String _query = '';
   String? _folderId;
@@ -184,318 +202,311 @@ class _LocalMusicPageState extends ConsumerState<LocalMusicPage> {
     final busy = state.busy || _preparingPlayback;
     final showingFolders = _view == 'folders' && _folderId == null;
 
-    return PlatformPageFrame(
-      title: '本地音乐',
-      subtitle: '${state.library.entries.length} 首音乐 · 离线随时听',
-      pageKey: const ValueKey('local-music-page'),
-      actions: [
-        if (busy)
-          const Padding(
-            padding: EdgeInsets.all(14),
-            child: BetaActivityIndicator(label: '正在处理本地音乐'),
-          )
-        else
-          Tooltip(
-            message: '刷新本地音乐',
-            child: BetaGlassButton(
-              label: '刷新本地音乐',
-              width: 48,
-              height: 48,
-              onPressed: controller.refresh,
-              child: const Icon(CupertinoIcons.arrow_clockwise, size: 21),
+    return BetaPageSearchLayout(
+      controller: _bottomSearch,
+      child: PlatformPageFrame(
+        title: '本地音乐',
+        subtitle: '${state.library.entries.length} 首音乐 · 离线随时听',
+        pageKey: const ValueKey('local-music-page'),
+        actions: [
+          if (busy)
+            const Padding(
+              padding: EdgeInsets.all(14),
+              child: BetaActivityIndicator(label: '正在处理本地音乐'),
+            )
+          else
+            Tooltip(
+              message: '刷新本地音乐',
+              child: BetaGlassButton(
+                label: '刷新本地音乐',
+                width: 48,
+                height: 48,
+                onPressed: controller.refresh,
+                child: const Icon(CupertinoIcons.arrow_clockwise, size: 21),
+              ),
             ),
-          ),
-      ],
-      child: CustomScrollView(
-        key: const PageStorageKey('local-music-scroll'),
-        slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
-            sliver: SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  CupertinoSearchTextField(
-                    key: const ValueKey('local-music-search'),
-                    placeholder: '搜索歌曲、歌手或专辑',
-                    backgroundColor: Theme.of(
-                      context,
-                    ).colorScheme.surfaceContainerLow,
-                    itemColor: tokens.textSecondary,
-                    style: TextStyle(color: tokens.textPrimary, fontSize: 15),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 14,
-                    ),
-                    onChanged: (value) => setState(() => _query = value),
-                  ),
-                  const SizedBox(height: 18),
-                  // Keep related imports beside each other. Normal phone
-                  // widths fit all three; narrow/large-text layouts can scroll
-                  // this row without wrapping folder import onto a new line.
-                  SingleChildScrollView(
-                    key: const ValueKey('local-import-actions'),
-                    scrollDirection: Axis.horizontal,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Row(
-                        children: [
-                          _ImportButton(
-                            label: '扫描手机',
-                            icon: CupertinoIcons.search_circle,
-                            onPressed: busy ? null : controller.scan,
-                            blue: state.library.entries.isEmpty,
-                          ),
-                          const SizedBox(width: 8),
-                          _ImportButton(
-                            label: '导入文件',
-                            icon: CupertinoIcons.doc,
-                            onPressed: busy ? null : controller.importFiles,
-                          ),
-                          const SizedBox(width: 8),
-                          _ImportButton(
-                            label: '导入文件夹',
-                            icon: CupertinoIcons.folder,
-                            onPressed: busy ? null : controller.importDirectory,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (state.error.isNotEmpty) ...[
-                    const SizedBox(height: 18),
-                    Semantics(
-                      liveRegion: true,
-                      child: Text(
-                        state.error,
-                        style: TextStyle(
-                          color: tokens.textPrimary,
-                          height: 1.5,
-                        ),
-                      ),
-                    ),
-                    if (state.errorCode == 'permission_permanently_denied')
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton(
-                          onPressed: () async {
-                            try {
-                              await ref
-                                  .read(localMusicRepositoryProvider)
-                                  .openSettings();
-                            } on LocalMusicException catch (error) {
-                              if (context.mounted) {
-                                showMusicNotice(
-                                  context,
-                                  icon: CupertinoIcons.exclamationmark_circle,
-                                  title: '设置未打开',
-                                  message: error.message,
-                                );
-                              }
-                            }
-                          },
-                          child: const Text('前往系统设置授权'),
-                        ),
-                      ),
-                  ],
-                  if (state.library.notice.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      state.library.notice,
-                      style: TextStyle(
-                        color: tokens.textSecondary,
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  CupertinoSlidingSegmentedControl<String>(
-                    groupValue: _view,
-                    onValueChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _view = value;
-                          _folderId = null;
-                        });
-                      }
-                    },
-                    children: const {
-                      'songs': Padding(
-                        padding: EdgeInsets.symmetric(
-                          vertical: 4,
-                          horizontal: 14,
-                        ),
-                        child: Text('全部歌曲'),
-                      ),
-                      'folders': Padding(
-                        padding: EdgeInsets.symmetric(
-                          vertical: 4,
-                          horizontal: 14,
-                        ),
-                        child: Text('文件夹'),
-                      ),
-                    },
-                  ),
-                  const SizedBox(height: 22),
-                  if (_folderId != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
-                        children: [
-                          CupertinoButton(
-                            padding: EdgeInsets.zero,
-                            minimumSize: const Size(44, 44),
-                            onPressed: () => setState(() => _folderId = null),
-                            child: const Icon(
-                              CupertinoIcons.chevron_back,
-                              size: 21,
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              selectedFolder?.name ?? '文件夹',
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (!showingFolders && available.isNotEmpty)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: BetaGlassButton(
-                        label: '播放全部 ${available.length} 首歌曲',
-                        onPressed: busy
-                            ? null
-                            : () => _play(available.first, all: available),
-                        height: 46,
-                        accent: true,
+        ],
+        child: CustomScrollView(
+          key: const PageStorageKey('local-music-scroll'),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
+              sliver: SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Keep related imports beside each other. Normal phone
+                    // widths fit all three; narrow/large-text layouts can scroll
+                    // this row without wrapping folder import onto a new line.
+                    SingleChildScrollView(
+                      key: const ValueKey('local-import-actions'),
+                      scrollDirection: Axis.horizontal,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
                         child: Row(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(CupertinoIcons.play_fill, size: 17),
+                            _ImportButton(
+                              label: '扫描手机',
+                              icon: CupertinoIcons.search_circle,
+                              onPressed: busy ? null : controller.scan,
+                              blue: state.library.entries.isEmpty,
+                            ),
                             const SizedBox(width: 8),
-                            Text('播放全部 · ${available.length} 首'),
+                            _ImportButton(
+                              label: '导入文件',
+                              icon: CupertinoIcons.doc,
+                              onPressed: busy ? null : controller.importFiles,
+                            ),
+                            const SizedBox(width: 8),
+                            _ImportButton(
+                              label: '导入文件夹',
+                              icon: CupertinoIcons.folder,
+                              onPressed: busy
+                                  ? null
+                                  : controller.importDirectory,
+                            ),
                           ],
                         ),
                       ),
                     ),
-                ],
+                    if (state.error.isNotEmpty) ...[
+                      const SizedBox(height: 18),
+                      Semantics(
+                        liveRegion: true,
+                        child: Text(
+                          state.error,
+                          style: TextStyle(
+                            color: tokens.textPrimary,
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                      if (state.errorCode == 'permission_permanently_denied')
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton(
+                            onPressed: () async {
+                              try {
+                                await ref
+                                    .read(localMusicRepositoryProvider)
+                                    .openSettings();
+                              } on LocalMusicException catch (error) {
+                                if (context.mounted) {
+                                  showMusicNotice(
+                                    context,
+                                    icon: CupertinoIcons.exclamationmark_circle,
+                                    title: '设置未打开',
+                                    message: error.message,
+                                  );
+                                }
+                              }
+                            },
+                            child: const Text('前往系统设置授权'),
+                          ),
+                        ),
+                    ],
+                    if (state.library.notice.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        state.library.notice,
+                        style: TextStyle(
+                          color: tokens.textSecondary,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 24),
+                    CupertinoSlidingSegmentedControl<String>(
+                      groupValue: _view,
+                      onValueChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _view = value;
+                            _folderId = null;
+                          });
+                        }
+                      },
+                      children: const {
+                        'songs': Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: 4,
+                            horizontal: 14,
+                          ),
+                          child: Text('全部歌曲'),
+                        ),
+                        'folders': Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: 4,
+                            horizontal: 14,
+                          ),
+                          child: Text('文件夹'),
+                        ),
+                      },
+                    ),
+                    const SizedBox(height: 22),
+                    if (_folderId != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          children: [
+                            CupertinoButton(
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size(44, 44),
+                              onPressed: () => setState(() => _folderId = null),
+                              child: const Icon(
+                                CupertinoIcons.chevron_back,
+                                size: 21,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                selectedFolder?.name ?? '文件夹',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (!showingFolders && available.isNotEmpty)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: BetaGlassButton(
+                          label: '播放全部 ${available.length} 首歌曲',
+                          onPressed: busy
+                              ? null
+                              : () => _play(available.first, all: available),
+                          height: 46,
+                          accent: true,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(CupertinoIcons.play_fill, size: 17),
+                              const SizedBox(width: 8),
+                              Text('播放全部 · ${available.length} 首'),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
-          ),
-          if (state.loading)
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Center(child: BetaActivityIndicator()),
-              ),
-            )
-          else if (state.library.entries.isEmpty)
-            const SliverToBoxAdapter(
-              child: _EmptyLibrary(
-                icon: CupertinoIcons.music_albums,
-                title: '把喜欢的音乐留在身边',
-                message: '扫描手机中的音频，或选择文件与文件夹导入。音乐会保留在这台设备上。',
-              ),
-            )
-          else if (showingFolders && visibleFolders.isEmpty)
-            const SliverToBoxAdapter(
-              child: _EmptyLibrary(
-                icon: CupertinoIcons.search,
-                title: '没有找到文件夹',
-                message: '试试其他歌曲、歌手或文件夹名称。',
-              ),
-            )
-          else if (showingFolders)
-            SliverList.builder(
-              itemCount: visibleFolders.length,
-              itemBuilder: (context, index) {
-                final folder = visibleFolders[index];
-                return ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 22,
-                    vertical: 8,
-                  ),
-                  leading: Icon(
-                    CupertinoIcons.folder_fill,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 36,
-                  ),
-                  title: Text(
-                    folder.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Text(
-                    '${folder.count} 首${folder.path.isEmpty ? '' : ' · ${folder.path}'}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: const Icon(
-                    CupertinoIcons.chevron_forward,
-                    size: 16,
-                  ),
-                  onTap: () => setState(() => _folderId = folder.id),
-                );
-              },
-            )
-          else if (entries.isEmpty)
-            const SliverToBoxAdapter(
-              child: _EmptyLibrary(
-                icon: CupertinoIcons.search,
-                title: '没有找到音乐',
-                message: '试试其他歌曲、歌手或专辑名称。',
-              ),
-            )
-          else
-            SliverList.builder(
-              itemCount: entries.length,
-              itemBuilder: (context, index) {
-                final entry = entries[index];
-                return ListTile(
-                  key: ValueKey(entry.id),
-                  contentPadding: const EdgeInsets.fromLTRB(22, 6, 12, 6),
-                  leading: _LocalArtwork(entry: entry),
-                  title: Text(
-                    entry.track.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: entry.available
-                          ? tokens.textPrimary
-                          : tokens.textSecondary,
+            if (state.loading)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Center(child: BetaActivityIndicator()),
+                ),
+              )
+            else if (state.library.entries.isEmpty)
+              const SliverToBoxAdapter(
+                child: _EmptyLibrary(
+                  icon: CupertinoIcons.music_albums,
+                  title: '把喜欢的音乐留在身边',
+                  message: '扫描手机中的音频，或选择文件与文件夹导入。音乐会保留在这台设备上。',
+                ),
+              )
+            else if (showingFolders && visibleFolders.isEmpty)
+              const SliverToBoxAdapter(
+                child: _EmptyLibrary(
+                  icon: CupertinoIcons.search,
+                  title: '没有找到文件夹',
+                  message: '试试其他歌曲、歌手或文件夹名称。',
+                ),
+              )
+            else if (showingFolders)
+              SliverList.builder(
+                itemCount: visibleFolders.length,
+                itemBuilder: (context, index) {
+                  final folder = visibleFolders[index];
+                  return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 22,
+                      vertical: 8,
                     ),
-                  ),
-                  subtitle: Text(
-                    entry.available
-                        ? '${entry.artist} · ${entry.duration > Duration.zero ? formatDuration(entry.duration) : '--:--'}'
-                        : '文件不可用 · 重新导入以恢复',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: tokens.textSecondary),
-                  ),
-                  trailing: CupertinoButton(
-                    padding: EdgeInsets.zero,
-                    minimumSize: const Size(44, 44),
-                    onPressed: busy ? null : () => _actions(entry),
-                    child: Semantics(
-                      label: '${entry.title}的更多操作',
-                      button: true,
-                      child: const Icon(CupertinoIcons.ellipsis, size: 23),
+                    leading: Icon(
+                      CupertinoIcons.folder_fill,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 36,
                     ),
-                  ),
-                  onTap: busy || !entry.available ? null : () => _play(entry),
-                );
-              },
-            ),
-          const SliverToBoxAdapter(child: SizedBox(height: 160)),
-        ],
+                    title: Text(
+                      folder.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      '${folder.count} 首${folder.path.isEmpty ? '' : ' · ${folder.path}'}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: const Icon(
+                      CupertinoIcons.chevron_forward,
+                      size: 16,
+                    ),
+                    onTap: () => setState(() => _folderId = folder.id),
+                  );
+                },
+              )
+            else if (entries.isEmpty)
+              const SliverToBoxAdapter(
+                child: _EmptyLibrary(
+                  icon: CupertinoIcons.search,
+                  title: '没有找到音乐',
+                  message: '试试其他歌曲、歌手或专辑名称。',
+                ),
+              )
+            else
+              SliverList.builder(
+                itemCount: entries.length,
+                itemBuilder: (context, index) {
+                  final entry = entries[index];
+                  return ListTile(
+                    key: ValueKey(entry.id),
+                    contentPadding: const EdgeInsets.fromLTRB(22, 6, 12, 6),
+                    leading: _LocalArtwork(entry: entry),
+                    title: Text(
+                      entry.track.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: entry.available
+                            ? tokens.textPrimary
+                            : tokens.textSecondary,
+                      ),
+                    ),
+                    subtitle: Text(
+                      entry.available
+                          ? '${entry.artist} · ${entry.duration > Duration.zero ? formatDuration(entry.duration) : '--:--'}'
+                          : '文件不可用 · 重新导入以恢复',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: tokens.textSecondary,
+                      ),
+                    ),
+                    trailing: CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(44, 44),
+                      onPressed: busy ? null : () => _actions(entry),
+                      child: Semantics(
+                        label: '${entry.title}的更多操作',
+                        button: true,
+                        child: const Icon(CupertinoIcons.ellipsis, size: 23),
+                      ),
+                    ),
+                    onTap: busy || !entry.available ? null : () => _play(entry),
+                  );
+                },
+              ),
+            const SliverToBoxAdapter(child: SizedBox(height: 160)),
+          ],
+        ),
       ),
     );
   }

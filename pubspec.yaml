@@ -121,6 +121,7 @@ flutter:
   assets:
     - assets/data/music-regions.json
     - assets/data/release-notes.json
+    - assets/data/netease-full-catalog.json
     - third_party/region_data/LICENSE
     - third_party/region_data/NOTICE.md
     - third_party/md3music/MESTING-1.0.3-PORTS.md
@@ -133,6 +134,9 @@ flutter:
     - third_party/audio_glyphs/NOTICE.md
     - third_party/netease_protocol/LICENSE
     - third_party/netease_protocol/NOTICE.md
+    - third_party/netease_protocol/afp/afp.js
+    - third_party/netease_protocol/afp/afp.wasm.js
+    - third_party/netease_protocol/afp/LICENSE
     - assets/branding/mesting-mark-master.png
     - assets/branding/mesting-app-icon.png
     - assets/branding/mesting-launch-lockup-master.png

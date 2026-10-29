@@ -25,6 +25,7 @@ import '../presentation/platform_comments_page.dart';
 import 'netease_comments_repository.dart';
 import '../../downloads/audio_downloads.dart';
 import 'netease_playlist_import_page.dart';
+import 'full/netease_full_page.dart';
 
 final neteaseFeaturesProvider = Provider<NeteaseFeaturesRepository>(
   (ref) => NeteaseFeaturesRepository(ref.watch(neteaseMusicRepositoryProvider)),
@@ -57,6 +58,7 @@ class NeteaseDiscoveryPage extends ConsumerWidget {
         NeteaseHomeShelf(feed: NeteaseFeed.albums),
         NeteaseHomeShelf(feed: NeteaseFeed.artists),
         NeteaseHomeShelf(feed: NeteaseFeed.mvs),
+        NeteaseFullNavigation(tab: '发现'),
       ],
     ),
   );
@@ -665,6 +667,7 @@ class NeteaseLibraryLinks extends StatelessWidget {
               ),
             ),
           ),
+          const NeteaseFullNavigation(tab: '音乐库'),
         ],
       ),
     ),
@@ -721,6 +724,7 @@ class _NeteaseAccountPanelState extends ConsumerState<NeteaseAccountPanel> {
               ),
           ],
         ),
+        const NeteaseFullNavigation(tab: '我的'),
       ],
     ),
   );
@@ -806,6 +810,22 @@ class _NeteaseResourceActionsState
                             ? '关注歌手'
                             : '收藏'),
             ),
+          ),
+          const SizedBox(height: 12),
+          BetaGlassButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => NeteaseFullHubPage(
+                  entityKind: widget.item.kind.name,
+                  seed: {
+                    'id': widget.item.id,
+                    'pid': widget.item.id,
+                    'ids': widget.item.id,
+                  },
+                ),
+              ),
+            ),
+            child: const Text('更多相关功能'),
           ),
           if (widget.item.kind == NeteaseEntity.artist)
             for (final feed in [

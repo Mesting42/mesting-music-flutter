@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/audio/playback_providers.dart';
-import '../../core/platform/distribution_channel.dart';
 import '../../shared/widgets/beta_bottom_search.dart';
+import '../../shared/widgets/beta_page_search_layout.dart';
 import '../../shared/widgets/artwork_image.dart';
 import '../../shared/widgets/beta_glass_controls.dart';
 import '../music_platform/data/music_platform_api.dart';
@@ -172,7 +172,7 @@ class _AudiobooksPageState extends ConsumerState<AudiobooksPage> {
         : width < 350 || MediaQuery.textScalerOf(context).scale(14) > 21
         ? 2
         : 3;
-    return BetaBottomSearchBinding(
+    return BetaPageSearchLayout(
       controller: _bottomSearch,
       child: PlatformPageFrame(
         title: '听书',
@@ -195,24 +195,6 @@ class _AudiobooksPageState extends ConsumerState<AudiobooksPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (!DistributionChannel.isBeta)
-                      TextField(
-                        key: const ValueKey('audiobooks-search'),
-                        controller: _search,
-                        textInputAction: TextInputAction.search,
-                        decoration: InputDecoration(
-                          hintText: '搜索书名、作者',
-                          prefixIcon: const Icon(CupertinoIcons.search),
-                          suffixIcon: IconButton(
-                            tooltip: '搜索听书',
-                            icon: const Icon(
-                              CupertinoIcons.arrow_right_circle_fill,
-                            ),
-                            onPressed: _submit,
-                          ),
-                        ),
-                        onSubmitted: (_) => _submit(),
-                      ),
                     ListenableBuilder(
                       listenable: store,
                       builder: (context, _) {

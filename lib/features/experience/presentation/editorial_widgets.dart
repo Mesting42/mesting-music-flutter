@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import '../../downloads/audio_downloads_page.dart';
 import 'cold_start_greeting.dart';
 import '../../../shared/widgets/beta_glass_controls.dart';
+import '../../music_platform/netease/full/netease_full_page.dart';
 import '../../player/presentation/beta_playback_actions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -358,6 +359,24 @@ class EditorialTrackRow extends ConsumerWidget {
                   },
                   child: const Text('下载到本地音乐'),
                 ),
+                if (track.source == TrackSource.netease)
+                  CupertinoActionSheetAction(
+                    onPressed: () {
+                      Navigator.pop(c);
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => NeteaseFullHubPage(
+                            entityKind: 'song',
+                            seed: {
+                              'id': track.platformSongId,
+                              'ids': track.platformSongId,
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text('网易云相关功能'),
+                  ),
               ],
               cancelButton: CupertinoActionSheetAction(
                 onPressed: () => Navigator.pop(c),

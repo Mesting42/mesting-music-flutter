@@ -343,7 +343,9 @@ void main() {
           ),
         );
         await tester.pump();
-        await tester.ensureVisible(find.text('其他登录方式'));
+        // The public welcome page now has separate platform entry buttons.
+        // Keep exercising its last login entry at a large accessibility scale.
+        await tester.ensureVisible(find.text('网易云登录'));
         await tester.pump();
         expect(tester.takeException(), isNull);
         await capture(tester, 'welcome-${dark ? 'dark' : 'light'}-large');

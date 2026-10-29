@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:mesting_music/features/music_platform/music_platform_providers.dart';
+import 'package:mesting_music/features/music_platform/domain/platform_session.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mesting_music/core/persistence/app_preferences.dart';
@@ -49,7 +52,13 @@ class _ReadyHotMusicController extends HotMusicController {
   );
 }
 
+class _GuestAccount extends PlatformAccountController {
+  @override
+  Future<PlatformSession?> build() async => null;
+}
+
 void main() {
+  setUpAll(LiquidGlassWidgets.initialize);
   late SharedPreferences preferences;
 
   setUp(() async {
@@ -67,6 +76,7 @@ void main() {
     return ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(preferences),
+        platformAccountProvider.overrideWith(_GuestAccount.new),
         if (showColdStartRanking) ...[
           hotMusicControllerProvider.overrideWith(_ReadyHotMusicController.new),
           listeningSignalsProvider.overrideWith(
@@ -114,14 +124,13 @@ void main() {
     expect(find.text('热歌榜'), findsOneWidget);
     expect(find.text('飙升榜'), findsOneWidget);
     expect(find.text('我的热榜'), findsOneWidget);
-    expect(find.text('搜索'), findsOneWidget);
+    expect(find.byKey(const ValueKey('search-submit-action')), findsOneWidget);
     expect(find.text('取消'), findsNothing);
     expect(find.byType(LinearProgressIndicator), findsNothing);
-    final searchField = tester.widget<TextField>(find.byType(TextField));
-    expect(searchField.decoration?.enabledBorder, InputBorder.none);
-    expect(searchField.decoration?.focusedBorder, InputBorder.none);
+    expect(find.byType(GlassTabBar), findsOneWidget);
+    expect(find.byType(EditableText), findsOneWidget);
 
-    await tester.enterText(find.byType(TextField), '海洋Bo');
+    await tester.enterText(find.byType(EditableText), '海洋Bo');
     await tester.pump(const Duration(milliseconds: 80));
 
     expect(find.text('正在加载...'), findsNothing);
@@ -135,22 +144,22 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.byType(LinearProgressIndicator), findsNothing);
 
-    await tester.enterText(find.byType(TextField), '');
+    await tester.enterText(find.byType(EditableText), '');
     await tester.pump(const Duration(milliseconds: 260));
 
     expect(find.text('猜你喜欢'), findsOneWidget);
     expect(find.text('正在加载...'), findsNothing);
   });
 
-  testWidgets('顶部搜索按钮提交当前输入并进入结果页', (tester) async {
+  testWidgets('底部玻璃搜索按钮提交当前输入并进入结果页', (tester) async {
     await tester.pumpWidget(searchApp(showReadyResults: true));
     await tester.pump();
 
-    await tester.enterText(find.byType(TextField), '测试');
+    await tester.enterText(find.byType(EditableText), '测试');
     await tester.tap(find.byKey(const ValueKey('search-submit-action')));
     await tester.pumpAndSettle();
 
-    expect(find.text('搜索'), findsOneWidget);
+    expect(find.byKey(const ValueKey('search-submit-action')), findsOneWidget);
     expect(find.text('取消'), findsNothing);
     expect(find.byKey(const ValueKey('search-result-tabs')), findsOneWidget);
     expect(find.text('在线音乐'), findsOneWidget);
@@ -220,8 +229,8 @@ void main() {
     await tester.pumpWidget(searchApp(showReadyResults: true));
     await tester.pump();
 
-    await tester.enterText(find.byType(TextField), '测试');
-    tester.widget<TextField>(find.byType(TextField)).onSubmitted!('测试');
+    await tester.enterText(find.byType(EditableText), '测试');
+    tester.widget<EditableText>(find.byType(EditableText)).onSubmitted!('测试');
     await tester.pumpAndSettle();
 
     final trackList = tester.widget<ListView>(
@@ -238,8 +247,8 @@ void main() {
     await tester.pumpWidget(
       searchApp(showReadyResults: true, activeTrackId: testTracks.first.id),
     );
-    await tester.enterText(find.byType(TextField), '测试');
-    tester.widget<TextField>(find.byType(TextField)).onSubmitted!('测试');
+    await tester.enterText(find.byType(EditableText), '测试');
+    tester.widget<EditableText>(find.byType(EditableText)).onSubmitted!('测试');
     await tester.pumpAndSettle();
 
     final title = tester.widget<Text>(find.text(testTracks.first.title));
@@ -255,7 +264,7 @@ void main() {
     await tester.pumpWidget(
       searchApp(showReadyResults: true, userResults: [artist]),
     );
-    await tester.enterText(find.byType(TextField), '陈粒');
+    await tester.enterText(find.byType(EditableText), '陈粒');
     await tester.pumpAndSettle();
 
     expect(
@@ -285,7 +294,7 @@ void main() {
         favoriteTrackIds: {testTracks.first.id},
       ),
     );
-    await tester.enterText(find.byType(TextField), '陈粒');
+    await tester.enterText(find.byType(EditableText), '陈粒');
     await tester.pumpAndSettle();
 
     expect(
@@ -318,8 +327,8 @@ void main() {
     await tester.pumpWidget(
       searchApp(showReadyResults: true, userResults: users),
     );
-    await tester.enterText(find.byType(TextField), '用户1');
-    tester.widget<TextField>(find.byType(TextField)).onSubmitted!('用户1');
+    await tester.enterText(find.byType(EditableText), '用户1');
+    tester.widget<EditableText>(find.byType(EditableText)).onSubmitted!('用户1');
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('search-result-tabs')), findsOneWidget);

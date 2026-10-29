@@ -7,11 +7,13 @@ class BetaPageSearchController extends ChangeNotifier {
     required this.hintText,
     required this.onSubmitted,
     required this.onCleared,
+    this.onChanged,
   });
 
   final String hintText;
   final ValueChanged<String> onSubmitted;
   final VoidCallback onCleared;
+  final ValueChanged<String>? onChanged;
   final text = TextEditingController();
   final focus = FocusNode();
   bool _active = false, _hasResults = false;
@@ -32,11 +34,14 @@ class BetaPageSearchController extends ChangeNotifier {
   }
 
   void changed(String value) {
+    onChanged?.call(value);
     if (value.trim().isEmpty && hasResults) clearResults();
+    if (onChanged != null && value.trim().isNotEmpty) hasResults = true;
   }
 
   void submit(String value) {
     if (value.trim().isEmpty) return;
+    hasResults = true;
     onSubmitted(value.trim());
     focus.unfocus();
   }

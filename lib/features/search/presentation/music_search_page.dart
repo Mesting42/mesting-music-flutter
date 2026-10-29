@@ -1,7 +1,7 @@
-import '../../../shared/widgets/beta_text_editing.dart';
 import 'beta_category_search_results.dart';
 import '../../../shared/widgets/beta_edge_back.dart';
 import '../../../shared/widgets/beta_bottom_search.dart';
+import '../../../shared/widgets/beta_page_search_layout.dart';
 import 'package:flutter/material.dart';
 import '../../../shared/widgets/beta_glass_controls.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -43,15 +43,20 @@ class MusicSearchPage extends ConsumerStatefulWidget {
 
 class _MusicSearchPageState extends ConsumerState<MusicSearchPage> {
   final _resultsKey = GlobalKey<MusicSearchResultsBodyState>();
-  final _textController = TextEditingController();
-  final _focusNode = FocusNode();
+  late final _bottomSearch = BetaPageSearchController(
+    hintText: '搜索歌曲、歌手或专辑',
+    onSubmitted: _submit,
+    onCleared: () => _handleQueryChanged(''),
+    onChanged: _handleQueryChanged,
+  );
+  TextEditingController get _textController => _bottomSearch.text;
+  FocusNode get _focusNode => _bottomSearch.focus;
   bool _inputIsEmpty = true;
   bool _hasSubmitted = false;
 
   @override
   void dispose() {
-    _textController.dispose();
-    _focusNode.dispose();
+    _bottomSearch.dispose();
     super.dispose();
   }
 
@@ -117,145 +122,77 @@ class _MusicSearchPageState extends ConsumerState<MusicSearchPage> {
     final search = ref.watch(musicSearchControllerProvider);
     final top = MediaQuery.paddingOf(context).top;
     final tokens = context.musicThemeTokens;
-    final accent = Theme.of(context).colorScheme.primary;
-    return BetaEdgeBack(
-      enabled: DistributionChannel.isBeta,
-      onBack: _closeSearch,
-      child: PopScope(
-        canPop: !DistributionChannel.isBeta || _inputIsEmpty,
-        onPopInvokedWithResult: (didPop, _) {
-          if (!didPop) _closeSearch();
-        },
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                tokens.glassStrong.withValues(alpha: .93),
-                tokens.glass.withValues(alpha: .89),
+    return BetaPageSearchLayout(
+      controller: _bottomSearch,
+      child: BetaEdgeBack(
+        enabled: DistributionChannel.isBeta,
+        onBack: _closeSearch,
+        child: PopScope(
+          canPop: !DistributionChannel.isBeta || _inputIsEmpty,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) _closeSearch();
+          },
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  tokens.glassStrong.withValues(alpha: .93),
+                  tokens.glass.withValues(alpha: .89),
+                ],
+              ),
+            ),
+            child: Column(
+              children: [
+                SizedBox(height: top + 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: _CircleBack(onTap: _closeSearch),
+                ),
+                Expanded(
+                  child: DistributionChannel.isBeta
+                      ? MusicSearchResultsBody(
+                          key: _resultsKey,
+                          onSearch: _submit,
+                        )
+                      : _inputIsEmpty
+                      ? _SearchLanding(onSearch: _submit)
+                      : (_hasSubmitted
+                            ? AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 220),
+                                switchInCurve: Curves.easeOutCubic,
+                                switchOutCurve: Curves.easeInCubic,
+                                child: search.isLoading
+                                    ? _SearchLoading(
+                                        key: ValueKey(
+                                          'search-loading-${search.query}',
+                                        ),
+                                        query: search.query,
+                                      )
+                                    : _SearchResults(
+                                        key: ValueKey(
+                                          'search-results-${search.query}',
+                                        ),
+                                        state: search,
+                                        onSearch: _submit,
+                                      ),
+                              )
+                            : AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 220),
+                                switchInCurve: Curves.easeOutCubic,
+                                switchOutCurve: Curves.easeInCubic,
+                                child: _SearchInputPreview(
+                                  key: ValueKey(
+                                    'search-input-preview-${search.query}',
+                                  ),
+                                  state: search,
+                                  onSearch: _submit,
+                                ),
+                              )),
+                ),
               ],
             ),
-          ),
-          child: Column(
-            children: [
-              SizedBox(height: top + 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: Row(
-                  children: [
-                    _CircleBack(onTap: _closeSearch),
-                    const SizedBox(width: 9),
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
-                        child: Container(
-                          height: 52,
-                          decoration: BoxDecoration(
-                            color: tokens.glass,
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: accent.withValues(alpha: .42),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const SizedBox(width: 13),
-                              const Icon(Icons.search_rounded, size: 20),
-                              const SizedBox(width: 7),
-                              Expanded(
-                                child: TextField(
-                                  contextMenuBuilder: buildBetaEditingMenu,
-                                  selectionControls:
-                                      mestingTextSelectionControls,
-                                  cursorRadius: const Radius.circular(1),
-                                  controller: _textController,
-                                  focusNode: _focusNode,
-                                  textInputAction: TextInputAction.search,
-                                  onChanged: _handleQueryChanged,
-                                  onSubmitted: _submit,
-                                  style: const TextStyle(fontSize: 13),
-                                  decoration: const InputDecoration(
-                                    hintText: '搜索本地音乐，也可以在线找试听',
-                                    hintStyle: TextStyle(fontSize: 12),
-                                    border: InputBorder.none,
-                                    enabledBorder: InputBorder.none,
-                                    focusedBorder: InputBorder.none,
-                                    disabledBorder: InputBorder.none,
-                                    errorBorder: InputBorder.none,
-                                    focusedErrorBorder: InputBorder.none,
-                                    isCollapsed: true,
-                                    filled: false,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    TextButton(
-                      key: const ValueKey('search-submit-action'),
-                      onPressed: () => _submit(_textController.text),
-                      style: TextButton.styleFrom(
-                        foregroundColor: tokens.textSecondary,
-                        minimumSize: const Size(0, 52),
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                      ),
-                      child: const Text(
-                        '搜索',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: DistributionChannel.isBeta
-                    ? MusicSearchResultsBody(
-                        key: _resultsKey,
-                        onSearch: _submit,
-                      )
-                    : _inputIsEmpty
-                    ? _SearchLanding(onSearch: _submit)
-                    : (_hasSubmitted
-                          ? AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 220),
-                              switchInCurve: Curves.easeOutCubic,
-                              switchOutCurve: Curves.easeInCubic,
-                              child: search.isLoading
-                                  ? _SearchLoading(
-                                      key: ValueKey(
-                                        'search-loading-${search.query}',
-                                      ),
-                                      query: search.query,
-                                    )
-                                  : _SearchResults(
-                                      key: ValueKey(
-                                        'search-results-${search.query}',
-                                      ),
-                                      state: search,
-                                      onSearch: _submit,
-                                    ),
-                            )
-                          : AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 220),
-                              switchInCurve: Curves.easeOutCubic,
-                              switchOutCurve: Curves.easeInCubic,
-                              child: _SearchInputPreview(
-                                key: ValueKey(
-                                  'search-input-preview-${search.query}',
-                                ),
-                                state: search,
-                                onSearch: _submit,
-                              ),
-                            )),
-              ),
-            ],
           ),
         ),
       ),

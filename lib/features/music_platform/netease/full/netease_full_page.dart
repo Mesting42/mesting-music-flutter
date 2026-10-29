@@ -1,0 +1,1067 @@
+import 'dart:io';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import '../../../../shared/models/track.dart';
+import '../../../../shared/widgets/artwork_image.dart';
+import '../../../../shared/widgets/beta_glass_controls.dart';
+import '../../../../shared/widgets/beta_glass_action.dart';
+import '../../../../shared/widgets/beta_bottom_search.dart';
+import '../../../../shared/widgets/beta_page_search_layout.dart';
+import '../../../experience/presentation/editorial_widgets.dart';
+import '../../music_platform_providers.dart';
+import '../../platform_backend_providers.dart';
+import '../../presentation/platform_account_page.dart';
+import '../../presentation/platform_design.dart';
+import '../../domain/platform_session.dart';
+import '../netease_features_page.dart';
+import '../netease_features_repository.dart';
+import '../netease_playback_settings_page.dart';
+import '../netease_music_repository.dart';
+import 'netease_catalog.dart';
+import 'netease_content.dart';
+import 'netease_full_repository.dart';
+import 'netease_recognition.dart';
+import 'netease_video.dart';
+import 'netease_entity_picker.dart';
+import 'netease_together_page.dart';
+
+final neteaseFullRepositoryProvider = Provider<NeteaseFullRepository>(
+  (ref) => NeteaseFullRepository(ref.watch(neteaseMusicRepositoryProvider)),
+);
+
+String neteaseTaskTitle(NeteaseEndpoint e) => switch (e.route) {
+  '/inner/version' => '兼容信息',
+  '/comment/hotwall/list' => '云村热评',
+  '/batch' => '账号与收藏概览',
+  '/audio/match' => '听歌识曲',
+  '/avatar/upload' => '更新头像',
+  '/song/url' => '歌曲播放资源',
+  '/song/url/v1' => '歌曲音质选择',
+  '/song/download/url' => '歌曲下载资源',
+  _ => e.title.replaceFirst(RegExp(r'^获取\s*'), '').replaceAll('接口', '').trim(),
+};
+
+/// Compact category links sit inside the existing four destinations. The
+/// searchable catalogue is local metadata and performs no background writes.
+class NeteaseFullNavigation extends ConsumerWidget {
+  const NeteaseFullNavigation({required this.tab, super.key});
+  final String tab;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final entries = ref.watch(neteaseCatalogProvider);
+    return entries.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (all) {
+        final categories = all
+            .where((e) => e.tab == tab)
+            .map((e) => e.category)
+            .toSet();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const EditorialSection('网易云专区'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 22),
+              child: PlatformPanel(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    for (final category in categories)
+                      ListTile(
+                        leading: Icon(_categoryIcon(category)),
+                        title: Text(category),
+                        trailing: const Icon(
+                          CupertinoIcons.chevron_right,
+                          size: 16,
+                        ),
+                        onTap: () => _push(
+                          context,
+                          NeteaseFullHubPage(tab: tab, category: category),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+IconData _categoryIcon(String category) => switch (category) {
+  '消息中心' => CupertinoIcons.chat_bubble_2,
+  '账号与安全' => CupertinoIcons.person_crop_circle,
+  '云村与话题' => CupertinoIcons.bubble_left_bubble_right,
+  '播客与声音' => CupertinoIcons.mic,
+  '视频与MV' => CupertinoIcons.play_rectangle,
+  '会员与云贝' => CupertinoIcons.star_circle,
+  '音乐人中心' => CupertinoIcons.music_note_2,
+  '听歌工具' => CupertinoIcons.slider_horizontal_3,
+  '歌单与收藏' => CupertinoIcons.music_note_list,
+  _ => CupertinoIcons.compass,
+};
+void _push(BuildContext context, Widget page) =>
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+
+class NeteaseFullHubPage extends ConsumerStatefulWidget {
+  const NeteaseFullHubPage({
+    this.tab,
+    this.category,
+    this.entityKind,
+    this.seed = const {},
+    super.key,
+  });
+  final String? tab, category, entityKind;
+  final Map<String, Object?> seed;
+  @override
+  ConsumerState<NeteaseFullHubPage> createState() => _NeteaseFullHubPageState();
+}
+
+class _NeteaseFullHubPageState extends ConsumerState<NeteaseFullHubPage> {
+  String _search = '';
+  late final _bottomSearch = BetaPageSearchController(
+    hintText: '查找功能',
+    onSubmitted: _filter,
+    onCleared: () => _filter(''),
+    onChanged: _filter,
+  );
+  void _filter(String value) {
+    if (mounted) setState(() => _search = value);
+  }
+
+  @override
+  void dispose() {
+    _bottomSearch.dispose();
+    super.dispose();
+  }
+
+  bool _matchesEntity(NeteaseEndpoint e) {
+    final kind = widget.entityKind;
+    if (kind == null) return true;
+    if (kind == 'song') {
+      return RegExp(
+        r'^/(song|simi/song|comment($|/(music|hot|new|floor|like))|lyric|like$|scrobble|sheet|share/resource|send/song)',
+      ).hasMatch(e.route);
+    }
+    if (kind == 'message') {
+      return e.route.startsWith('/msg/') || e.route.startsWith('/send/');
+    }
+    if (kind == 'comment') {
+      return e.route == '/comment' ||
+          e.route.startsWith('/comment/') ||
+          e.route == '/resource/like';
+    }
+    return e.route.startsWith('/$kind/') ||
+        e.route == '/$kind' ||
+        e.route == '/comment/$kind' ||
+        e.route == '/send/$kind' ||
+        e.route == '/share/resource';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final catalog = ref.watch(neteaseCatalogProvider);
+    return BetaPageSearchLayout(
+      controller: _bottomSearch,
+      child: PlatformPageFrame(
+        title: widget.category ?? '更多音乐功能',
+        child: Column(
+          children: [
+            Expanded(
+              child: catalog.when(
+                loading: () => const PlatformFeedbackState(loading: true),
+                error: (_, _) => PlatformFeedbackState(
+                  message: '功能目录加载失败',
+                  retry: () => ref.invalidate(neteaseCatalogProvider),
+                ),
+                data: (all) {
+                  final entries = all
+                      .where(
+                        (e) =>
+                            (widget.tab == null || e.tab == widget.tab) &&
+                            (widget.category == null ||
+                                e.category == widget.category) &&
+                            _matchesEntity(e) &&
+                            ('${neteaseTaskTitle(e)} ${e.category}'.contains(
+                              _search.trim(),
+                            )),
+                      )
+                      .toList();
+                  return ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 40),
+                    itemCount: entries.length,
+                    itemBuilder: (context, index) {
+                      final endpoint = entries[index];
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 5,
+                        ),
+                        leading: Icon(_categoryIcon(endpoint.category)),
+                        title: Text(neteaseTaskTitle(endpoint)),
+                        trailing: const Icon(
+                          CupertinoIcons.chevron_right,
+                          size: 16,
+                        ),
+                        onTap: () => _push(
+                          context,
+                          endpoint.route.startsWith('/listentogether/')
+                              ? const NeteaseTogetherPage()
+                              : NeteaseFullTaskPage(
+                                  endpoint: endpoint,
+                                  seed: widget.seed,
+                                ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class NeteaseFullTaskPage extends ConsumerStatefulWidget {
+  const NeteaseFullTaskPage({
+    required this.endpoint,
+    this.seed = const {},
+    super.key,
+  });
+  final NeteaseEndpoint endpoint;
+  final Map<String, Object?> seed;
+  @override
+  ConsumerState<NeteaseFullTaskPage> createState() =>
+      _NeteaseFullTaskPageState();
+}
+
+class _NeteaseFullTaskPageState extends ConsumerState<NeteaseFullTaskPage> {
+  String? get _searchKey => e.parameters
+      .where(
+        (p) =>
+            {'keywords', 'keyword'}.contains(p.key) ||
+            e.route.contains('search') &&
+                {'name', 'podcastName'}.contains(p.key),
+      )
+      .firstOrNull
+      ?.key;
+  late final _taskSearch = BetaPageSearchController(
+    hintText: '搜索内容',
+    onSubmitted: (text) {
+      final key = _searchKey;
+      if (key != null) {
+        _fields[key]!.text = text;
+        _submit();
+      }
+    },
+    onCleared: () {
+      final key = _searchKey;
+      if (key != null) _fields[key]!.clear();
+      _generation++;
+      if (mounted) {
+        setState(() {
+          _rows.clear();
+          _facts.clear();
+          _busy = false;
+          _more = false;
+          _error = null;
+          _notice = null;
+        });
+      }
+    },
+  );
+  Widget _searchLayout(Widget child) => _searchKey == null
+      ? child
+      : BetaPageSearchLayout(controller: _taskSearch, child: child);
+  final _form = GlobalKey<FormState>();
+  final _fields = <String, TextEditingController>{};
+  final _files = <String, Object?>{};
+  final _rows = <NeteaseContentRow>[];
+  final _facts = <String, String>{};
+  String? _owner, _credential, _error, _notice, _videoUrl;
+  bool _busy = false, _confirming = false, _more = false;
+  int _generation = 0, _offset = 0, _page = 1;
+  Object? _cursor;
+  NeteaseEndpoint get e => widget.endpoint;
+  bool get _current =>
+      ref.read(usesNeteaseProvider) &&
+      ref.read(platformAccountProvider).value?.ownerId == _owner &&
+      ref.read(platformAccountProvider).value?.token == _credential;
+  bool get _loginWorkflow => {
+    '/login',
+    '/login/cellphone',
+    '/login/qr/key',
+    '/login/qr/create',
+    '/login/qr/check',
+    '/captcha/sent',
+  }.contains(e.route);
+  bool get _fileWorkflow => {
+    '/cloud',
+    '/voice/upload',
+    '/avatar/upload',
+    '/playlist/cover/update',
+  }.contains(e.route);
+  List<NeteaseParameter> get _params => e.parameters
+      .where(
+        (p) => !{
+          'imgFile',
+          'songFile',
+          'qrimg',
+          'unblock',
+          'md5_password',
+          'audioFP',
+          'duration',
+          'offset',
+          'cursor',
+          'page',
+          'pageNo',
+          'idCursor',
+          'lasttime',
+          'before',
+          'idx',
+          'res',
+        }.contains(p.key),
+      )
+      .toList();
+  @override
+  void initState() {
+    super.initState();
+    final a = ref.read(platformAccountProvider).value;
+    _owner = a?.ownerId;
+    _credential = a?.token;
+    for (final p in _params) {
+      _fields[p.key] = TextEditingController(
+        text:
+            '${widget.seed[p.key] ?? (p.key == 'uid' || p.key == 'userId' ? a?.userId ?? '' : '')}',
+      );
+    }
+    if (_searchKey != null) _taskSearch.text.text = _fields[_searchKey]!.text;
+    if (_searchKey == null &&
+        !_loginWorkflow &&
+        !e.write &&
+        !_fileWorkflow &&
+        e.route != '/audio/match' &&
+        e.route != '/batch' &&
+        e.unavailable == null &&
+        _params
+            .where((p) => p.required)
+            .every((p) => _fields[p.key]!.text.isNotEmpty)) {
+      Future.microtask(() => _load());
+    }
+  }
+
+  @override
+  void dispose() {
+    _generation++;
+    _taskSearch.dispose();
+    for (final c in _fields.values) {
+      c.clear();
+      c.dispose();
+    }
+    _cleanupFiles();
+    super.dispose();
+  }
+
+  Future<void> _cleanupFiles() async {
+    for (final value in _files.values) {
+      if (value is Map && value['path'] is String) {
+        final file = File('${value['path']}');
+        try {
+          if (await file.exists()) await file.delete();
+        } on FileSystemException {
+          /* Only the picker-owned temporary copy is eligible. */
+        }
+      }
+    }
+  }
+
+  Map<String, Object?> _query({bool next = false}) {
+    final q = <String, Object?>{
+      for (final p in e.parameters)
+        if (widget.seed.containsKey(p.key)) p.key: widget.seed[p.key],
+      ..._files,
+      for (final f in _fields.entries)
+        if (f.value.text.trim().isNotEmpty)
+          f.key: f.key == 'password' ? f.value.text : f.value.text.trim(),
+    };
+    if (e.parameters.any((p) => p.key == 'offset')) {
+      q['offset'] = next ? _offset : 0;
+    }
+    if (e.parameters.any((p) => p.key == 'pageNo')) {
+      q['pageNo'] = next ? _page : 1;
+    }
+    if (e.parameters.any((p) => p.key == 'page')) q['page'] = next ? _page : 1;
+    if (next && _cursor != null) {
+      for (final k in ['cursor', 'lasttime', 'before', 'idCursor']) {
+        if (e.parameters.any((p) => p.key == k)) q[k] = _cursor;
+      }
+    }
+    if (e.route == '/batch') {
+      q['requests'] = [
+        for (final route in ['/user/account', '/user/level', '/user/subcount'])
+          {'route': route, 'query': <String, Object?>{}},
+      ];
+    }
+    return q;
+  }
+
+  Future<void> _submit() async {
+    if (_busy ||
+        _confirming ||
+        !_current ||
+        !(_form.currentState?.validate() ?? true)) {
+      return;
+    }
+    if (_fileWorkflow && _files.isEmpty) {
+      setState(() => _error = '请先选择文件');
+      return;
+    }
+    final q = _query();
+    if (e.write) {
+      _confirming = true;
+      final confirmed = await showCupertinoDialog<bool>(
+        context: context,
+        builder: (c) => CupertinoAlertDialog(
+          title: Text('确认${neteaseTaskTitle(e)}？'),
+          content: Text(
+            '${e.route.startsWith('/send/')
+                ? '这会向所选收件人发送消息。'
+                : e.route == '/digitalAlbum/ordering'
+                ? '这会创建购买订单，请核对内容、数量与支付方式。'
+                : '操作将应用到当前网易云账号。'}\n提交后请等待平台确认结果。',
+          ),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () => Navigator.pop(c, false),
+              child: const Text('取消'),
+            ),
+            CupertinoDialogAction(
+              isDestructiveAction: e.title.contains('删除'),
+              onPressed: () => Navigator.pop(c, true),
+              child: const Text('确认'),
+            ),
+          ],
+        ),
+      );
+      _confirming = false;
+      if (confirmed != true || !mounted || !_current) return;
+    }
+    await _load(query: q);
+  }
+
+  Future<void> _load({bool next = false, Map<String, Object?>? query}) async {
+    if (_busy || !_current) return;
+    final epoch = ++_generation;
+    final q = query ?? _query(next: next);
+    setState(() {
+      _busy = true;
+      _error = null;
+      _notice = null;
+    });
+    try {
+      if (e.route == '/login/refresh') {
+        await ref.read(platformAccountProvider.notifier).refreshNetease();
+        if (mounted) {
+          _credential = ref.read(platformAccountProvider).value?.token;
+          setState(() => _notice = '登录状态已刷新');
+        }
+        return;
+      }
+      final payload = await ref.read(neteaseFullRepositoryProvider).run(e, q);
+      if (!mounted || epoch != _generation || !_current) return;
+      if (e.route == '/logout') {
+        await ref.read(platformAccountProvider.notifier).signOut();
+        return;
+      }
+      final result = NeteaseContent.parse(payload, e.route);
+      setState(() {
+        if (!next) {
+          _rows.clear();
+          _facts.clear();
+          _offset = 0;
+          _page = 1;
+        }
+        final identities = _rows.map((r) => r.identity).toSet();
+        _rows.addAll(result.rows.where((r) => identities.add(r.identity)));
+        _facts.addAll(result.facts);
+        if ({'/video/url', '/mv/url', '/mlog/url'}.contains(e.route)) {
+          _videoUrl = neteaseVideoUrl(payload);
+        }
+        _offset += result.rows.length;
+        _page++;
+        _cursor = result.cursor;
+        _more =
+            !e.write &&
+            (result.more ||
+                (e.parameters.any((p) => p.key == 'offset') &&
+                    result.rows.length >=
+                        (int.tryParse('${q['limit']}') ?? 30)));
+        if (e.write) {
+          _notice = '平台已确认操作，请刷新相关列表查看结果';
+        } else if (_rows.isEmpty && _facts.isEmpty) {
+          _notice = '平台暂未返回可展示的内容';
+        }
+      });
+    } catch (error) {
+      if (mounted && epoch == _generation && _current) {
+        setState(
+          () => _error =
+              '${error.toString().replaceFirst('Exception: ', '')} ${e.write ? '若请求已发送但结果未确认，请先刷新内容核对，避免重复提交。' : ''}',
+        );
+      }
+    } finally {
+      if (mounted && epoch == _generation) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _pick(bool image) async {
+    if (_busy || !_current) return;
+    try {
+      if (image) {
+        final chosen = await ImagePicker().pickImage(
+          source: ImageSource.gallery,
+          maxWidth: 2048,
+          maxHeight: 2048,
+          imageQuality: 90,
+        );
+        if (chosen == null || !mounted || !_current) return;
+        final Uint8List bytes = await chosen.readAsBytes();
+        if (!mounted || !_current) return;
+        setState(() => _files['imgFile'] = bytes);
+      } else {
+        final file = await const MethodChannel(
+          'com.mesting.music/netease_cloud_file',
+        ).invokeMapMethod<Object?, Object?>('pick');
+        if (file == null) return;
+        if (!mounted || !_current) {
+          final temporary = File('${file['path']}');
+          if (await temporary.exists()) await temporary.delete();
+          return;
+        }
+        await _cleanupFiles();
+        if (mounted && _current) setState(() => _files['songFile'] = file);
+      }
+    } catch (_) {
+      if (mounted && _current) setState(() => _error = '文件未能读取，请重新选择');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.watch(platformAccountProvider);
+    if (!_current) {
+      return PlatformPageFrame(
+        title: neteaseTaskTitle(e),
+        child: const Center(child: Text('账号已变化，请返回后重新打开')),
+      );
+    }
+    if (e.route == '/scrobble') return const NeteasePlaybackSettingsPage();
+    if (e.unavailable != null) {
+      return PlatformPageFrame(
+        title: neteaseTaskTitle(e),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: PlatformFeedbackState(message: '平台暂不支持\n${e.unavailable}'),
+        ),
+      );
+    }
+    if (_loginWorkflow) {
+      return PlatformPageFrame(
+        title: neteaseTaskTitle(e),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('在账号管理中完成登录、验证码和扫码。登录状态由账号管理统一保存。'),
+              const SizedBox(height: 20),
+              BetaGlassButton(
+                onPressed: () => _push(
+                  context,
+                  const PlatformAccountPage(
+                    platform: MusicPlatform.netease,
+                    loginOnly: true,
+                  ),
+                ),
+                child: const Text('打开网易云账号管理'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    final tracks = _rows.map((r) => r.track).whereType<Track>().toList();
+    return _searchLayout(
+      PlatformPageFrame(
+        title: neteaseTaskTitle(e),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(22, 10, 22, 40),
+          children: [
+            if (e.route == '/audio/match')
+              NeteaseRecognitionCapture(
+                isCurrent: () => mounted && _current,
+                onFingerprint: (fp, duration) {
+                  _files['audioFP'] = fp;
+                  _files['duration'] = duration;
+                  _load();
+                },
+              ),
+            Form(
+              key: _form,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final p in _params.where((p) => p.key != _searchKey))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: _input(p),
+                    ),
+                  if (e.route == '/batch')
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      child: Text('一起查看当前账号资料、等级和收藏数量。'),
+                    ),
+                  if (_fileWorkflow) ...[
+                    BetaGlassButton(
+                      onPressed: _busy
+                          ? null
+                          : () => _pick(
+                              e.route == '/avatar/upload' ||
+                                  e.route == '/playlist/cover/update',
+                            ),
+                      child: Text(_files.isEmpty ? '选择文件' : '重新选择文件'),
+                    ),
+                    if (_files.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Text(
+                          _files['songFile'] is Map
+                              ? '${(_files['songFile'] as Map)['name']}'
+                              : '图片已选择',
+                        ),
+                      ),
+                  ],
+                  if (e.route != '/audio/match' && _searchKey == null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: BetaGlassButton(
+                        onPressed: _busy ? null : _submit,
+                        loading: _busy,
+                        blue: e.write,
+                        child: Text(e.write ? '确认提交' : '查看内容'),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (_busy)
+              const Padding(
+                padding: EdgeInsets.all(22),
+                child: Center(child: BetaActivityIndicator()),
+              ),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                child: Column(
+                  children: [
+                    Text(_error!),
+                    const SizedBox(height: 12),
+                    if (!e.write)
+                      BetaGlassButton(
+                        onPressed: _busy ? null : _submit,
+                        child: const Text('重新加载'),
+                      ),
+                  ],
+                ),
+              ),
+            if (_notice != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                child: Text(_notice!),
+              ),
+            if (_videoUrl != null)
+              NeteaseVideoView(
+                key: ValueKey(_videoUrl),
+                url: _videoUrl!,
+                isCurrent: () => mounted && _current,
+              ),
+            if (e.route == '/style/detail')
+              BetaGlassButton(
+                onPressed: () => _push(
+                  context,
+                  NeteaseFullHubPage(
+                    entityKind: 'style',
+                    seed: {'tagId': _query()['tagId']},
+                  ),
+                ),
+                child: const Text('查看此曲风的歌曲、专辑与歌单'),
+              ),
+            for (final fact in _facts.entries)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: fact.key.contains('二维码')
+                    ? Column(
+                        children: [
+                          QrImageView(data: fact.value, size: 220),
+                          Text(
+                            fact.key == '支付二维码'
+                                ? '请使用所选支付应用扫码，核对订单后付款'
+                                : '请使用网易云官方客户端扫码',
+                          ),
+                        ],
+                      )
+                    : fact.key == '乐谱图片'
+                    ? ArtworkImage(
+                        uri: fact.value,
+                        height: 480,
+                        fit: BoxFit.contain,
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            fact.key,
+                            style: Theme.of(context).textTheme.labelLarge,
+                          ),
+                          const SizedBox(height: 7),
+                          SelectableText(fact.value),
+                        ],
+                      ),
+              ),
+            for (final row in _rows)
+              row.track != null
+                  ? EditorialTrackRow(track: row.track!, contextTracks: tracks)
+                  : ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: row.cover.isEmpty
+                          ? Icon(_categoryIcon(e.category))
+                          : ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: ArtworkImage(
+                                uri: row.cover,
+                                width: 48,
+                                height: 48,
+                              ),
+                            ),
+                      title: Text(row.title),
+                      subtitle: row.subtitle.isEmpty
+                          ? null
+                          : Text(row.subtitle),
+                      trailing: row.id.isEmpty
+                          ? null
+                          : const Icon(CupertinoIcons.chevron_right, size: 16),
+                      onTap: () => _openRow(context, row),
+                    ),
+            if (_more)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                child: BetaGlassButton(
+                  onPressed: _busy ? null : () => _load(next: true),
+                  loading: _busy,
+                  child: const Text('加载更多'),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openRow(BuildContext context, NeteaseContentRow row) {
+    if (!_current) return;
+    final catalog = ref.read(neteaseCatalogProvider).value;
+    final relatedRoute =
+        row.kind == 'message' && e.route != '/msg/private/history'
+        ? '/msg/private/history'
+        : row.kind == 'style'
+        ? '/style/detail'
+        : e.route == '/sheet/list'
+        ? '/sheet/preview'
+        : null;
+    if (relatedRoute != null) {
+      final endpoint = catalog
+          ?.where((e) => e.route == relatedRoute)
+          .firstOrNull;
+      if (endpoint != null) {
+        final from = NeteaseMusicRepository.object(
+          row.raw['fromUser'] ?? row.raw['user'],
+        );
+        _push(
+          context,
+          NeteaseFullTaskPage(
+            endpoint: endpoint,
+            seed: {
+              'id': row.id,
+              'tagId': row.id,
+              'uid': '${from['userId'] ?? row.id}',
+            },
+          ),
+        );
+        return;
+      }
+    }
+    final kind = switch (row.kind) {
+      'playlist' => NeteaseEntity.playlist,
+      'album' => NeteaseEntity.album,
+      'artist' => NeteaseEntity.artist,
+      'mv' => NeteaseEntity.mv,
+      'podcast' => NeteaseEntity.podcast,
+      'user' => NeteaseEntity.user,
+      _ => null,
+    };
+    if (kind != null) {
+      openNeteaseItem(
+        context,
+        NeteaseItem(
+          id: row.id,
+          name: row.title,
+          kind: kind,
+          cover: row.cover,
+          subtitle: row.subtitle,
+        ),
+      );
+      return;
+    }
+    if (row.kind == 'video') {
+      final catalog = ref.read(neteaseCatalogProvider).value;
+      final endpoint = catalog
+          ?.where((e) => e.route == '/video/url')
+          .firstOrNull;
+      if (endpoint != null) {
+        _push(
+          context,
+          NeteaseFullTaskPage(endpoint: endpoint, seed: {'id': row.id}),
+        );
+        return;
+      }
+    }
+    _push(
+      context,
+      NeteaseContentDetailPage(row: row, category: e.category, seed: _query()),
+    );
+  }
+
+  Widget _input(NeteaseParameter p) {
+    final options = switch (p.key) {
+      'gender' => const {'0': '未设置', '1': '男', '2': '女'},
+      'payment' => const {'0': '支付宝', '3': '微信'},
+      'level' => const {
+        'standard': '标准',
+        'higher': '较高',
+        'exhigh': '极高',
+        'lossless': '无损',
+        'hires': 'Hi-Res',
+        'jyeffect': '高清环绕',
+        'sky': '沉浸环绕',
+        'jymaster': '超清母带',
+      },
+      'privacy' =>
+        e.route == '/playlist/create'
+            ? const {'0': '公开', '10': '私密'}
+            : const {'0': '公开', '1': '私密'},
+      't' =>
+        e.route == '/comment'
+            ? const {'1': '发布评论', '2': '回复评论', '0': '删除评论'}
+            : null,
+      'type' =>
+        e.route.startsWith('/comment')
+            ? const {
+                '0': '歌曲',
+                '1': 'MV',
+                '2': '歌单',
+                '3': '专辑',
+                '4': '电台节目',
+                '5': '视频',
+                '6': '动态',
+                '7': '电台',
+              }
+            : null,
+      _ => null,
+    };
+    final decoration = InputDecoration(
+      labelText: p.label + (p.required ? ' *' : ''),
+      helperText: p.key == 'user_ids'
+          ? '搜索选择收件人，或输入用户编号'
+          : p.help.isEmpty ||
+                p.help.contains('/api') ||
+                p.help.contains('接口') ||
+                p.help.toLowerCase().contains('id')
+          ? null
+          : p.help,
+      helperMaxLines: 3,
+      suffixIcon: _pickerKind(p) == null
+          ? null
+          : Padding(
+              padding: const EdgeInsets.all(4),
+              child: BetaGlassAction(
+                label: '搜索并选择',
+                compact: true,
+                onPressed: _busy ? null : () => _chooseEntity(p),
+                icon: CupertinoIcons.search,
+              ),
+            ),
+    );
+    String? validate(String? value) =>
+        p.required && (value ?? '').trim().isEmpty ? '请填写${p.label}' : null;
+    if (options != null) {
+      return DropdownButtonFormField<String>(
+        initialValue: options.containsKey(_fields[p.key]!.text)
+            ? _fields[p.key]!.text
+            : null,
+        isExpanded: true,
+        decoration: decoration,
+        items: [
+          for (final item in options.entries)
+            DropdownMenuItem(value: item.key, child: Text(item.value)),
+        ],
+        onChanged: _busy ? null : (value) => _fields[p.key]!.text = value ?? '',
+        validator: validate,
+      );
+    }
+    return TextFormField(
+      controller: _fields[p.key],
+      enabled: !_busy,
+      obscureText: p.private,
+      maxLines: p.private || p.key == 'user_ids'
+          ? 1
+          : p.multiline
+          ? 3
+          : 1,
+      autocorrect: !p.private,
+      enableSuggestions: !p.private,
+      decoration: decoration,
+      validator: validate,
+    );
+  }
+
+  String? _pickerKind(NeteaseParameter p) {
+    if ({'uid', 'userId', 'user_ids', 'inviterId'}.contains(p.key)) {
+      return 'user';
+    }
+    if ({'pid', 'playlist'}.contains(p.key)) return 'playlist';
+    if ({
+      'songId',
+      'songid',
+      'targetSongId',
+      'formerSongId',
+      'tracks',
+      'ids',
+    }.contains(p.key)) {
+      return 'song';
+    }
+    if (p.key != 'id') return null;
+    if (e.route.startsWith('/playlist') ||
+        e.route == '/top/list' ||
+        e.route == '/related/playlist') {
+      return 'playlist';
+    }
+    if (e.route.startsWith('/artist')) return 'artist';
+    if (e.route.startsWith('/album') || e.route.startsWith('/digitalAlbum')) {
+      return 'album';
+    }
+    if (e.route.startsWith('/song') ||
+        e.route.startsWith('/simi/song') ||
+        e.route.startsWith('/lyric') ||
+        e.route == '/check/music' ||
+        e.route == '/like' ||
+        e.route.startsWith('/sheet')) {
+      return 'song';
+    }
+    return null;
+  }
+
+  Future<void> _chooseEntity(NeteaseParameter p) async {
+    final kind = _pickerKind(p);
+    if (kind == null || !_current) return;
+    final id = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => NeteaseEntityPicker(kind: kind)),
+    );
+    if (id == null || !mounted || !_current) return;
+    final multiple = {'ids', 'tracks', 'user_ids'}.contains(p.key);
+    final current = _fields[p.key]!.text.trim();
+    setState(
+      () => _fields[p.key]!.text = multiple && current.isNotEmpty
+          ? '$current,$id'
+          : id,
+    );
+  }
+}
+
+class NeteaseContentDetailPage extends StatelessWidget {
+  const NeteaseContentDetailPage({
+    required this.row,
+    this.category,
+    this.seed = const {},
+    super.key,
+  });
+  final NeteaseContentRow row;
+  final String? category;
+  final Map<String, Object?> seed;
+  @override
+  Widget build(BuildContext context) {
+    final details = NeteaseContent.parse(row.raw, '/content/detail');
+    return PlatformPageFrame(
+      title: row.kind == 'message' ? '消息内容' : '内容详情',
+      child: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          Text(row.title, style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 14),
+          SelectableText(row.subtitle),
+          for (final fact in details.facts.entries)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Text('${fact.key}：${fact.value}'),
+            ),
+          for (final item in details.rows)
+            ListTile(
+              title: Text(item.title),
+              subtitle: item.subtitle.isEmpty ? null : Text(item.subtitle),
+              onTap: () => _push(
+                context,
+                NeteaseContentDetailPage(
+                  row: item,
+                  category: category,
+                  seed: seed,
+                ),
+              ),
+            ),
+          const SizedBox(height: 24),
+          BetaGlassButton(
+            onPressed: () => _push(
+              context,
+              NeteaseFullHubPage(
+                category: row.kind == 'content' ? category : null,
+                entityKind: row.kind == 'content' ? null : row.kind,
+                seed: {
+                  ...seed,
+                  ...row.raw.map(
+                    (k, v) => MapEntry(k, v is String || v is num ? v : null),
+                  ),
+                  'id': row.kind == 'comment' ? seed['id'] : row.id,
+                  'uid': row.id,
+                  'user_ids': row.raw['fromUser'] is Map
+                      ? '${(row.raw['fromUser'] as Map)['userId']}'
+                      : row.id,
+                  'commentId': row.id,
+                  'cid': row.id,
+                },
+              ),
+            ),
+            child: const Text('相关功能'),
+          ),
+        ],
+      ),
+    );
+  }
+}

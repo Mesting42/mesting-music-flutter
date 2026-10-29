@@ -405,6 +405,7 @@ class NeteaseApi {
     Future<void>? abortTrigger,
     bool allowBusinessError = false,
     String? expectedCredential,
+    Map<String, String> additionalHeaders = const {},
   }) async {
     if (!path.startsWith('/api/') ||
         path.contains('?') ||
@@ -457,6 +458,8 @@ class NeteaseApi {
             .join('; '),
         'Accept': 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded',
+        if (additionalHeaders.containsKey('x-nos-token'))
+          'x-nos-token': additionalHeaders['x-nos-token']!,
       })
       ..bodyFields = encoded;
     try {

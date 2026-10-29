@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../music_platform/platform_backend_providers.dart';
 import '../../music_platform/netease/netease_features_page.dart';
 import '../../music_platform/netease/netease_features_repository.dart';
+import '../../music_platform/netease/full/netease_full_page.dart';
 import '../../downloads/audio_downloads_page.dart';
 import '../../../shared/widgets/beta_bottom_search.dart';
 
@@ -155,6 +156,7 @@ class MusicFunctionsPage extends ConsumerWidget {
           _FunctionGrid(entries),
           const EditorialSection('常用'),
           _FunctionGrid(common),
+          if (netease) const NeteaseFullNavigation(tab: '功能'),
         ],
       ),
     );
