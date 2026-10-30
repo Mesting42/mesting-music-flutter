@@ -1,4 +1,5 @@
 import '../../shared/widgets/beta_page_motion.dart';
+import '../../shared/widgets/beta_tab_navigation.dart';
 import '../../features/experience/presentation/player_dismiss_motion.dart';
 import '../../features/experience/presentation/playback_pill_menu.dart';
 import '../../features/music_platform/data/platform_category_search.dart';
@@ -540,11 +541,25 @@ Page<void> _musicSlidePage({
   required Widget child,
 }) {
   if (DistributionChannel.isBeta) {
+    final tabIndex = switch (state.uri.toString()) {
+      '/music/recommend' => 0,
+      '/music' => 1,
+      '/music/library' => 2,
+      '/profile' => 3,
+      _ => null,
+    };
     return CustomTransitionPage<void>(
       key: state.pageKey,
       transitionDuration: const Duration(milliseconds: 360),
       reverseTransitionDuration: const Duration(milliseconds: 320),
-      child: child is MusicSearchPage ? child : BetaEdgeBack(child: child),
+      child: tabIndex != null
+          ? BetaTabRouteReady(
+              index: tabIndex,
+              child: BetaEdgeBack(child: child),
+            )
+          : child is MusicSearchPage
+          ? child
+          : BetaEdgeBack(child: child),
       transitionsBuilder: (context, animation, secondary, child) =>
           BetaPageMotion(animation: animation, child: child),
     );

@@ -180,6 +180,7 @@ class _RawLiquidGlassBlendGroup extends SingleChildRenderObjectWidget {
       settings: settings,
       link: link,
       blend: blend,
+      cacheKnownShader: true,
     );
   }
 
@@ -207,6 +208,7 @@ class RenderLiquidGlassBlendGroup extends RenderLiquidGlassGeometry
     required super.settings,
     required GlassGroupLink link,
     required double blend,
+    this.cacheKnownShader = false,
   })  : _link = link,
         _blend = blend {
     link.addListener(_onLinkUpdate);
@@ -214,6 +216,34 @@ class RenderLiquidGlassBlendGroup extends RenderLiquidGlassGeometry
   }
 
   GlassGroupLink _link;
+  final bool cacheKnownShader;
+
+  @override
+  List<double>? geometryRasterKey(Rect bounds, List<ShapeGeometry> shapes) =>
+      !cacheKnownShader
+          ? null
+          : [
+              bounds.left,
+              bounds.top,
+              bounds.width,
+              bounds.height,
+              devicePixelRatio,
+              settings.effectiveRefractiveIndex,
+              settings.effectiveChromaticAberration,
+              settings.effectiveThickness,
+              blend,
+              settings.rimShade > 0 || settings.frost > 0 ? 1 : 0,
+              shapes.length.toDouble(),
+              for (final shape in shapes) ...[
+                shape.rawShapeType.shaderIndex,
+                shape.shapeBounds.left,
+                shape.shapeBounds.top,
+                shape.shapeBounds.width,
+                shape.shapeBounds.height,
+                shape.rawCornerRadius,
+                shape.rawBottomCornerRadius,
+              ],
+            ];
 
   /// The link that provides shape information to this geometry.
   GlassGroupLink get link => _link;

@@ -140,7 +140,14 @@ void main() {
         final root = await Directory.systemTemp.createTemp(
           'mesting119-download-',
         );
-        addTearDown(() => root.delete(recursive: true));
+        addTearDown(() async {
+          try {
+            await root.delete(recursive: true);
+          } on PathNotFoundException {
+            // The completed download's staging cleanup may already have
+            // removed this temporary fixture directory. Other I/O errors fail.
+          }
+        });
         var fetched = 0, published = 0;
         final gate = Completer<void>();
         final requested = <PlatformAudioQuality?>[];

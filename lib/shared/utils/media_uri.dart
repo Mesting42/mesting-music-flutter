@@ -33,7 +33,8 @@ String firstArtworkUri(Iterable<Object?> values) {
 
 /// The public NetEase artwork CDN rejects Dart's default HTTP User-Agent with
 /// 403 on some image hosts. Identify this client consistently for disk-cache
-/// and Flutter image requests; never attach account credentials to artwork.
+/// and direct image requests (which must replace, not append, this header);
+/// never attach account credentials to artwork.
 /// Other hosts retain their own HTTP/signature behavior.
 Map<String, String>? artworkRequestHeaders(String value) {
   final uri = Uri.tryParse(value);

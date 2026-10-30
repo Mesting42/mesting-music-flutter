@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../media/persistent_network_image_cache.dart';
+import '../media/artwork_network_image.dart';
 import '../../core/diagnostics/local_music_diagnostics.dart';
 
 const _legacyArtworkAssetAliases = <String, String>{
@@ -129,7 +130,7 @@ class _ArtworkImageState extends State<ArtworkImage> {
         final provider = ResizeImage.resizeIfNeeded(
           cacheWidth,
           cacheHeight,
-          NetworkImage(uri, headers: artworkRequestHeaders(uri)),
+          networkArtworkProvider(uri),
         );
         return Image(
           key: ValueKey('network-artwork-retry-$_networkRetry'),
@@ -142,6 +143,10 @@ class _ArtworkImageState extends State<ArtworkImage> {
             LocalMusicDiagnostics.record('artwork.decode_network_failed', {
               ...LocalMusicDiagnostics.artwork(uri),
               'type': error.runtimeType.toString(),
+              // Keep only the status, never the exception's URL/message. This
+              // distinguishes CDN rejection from a decoding or network error.
+              if (error is NetworkImageLoadException)
+                'status': error.statusCode,
             });
             widget.onNetworkError?.call();
             _scheduleNetworkRetry(provider);

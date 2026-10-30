@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../shared/media/artwork_network_image.dart';
 
 import '../../../core/audio/playback_providers.dart';
 import '../../../core/database/app_database.dart';
@@ -2547,7 +2548,7 @@ ImageProvider<Object>? _favoriteArtworkProvider(
 ) {
   ImageProvider<Object> provider;
   if (uri.startsWith('http://') || uri.startsWith('https://')) {
-    provider = NetworkImage(uri);
+    provider = networkArtworkProvider(uri);
   } else {
     File? file;
     if (uri.startsWith('file://')) {

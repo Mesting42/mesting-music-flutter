@@ -2,6 +2,12 @@
 /// offline and must never be shown as the notes of an unknown future build.
 /// The distribution service may also supply notes for a newer release.
 const musicReleaseNotes = <String, List<String>>{
+  '1.0.21': [
+    '优化连续切换主页面时的过渡调度，保留最后一次选择，避免退出页面和玻璃绘制不断叠加。',
+    '优化封面、歌词和播放队列之间的快速切换，保留反向切换状态并限制同时绘制的内容数量。',
+    '复用参数完全一致的玻璃几何纹理，并合并快速滚动时胶囊的重复形变请求，保留原有折射与清晰度。',
+    '修正公开封面图片请求中的重复标识，扩展歌曲、歌手、专辑、搜索与播放器快速操作复测，继续跟踪原生闪退。',
+  ],
   '1.0.20': [
     "修复网易云创建、收藏歌单和歌手榜封面无法显示的问题，改善图片缓存损坏后的恢复。",
     "修复我的消息未读徽标，统一私信、评论、提及、通知和新粉丝计数，超过99显示99+。",

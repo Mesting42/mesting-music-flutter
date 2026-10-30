@@ -23,6 +23,7 @@ import '../../renderer/liquid_glass_renderer.dart'
 import '../liquid_glass.dart' show RenderLiquidGlass;
 import '../liquid_glass_settings.dart';
 import '../render_liquid_glass_geometry.dart';
+import 'geometry_matte_cache.dart';
 import '../snap_rect_to_pixels.dart';
 
 /// A render object that can assemble [RenderLiquidGlassGeometry] shapes and
@@ -968,8 +969,41 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
       ..clear()
       ..addAll([for (final (_, _, transform) in geometries) transform]);
 
+    final localBounds = bounds.snapToPixels(devicePixelRatio).inflate(2.0);
+    final key = geometries.every((entry) => entry.$2.matteCacheKey != null)
+        ? GeometryMatteKey([
+            devicePixelRatio,
+            matteDevicePixelRatio,
+            localBounds.left,
+            localBounds.top,
+            localBounds.width,
+            localBounds.height,
+            geometries.length.toDouble(),
+            for (final (_, geometry, transform) in geometries) ...[
+              geometry.matteCacheKey!.length.toDouble(),
+              ...geometry.matteCacheKey!,
+              geometry.matteBounds.left,
+              geometry.matteBounds.top,
+              geometry.matteBounds.width,
+              geometry.matteBounds.height,
+              ...transform.storage,
+            ],
+          ])
+        : null;
+    final cached = key == null ? null : GeometryMatteCache.shared.obtain(key);
+    if (cached != null) {
+      _clearGeometryImage();
+      _geometryImage = cached;
+      _geometryLocalBounds = localBounds;
+      _geometryImageDevicePixelRatio = matteDevicePixelRatio;
+      _geometryImageCapped = matteDevicePixelRatio < devicePixelRatio;
+      GlassRenderDiagnostics.count(GlassRenderMetric.matteTextureReuses);
+      if (_geometryImageCapped) _scheduleGeometrySettle();
+      return;
+    }
+
     // Record canvas commands synchronously — pure CPU work.
-    final (picture, localBounds, imageSize) =
+    final (picture, recordedBounds, imageSize) =
         _recordGeometryPicture(geometries, bounds, matteDevicePixelRatio);
 
     try {
@@ -980,13 +1014,16 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
         max(1, imageSize.width.ceil()),
         max(1, imageSize.height.ceil()),
       );
+      if (!capped && key != null) {
+        GeometryMatteCache.shared.remember(key, image);
+      }
       GlassRenderDiagnostics.count(GlassRenderMetric.matteRebuilds);
       GlassRenderDiagnostics.count(GlassRenderMetric.mattePixels,
           amount: image.width * image.height);
 
       _clearGeometryImage();
       _geometryImage = image;
-      _geometryLocalBounds = localBounds;
+      _geometryLocalBounds = recordedBounds;
       _geometryImageDevicePixelRatio = matteDevicePixelRatio;
       _geometryImageCapped = matteDevicePixelRatio < devicePixelRatio;
       // No markNeedsPaint() needed — we are already inside paint().

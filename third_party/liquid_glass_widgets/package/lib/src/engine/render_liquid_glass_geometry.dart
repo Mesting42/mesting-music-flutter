@@ -256,12 +256,18 @@ abstract class RenderLiquidGlassGeometry extends RenderProxyBox {
       matteBounds: matteBounds,
       shapes: shapes,
       path: getPath(shapes),
+      matteCacheKey: geometryRasterKey(snappedBounds, shapes),
     );
 
     // We have updated the geometry.
     _renderLink?.notifyGeometryChanged(this);
     return newGeo;
   }
+
+  /// A custom renderer opts out unless it describes every shader input.
+  @protected
+  List<double>? geometryRasterKey(Rect bounds, List<ShapeGeometry> shapes) =>
+      null;
 
   Picture _buildGeometryPicture(
     Rect geometryBounds,
@@ -318,6 +324,7 @@ sealed class GeometryCache {
     required this.bounds,
     required this.shapes,
     required this.path,
+    this.matteCacheKey,
   });
 
   /// The bounds of the geometry in the coordinate space of its
@@ -330,6 +337,7 @@ sealed class GeometryCache {
   final List<ShapeGeometry> shapes;
 
   final Path path;
+  final List<double>? matteCacheKey;
 
   /// Ensure that this geometry is rendered and potentially dispose this
   /// instance.
@@ -358,6 +366,7 @@ class UnrenderedGeometryCache extends GeometryCache {
     required super.bounds,
     required super.shapes,
     required super.path,
+    super.matteCacheKey,
   });
 
   /// The matte image representing the geometry.
@@ -395,6 +404,7 @@ class UnrenderedGeometryCache extends GeometryCache {
       bounds: bounds,
       shapes: shapes,
       path: path,
+      matteCacheKey: matteCacheKey,
     );
   }
 
@@ -428,6 +438,7 @@ class UnrenderedGeometryCache extends GeometryCache {
         bounds: bounds,
         shapes: shapes,
         path: path,
+        matteCacheKey: matteCacheKey,
       );
     } catch (_) {
       // Mali GPU driver failure during toImageSync — return a safe 1×1 fallback
@@ -466,6 +477,7 @@ class RenderedGeometryCache extends GeometryCache {
     required super.bounds,
     required super.shapes,
     required super.path,
+    super.matteCacheKey,
   });
 
   /// The matte image representing the geometry.

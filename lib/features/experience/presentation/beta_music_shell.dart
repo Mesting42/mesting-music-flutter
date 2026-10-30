@@ -7,6 +7,8 @@ import '../../../shared/widgets/beta_edge_back.dart';
 import '../../../shared/widgets/beta_text_editing.dart';
 import '../../../shared/widgets/beta_glass_action.dart';
 import '../../../shared/widgets/beta_bottom_search.dart';
+import '../../../shared/widgets/beta_tab_navigation.dart';
+import '../../../shared/widgets/beta_scroll_chrome.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/performance/frame_timing_probe.dart';
 
@@ -52,9 +54,13 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
   final _searchText = TextEditingController();
   final _focus = FocusNode();
   final _positions = <String, ScrollPosition>{};
-  final _compact = ValueNotifier(false);
+  final _compact = BetaScrollChrome();
   bool get _mini => _compact.value;
-  set _mini(bool value) => _compact.value = value;
+  set _mini(bool value) {
+    _pendingCompact = null;
+    _compact.show(value);
+  }
+
   bool _compactScheduled = false;
   bool? _pendingCompact;
   bool _searching = false, _focused = false;
@@ -76,10 +82,13 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
       _searching || _routedSearch ? null : _pageSearchHost.current;
   bool get _anySearch => _searching || (_pageSearch?.active ?? false);
   late int _selected = musicBottomNavigationIndexForLocation(widget.location);
+  late final BetaTabNavigation _tabNavigation;
 
   @override
   void initState() {
     super.initState();
+    // Retain the coordinator itself: WidgetRef is unsafe during unmount.
+    _tabNavigation = ref.read(betaTabNavigationProvider);
     _searchMotion.addStatusListener(_searchStatus);
     _pageSearchHost.addListener(_pageSearchChanged);
     if (_routedSearch) {
@@ -151,6 +160,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
 
   @override
   void dispose() {
+    _tabNavigation.cancel();
     _backHistory.clear();
     _pageBackHistory.clear();
     _pageSearchHost.removeListener(_pageSearchChanged);
@@ -166,6 +176,9 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
   void didUpdateWidget(covariant BetaMusicShell oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.location != oldWidget.location) {
+      if (_rootTab(widget.location) == null) {
+        _tabNavigation.cancel();
+      }
       _closingSearchRoute = false;
       _pageSearchHost.current?.focus.unfocus();
       _pageSearchHost.location = widget.location;
@@ -311,10 +324,11 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
     if (position != null) _positions[widget.location] = position;
     // Hysteresis avoids toggling two costly glass geometries at one pixel
     // boundary during overscroll, slow drags and inertial settling.
-    final mini = (_pendingCompact ?? _mini)
+    final requested = _pendingCompact ?? _compact.requestedCompact;
+    final mini = requested
         ? notification.metrics.pixels > 24
         : notification.metrics.pixels > 88;
-    if (mini != (_pendingCompact ?? _mini)) {
+    if (mini != requested) {
       _pendingCompact = mini;
       if (!_compactScheduled) {
         _compactScheduled = true;
@@ -327,7 +341,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
             FrameTimingProbe.markTransition(
               value ? 'capsule_compact' : 'capsule_expanded',
             );
-            _mini = value;
+            _compact.request(value);
           }
         });
         WidgetsBinding.instance.ensureVisualUpdate();
@@ -475,8 +489,15 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
                       return;
                     }
                     _endSearch();
-                    setState(() => _selected = index);
-                    context.go(betaMusicRoutes[index]);
+                    _tabNavigation.request(
+                      index: index,
+                      currentIndex: _rootTab(widget.location) ?? -1,
+                      navigate: (destination) {
+                        if (!mounted) return;
+                        setState(() => _selected = destination);
+                        context.go(betaMusicRoutes[destination]);
+                      },
+                    );
                   },
                   searchConfig: GlassSearchBarConfig(
                     contextMenuBuilder: buildBetaEditingMenu,

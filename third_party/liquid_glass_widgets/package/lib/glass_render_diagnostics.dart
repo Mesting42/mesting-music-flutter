@@ -10,6 +10,7 @@ enum GlassRenderMetric {
   shaderPasses,
   matteRebuilds,
   matteCacheHits,
+  matteTextureReuses,
   mattePixels,
   matteLayoutUpdates,
   matteLinkUpdates,
