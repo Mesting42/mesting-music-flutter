@@ -62,6 +62,7 @@ open class MainActivity : AudioServiceActivity() {
     private var localMusicBridge: LocalMusicBridge? = null
     private var neteaseCloudFileBridge: NeteaseCloudFileBridge? = null
     private var musicDownloadBridge: OfflineAudioStorageBridge? = null
+    private var appExitDiagnosticsBridge: AppExitDiagnosticsBridge? = null
     private var requestedSurfaceHz = 0f
     private val refreshSurfaceCallbacks = java.util.WeakHashMap<SurfaceHolder, SurfaceHolder.Callback>()
     private lateinit var lyricsChannel: MethodChannel
@@ -70,6 +71,8 @@ open class MainActivity : AudioServiceActivity() {
     private var pendingPhoneNumberResult: MethodChannel.Result? = null
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        appExitDiagnosticsBridge?.dispose()
+        appExitDiagnosticsBridge = null
         audioOutputBridge?.dispose()
         audioOutputBridge = null
         localMusicBridge?.dispose()
@@ -161,7 +164,12 @@ open class MainActivity : AudioServiceActivity() {
             SYSTEM_CHANNEL,
         ).setMethodCallHandler { call, result ->
             when (call.method) {
-                "getRecentAppExits" -> result.success(AppExitDiagnostics.recent(this))
+                "getRecentAppExits" -> {
+                    val bridge = appExitDiagnosticsBridge ?: AppExitDiagnosticsBridge(this).also {
+                        appExitDiagnosticsBridge = it
+                    }
+                    bridge.recent(result)
+                }
                 "getListeningDeviceInfo" -> {
                     // Runtime screen/device fields for this app's own signed
                     // playback events. No identifier or credential is logged.

@@ -2,6 +2,12 @@
 /// offline and must never be shown as the notes of an unknown future build.
 /// The distribution service may also supply notes for a newer release.
 const musicReleaseNotes = <String, List<String>>{
+  '1.0.22': [
+    '将我的页面拆为独立滚动段，减少离屏玻璃参与绘制，保留原有材质与交互动效。',
+    '按显示尺寸解码喜欢封面，并缩小收藏、资料和歌单变化时的界面重建范围。',
+    '补充网易云登录态个人页的正常、快速滚动和反复进入回归，继续排查原生闪退。',
+    '音源诊断日志增加系统可用的脱敏原生崩溃线程与函数栈，在后台读取，便于不连接电脑时反馈。',
+  ],
   '1.0.21': [
     '优化连续切换主页面时的过渡调度，保留最后一次选择，避免退出页面和玻璃绘制不断叠加。',
     '优化封面、歌词和播放队列之间的快速切换，保留反向切换状态并限制同时绘制的内容数量。',

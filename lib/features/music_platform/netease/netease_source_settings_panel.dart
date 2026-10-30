@@ -146,7 +146,9 @@ class _NeteaseSourceSettingsPanelState
         SwitchListTile.adaptive(
           contentPadding: EdgeInsets.zero,
           title: const Text('音源诊断日志'),
-          subtitle: const Text('仅在本机记录音源、结果、耗时和码率，最多 80 条'),
+          subtitle: const Text(
+            '本机记录音源与系统退出原因；原生崩溃保留可用的脱敏线程和函数栈，最多 80 条，不包含账号或歌曲内容',
+          ),
           value: options.diagnostics,
           onChanged: _busy
               ? null

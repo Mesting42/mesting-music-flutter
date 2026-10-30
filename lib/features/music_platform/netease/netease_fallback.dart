@@ -246,6 +246,7 @@ class NeteaseFallbackDiagnostics extends ChangeNotifier {
         'pssKiB': exit.pssKiB,
         'rssKiB': exit.rssKiB,
         'versionUnknown': true,
+        'nativeTrace': ?exit.nativeTrace?.toJson(),
       });
       if (_rows.length > 80) _rows.removeAt(0);
     }
