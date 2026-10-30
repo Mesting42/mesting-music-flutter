@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
 import '../../core/security/avatar_image_validator.dart';
+import '../../core/diagnostics/local_music_diagnostics.dart';
+import '../utils/media_uri.dart';
 
 typedef PersistentNetworkImageDirectoryProvider = Future<Directory> Function();
 
@@ -82,8 +84,18 @@ class PersistentNetworkImageCache {
       final target = await _cacheFile(cacheKey);
       if (await target.exists()) {
         if (await target.length() > 0) {
-          _memoryFiles[cacheKey] = target;
-          return target;
+          try {
+            await validateAvatarImage(target.path);
+            _memoryFiles[cacheKey] = target;
+            LocalMusicDiagnostics.record(
+              'artwork.disk_hit',
+              LocalMusicDiagnostics.artwork(url),
+            );
+            return target;
+          } on AvatarValidationException {
+            // Older caches only checked nonzero length. A cached HTML/error
+            // response must be replaced, rather than passed back forever.
+          }
         }
         await target.delete();
       }
@@ -92,7 +104,14 @@ class PersistentNetworkImageCache {
       if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
         return null;
       }
-      final response = await _client.get(uri).timeout(_requestTimeout);
+      final response = await _client
+          .get(uri, headers: artworkRequestHeaders(url))
+          .timeout(_requestTimeout);
+      LocalMusicDiagnostics.record('artwork.http', {
+        ...LocalMusicDiagnostics.artwork(url),
+        'status': response.statusCode,
+        'bytes': response.bodyBytes.length,
+      });
       if (response.statusCode < 200 ||
           response.statusCode >= 300 ||
           response.bodyBytes.isEmpty ||
@@ -109,7 +128,11 @@ class PersistentNetworkImageCache {
       temporary = null;
       _memoryFiles[cacheKey] = target;
       return target;
-    } on Object {
+    } on Object catch (error) {
+      LocalMusicDiagnostics.record('artwork.cache_failed', {
+        ...LocalMusicDiagnostics.artwork(url),
+        'type': error.runtimeType.toString(),
+      });
       return null;
     } finally {
       if (temporary != null) {

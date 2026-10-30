@@ -7,6 +7,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:liquid_glass_widgets/glass_render_diagnostics.dart';
 import 'package:mesting_music/app/router/app_router.dart';
 import 'package:mesting_music/core/audio/playback_providers.dart';
 import 'package:mesting_music/features/experience/presentation/beta_music_shell.dart';
@@ -120,6 +121,7 @@ void main() {
       final samples = <FrameTiming>[];
       void collect(List<FrameTiming> batch) => samples.addAll(batch);
       SchedulerBinding.instance.addTimingsCallback(collect);
+      GlassRenderDiagnostics.begin();
       try {
         for (var cycle = 0; cycle < 8; cycle++) {
           await up();
@@ -128,6 +130,19 @@ void main() {
         await _wait(tester, const Duration(milliseconds: 250));
       } finally {
         SchedulerBinding.instance.removeTimingsCallback(collect);
+        GlassRenderDiagnostics.stop();
+      }
+      expect(samples, isNotEmpty, reason: 'Native timing collection must run.');
+      final glassTotals = <String, int>{};
+      for (final row in GlassRenderDiagnostics.report()) {
+        for (final metric in GlassRenderMetric.values) {
+          final count = row[metric.name] as int? ?? 0;
+          glassTotals.update(
+            metric.name,
+            (old) => old + count,
+            ifAbsent: () => count,
+          );
+        }
       }
       double percentile(List<double> values, double p) {
         values.sort();
@@ -150,6 +165,7 @@ void main() {
       ];
       final result = {
         'frames': samples.length,
+        'glassPaintCounters': glassTotals,
         'buildMs': {
           for (final p in [.5, .95, .99])
             '${(p * 100).round()}': percentile(build, p),
@@ -167,6 +183,13 @@ void main() {
       print(
         'MESTING_DEVICE_PERF home_scroll_and_capsule ${jsonEncode(result)}',
       );
+      // Anonymous bounded samples explain whether rebuilds follow real shape
+      // changes or only floating-point transforms; never a visual FPS claim.
+      // ignore: avoid_print
+      for (final sample in GlassRenderDiagnostics.matteSamples()) {
+        // ignore: avoid_print
+        print('MESTING_MATTE_SAMPLE ${jsonEncode(sample)}');
+      }
       await _capture(tester, shell, 'benchmark-after');
     },
     timeout: const Timeout(Duration(minutes: 3)),

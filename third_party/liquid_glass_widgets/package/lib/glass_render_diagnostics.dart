@@ -11,6 +11,9 @@ enum GlassRenderMetric {
   matteRebuilds,
   matteCacheHits,
   mattePixels,
+  matteLayoutUpdates,
+  matteLinkUpdates,
+  matteTransformUpdates,
   shadowLivePasses,
   shadowBakes,
   shadowCacheHits,
@@ -26,16 +29,41 @@ class GlassRenderDiagnostics {
   static const _limit = 14000;
   static final Map<int, Map<String, int>> _frames = {};
   static int? _afterVsyncUs;
+  static bool get isCapturing => _enabled;
+  static final Map<Object, int> _surfaces = Map.identity();
+  static final List<Map<String, Object>> _matteSamples = [];
 
   /// Starts an empty, opt-in capture. No frame callbacks/tickers are installed.
   static void begin({int? afterVsyncUs}) {
     _frames.clear();
+    _surfaces.clear();
+    _matteSamples.clear();
     _afterVsyncUs = afterVsyncUs;
     _enabled = true;
   }
 
   /// Stops allocations immediately, retaining only the bounded report.
-  static void stop() => _enabled = false;
+  static void stop() {
+    _enabled = false;
+    _surfaces.clear();
+  }
+
+  /// Bounded anonymous geometry-only samples for explaining rebuild counters.
+  /// Object references are used solely to assign local ordinals and are dropped
+  /// at stop; no content, account IDs, paths or URLs enter this report.
+  static void matteSample(Object surface, List<double> previous,
+      List<double> current, List<List<double>> transforms) {
+    if (!_enabled || _matteSamples.length >= 64) return;
+    final ordinal = _surfaces.putIfAbsent(surface, () => _surfaces.length);
+    _matteSamples.add({
+      'surface': ordinal,
+      'previous': previous,
+      'current': current,
+      'transforms': transforms.take(2).toList(),
+    });
+  }
+
+  static List<Map<String, Object>> matteSamples() => List.of(_matteSamples);
 
   /// Counts actual paint work at the raw engine vsync that produced it. Retained
   /// layers may be composited without painting, so absent rows mean no observed

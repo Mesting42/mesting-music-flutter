@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../media/persistent_network_image_cache.dart';
+import '../../core/diagnostics/local_music_diagnostics.dart';
 
 const _legacyArtworkAssetAliases = <String, String>{
   'assets/branding/dress-midnight-launch.png':
@@ -62,6 +63,7 @@ class _ArtworkImageState extends State<ArtworkImage> {
   File? _persistentNetworkFile;
   String? _persistentNetworkIdentity;
   bool _persistentNetworkFailed = false;
+  bool _handlingBrokenFile = false;
   String get _requestUri => sizedArtworkUri(
     canonicalArtworkUri(widget.uri),
     width: ((widget.decodeWidth ?? widget.width ?? 256) * 3).ceil(),
@@ -123,6 +125,35 @@ class _ArtworkImageState extends State<ArtworkImage> {
     }
 
     if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      Widget directNetwork() {
+        final provider = ResizeImage.resizeIfNeeded(
+          cacheWidth,
+          cacheHeight,
+          NetworkImage(uri, headers: artworkRequestHeaders(uri)),
+        );
+        return Image(
+          key: ValueKey('network-artwork-retry-$_networkRetry'),
+          image: provider,
+          width: widget.width,
+          height: widget.height,
+          fit: widget.fit,
+          gaplessPlayback: true,
+          errorBuilder: (context, error, stackTrace) {
+            LocalMusicDiagnostics.record('artwork.decode_network_failed', {
+              ...LocalMusicDiagnostics.artwork(uri),
+              'type': error.runtimeType.toString(),
+            });
+            widget.onNetworkError?.call();
+            _scheduleNetworkRetry(provider);
+            return errorBuilder(context, error, stackTrace);
+          },
+          frameBuilder: (context, child, frame, synchronous) =>
+              synchronous || frame != null
+              ? child
+              : _ArtworkPlaceholder(width: widget.width, height: widget.height),
+        );
+      }
+
       final persistentImage = _persistentNetworkConfig;
       if (persistentImage != null) {
         final file = _persistentNetworkFile;
@@ -136,22 +167,7 @@ class _ArtworkImageState extends State<ArtworkImage> {
           // A failed disk cache must not leave a permanently empty cover. Let
           // Flutter load the same public image directly while the bounded cache
           // retry runs; this also works when app-private storage is unavailable.
-          return Image.network(
-            uri,
-            width: widget.width,
-            height: widget.height,
-            cacheWidth: cacheWidth,
-            cacheHeight: cacheHeight,
-            fit: widget.fit,
-            errorBuilder: errorBuilder,
-            frameBuilder: (context, child, frame, synchronous) =>
-                synchronous || frame != null
-                ? child
-                : _ArtworkPlaceholder(
-                    width: widget.width,
-                    height: widget.height,
-                  ),
-          );
+          return directNetwork();
         }
         return Image.file(
           file,
@@ -163,14 +179,15 @@ class _ArtworkImageState extends State<ArtworkImage> {
           fit: widget.fit,
           gaplessPlayback: true,
           errorBuilder: (context, error, stackTrace) {
-            unawaited(
-              persistentImage.cache.invalidate(
-                cacheKey: persistentImage.cacheKey,
-                url: persistentImage.uri,
-              ),
-            );
-            _schedulePersistentNetworkRetry();
-            return errorBuilder(context, error, stackTrace);
+            LocalMusicDiagnostics.record('artwork.decode_file_failed', {
+              ...LocalMusicDiagnostics.artwork(uri),
+              'type': error.runtimeType.toString(),
+            });
+            _recoverBrokenFile(file);
+            // A file can pass the header check yet fail full decoding. The
+            // live image path must recover immediately, even after disk retry
+            // exhaustion; a non-null File is not proof of a usable image.
+            return directNetwork();
           },
           frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
             if (wasSynchronouslyLoaded || frame != null) {
@@ -181,41 +198,7 @@ class _ArtworkImageState extends State<ArtworkImage> {
           },
         );
       }
-      final provider = ResizeImage.resizeIfNeeded(
-        cacheWidth,
-        cacheHeight,
-        NetworkImage(uri),
-      );
-      return Image(
-        // Keep the same image element when a signed URL is refreshed. This lets
-        // gaplessPlayback retain the last decoded avatar instead of flashing
-        // the placeholder between two equivalent CloudBase URLs.
-        key: ValueKey('network-artwork-retry-$_networkRetry'),
-        image: provider,
-        width: widget.width,
-        height: widget.height,
-        fit: widget.fit,
-        gaplessPlayback: true,
-        errorBuilder: (context, error, stackTrace) {
-          widget.onNetworkError?.call();
-          _scheduleNetworkRetry(provider);
-          return errorBuilder(context, error, stackTrace);
-        },
-        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-          if (wasSynchronouslyLoaded || frame != null) {
-            _retryTimer?.cancel();
-            _retryTimer = null;
-          }
-          return child;
-        },
-        loadingBuilder: (context, child, progress) {
-          if (progress == null || widget.retryOnNetworkError) return child;
-          return _ArtworkPlaceholder(
-            width: widget.width,
-            height: widget.height,
-          );
-        },
-      );
+      return directNetwork();
     }
     if (uri.isEmpty) {
       return _ArtworkPlaceholder(width: widget.width, height: widget.height);
@@ -241,6 +224,30 @@ class _ArtworkImageState extends State<ArtworkImage> {
       fit: widget.fit,
       errorBuilder: errorBuilder,
     );
+  }
+
+  void _recoverBrokenFile(File file) {
+    if (_handlingBrokenFile) return;
+    _handlingBrokenFile = true;
+    final identity = _persistentNetworkIdentity;
+    final config = _persistentNetworkConfig;
+    unawaited(FileImage(file).evict());
+    if (config != null) {
+      unawaited(
+        config.cache.invalidate(cacheKey: config.cacheKey, url: config.uri),
+      );
+    }
+    // Image error builders can run during build. Repair state after this frame
+    // and keep the new network child visible while a bounded disk retry runs.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _handlingBrokenFile = false;
+      if (!mounted || identity != _persistentNetworkIdentity) return;
+      setState(() {
+        _persistentNetworkFile = null;
+        _persistentNetworkFailed = true;
+      });
+      _schedulePersistentNetworkRetry();
+    });
   }
 
   void _scheduleNetworkRetry(ImageProvider<Object> provider) {

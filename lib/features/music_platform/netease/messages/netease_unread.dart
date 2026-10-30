@@ -14,7 +14,7 @@ final neteaseUnreadCountsProvider =
         return;
       }
       final repository = ref.watch(neteaseMessagesRepositoryProvider);
-      Map<String, int> last = const {};
+      Map<String, int>? last;
       var stopped = false;
       Timer? timer;
       Completer<void>? wake;
@@ -33,20 +33,30 @@ final neteaseUnreadCountsProvider =
         if (WidgetsBinding.instance.lifecycleState == null ||
             WidgetsBinding.instance.lifecycleState ==
                 AppLifecycleState.resumed) {
+          var conversationsRead = false;
+          Object? failure;
           try {
             // Reconcile current peer timestamps before subtracting local read
             // cursors: an old conversation must not hide newly arrived mail.
             try {
               await repository.conversations();
+              conversationsRead = true;
             } catch (_) {
               /* Counts remain independently readable. */
             }
             last = await repository.counts();
-          } catch (_) {
-            /* Retry next foreground poll. */
+          } catch (error) {
+            failure = error;
           }
           if (stopped) return;
-          yield last;
+          if (last != null) {
+            yield last;
+          } else if (conversationsRead) {
+            yield {'privateMsgCount': repository.knownRawPrivateUnread};
+          } else if (failure != null) {
+            // Retain an error/unknown state instead of manufacturing zero.
+            yield* Stream<Map<String, int>>.error(failure);
+          }
         }
         wake = Completer<void>();
         timer = Timer(const Duration(seconds: 30), () => wake?.complete());

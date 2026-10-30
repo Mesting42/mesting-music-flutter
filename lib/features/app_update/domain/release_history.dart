@@ -2,6 +2,12 @@
 /// offline and must never be shown as the notes of an unknown future build.
 /// The distribution service may also supply notes for a newer release.
 const musicReleaseNotes = <String, List<String>>{
+  '1.0.20': [
+    "修复网易云创建、收藏歌单和歌手榜封面无法显示的问题，改善图片缓存损坏后的恢复。",
+    "修复我的消息未读徽标，统一私信、评论、提及、通知和新粉丝计数，超过99显示99+。",
+    "修正玻璃滤镜的首帧合成与裁剪边界，保留原有玻璃材质、形变和页面过渡。",
+    "优化滚动及底部胶囊伸缩时的阴影缓存，保留实时形状遮罩、玻璃折射和交互动效。",
+  ],
   '1.0.19': [
     "网易云歌单与歌手封面改为按显示尺寸读取CDN缩略图，修复大图缓存加载失败并减少解码开销。",
     "网易云和酷狗下载前可选择歌曲支持的音质，下载任务独立保存档位，批量下载仅提供共同支持的音质。",

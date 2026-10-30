@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'dart:async';
+import '../diagnostics/local_music_diagnostics.dart';
 import 'dart:ui' show FramePhase;
 import 'package:liquid_glass_widgets/glass_render_diagnostics.dart';
 
@@ -117,6 +118,7 @@ class FrameTimingProbe {
         _started = false;
       }
       draining.value = false;
+      unawaited(LocalMusicDiagnostics.exportTiming(sessionReport()));
       completer.complete();
     });
     return completer.future;

@@ -31,6 +31,16 @@ String firstArtworkUri(Iterable<Object?> values) {
   return '';
 }
 
+/// The public NetEase artwork CDN rejects Dart's default HTTP User-Agent with
+/// 403 on some image hosts. Identify this client consistently for disk-cache
+/// and Flutter image requests; never attach account credentials to artwork.
+/// Other hosts retain their own HTTP/signature behavior.
+Map<String, String>? artworkRequestHeaders(String value) {
+  final uri = Uri.tryParse(value);
+  if (uri == null || !uri.host.endsWith('.music.126.net')) return null;
+  return const {'User-Agent': 'MestingMusic/1.0 (Artwork)'};
+}
+
 /// NetEase returns original photos (sometimes >10 MB) even for a 64px row.
 /// Request the CDN thumbnail before disk validation/decode, rather than merely
 /// decoding a full download at a smaller size. Other CDNs/signatures are intact.

@@ -1,6 +1,9 @@
 import 'netease_message_reads.dart';
+import 'netease_message_counts.dart';
+import '../../../../core/diagnostics/local_music_diagnostics.dart';
 import '../../../../core/persistence/app_preferences.dart';
 import 'dart:convert';
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../netease_music_repository.dart';
@@ -171,17 +174,23 @@ final neteaseMessagesRepositoryProvider = Provider<NeteaseMessagesRepository>((
       await prefs.setString(key, jsonEncode(value));
     },
   );
-  ref.onDispose(reads.close);
-  return NeteaseMessagesRepository(music, reads: reads);
+  final repository = NeteaseMessagesRepository(music, reads: reads);
+  ref.onDispose(repository.dispose);
+  return repository;
 });
 
-final neteaseMessageReadRevisionProvider = StreamProvider<int>((ref) async* {
-  final reads = ref.watch(neteaseMessagesRepositoryProvider).reads;
-  var revision = 0;
-  yield revision;
-  await for (final _ in reads.changes) {
-    yield ++revision;
-  }
+final neteaseMessageReadRevisionProvider = StreamProvider<int>((ref) {
+  final repository = ref.watch(neteaseMessagesRepositoryProvider);
+  return Stream<int>.multi((sink) {
+    var revision = 0;
+    sink.add(revision);
+    final a = repository.reads.changes.listen((_) => sink.add(++revision));
+    final b = repository.changes.listen((_) => sink.add(++revision));
+    sink.onCancel = () async {
+      await a.cancel();
+      await b.cancel();
+    };
+  });
 });
 
 /// Every operation uses the account snapshot retained by the music repository.
@@ -193,6 +202,17 @@ class NeteaseMessagesRepository {
   final NeteaseMusicRepository music;
   final NeteaseMessageReads reads;
   final _rawConversations = <String, NeteaseConversation>{};
+  final _updates = StreamController<void>.broadcast();
+  Stream<void> get changes => _updates.stream;
+  int get knownRawPrivateUnread => _rawConversations.values.fold(
+    0,
+    (sum, c) => sum + c.unread.clamp(0, 2147483647),
+  );
+  void dispose() {
+    reads.close();
+    unawaited(_updates.close());
+  }
+
   NeteaseConversation visibleConversation(NeteaseConversation value) =>
       NeteaseConversation(
         value.peer,
@@ -203,12 +223,20 @@ class NeteaseMessagesRepository {
     final suppressed = _rawConversations.values
         .where((c) => reads.includes(c.peer.id, c.last.time))
         .fold<int>(0, (n, c) => n + c.unread);
+    final knownVisible = _rawConversations.values
+        .map(visibleConversation)
+        .fold<int>(0, (sum, c) => sum + c.unread.clamp(0, 2147483647));
+    final serverVisible = ((raw['privateMsgCount'] ?? 0) - suppressed).clamp(
+      0,
+      2147483647,
+    );
     return {
       ...raw,
-      'privateMsgCount': ((raw['privateMsgCount'] ?? 0) - suppressed).clamp(
-        0,
-        2147483647,
-      ),
+      // The entry and message list must agree. A missing/failed total endpoint
+      // cannot erase unread messages that the same account just returned.
+      'privateMsgCount': knownVisible > serverVisible
+          ? knownVisible
+          : serverVisible,
     };
   }
 
@@ -248,6 +276,11 @@ class NeteaseMessagesRepository {
     for (final value in rows) {
       _rawConversations[value.peer.id] = value;
     }
+    if (!_updates.isClosed) _updates.add(null);
+    LocalMusicDiagnostics.record('messages.conversations', {
+      'rows': rows.length,
+      'knownUnread': knownRawPrivateUnread,
+    });
     return rows;
   }
 
@@ -268,17 +301,18 @@ class NeteaseMessagesRepository {
 
   Future<Map<String, int>> counts() async {
     final r = await _request('/api/pl/count', {});
-    final data = {...r, ..._map(r['data'])};
-    return {
-      for (final key in [
-        'commentCount',
-        'forwardCount',
-        'noticeCount',
-        'newFollowerCount',
-        'privateMsgCount',
-      ])
-        key: int.tryParse('${data[key]}') ?? 0,
-    };
+    LocalMusicDiagnostics.record('messages.count_schema', {
+      'fields': {
+        for (final e in r.entries) e.key: e.value?.runtimeType.toString(),
+      },
+      'dataFields': {
+        for (final e in _map(r['data']).entries)
+          e.key: e.value?.runtimeType.toString(),
+      },
+    });
+    final parsed = parseNeteaseMessageCounts(r);
+    LocalMusicDiagnostics.record('messages.count_values', parsed);
+    return parsed;
   }
 
   Future<List<NeteasePerson>> friends([int offset = 0]) async {

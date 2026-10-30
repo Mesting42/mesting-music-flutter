@@ -10,6 +10,7 @@
 
 import 'dart:ui';
 import 'dart:ui' as ui;
+import 'dart:math' show min;
 
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/widgets.dart';
@@ -28,9 +29,11 @@ import 'glass_glow.dart';
 import 'internal/transform_tracking_repaint_boundary_mixin.dart';
 import 'liquid_glass_render_scope.dart';
 import 'liquid_glass_settings.dart';
+import 'liquid_shape.dart';
 import 'multi_shader_builder.dart';
 import 'render_liquid_glass_geometry.dart';
 import 'rendering/liquid_glass_render_object.dart';
+import 'rendering/rounded_shadow_cache.dart';
 import 'shaders.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -596,6 +599,7 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
   List<BoxShadow>? _bakedShadowList;
   Rect _bakedShadowBounds = Rect.zero;
   double _bakedShadowDpr = 0;
+  final _roundedShadows = RoundedShadowCache();
 
   final _shaderHandle = LayerHandle<BackdropFilterLayer>();
   final _blurLayerHandle = LayerHandle<BackdropFilterLayer>();
@@ -832,6 +836,7 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
         offset,
         geometryImage!,
         geometryLocalBounds,
+        profile: _roundedShadowProfile(shapes),
       );
     }
 
@@ -1092,10 +1097,32 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     Canvas canvas,
     Offset offset,
     ui.Image geometry,
-    Rect bounds,
-  ) {
+    Rect bounds, {
+    RoundedShadowProfile? profile,
+  }) {
     final stable = identical(geometry, _lastShadowGeometry);
     _lastShadowGeometry = geometry;
+    if (_roundedShadows.paint(
+      canvas: canvas,
+      offset: offset,
+      bounds: profile?.bounds ?? bounds,
+      dpr: devicePixelRatio,
+      profile: profile,
+      shadows: shadows,
+      rasterizeBlur: (target, shadow) =>
+          _drawShadowBlur(target, bounds, geometry, shadow),
+      cutout: (target, shift) => target.drawImageRect(
+          geometry,
+          Rect.fromLTWH(
+              0, 0, geometry.width.toDouble(), geometry.height.toDouble()),
+          bounds.shift(shift),
+          Paint()..blendMode = BlendMode.dstOut),
+      onBake: () => GlassRenderDiagnostics.count(GlassRenderMetric.shadowBakes),
+      onHit: () =>
+          GlassRenderDiagnostics.count(GlassRenderMetric.shadowCacheHits),
+    )) {
+      return;
+    }
     if (stable) {
       if (!identical(_bakedShadowGeometry, geometry) ||
           !listEquals(_bakedShadowList, shadows) ||
@@ -1115,6 +1142,36 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
       }
     }
     _drawShadows(canvas, bounds.shift(offset), geometry);
+  }
+
+  /// Only one translated standard rounded rectangle has a uniform straight
+  /// middle strip. Blends, rotations, changing corners/heights and the frost
+  /// silhouette continue to render their exact live shadow masks.
+  RoundedShadowProfile? _roundedShadowProfile(
+      List<(RenderLiquidGlassGeometry, GeometryCache, Matrix4)> geometries) {
+    if (geometries.length != 1 ||
+        settings.effectiveThickness <= 0 ||
+        settings.effectiveFrost > 0) {
+      return null;
+    }
+    final (_, geometry, transform) = geometries.single;
+    if (geometry.shapes.length != 1) return null;
+    final translation = MatrixUtils.getAsTranslation(transform);
+    final shape = geometry.shapes.single;
+    if (translation == null ||
+        shape.shape is! LiquidRoundedRectangle ||
+        shape.shapeToGeometry == null ||
+        MatrixUtils.getAsTranslation(shape.shapeToGeometry!) == null) {
+      return null;
+    }
+    final rect = shape.shapeBounds.shift(translation);
+    final radius = min(shape.rawCornerRadius, rect.height / 2);
+    if (rect.width < radius * 2 || !rect.isFinite || rect.isEmpty) return null;
+    return RoundedShadowProfile(
+      bounds: rect,
+      radius: radius,
+      nativeEdge: settings.rimShade > 0,
+    );
   }
 
   void _bakeShadows(ui.Image geometry, Rect bounds) {
@@ -1158,9 +1215,10 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     Canvas canvas,
     Offset offset,
     ui.Image geometry,
-    Rect bounds,
-  ) =>
-      _paintShadows(canvas, offset, geometry, bounds);
+    Rect bounds, {
+    RoundedShadowProfile? profile,
+  }) =>
+      _paintShadows(canvas, offset, geometry, bounds, profile: profile);
 
   /// The image the shadows are baked into, once the geometry held still.
   @visibleForTesting
@@ -1171,6 +1229,21 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
       bounds
           .shift(shadow.offset)
           .inflate(shadow.spreadRadius + shadow.blurRadius * 3);
+
+  void _drawShadowBlur(
+      Canvas canvas, Rect bounds, ui.Image geometry, BoxShadow shadow) {
+    canvas.drawImageRect(
+        geometry,
+        Rect.fromLTWH(
+            0, 0, geometry.width.toDouble(), geometry.height.toDouble()),
+        bounds.shift(shadow.offset),
+        Paint()
+          ..colorFilter = ColorFilter.mode(shadow.color, BlendMode.srcIn)
+          ..imageFilter = ImageFilter.blur(
+              sigmaX: shadow.blurSigma,
+              sigmaY: shadow.blurSigma,
+              tileMode: TileMode.decal));
+  }
 
   void _drawShadows(Canvas canvas, Rect bounds, ui.Image geometry,
       {bool baking = false}) {
@@ -1189,19 +1262,7 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
       canvas.saveLayer(_shadowClip(bounds, shadow), Paint());
 
       // 1. Draw the geometry matte as a blurred, tinted shadow
-      final shadowPaint = Paint()
-        ..colorFilter = ColorFilter.mode(shadow.color, BlendMode.srcIn)
-        ..imageFilter = ImageFilter.blur(
-          sigmaX: shadow.blurSigma,
-          sigmaY: shadow.blurSigma,
-          tileMode: TileMode.decal,
-        );
-      canvas.drawImageRect(
-        geometry,
-        src,
-        bounds.shift(shadow.offset),
-        shadowPaint,
-      );
+      _drawShadowBlur(canvas, bounds, geometry, shadow);
 
       // 2. GPU Cutout (dstOut): punch out the interior using the same geometry
       // matte to prevent the glass from blurring its own shadow (dirty rim).
@@ -1218,6 +1279,7 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
 
   @override
   void dispose() {
+    _roundedShadows.dispose();
     _bakedShadow?.dispose();
     _bakedShadow = null;
     _bakedShadowGeometry = null;

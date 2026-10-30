@@ -1,5 +1,6 @@
 import '../../../shared/models/track.dart';
 import '../../../shared/utils/media_uri.dart';
+import '../../../core/diagnostics/local_music_diagnostics.dart';
 import '../data/music_platform_api.dart';
 import 'netease_music_repository.dart';
 
@@ -496,6 +497,24 @@ class NeteaseFeaturesRepository {
       );
     }
     final artist = NeteaseMusicRepository.object(r['artist']);
+    if (kind == NeteaseEntity.artist) {
+      LocalMusicDiagnostics.record('artist.cover_schema', {
+        'fields': {
+          for (final key in [
+            'picUrl',
+            'img1v1Url',
+            'coverImgUrl',
+            'coverUrl',
+            'avatarUrl',
+            'cover',
+          ])
+            key: r[key]?.runtimeType.toString(),
+        },
+        'image': LocalMusicDiagnostics.artwork(
+          firstArtworkUri([r['picUrl'], r['img1v1Url'], r['coverImgUrl']]),
+        ),
+      });
+    }
     final creators = NeteaseMusicRepository.rows(r['artists'] ?? r['creator']);
     return NeteaseItem(
       id: kind == NeteaseEntity.category

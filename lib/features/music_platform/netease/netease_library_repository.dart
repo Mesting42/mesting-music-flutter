@@ -1,4 +1,5 @@
 import '../../../shared/utils/media_uri.dart';
+import '../../../core/diagnostics/local_music_diagnostics.dart';
 import '../data/cloud_library_repository.dart';
 import 'dart:async';
 
@@ -68,6 +69,26 @@ class NeteaseLibraryRepository extends CloudLibraryRepository {
         'offset': offset,
       });
       final rows = NeteaseMusicRepository.rows(payload['playlist']);
+      for (final row in rows.take(6)) {
+        LocalMusicDiagnostics.record('playlist.cover_schema', {
+          'fields': {
+            for (final key in [
+              'coverImgUrl',
+              'picUrl',
+              'coverUrl',
+              'coverImgId_str',
+            ])
+              key: row[key]?.runtimeType.toString(),
+          },
+          'image': LocalMusicDiagnostics.artwork(
+            firstArtworkUri([
+              row['coverImgUrl'],
+              row['picUrl'],
+              row['coverUrl'],
+            ]),
+          ),
+        });
+      }
       var added = 0;
       for (final row in rows) {
         if (seen.add('${row['id']}')) {

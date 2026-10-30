@@ -185,18 +185,7 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
         -sin(value.lightAngle),
       );
     }
-    // alwaysNeedsCompositing == (_geometryImage != null). The geometry image is
-    // set synchronously inside paint() so we cannot call
-    // markNeedsCompositingBitsUpdate() from there. However, when settings
-    // change such that the paint path changes (e.g. thickness/blur both drop to
-    // zero → _clearGeometryImage is called → predicate flips false), we need
-    // to dirty the compositing bit. Capture the pre-update state and request
-    // a re-evaluation after the value changes.
-    final wasCompositing = alwaysNeedsCompositing;
     _settings = value;
-    if (wasCompositing != alwaysNeedsCompositing) {
-      markNeedsCompositingBitsUpdate();
-    }
     markNeedsPaint();
   }
 
@@ -286,7 +275,13 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
   }
 
   @override
-  bool get alwaysNeedsCompositing => _geometryImage != null;
+  // This render object emits backdrop/filter layers, including its first paint
+  // before the matte exists. Flutter computes compositing bits BEFORE paint;
+  // deriving this flag from a texture created during paint leaves ancestors and
+  // pushClipRect/Path using canvas clips around composited children. Those clips
+  // do not bound the backdrop render pass. Declare the layer requirement up
+  // front, as RenderBackdropFilter does, independent of GPU cache lifetime.
+  bool get alwaysNeedsCompositing => true;
 
   /// Pre-rendered geometry texture in the render object's LOCAL coordinate space.
   /// Because the geometry is recorded without `matteTransform`, its screen-space
@@ -475,6 +470,30 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
         !_sameTransformsAsMatte();
     final reusedGeometry = !rebuildGeometry && !_geometryImageCapped;
     if (rebuildGeometry) {
+      if (needsGeometryUpdate) {
+        GlassRenderDiagnostics.count(GlassRenderMetric.matteLayoutUpdates);
+      }
+      if (link._dirty) {
+        GlassRenderDiagnostics.count(GlassRenderMetric.matteLinkUpdates);
+      }
+      if (!_sameTransformsAsMatte()) {
+        GlassRenderDiagnostics.count(GlassRenderMetric.matteTransformUpdates);
+      }
+      if (GlassRenderDiagnostics.isCapturing) {
+        GlassRenderDiagnostics.matteSample(this, [
+          _geometryLocalBounds.left,
+          _geometryLocalBounds.top,
+          _geometryLocalBounds.width,
+          _geometryLocalBounds.height
+        ], [
+          boundingBox.left,
+          boundingBox.top,
+          boundingBox.width,
+          boundingBox.height
+        ], [
+          for (final entry in _shapesWithGeometry) entry.$3.storage.toList()
+        ]);
+      }
       link._dirty = false;
       needsGeometryUpdate = false;
 
