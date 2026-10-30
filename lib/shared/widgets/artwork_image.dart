@@ -62,6 +62,12 @@ class _ArtworkImageState extends State<ArtworkImage> {
   File? _persistentNetworkFile;
   String? _persistentNetworkIdentity;
   bool _persistentNetworkFailed = false;
+  String get _requestUri => sizedArtworkUri(
+    canonicalArtworkUri(widget.uri),
+    width: ((widget.decodeWidth ?? widget.width ?? 256) * 3).ceil(),
+    height: ((widget.decodeHeight ?? widget.height ?? widget.width ?? 256) * 3)
+        .ceil(),
+  );
 
   @override
   void initState() {
@@ -76,7 +82,11 @@ class _ArtworkImageState extends State<ArtworkImage> {
         oldWidget.retryOnNetworkError == widget.retryOnNetworkError &&
         oldWidget.persistentNetworkCacheKey ==
             widget.persistentNetworkCacheKey &&
-        oldWidget.networkImageCache == widget.networkImageCache) {
+        oldWidget.networkImageCache == widget.networkImageCache &&
+        oldWidget.width == widget.width &&
+        oldWidget.height == widget.height &&
+        oldWidget.decodeWidth == widget.decodeWidth &&
+        oldWidget.decodeHeight == widget.decodeHeight) {
       return;
     }
     _retryTimer?.cancel();
@@ -93,7 +103,7 @@ class _ArtworkImageState extends State<ArtworkImage> {
 
   @override
   Widget build(BuildContext context) {
-    final uri = canonicalArtworkUri(widget.uri);
+    final uri = _requestUri;
     final hasExplicitDecodeSize =
         widget.decodeWidth != null || widget.decodeHeight != null;
     final cacheWidth = artworkCacheDimension(
@@ -251,7 +261,7 @@ class _ArtworkImageState extends State<ArtworkImage> {
   ({PersistentNetworkImageCache cache, String cacheKey, String uri})?
   get _persistentNetworkConfig {
     final cacheKey = widget.persistentNetworkCacheKey?.trim();
-    final uri = canonicalArtworkUri(widget.uri);
+    final uri = _requestUri;
     if (cacheKey == null ||
         cacheKey.isEmpty ||
         (!uri.startsWith('http://') && !uri.startsWith('https://'))) {

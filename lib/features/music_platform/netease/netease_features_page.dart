@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/models/track.dart';
 import '../../../shared/widgets/artwork_image.dart';
 import '../../../shared/widgets/automatic_song_paging.dart';
+import '../../../shared/widgets/route_settled_content.dart';
 import '../../../shared/widgets/beta_glass_controls.dart';
 import '../../experience/presentation/editorial_widgets.dart';
 import '../data/platform_category_search.dart';
@@ -24,7 +25,7 @@ import 'netease_membership_page.dart';
 import '../data/platform_comments_repository.dart';
 import '../presentation/platform_comments_page.dart';
 import 'netease_comments_repository.dart';
-import '../../downloads/audio_downloads.dart';
+import '../../downloads/audio_downloads_page.dart';
 import 'netease_playlist_import_page.dart';
 import 'full/netease_full_page.dart';
 
@@ -75,30 +76,36 @@ class NeteaseHomeShelf extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         EditorialSection(title, onTap: () => openNeteaseFeed(context, feed)),
-        ref
-            .watch(neteaseFeedPreviewProvider(feed))
-            .when(
-              loading: () => const PlatformFeedbackState(loading: true),
-              error: (_, _) => EditorialEmpty(
-                '$title暂时无法加载',
-                onRetry: () => ref.invalidate(neteaseFeedPreviewProvider(feed)),
-              ),
-              data: (batch) => batch.items.isEmpty
-                  ? EditorialEmpty('暂无$title')
-                  : EditorialShelf(
-                      height: 248,
-                      children: [
-                        for (final item in batch.items.take(12))
-                          EditorialCover(
-                            cover: item.cover,
-                            title: item.name,
-                            subtitle: item.subtitle,
-                            width: 170,
-                            onTap: () => openNeteaseItem(context, item),
-                          ),
-                      ],
-                    ),
-            ),
+        RouteSettledContent(
+          placeholder: const SizedBox(height: 248),
+          builder: (_) => Consumer(
+            builder: (context, ref, _) => ref
+                .watch(neteaseFeedPreviewProvider(feed))
+                .when(
+                  loading: () => const PlatformFeedbackState(loading: true),
+                  error: (_, _) => EditorialEmpty(
+                    '$title暂时无法加载',
+                    onRetry: () =>
+                        ref.invalidate(neteaseFeedPreviewProvider(feed)),
+                  ),
+                  data: (batch) => batch.items.isEmpty
+                      ? EditorialEmpty('暂无$title')
+                      : EditorialShelf(
+                          height: 248,
+                          children: [
+                            for (final item in batch.items.take(12))
+                              EditorialCover(
+                                cover: item.cover,
+                                title: item.name,
+                                subtitle: item.subtitle,
+                                width: 170,
+                                onTap: () => openNeteaseItem(context, item),
+                              ),
+                          ],
+                        ),
+                ),
+          ),
+        ),
       ],
     );
   }
@@ -415,14 +422,14 @@ class _NeteaseFeaturesPageState extends ConsumerState<NeteaseFeaturesPage> {
                                 label: const Text('下载已加载歌曲'),
                                 onPressed: () {
                                   if (!_current) return;
-                                  final manager = ref.read(
-                                    audioDownloadManagerProvider,
+                                  enqueueAudioDownloads(
+                                    context,
+                                    ref,
+                                    _items
+                                        .map((i) => i.track)
+                                        .whereType<Track>()
+                                        .toList(),
                                   );
-                                  for (final item in _items) {
-                                    if (item.track != null) {
-                                      manager.enqueue(item.track!);
-                                    }
-                                  }
                                 },
                               ),
                             if (widget.feed == NeteaseFeed.cloud)

@@ -18,8 +18,32 @@ String normalizeArtworkUri(String value) {
 String firstArtworkUri(Iterable<Object?> values) {
   for (final value in values) {
     if (value is String && value.trim().isNotEmpty) {
-      return normalizeArtworkUri(value);
+      final normalized = normalizeArtworkUri(value);
+      final uri = Uri.tryParse(normalized);
+      // A filename/id in a primary DTO field must not mask the later CDN URL.
+      if (uri != null &&
+          {'http', 'https'}.contains(uri.scheme) &&
+          uri.host.isNotEmpty) {
+        return normalized;
+      }
     }
   }
   return '';
+}
+
+/// NetEase returns original photos (sometimes >10 MB) even for a 64px row.
+/// Request the CDN thumbnail before disk validation/decode, rather than merely
+/// decoding a full download at a smaller size. Other CDNs/signatures are intact.
+String sizedArtworkUri(String value, {int width = 768, int height = 768}) {
+  final normalized = normalizeArtworkUri(value);
+  final uri = Uri.tryParse(normalized);
+  if (uri == null || !uri.host.endsWith('.music.126.net')) return normalized;
+  return uri
+      .replace(
+        queryParameters: {
+          ...uri.queryParameters,
+          'param': '${width.clamp(32, 1024)}y${height.clamp(32, 1024)}',
+        },
+      )
+      .toString();
 }

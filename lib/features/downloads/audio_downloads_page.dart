@@ -13,6 +13,7 @@ import '../music_platform/presentation/platform_feedback.dart';
 import '../experience/presentation/editorial_widgets.dart';
 import '../player/presentation/beta_playback_actions.dart';
 import 'audio_downloads.dart';
+import 'audio_download_quality.dart';
 import 'audio_download_storage.dart';
 
 Future<void> enqueueAudioDownload(
@@ -20,13 +21,31 @@ Future<void> enqueueAudioDownload(
   WidgetRef ref,
   Track track,
 ) async {
+  await enqueueAudioDownloads(context, ref, [track]);
+}
+
+/// Every entry (single track and collection) goes through the same selection,
+/// directory grant, and retained-account check before adding durable tasks.
+Future<void> enqueueAudioDownloads(
+  BuildContext context,
+  WidgetRef ref,
+  List<Track> tracks,
+) async {
   try {
-    final owner = ref.read(platformAccountProvider).value?.ownerId;
+    if (tracks.isEmpty) return;
+    final account = ref.read(platformAccountProvider).value;
+    final owner = account?.ownerId;
     if (owner == null) throw const MusicPlatformException('请先登录对应音乐平台');
+    final quality = await chooseAudioDownloadQuality(context, tracks);
+    if (!context.mounted || quality == null) return;
     final directory = await const AudioDownloadStorage().ensureDirectory();
     if (!context.mounted || directory == null) return;
-    if (ref.read(platformAccountProvider).value?.ownerId != owner) return;
-    ref.read(audioDownloadManagerProvider).enqueue(track);
+    final current = ref.read(platformAccountProvider).value;
+    if (current?.ownerId != owner || current?.token != account?.token) return;
+    final manager = ref.read(audioDownloadManagerProvider);
+    for (final track in tracks) {
+      manager.enqueue(track, quality: quality);
+    }
     ScaffoldMessenger.maybeOf(
       context,
     )?.showSnackBar(const SnackBar(content: Text('已加入下载队列，可在“已下载”中查看')));
@@ -300,7 +319,9 @@ class _AudioDownloadsPageState extends ConsumerState<AudioDownloadsPage> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          subtitle: Text('${task.track.artist}\n$label'),
+                          subtitle: Text(
+                            '${task.track.artist}\n${task.requestedQuality == null ? '' : '${task.track.source == TrackSource.netease ? task.requestedQuality!.neteaseLabel : task.requestedQuality!.label} · '}$label',
+                          ),
                           isThreeLine: true,
                           trailing: done
                               ? IconButton(

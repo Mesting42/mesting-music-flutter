@@ -15,6 +15,7 @@ import '../music_platform/domain/platform_session.dart';
 import '../music_platform/music_platform_providers.dart';
 import '../music_platform/platform_backend_providers.dart';
 import '../music_platform/platform_quality_providers.dart';
+import '../music_platform/domain/platform_audio_quality.dart';
 import '../music_platform/netease/netease_music_repository.dart';
 import '../music_platform/netease/netease_fallback.dart';
 import '../search/search_providers.dart';
@@ -38,9 +39,12 @@ class AudioDownloadTask {
     this.total = 0,
     this.uri = '',
     this.error = '',
+    this.requestedQuality,
   });
   final String id, owner, uri, error;
   final Track track;
+  // Immutable per task; playback preferences may change while it is queued.
+  final PlatformAudioQuality? requestedQuality;
   final AudioDownloadPhase phase;
   final int received, total;
   AudioDownloadTask copy({
@@ -54,6 +58,7 @@ class AudioDownloadTask {
     id: id,
     owner: owner,
     track: track ?? this.track,
+    requestedQuality: requestedQuality,
     phase: phase ?? this.phase,
     received: received ?? this.received,
     total: total ?? this.total,
@@ -69,6 +74,7 @@ class AudioDownloadTask {
     'total': total,
     'uri': uri,
     'error': error,
+    'requestedQuality': requestedQuality?.code,
   };
 }
 
@@ -92,6 +98,8 @@ class AudioDownloadTask {
 
 typedef ResolveDownload = Future<String> Function(Track track);
 typedef ResolveDownloadMedia = Future<Track> Function(Track track);
+typedef ResolveRequestedDownloadMedia =
+    Future<Track> Function(Track track, PlatformAudioQuality? quality);
 typedef PublishDownload =
     Future<String> Function(
       File file,
@@ -107,18 +115,27 @@ class AudioDownloadManager extends ChangeNotifier {
     required this.client,
     this.resolve,
     this.resolveMedia,
+    this.resolveRequestedMedia,
     required this.publish,
     required this.currentOwner,
     required this.directory,
     required this.persist,
     List<AudioDownloadTask> restored = const [],
-  }) : assert((resolve == null) != (resolveMedia == null)),
+  }) : assert(
+         [
+               resolve,
+               resolveMedia,
+               resolveRequestedMedia,
+             ].where((r) => r != null).length ==
+             1,
+       ),
        _tasks = [...restored];
   final http.Client client;
   // Preserve URL-only embedders while letting typed native sources carry their
   // public CDN headers. Exactly one resolver owns a given download manager.
   final ResolveDownload? resolve;
   final ResolveDownloadMedia? resolveMedia;
+  final ResolveRequestedDownloadMedia? resolveRequestedMedia;
   final PublishDownload publish;
   final String? Function() currentOwner;
   final Future<Directory> Function() directory;
@@ -148,13 +165,14 @@ class AudioDownloadManager extends ChangeNotifier {
     _notify();
   }
 
-  void enqueue(Track track) {
+  void enqueue(Track track, {PlatformAudioQuality? quality}) {
     final owner = currentOwner();
     if (owner == null) throw const MusicPlatformException('请先登录对应音乐平台');
     if (_tasks.any(
       (t) =>
           t.owner == owner &&
           t.track.id == track.id &&
+          t.requestedQuality == quality &&
           {
             AudioDownloadPhase.queued,
             AudioDownloadPhase.downloading,
@@ -165,9 +183,10 @@ class AudioDownloadManager extends ChangeNotifier {
     }
     _tasks.add(
       AudioDownloadTask(
-        id: '${DateTime.now().microsecondsSinceEpoch}',
+        id: '${DateTime.now().microsecondsSinceEpoch}-${_tasks.length}',
         owner: owner,
         track: track,
+        requestedQuality: quality,
       ),
     );
     _save();
@@ -246,7 +265,9 @@ class AudioDownloadManager extends ChangeNotifier {
     File? partial;
     try {
       _replace(task.copy(phase: AudioDownloadPhase.downloading));
-      final media = resolveMedia != null
+      final media = resolveRequestedMedia != null
+          ? await resolveRequestedMedia!(task.track, task.requestedQuality)
+          : resolveMedia != null
           ? await resolveMedia!(task.track)
           : task.track.copyWith(
               audioAsset: await resolve!(task.track),
@@ -254,6 +275,11 @@ class AudioDownloadManager extends ChangeNotifier {
             );
       final url = Uri.parse(media.audioAsset);
       if (!_current(task)) return;
+      if (media.isPreview) throw const MusicPlatformException('平台只返回试听片段，未下载');
+      if (task.requestedQuality != null &&
+          media.playbackQuality != task.requestedQuality!.code) {
+        throw const MusicPlatformException('平台未返回所选下载音质，请重选音质后下载');
+      }
       if (!{'https', 'http'}.contains(url.scheme) ||
           url.host.isEmpty ||
           url.userInfo.isNotEmpty) {
@@ -391,6 +417,9 @@ final audioDownloadManagerProvider = Provider<AudioDownloadManager>((ref) {
           id: '${row['id']}',
           owner: '${row['owner']}',
           track: Track.fromJson(Map<String, Object?>.from(row['track'] as Map)),
+          requestedQuality: PlatformAudioQuality.fromCode(
+            row['requestedQuality'],
+          ),
           phase:
               phase == AudioDownloadPhase.completed ||
                   phase == AudioDownloadPhase.cancelled
@@ -420,8 +449,8 @@ final audioDownloadManagerProvider = Provider<AudioDownloadManager>((ref) {
         throw const MusicPlatformException('下载记录未保存');
       }
     },
-    resolveMedia: (track) async {
-      final quality = ref.read(platformQualityProvider).preferred;
+    resolveRequestedMedia: (track, requested) async {
+      final quality = requested ?? ref.read(platformQualityProvider).preferred;
       if (track.source == TrackSource.netease &&
           ref.read(usesNeteaseProvider)) {
         final music = ref.read(neteaseMusicRepositoryProvider);
@@ -442,6 +471,7 @@ final audioDownloadManagerProvider = Provider<AudioDownloadManager>((ref) {
             track: track,
             quality: quality,
             selectedSource: selected,
+            requireQuality: requested != null,
           );
         }
         Object? failure;
@@ -464,6 +494,10 @@ final audioDownloadManagerProvider = Provider<AudioDownloadManager>((ref) {
           return track.copyWith(
             audioAsset: '${row['url']}',
             audioHeaders: const {},
+            playbackQuality:
+                PlatformAudioQuality.fromNeteaseLevel(row['level'])?.code ?? '',
+            audioBitrate: int.tryParse('${row['br']}') ?? 0,
+            isPreview: false,
           );
         }
         if (ref.read(neteaseFallbackEnabledProvider)) {
@@ -477,6 +511,7 @@ final audioDownloadManagerProvider = Provider<AudioDownloadManager>((ref) {
                     ref.read(usesNeteaseProvider) &&
                     ref.read(neteaseMusicRepositoryProvider).credential ==
                         credential,
+                requiredQuality: requested?.code,
               );
           if (fallback != null) return fallback;
         }
@@ -487,7 +522,11 @@ final audioDownloadManagerProvider = Provider<AudioDownloadManager>((ref) {
               MusicPlatform.kugou) {
         final source = ref.read(kugouMusicSourceProvider);
         if (source is EmbeddedKugouMusicSource) {
-          final resolved = await source.resolveTrack(track, quality: quality);
+          final resolved = await source.resolveTrack(
+            track,
+            quality: quality,
+            requireRequestedQuality: requested != null,
+          );
           if (resolved.isPlayable && !resolved.isPreview) {
             return resolved;
           }

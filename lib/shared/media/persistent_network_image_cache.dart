@@ -143,7 +143,18 @@ class PersistentNetworkImageCache {
     if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
       return null;
     }
-    return uri.replace(query: '', fragment: '').toString();
+    // CDN thumbnails of different sizes are different images. Keep only this
+    // stable size field; expiring signatures still do not multiply cache rows.
+    return uri
+        .replace(
+          query: uri.queryParameters['param'] == null
+              ? ''
+              : Uri(
+                  queryParameters: {'param': uri.queryParameters['param']!},
+                ).query,
+          fragment: '',
+        )
+        .toString();
   }
 }
 

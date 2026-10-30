@@ -34,6 +34,7 @@ import 'netease_video.dart';
 import 'netease_entity_picker.dart';
 import 'netease_together_page.dart';
 import '../messages/netease_messages_page.dart';
+import '../messages/netease_unread.dart';
 import 'netease_workflow_policy.dart';
 import 'netease_comment_entry_page.dart';
 
@@ -66,7 +67,7 @@ class NeteaseFullNavigation extends ConsumerWidget {
       error: (_, _) => const SizedBox.shrink(),
       data: (all) {
         final categories = all
-            .where((e) => e.tab == tab)
+            .where((e) => e.tab == tab && e.category != '音乐搜索')
             .map((e) => e.category)
             .toSet();
         return Column(
@@ -83,18 +84,35 @@ class NeteaseFullNavigation extends ConsumerWidget {
                       ListTile(
                         leading: Icon(_categoryIcon(category)),
                         title: Text(category == '消息中心' ? '我的消息' : category),
-                        trailing: const Icon(
-                          CupertinoIcons.chevron_right,
-                          size: 16,
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (category == '消息中心') ...[
+                              NeteaseUnreadBadge(
+                                ref.watch(neteaseUnreadTotalProvider),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                            const Icon(CupertinoIcons.chevron_right, size: 16),
+                          ],
                         ),
-                        onTap: () => _push(
-                          context,
-                          category == '消息中心'
-                              ? const NeteaseMessagesPage()
-                              : category == '一起听'
-                              ? const NeteaseTogetherPage()
-                              : neteaseCategoryDestination(all, tab, category),
-                        ),
+                        onTap: () async {
+                          await _push(
+                            context,
+                            category == '消息中心'
+                                ? const NeteaseMessagesPage()
+                                : category == '一起听'
+                                ? const NeteaseTogetherPage()
+                                : neteaseCategoryDestination(
+                                    all,
+                                    tab,
+                                    category,
+                                  ),
+                          );
+                          if (context.mounted && category == '消息中心') {
+                            ref.invalidate(neteaseUnreadCountsProvider);
+                          }
+                        },
                       ),
                   ],
                 ),
@@ -143,7 +161,7 @@ IconData _categoryIcon(String category) => switch (category) {
   '播放与同步' => CupertinoIcons.slider_horizontal_3,
   _ => CupertinoIcons.compass,
 };
-void _push(BuildContext context, Widget page) =>
+Future<void> _push(BuildContext context, Widget page) async =>
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
 
 class NeteaseFullHubPage extends ConsumerStatefulWidget {

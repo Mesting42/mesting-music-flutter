@@ -123,6 +123,9 @@ class PlatformPageFrame extends StatelessWidget {
     this.subtitle = '',
     this.actions = const [],
     this.pageKey,
+    this.centerTitle = false,
+    this.titleWeight = FontWeight.w700,
+    this.titleFontSize = 18,
     super.key,
   });
   final String title;
@@ -130,6 +133,9 @@ class PlatformPageFrame extends StatelessWidget {
   final Widget child;
   final List<Widget> actions;
   final Key? pageKey;
+  final bool centerTitle;
+  final FontWeight titleWeight;
+  final double titleFontSize;
   @override
   Widget build(BuildContext context) => PlatformStyle(
     child: BetaEdgeBack(
@@ -141,43 +147,80 @@ class PlatformPageFrame extends StatelessWidget {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: Row(
-                  children: [
-                    BetaGlassBackButton(
-                      onPressed: () => Navigator.of(context).maybePop(),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          OverflowMarquee(
-                            title,
-                            style: TextStyle(
-                              fontSize: 21,
-                              fontWeight: FontWeight.w700,
-                              height: 1.2,
-                              color: context.musicThemeTokens.textPrimary,
-                              letterSpacing: -.5,
+                child: centerTitle
+                    ? SizedBox(
+                        height: 52,
+                        child: CustomMultiChildLayout(
+                          delegate: _CenteredPlatformHeader(),
+                          children: [
+                            LayoutId(
+                              id: 'back',
+                              child: BetaGlassBackButton(
+                                onPressed: () =>
+                                    Navigator.of(context).maybePop(),
+                              ),
                             ),
-                          ),
-                          if (subtitle.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 5),
+                            LayoutId(
+                              id: 'title',
                               child: Text(
-                                subtitle,
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: 12,
-                                  color: context.musicThemeTokens.textSecondary,
+                                  fontSize: titleFontSize,
+                                  fontWeight: titleWeight,
                                 ),
                               ),
                             ),
+                            LayoutId(
+                              id: 'actions',
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: actions,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Row(
+                        children: [
+                          BetaGlassBackButton(
+                            onPressed: () => Navigator.of(context).maybePop(),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                OverflowMarquee(
+                                  title,
+                                  style: TextStyle(
+                                    fontSize: 21,
+                                    fontWeight: titleWeight,
+                                    height: 1.2,
+                                    color: context.musicThemeTokens.textPrimary,
+                                    letterSpacing: -.5,
+                                  ),
+                                ),
+                                if (subtitle.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 5),
+                                    child: Text(
+                                      subtitle,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: context
+                                            .musicThemeTokens
+                                            .textSecondary,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          ...actions,
                         ],
                       ),
-                    ),
-                    ...actions,
-                  ],
-                ),
               ),
               // Keep an opaque backdrop in the same scroll compositing pass.
               Expanded(
@@ -192,6 +235,43 @@ class PlatformPageFrame extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Equal title gutters use the larger measured action group. The text remains
+/// centred on the page even with asymmetric buttons or accessibility scaling;
+/// ellipsis handles a long peer name without covering either control group.
+class _CenteredPlatformHeader extends MultiChildLayoutDelegate {
+  @override
+  void performLayout(Size size) {
+    final back = layoutChild('back', BoxConstraints.loose(size));
+    final actions = layoutChild(
+      'actions',
+      BoxConstraints(
+        maxWidth: (size.width - back.width - 8).clamp(0, size.width),
+        maxHeight: size.height,
+      ),
+    );
+    final side = (back.width > actions.width ? back.width : actions.width) + 4;
+    final title = layoutChild(
+      'title',
+      BoxConstraints(
+        maxWidth: (size.width - side * 2).clamp(0, size.width),
+        maxHeight: size.height,
+      ),
+    );
+    positionChild('back', Offset(0, (size.height - back.height) / 2));
+    positionChild(
+      'actions',
+      Offset(size.width - actions.width, (size.height - actions.height) / 2),
+    );
+    positionChild(
+      'title',
+      Offset((size.width - title.width) / 2, (size.height - title.height) / 2),
+    );
+  }
+
+  @override
+  bool shouldRelayout(covariant _CenteredPlatformHeader oldDelegate) => false;
 }
 
 class PlatformSectionTitle extends StatelessWidget {

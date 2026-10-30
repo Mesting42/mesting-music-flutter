@@ -18,7 +18,7 @@ import '../platform_explore_providers.dart';
 import '../platform_backend_providers.dart';
 import '../netease/netease_features_page.dart';
 import '../netease/netease_features_repository.dart';
-import '../../downloads/audio_downloads.dart';
+import '../../downloads/audio_downloads_page.dart';
 export '../platform_explore_providers.dart';
 
 /// Search history, real keyword boards, then upstream music exploration. A
@@ -387,10 +387,7 @@ class _ExploreSongsPageState extends ConsumerState<PlatformExploreSongsPage> {
                             current?.token != _token) {
                           return;
                         }
-                        final manager = ref.read(audioDownloadManagerProvider);
-                        for (final track in _tracks) {
-                          manager.enqueue(track);
-                        }
+                        enqueueAudioDownloads(context, ref, _tracks);
                       },
                     ),
                 ],

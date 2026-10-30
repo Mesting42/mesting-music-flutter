@@ -271,17 +271,26 @@ class NeteaseMusicRepository {
     final values = rows(payload['songs']);
     if (values.isEmpty) throw const MusicPlatformException('暂未获取网易云音质信息');
     final row = values.first;
+    bool has(String key) {
+      final resource = object(row[key]);
+      return resource.isNotEmpty &&
+          (int.tryParse('${resource['size']}') ??
+                  int.tryParse('${resource['br']}') ??
+                  0) >
+              0;
+    }
+
     return {
-      if (row['l'] != null || row['h'] != null) PlatformAudioQuality.standard,
-      if (row['h'] != null) PlatformAudioQuality.high,
-      if (row['sq'] != null) PlatformAudioQuality.lossless,
-      if (row['hr'] != null) PlatformAudioQuality.hiRes,
-      if (row['m'] != null) PlatformAudioQuality.higher,
-      if (row['je'] != null) PlatformAudioQuality.jyEffect,
-      if (row['sk'] != null) PlatformAudioQuality.sky,
-      if (row['jm'] != null) PlatformAudioQuality.jyMaster,
-      if (row['db'] != null) PlatformAudioQuality.dolby,
-      if (row['vivid'] != null) PlatformAudioQuality.vivid,
+      if (has('l') || has('h')) PlatformAudioQuality.standard,
+      if (has('h')) PlatformAudioQuality.high,
+      if (has('sq')) PlatformAudioQuality.lossless,
+      if (has('hr')) PlatformAudioQuality.hiRes,
+      if (has('m')) PlatformAudioQuality.higher,
+      if (has('je')) PlatformAudioQuality.jyEffect,
+      if (has('sk')) PlatformAudioQuality.sky,
+      if (has('jm')) PlatformAudioQuality.jyMaster,
+      if (has('db')) PlatformAudioQuality.dolby,
+      if (has('vivid')) PlatformAudioQuality.vivid,
     };
   }
 

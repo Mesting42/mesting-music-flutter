@@ -19,6 +19,8 @@ import '../netease_music_repository.dart';
 import '../full/netease_together_page.dart';
 import '../full/netease_entity_picker.dart';
 import 'netease_messages_repository.dart';
+import 'netease_emojis.dart';
+import '../../../../shared/widgets/beta_popup_menu_button.dart';
 
 Future<T?> _open<T>(BuildContext context, Widget page) => Navigator.of(
   context,
@@ -708,13 +710,41 @@ class _NeteaseChatPageState extends _MessageState<NeteaseChatPage> {
     return KeyboardVisibilityBuilder(
       builder: (context, keyboard) => PlatformPageFrame(
         title: widget.peer.name,
+        centerTitle: true,
+        titleWeight: FontWeight.w500,
+        titleFontSize: MediaQuery.sizeOf(context).width < 360 ? 16 : 18,
         actions: [
-          BetaGlassAction(
-            label: '一起听',
-            icon: CupertinoIcons.person_2,
-            blue: false,
-            onPressed: () =>
-                _open<void>(context, NeteaseTogetherPage(invitee: widget.peer)),
+          Tooltip(
+            message: '一起听',
+            child: BetaGlassButton(
+              label: '一起听',
+              height: 40,
+              width: MediaQuery.sizeOf(context).width < 360 ? 44 : null,
+              horizontalPadding: 10,
+              blue: false,
+              onPressed: () => _open<void>(
+                context,
+                NeteaseTogetherPage(invitee: widget.peer),
+              ),
+              child: MediaQuery.sizeOf(context).width < 360
+                  ? const Icon(CupertinoIcons.headphones, size: 18)
+                  : const Text(
+                      '一起听',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          BetaPopupMenuButton<String>(
+            tooltip: '聊天菜单',
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'refresh', child: Text('刷新消息')),
+              PopupMenuItem(value: 'earlier', child: Text('查看更早消息')),
+            ],
+            onSelected: (value) => _load(older: value == 'earlier'),
           ),
         ],
         child: Column(
@@ -816,10 +846,15 @@ class _NeteaseChatPageState extends _MessageState<NeteaseChatPage> {
                                       )
                                     else
                                       SelectableText(
-                                        message.text,
+                                        displayNeteaseEmojis(message.text),
                                         style: const TextStyle(
                                           fontSize: 16,
                                           height: 1.45,
+                                          fontFamilyFallback: [
+                                            'Noto Color Emoji',
+                                            'Apple Color Emoji',
+                                            'Segoe UI Emoji',
+                                          ],
                                         ),
                                       ),
                                     if (message.text.contains(
@@ -978,6 +1013,7 @@ class _NeteaseChatPageState extends _MessageState<NeteaseChatPage> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
                 child: Wrap(
+                  alignment: WrapAlignment.center,
                   spacing: 6,
                   runSpacing: 6,
                   children: [
@@ -1003,10 +1039,22 @@ class _NeteaseChatPageState extends _MessageState<NeteaseChatPage> {
                         width: 48,
                         height: 42,
                         child: BetaGlassButton(
+                          width: 48,
+                          height: 42,
+                          horizontalPadding: 0,
                           onPressed: () => _appendEmoji(emoji),
-                          child: Text(
-                            emoji,
-                            style: const TextStyle(fontSize: 23),
+                          child: Center(
+                            child: Text(
+                              emoji,
+                              style: const TextStyle(
+                                fontSize: 23,
+                                fontFamilyFallback: [
+                                  'Noto Color Emoji',
+                                  'Apple Color Emoji',
+                                  'Segoe UI Emoji',
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ),

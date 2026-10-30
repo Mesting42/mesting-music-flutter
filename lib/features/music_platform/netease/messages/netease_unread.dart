@@ -1,0 +1,107 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../platform_backend_providers.dart';
+import 'netease_messages_repository.dart';
+
+/// One account-scoped read per poll, shared by every entry badge. Disposing the
+/// consumer or backgrounding the app stops requests; failures retain the last
+/// known count rather than inventing zero or a successful read acknowledgement.
+final neteaseUnreadCountsProvider =
+    StreamProvider.autoDispose<Map<String, int>>((ref) async* {
+      if (!ref.watch(usesNeteaseProvider)) {
+        yield const {};
+        return;
+      }
+      final repository = ref.watch(neteaseMessagesRepositoryProvider);
+      Map<String, int> last = const {};
+      var stopped = false;
+      Timer? timer;
+      Completer<void>? wake;
+      final observer = _UnreadResumeObserver(() {
+        timer?.cancel();
+        if (wake?.isCompleted == false) wake!.complete();
+      });
+      WidgetsBinding.instance.addObserver(observer);
+      ref.onDispose(() {
+        stopped = true;
+        timer?.cancel();
+        WidgetsBinding.instance.removeObserver(observer);
+        if (wake?.isCompleted == false) wake!.complete();
+      });
+      while (!stopped) {
+        if (WidgetsBinding.instance.lifecycleState == null ||
+            WidgetsBinding.instance.lifecycleState ==
+                AppLifecycleState.resumed) {
+          try {
+            // Reconcile current peer timestamps before subtracting local read
+            // cursors: an old conversation must not hide newly arrived mail.
+            try {
+              await repository.conversations();
+            } catch (_) {
+              /* Counts remain independently readable. */
+            }
+            last = await repository.counts();
+          } catch (_) {
+            /* Retry next foreground poll. */
+          }
+          if (stopped) return;
+          yield last;
+        }
+        wake = Completer<void>();
+        timer = Timer(const Duration(seconds: 30), () => wake?.complete());
+        await wake.future;
+      }
+    });
+
+final neteaseUnreadTotalProvider = Provider.autoDispose<int>((ref) {
+  ref.watch(neteaseMessageReadRevisionProvider);
+  final state = ref.watch(neteaseUnreadCountsProvider);
+  // Riverpod can retain the previous stream value while a dependency reloads.
+  // A new account must never briefly inherit that old account's unread badge.
+  final raw = state.isLoading
+      ? const <String, int>{}
+      : state.value ?? const <String, int>{};
+  final counts = ref
+      .watch(neteaseMessagesRepositoryProvider)
+      .visibleCounts(raw);
+  return counts.values.fold(0, (sum, count) => sum + (count < 0 ? 0 : count));
+});
+
+class _UnreadResumeObserver extends WidgetsBindingObserver {
+  _UnreadResumeObserver(this.resume);
+  final VoidCallback resume;
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) resume();
+  }
+}
+
+class NeteaseUnreadBadge extends StatelessWidget {
+  const NeteaseUnreadBadge(this.count, {super.key});
+  final int count;
+  @override
+  Widget build(BuildContext context) => count <= 0
+      ? const SizedBox.shrink()
+      : Semantics(
+          label: '$count 条未读消息',
+          child: Container(
+            key: const ValueKey('netease-unread-badge'),
+            constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.error,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Text(
+              count > 99 ? '99+' : '$count',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onError,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        );
+}
