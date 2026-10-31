@@ -1,3 +1,5 @@
+**2026-10-31 最新 Git/GitHub归档：1.0.23/code44原R2正式Release、1.0.24/code45预发布及全部31个附件已核验，独立源码提交/标签已保存，维护分支beta使用1.0.24。先读[跨电脑总交接](HANDOFF-GITHUB-2026-10-31-v1.0.24.md)和[回读证据](docs/version-archive/GITHUB-ARCHIVE-2026-10-31-v123-v124-verification.json)。1.0.23源码为本次恢复并重新通过1141项回归/分析/构建的归档，业务二进制完全重现未证明；1.0.24原冻结APK/ZIP保持，待手机验收。下方“未提交/未发布/待实现”保留历史时点。本次未访问手机/ADB、真实账号或music后台；手机测试继续暂停，新任务按逐题澄清和确认方案后实施。**
+
 # Mesting Music 版本归档
 
 **2026-10-30最新GitHub归档：1.0.18 / code39。** 独立版本提交、固定标签与正式Release已完成，全部15个附件核验。维护入口beta，main和旧版本保持。[原APK／源码／校验](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.18) · [最新跨电脑交接](HANDOFF-GITHUB-2026-10-30-v1.0.18.md) · [来源说明](docs/version-archive/RELEASE-ARCHIVE-2026-10-30-v118.md)。本次不操作music后台，以下“最新／未提交／未发布”为历史记录。

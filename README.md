@@ -1,12 +1,12 @@
 # Mesting Music
 
-**当前维护版本：1.0.18 / Android code39，开发分支beta。** 新电脑先读[跨电脑总交接](HANDOFF-GITHUB-2026-10-30-v1.0.18.md)、[接续入口](docs/CONTINUE-BETA.md)与AGENTS.md。
+**当前维护代码：1.0.24 / Android code45，开发分支 beta，待手机验收。** 新电脑先读[跨电脑总交接](HANDOFF-GITHUB-2026-10-31-v1.0.24.md)、[接续入口](docs/CONTINUE-BETA.md)与AGENTS.md。
 
-[1.0.18正式GitHub Release](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.18)已附原APK、完整原源码ZIP和校验资料，全部15个附件digest已回读核验。固定源码提交`59a3423dd11b457833fc1effea834519bfb22981`；beta在标签之后只补充归档和接续资料，运行代码不变。[本版修改](docs/fixes-2026-10-29-v1.0.18.md) · [安装复测](docs/INSTALL-v1.0.18.md) · [归档来源](docs/version-archive/RELEASE-ARCHIVE-2026-10-30-v118.md)。
+[1.0.23 R2 正式归档](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.23)和[1.0.24 预发布](https://github.com/Mesting42/mesting-music-flutter/releases/tag/v1.0.24)均附原签名APK、完整源码ZIP及校验资料，全部31个附件摘要已回读核验。1.0.23源码为本次恢复且通过回归/构建的资料，业务二进制完全重现未证明；1.0.24直接采用原冻结交付。详情见[归档来源](docs/version-archive/RELEASE-ARCHIVE-2026-10-31-v123-v124.md)。
 
-本版修复音质／封面／空列表／等级、下载目录、设置和个人页、MV与滑动菜单；完整源码含已授权分发的SDK并保留原许可。签名材料需私下转移。本轮归档不操作music后台，实际账号与手机行为按验收清单复测。
+1.0.24 包含双平台签到、酷狗账号补源、下载页改版、公共分页/底栏与音效整理、手机内自动诊断。70文件1197项Beta、Stable19、Android返回1项及分析0问题已验证，实际手机和账号行为按验收清单复测。[本版修改](docs/fixes-2026-10-31-v1.0.24.md) · [安装验收](docs/INSTALL-v1.0.24.md) · [诊断场景](docs/DIAGNOSTIC-SCENARIOS-v1.0.24.md)。
 
-以下Beta.19与stable介绍保留历史产品背景，当前开发以beta和上方接续为准。
+源码保留完整SDK、定制引擎和第三方许可；原签名材料私下转移。本次仅Git/GitHub归档，未操作music后台或手机。以下Beta.19和stable介绍保留历史产品背景。
 
 ## Beta.19 本次更新
 
