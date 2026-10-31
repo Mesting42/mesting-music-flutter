@@ -22,6 +22,7 @@ import '../search/search_providers.dart';
 
 enum AudioDownloadPhase {
   queued,
+  resolving,
   downloading,
   saving,
   completed,
@@ -144,6 +145,7 @@ class AudioDownloadManager extends ChangeNotifier {
   List<AudioDownloadTask> get tasks => List.unmodifiable(_tasks);
   bool _working = false, _disposed = false;
   String? _active;
+  final _attempts = <String, int>{};
   Completer<void>? _abort;
   Future<void> _writes = Future.value();
   void _notify() {
@@ -175,6 +177,7 @@ class AudioDownloadManager extends ChangeNotifier {
           t.requestedQuality == quality &&
           {
             AudioDownloadPhase.queued,
+            AudioDownloadPhase.resolving,
             AudioDownloadPhase.downloading,
             AudioDownloadPhase.saving,
           }.contains(t.phase),
@@ -200,6 +203,7 @@ class AudioDownloadManager extends ChangeNotifier {
         task.phase == AudioDownloadPhase.completed) {
       return;
     }
+    _attempts[id] = (_attempts[id] ?? 0) + 1;
     if (_active == id && _abort?.isCompleted == false) _abort!.complete();
     _replace(task.copy(phase: AudioDownloadPhase.cancelled));
   }
@@ -207,8 +211,19 @@ class AudioDownloadManager extends ChangeNotifier {
   void cancelPending() {
     for (final task in List<AudioDownloadTask>.of(_tasks)) {
       if (task.phase == AudioDownloadPhase.queued ||
+          task.phase == AudioDownloadPhase.resolving ||
           task.phase == AudioDownloadPhase.downloading) {
         cancel(task.id);
+      } else if (task.phase == AudioDownloadPhase.saving) {
+        // An account token can change without changing ownerId. Invalidate a
+        // saving attempt too; its late exporter result cannot claim success.
+        _attempts[task.id] = (_attempts[task.id] ?? 0) + 1;
+        _replace(
+          task.copy(
+            phase: AudioDownloadPhase.failed,
+            error: '账号已变化，保存结果未写入下载记录',
+          ),
+        );
       }
     }
   }
@@ -233,7 +248,8 @@ class AudioDownloadManager extends ChangeNotifier {
     unawaited(_pump());
   }
 
-  bool _current(AudioDownloadTask task) =>
+  bool _current(AudioDownloadTask task, int attempt) =>
+      _attempts[task.id] == attempt &&
       !_disposed &&
       task.owner == currentOwner() &&
       _tasks.any(
@@ -260,11 +276,15 @@ class AudioDownloadManager extends ChangeNotifier {
   }
 
   Future<void> _download(AudioDownloadTask task) async {
+    // A cancelled task can be retried while its resolver is still unwinding.
+    // An attempt token prevents that old result from reviving the new job.
+    final attempt = (_attempts[task.id] ?? 0) + 1;
+    _attempts[task.id] = attempt;
     _active = task.id;
     _abort = Completer<void>();
     File? partial;
     try {
-      _replace(task.copy(phase: AudioDownloadPhase.downloading));
+      _replace(task.copy(phase: AudioDownloadPhase.resolving));
       final media = resolveRequestedMedia != null
           ? await resolveRequestedMedia!(task.track, task.requestedQuality)
           : resolveMedia != null
@@ -274,7 +294,7 @@ class AudioDownloadManager extends ChangeNotifier {
               audioHeaders: const {},
             );
       final url = Uri.parse(media.audioAsset);
-      if (!_current(task)) return;
+      if (!_current(task, attempt)) return;
       if (media.isPreview) throw const MusicPlatformException('平台只返回试听片段，未下载');
       if (task.requestedQuality != null &&
           media.playbackQuality != task.requestedQuality!.code) {
@@ -285,8 +305,13 @@ class AudioDownloadManager extends ChangeNotifier {
           url.userInfo.isNotEmpty) {
         throw const FormatException('无效音频地址');
       }
+      // Resolving may outlive cancellation or an account switch. Recheck before
+      // opening a network stream; cancelled jobs must never be resurrected.
+      if (!_current(task, attempt)) return;
+      _replace(task.copy(phase: AudioDownloadPhase.downloading));
       final root = await directory();
       await root.create(recursive: true);
+      if (!_current(task, attempt)) return;
       partial = File('${root.path}/${task.id}.part');
       final response = await client
           .send(
@@ -297,6 +322,10 @@ class AudioDownloadManager extends ChangeNotifier {
       if (response.statusCode != 200) {
         await response.stream.take(1).drain<void>();
         throw const MusicPlatformException('下载地址已失效，请重试');
+      }
+      if (!_current(task, attempt)) {
+        await response.stream.take(1).drain<void>();
+        return;
       }
       final total = response.contentLength ?? 0;
       if (total > 512 * 1024 * 1024) {
@@ -311,12 +340,16 @@ class AudioDownloadManager extends ChangeNotifier {
         await for (final chunk in response.stream.timeout(
           const Duration(seconds: 30),
         )) {
-          if (!_current(task)) throw const MusicPlatformException('下载已取消');
+          if (!_current(task, attempt)) {
+            throw const MusicPlatformException('下载已取消');
+          }
           received += chunk.length;
           if (received > 512 * 1024 * 1024) {
             throw const MusicPlatformException('文件超过 512 MB');
           }
-          if (prefix.length < 64) prefix.addAll(chunk.take(64 - prefix.length));
+          if (prefix.length < 64) {
+            prefix.addAll(chunk.take(64 - prefix.length));
+          }
           output.add(chunk);
           if (watch.elapsedMilliseconds >= 250) {
             _replace(
@@ -334,7 +367,7 @@ class AudioDownloadManager extends ChangeNotifier {
       } finally {
         await output.close();
       }
-      if (!_current(task)) return;
+      if (!_current(task, attempt)) return;
       if (received == 0 || (total > 0 && received != total)) {
         throw const MusicPlatformException('文件下载不完整，请重试');
       }
@@ -353,6 +386,9 @@ class AudioDownloadManager extends ChangeNotifier {
         format.extension,
         format.mime,
       );
+      // The platform exporter is asynchronous too. Disposed/account-invalid
+      // workers must not publish a late successful-looking history entry.
+      if (!_current(task, attempt)) return;
       _replace(
         task.copy(
           phase: AudioDownloadPhase.completed,
@@ -366,13 +402,20 @@ class AudioDownloadManager extends ChangeNotifier {
         ),
       );
     } catch (error) {
-      if (_current(task)) {
+      if (_current(task, attempt)) {
         _replace(
-          task.copy(phase: AudioDownloadPhase.failed, error: error.toString()),
+          _tasks
+              .firstWhere((t) => t.id == task.id)
+              .copy(phase: AudioDownloadPhase.failed, error: error.toString()),
         );
       }
     } finally {
-      if (partial != null && await partial.exists()) await partial.delete();
+      try {
+        if (partial != null && await partial.exists()) await partial.delete();
+      } on FileSystemException {
+        // Cleanup races with external storage removal or app shutdown. It must
+        // not escape the detached worker or overwrite a confirmed publish.
+      }
       _active = null;
       _abort = null;
     }

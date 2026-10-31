@@ -1,4 +1,5 @@
 import '../../../../shared/widgets/beta_choice_field.dart';
+import '../../../../shared/widgets/beta_content_insets.dart';
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -251,7 +252,9 @@ class _NeteaseFullHubPageState extends ConsumerState<NeteaseFullHubPage> {
                       .where((e) => workflowKeys.add(neteaseWorkflowKey(e)))
                       .toList();
                   return ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 40),
+                    padding: EdgeInsets.only(
+                      bottom: BetaContentInsets.bottomOf(context, 40),
+                    ),
                     itemCount: entries.length,
                     itemBuilder: (context, index) {
                       final endpoint = entries[index];
@@ -738,7 +741,12 @@ class _NeteaseFullTaskPageState extends ConsumerState<NeteaseFullTaskPage> {
       PlatformPageFrame(
         title: neteaseTaskTitle(e),
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(22, 10, 22, 40),
+          padding: EdgeInsets.fromLTRB(
+            22,
+            10,
+            22,
+            BetaContentInsets.bottomOf(context, 40),
+          ),
           children: [
             if (!e.write &&
                 _params.any(

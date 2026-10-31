@@ -10,12 +10,17 @@ class NeteaseAudioProbe {
     this.bitrate = 0,
     this.duration,
     this.format = '',
+    this.sampleRate = 0,
+    this.bitsPerSample = 0,
   });
   final String reason;
   final int? totalBytes;
   final int bitrate;
   final Duration? duration;
   final String format;
+  final int sampleRate, bitsPerSample;
+  bool get hiRes =>
+      format == 'flac' && bitsPerSample > 16 && sampleRate >= 48000;
   bool get playable => reason == 'audio_ready';
 }
 
@@ -122,6 +127,15 @@ Future<NeteaseAudioProbe> inspectNeteaseAudio(
           : magic('ftyp', 4)
           ? 'm4a'
           : '',
+      // STREAMINFO packs sample rate (20 bits) and bit depth (5 bits)
+      // before its 36-bit total sample count. A requested `high` label alone
+      // cannot prove Hi-Res; only the actual file header can establish it.
+      sampleRate: flac && prefix.length >= 26
+          ? (prefix[18] << 12) | (prefix[19] << 4) | (prefix[20] >> 4)
+          : 0,
+      bitsPerSample: flac && prefix.length >= 26
+          ? (((prefix[20] & 1) << 4) | (prefix[21] >> 4)) + 1
+          : 0,
     );
   } finally {
     // Cancel also when the server ignores Range and starts streaming the full

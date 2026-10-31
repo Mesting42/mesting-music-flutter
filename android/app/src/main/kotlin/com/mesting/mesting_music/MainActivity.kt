@@ -289,6 +289,7 @@ open class MainActivity : AudioServiceActivity() {
             SHARE_CHANNEL,
         ).setMethodCallHandler { call, result ->
             when (call.method) {
+                "shareDiagnosticJson" -> DiagnosticReportShare.share(this, call, result)
                 "shareText" -> {
                     val text = call.argument<String>("text")?.trim()
                     if (text.isNullOrEmpty()) {

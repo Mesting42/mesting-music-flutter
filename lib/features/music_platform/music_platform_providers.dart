@@ -14,6 +14,7 @@ import '../auth/beta_account_choice.dart';
 import '../auth/beta_entry_flow.dart';
 import 'netease/netease_providers.dart';
 import 'netease/netease_session.dart';
+import 'retained_kugou_scope.dart';
 
 final musicServerProvider = Provider<MusicServer>(
   (ref) => EmbeddedMusicServer(),
@@ -150,6 +151,8 @@ class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
     final hadAccount = state.value != null;
     final session = PlatformSession.fromJson(result);
     await ref.read(platformSessionStoreProvider).write(session);
+    ref.read(retainedKugouMutationProvider.notifier).publish(session);
+    ref.invalidate(savedKugouSessionProvider);
     if (state.value?.ownerId != session.ownerId) {
       await _prepare(session.ownerId);
     }
@@ -174,6 +177,7 @@ class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
     }
     final hadAccount = state.value != null;
     await ref.read(neteaseSessionStoreProvider).write(session);
+    ref.read(retainedNeteaseEpochProvider.notifier).advance();
     await _prepare(session.identity.ownerId);
     await ref
         .read(betaAccountChoiceProvider.notifier)
@@ -248,6 +252,7 @@ class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
         avatarUrl: avatarUrl?.isNotEmpty == true ? avatarUrl! : saved.avatarUrl,
       );
       await ref.read(neteaseSessionStoreProvider).write(updated);
+      ref.read(retainedNeteaseEpochProvider.notifier).advance();
       _publish(updated.identity);
       return;
     }
@@ -259,6 +264,8 @@ class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
       avatarUrl: avatarUrl?.isNotEmpty == true ? avatarUrl! : current.avatarUrl,
     );
     await ref.read(platformSessionStoreProvider).write(updated);
+    ref.read(retainedKugouMutationProvider.notifier).publish(updated);
+    ref.invalidate(savedKugouSessionProvider);
     _publish(updated);
   });
 
@@ -282,6 +289,7 @@ class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
       avatarUrl: saved.avatarUrl,
     );
     await ref.read(neteaseSessionStoreProvider).write(updated);
+    ref.read(retainedNeteaseEpochProvider.notifier).advance();
     ref.read(neteaseApiProvider).configure(updated);
     _publish(updated.identity);
   });
@@ -293,9 +301,12 @@ class PlatformAccountController extends AsyncNotifier<PlatformSession?> {
     await _prepare('local');
     if (state.value?.platform == MusicPlatform.netease) {
       await ref.read(neteaseSessionStoreProvider).clear();
+      ref.read(retainedNeteaseEpochProvider.notifier).advance();
       ref.read(neteaseApiProvider).configure(null);
     } else {
       await ref.read(platformSessionStoreProvider).clear();
+      ref.read(retainedKugouMutationProvider.notifier).publish(null);
+      ref.invalidate(savedKugouSessionProvider);
     }
     if (DistributionChannel.isBeta) {
       await ref

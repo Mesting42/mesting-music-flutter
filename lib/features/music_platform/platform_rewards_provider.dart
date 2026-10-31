@@ -5,10 +5,14 @@ import '../../core/persistence/app_preferences.dart';
 import 'data/platform_rewards_repository.dart';
 import 'domain/platform_rewards.dart';
 import 'domain/platform_session.dart';
-import 'music_platform_providers.dart';
+import 'retained_kugou_scope.dart';
+import '../../core/diagnostics/diagnostic_activity.dart';
 
 final platformRewardServiceProvider = Provider<PlatformRewardService>(
-  (ref) => PlatformRewardsRepository(ref.watch(musicPlatformApiProvider)),
+  (ref) => PlatformRewardsRepository(
+    ref.watch(retainedKugouScopeProvider)!.api,
+    allowMutation: () => ref.mounted && !ref.read(diagnosticActivityProvider),
+  ),
 );
 typedef RewardDelay =
     Future<void> Function(Duration interval, Future<void> cancelled);
@@ -99,7 +103,15 @@ class PlatformRewardsController extends Notifier<PlatformRewardState> {
 
   @override
   PlatformRewardState build() {
-    final owner = ref.watch(platformAccountProvider).value;
+    ref.watch(
+      retainedKugouSessionProvider.select(
+        (s) => (s?.userId, s?.token, s?.vipToken),
+      ),
+    );
+    final owner = ref.read(retainedKugouSessionProvider);
+    ref.listen(diagnosticActivityProvider, (_, running) {
+      if (running) stopAds();
+    });
     final ticket = ++_generation;
     _loadVersion++;
     _adAbort = null;
@@ -121,6 +133,7 @@ class PlatformRewardsController extends Notifier<PlatformRewardState> {
         await refresh();
         if (!_valid(ticket, owner) ||
             !state.autoSignIn ||
+            ref.read(diagnosticActivityProvider) ||
             state.action != null) {
           return;
         }
@@ -138,12 +151,12 @@ class PlatformRewardsController extends Notifier<PlatformRewardState> {
 
   bool _valid(int ticket, PlatformSession owner) {
     if (!ref.mounted || ticket != _generation) return false;
-    final current = ref.read(platformAccountProvider).value;
+    final current = ref.read(retainedKugouSessionProvider);
     return current?.userId == owner.userId && current?.token == owner.token;
   }
 
   Future<void> setAutoSignIn(bool enabled) async {
-    final owner = ref.read(platformAccountProvider).value;
+    final owner = ref.read(retainedKugouSessionProvider);
     if (owner == null) return;
     final ticket = _generation;
     final saved = await ref
@@ -154,6 +167,7 @@ class PlatformRewardsController extends Notifier<PlatformRewardState> {
     state = state.copyWith(autoSignIn: enabled);
     // Enabling is an explicit request; completed days are never claimed again.
     if (enabled &&
+        !ref.read(diagnosticActivityProvider) &&
         !state.signedDates.contains(
           rewardDateKey(state.snapshot?.now ?? DateTime.now()),
         )) {
@@ -162,7 +176,7 @@ class PlatformRewardsController extends Notifier<PlatformRewardState> {
   }
 
   Future<void> refresh() async {
-    final owner = ref.read(platformAccountProvider).value;
+    final owner = ref.read(retainedKugouSessionProvider);
     if (owner == null) return;
     final ticket = _generation, load = ++_loadVersion;
     state = state.copyWith(loading: true);
@@ -199,8 +213,11 @@ class PlatformRewardsController extends Notifier<PlatformRewardState> {
     RewardAction action,
     Future<RewardOutcome> Function(PlatformSession owner, int ticket) operation,
   ) async {
-    final owner = ref.read(platformAccountProvider).value;
+    final owner = ref.read(retainedKugouSessionProvider);
     if (owner == null) return const RewardOutcome(false, '请先登录酷狗账号');
+    if (ref.read(diagnosticActivityProvider)) {
+      return const RewardOutcome(false, '流畅度诊断期间暂停签到与奖励领取');
+    }
     if (state.action != null) return const RewardOutcome(false, '当前领取尚未完成，请稍候');
     final ticket = _generation;
     state = state.copyWith(action: action, adCount: 0, adWaiting: false);
@@ -234,8 +251,13 @@ class PlatformRewardsController extends Notifier<PlatformRewardState> {
     (owner, ticket) async {
       // Re-read server time before a manual retry (including across midnight).
       await refresh();
-      if (!_valid(ticket, owner)) return const RewardOutcome(false, '账号已变化');
+      if (!_valid(ticket, owner) || ref.read(diagnosticActivityProvider)) {
+        return const RewardOutcome(false, '账号已变化或诊断已启动');
+      }
       final day = state.snapshot?.now ?? DateTime.now();
+      if (state.signedDates.contains(rewardDateKey(day))) {
+        return const RewardOutcome(true, '今日签到已确认', signed: true);
+      }
       final result = await ref
           .read(platformRewardServiceProvider)
           .signIn(
@@ -287,7 +309,11 @@ class PlatformRewardsController extends Notifier<PlatformRewardState> {
     // A quota response is terminal; cancellation/owner change prevents any
     // later request rather than merely hiding its UI.
     for (var attempt = 0; attempt < 8; attempt++) {
-      if (!_valid(ticket, owner) || abort.isCompleted) break;
+      if (!_valid(ticket, owner) ||
+          abort.isCompleted ||
+          ref.read(diagnosticActivityProvider)) {
+        break;
+      }
       final result = await ref.read(platformRewardServiceProvider).ad(owner);
       if (!_valid(ticket, owner)) break;
       if (result.quotaDone) {

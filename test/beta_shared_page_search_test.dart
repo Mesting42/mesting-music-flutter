@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mesting_music/core/audio/playback_providers.dart';
+import 'package:mesting_music/core/persistence/app_preferences.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:mesting_music/shared/widgets/beta_bottom_search.dart';
 import 'package:mesting_music/shared/widgets/beta_page_search_layout.dart';
 
 void main() {
   setUpAll(LiquidGlassWidgets.initialize);
+  late SharedPreferences preferences;
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    preferences = await SharedPreferences.getInstance();
+  });
   testWidgets('standalone page has one official glass search at the bottom', (
     tester,
   ) async {
@@ -19,6 +28,13 @@ void main() {
     addTearDown(controller.dispose);
     await tester.pumpWidget(
       MaterialApp(
+        builder: (_, child) => ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(preferences),
+            currentMediaItemProvider.overrideWith((ref) => Stream.value(null)),
+          ],
+          child: child!,
+        ),
         home: Scaffold(
           body: BetaPageSearchLayout(
             controller: controller,
@@ -31,6 +47,8 @@ void main() {
     expect(find.byType(GlassTabBar), findsOneWidget);
     expect(find.byType(EditableText), findsOneWidget);
     expect(tester.getCenter(find.byType(EditableText)).dy, greaterThan(450));
+    controller.setActive(true);
+    await tester.pumpAndSettle();
     await tester.enterText(find.byType(EditableText), '本地');
     await tester.pump();
     expect(changed, '本地');
@@ -60,6 +78,13 @@ void main() {
     addTearDown(controller.dispose);
     await tester.pumpWidget(
       MaterialApp(
+        builder: (_, child) => ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(preferences),
+            currentMediaItemProvider.overrideWith((ref) => Stream.value(null)),
+          ],
+          child: child!,
+        ),
         home: BetaBottomSearchScope(
           host: host,
           child: BetaPageSearchLayout(
@@ -91,6 +116,13 @@ void main() {
     addTearDown(controller.dispose);
     await tester.pumpWidget(
       MaterialApp(
+        builder: (_, child) => ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(preferences),
+            currentMediaItemProvider.overrideWith((ref) => Stream.value(null)),
+          ],
+          child: child!,
+        ),
         home: Scaffold(
           body: BetaPageSearchLayout(
             controller: controller,

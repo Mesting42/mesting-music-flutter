@@ -10,6 +10,7 @@ import '../../../../shared/widgets/beta_glass_action.dart';
 import '../../../../shared/widgets/beta_glass_controls.dart';
 import '../../../../shared/widgets/beta_bottom_search.dart';
 import '../../../../shared/widgets/beta_page_search_layout.dart';
+import '../../../../shared/widgets/beta_swipe_pages.dart';
 import '../../../../shared/widgets/keyboard_visibility_builder.dart';
 import '../../platform_backend_providers.dart';
 import '../../presentation/platform_design.dart';
@@ -709,6 +710,7 @@ class _NeteaseChatPageState extends _MessageState<NeteaseChatPage> {
     if (!current) return stale();
     return KeyboardVisibilityBuilder(
       builder: (context, keyboard) => PlatformPageFrame(
+        musicChrome: false,
         title: widget.peer.name,
         centerTitle: true,
         titleWeight: FontWeight.w500,
@@ -1156,15 +1158,75 @@ class _NeteaseShareMessagePageState
   }
 }
 
-class NeteaseNoticesPage extends ConsumerStatefulWidget {
+class NeteaseNoticesPage extends StatefulWidget {
   const NeteaseNoticesPage({required this.initial, super.key});
   final NeteaseNoticeKind initial;
   @override
-  ConsumerState<NeteaseNoticesPage> createState() => _NeteaseNoticesPageState();
+  State<NeteaseNoticesPage> createState() => _NeteaseNoticesPageState();
 }
 
-class _NeteaseNoticesPageState extends _MessageState<NeteaseNoticesPage> {
-  late NeteaseNoticeKind _kind = widget.initial;
+class _NeteaseNoticesPageState extends State<NeteaseNoticesPage> {
+  late int _index = widget.initial == NeteaseNoticeKind.mentions ? 1 : 0;
+  @override
+  Widget build(BuildContext context) {
+    if (widget.initial != NeteaseNoticeKind.comments &&
+        widget.initial != NeteaseNoticeKind.mentions) {
+      return _NeteaseNoticeList(initial: widget.initial);
+    }
+    return PlatformPageFrame(
+      title: '评论和@提及',
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: CupertinoSlidingSegmentedControl<int>(
+              groupValue: _index,
+              children: const {0: Text('评论'), 1: Text('@我')},
+              onValueChanged: (index) {
+                if (index != null) {
+                  setState(() => _index = index);
+                }
+              },
+            ),
+          ),
+          Expanded(
+            child: BetaSwipePages(
+              index: _index,
+              length: 2,
+              onChanged: (index) {
+                if (_index != index) {
+                  setState(() => _index = index);
+                }
+              },
+              itemBuilder: (context, index) => _NeteaseNoticeList(
+                key: ValueKey(index),
+                embedded: true,
+                initial: index == 0
+                    ? NeteaseNoticeKind.comments
+                    : NeteaseNoticeKind.mentions,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NeteaseNoticeList extends ConsumerStatefulWidget {
+  const _NeteaseNoticeList({
+    required this.initial,
+    this.embedded = false,
+    super.key,
+  });
+  final bool embedded;
+  final NeteaseNoticeKind initial;
+  @override
+  ConsumerState<_NeteaseNoticeList> createState() => _NeteaseNoticeListState();
+}
+
+class _NeteaseNoticeListState extends _MessageState<_NeteaseNoticeList> {
+  late final NeteaseNoticeKind _kind = widget.initial;
   final _rows = <NeteaseMessageNotice>[];
   String? _error;
   bool _busy = false, _more = false;
@@ -1204,15 +1266,6 @@ class _NeteaseNoticesPageState extends _MessageState<NeteaseNoticesPage> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
-  }
-
-  Future<void> _select(NeteaseNoticeKind kind) async {
-    if (_busy || kind == _kind) return;
-    setState(() {
-      _kind = kind;
-      _rows.clear();
-    });
-    await _load();
   }
 
   Future<void> _detail(NeteaseMessageNotice row) async {
@@ -1270,72 +1323,53 @@ class _NeteaseNoticesPageState extends _MessageState<NeteaseNoticesPage> {
       NeteaseNoticeKind.mentions => '评论和@提及',
       NeteaseNoticeKind.notices => '赞和通知',
     };
-    return PlatformPageFrame(
-      title: title,
-      child: Column(
+    final list = RefreshIndicator(
+      onRefresh: _load,
+      child: ListView(
+        key: PageStorageKey('notices-${_kind.name}'),
+        padding: const EdgeInsets.only(bottom: 190),
+        physics: const AlwaysScrollableScrollPhysics(),
         children: [
-          if (_kind == NeteaseNoticeKind.comments ||
-              _kind == NeteaseNoticeKind.mentions)
+          if (_error != null) _MessageFeedback(_error!, retry: _load),
+          if (_busy)
+            const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: BetaActivityIndicator()),
+            ),
+          for (final row in _rows)
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 22,
+                vertical: 8,
+              ),
+              leading: NeteasePersonAvatar(row.person),
+              title: Text(row.person.name),
+              subtitle: Text(
+                row.text,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: Text(
+                neteaseMessageTime(row.time),
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+              onTap: () => _detail(row),
+            ),
+          if (!_busy && _rows.isEmpty && _error == null)
+            const _MessageFeedback('暂时没有消息'),
+          if (_more)
             Padding(
-              padding: const EdgeInsets.all(14),
-              child: CupertinoSlidingSegmentedControl<NeteaseNoticeKind>(
-                groupValue: _kind,
-                children: const {
-                  NeteaseNoticeKind.comments: Text('评论'),
-                  NeteaseNoticeKind.mentions: Text('@我'),
-                },
-                onValueChanged: (kind) {
-                  if (kind != null) _select(kind);
-                },
+              padding: const EdgeInsets.all(22),
+              child: BetaGlassButton(
+                onPressed: _busy ? null : () => _load(next: true),
+                child: const Text('加载更多'),
               ),
             ),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _load,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: [
-                  if (_error != null) _MessageFeedback(_error!, retry: _load),
-                  if (_busy)
-                    const Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Center(child: BetaActivityIndicator()),
-                    ),
-                  for (final row in _rows)
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 22,
-                        vertical: 8,
-                      ),
-                      leading: NeteasePersonAvatar(row.person),
-                      title: Text(row.person.name),
-                      subtitle: Text(
-                        row.text,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: Text(
-                        neteaseMessageTime(row.time),
-                        style: Theme.of(context).textTheme.labelSmall,
-                      ),
-                      onTap: () => _detail(row),
-                    ),
-                  if (!_busy && _rows.isEmpty && _error == null)
-                    const _MessageFeedback('暂时没有消息'),
-                  if (_more)
-                    Padding(
-                      padding: const EdgeInsets.all(22),
-                      child: BetaGlassButton(
-                        onPressed: _busy ? null : () => _load(next: true),
-                        child: const Text('加载更多'),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );
+    return widget.embedded
+        ? list
+        : PlatformPageFrame(title: title, child: list);
   }
 }

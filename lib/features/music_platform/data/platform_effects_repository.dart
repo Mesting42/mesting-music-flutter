@@ -1,4 +1,4 @@
-import '../domain/platform_session.dart';
+import '../../../shared/utils/media_uri.dart';
 import 'music_platform_api.dart';
 
 enum MusicEffectsCatalog { community, earphone, artist }
@@ -54,13 +54,18 @@ class MusicSoundEffect {
       author: text('author').isNotEmpty ? text('author') : text('brand_name'),
       category: category,
       description: description,
-      cover: PlatformSession.picture(
-        text('icon_url').isNotEmpty
-            ? text('icon_url')
-            : text('model_icon').isNotEmpty
-            ? text('model_icon')
-            : text('logo'),
-      ),
+      // Community/artist return icon_url; headphone models use model_icon.
+      // Some catalogues carry only their playlist artwork. Select the first
+      // valid real URL, rather than allowing an empty/identifier field to mask
+      // a later image, and share the same transport normalization as the widget.
+      cover: firstArtworkUri([
+        text('icon_url'),
+        text('model_icon'),
+        text('logo'),
+        text('playlist_v20_icon'),
+        text('playlist_on_icon'),
+        text('playlist_off_icon'),
+      ]),
     );
   }
 

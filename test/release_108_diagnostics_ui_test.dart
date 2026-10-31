@@ -14,6 +14,7 @@ import 'package:mesting_music/core/persistence/app_preferences.dart';
 import 'package:mesting_music/features/settings/presentation/frame_diagnostics_page.dart';
 import 'package:mesting_music/features/themes/app_theme.dart';
 import 'package:mesting_music/features/themes/music_theme_preset.dart';
+import 'support/diagnostics_fixture.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -65,7 +66,12 @@ void main() {
       }
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(preferences),
+            diagnosticControllerProvider.overrideWith(
+              (ref) async => diagnosticFixture(),
+            ),
+          ],
           child: LiquidGlassWidgets.wrap(
             adaptiveQuality: false,
             brightnessResolver: Theme.maybeBrightnessOf,
@@ -109,7 +115,14 @@ void main() {
       }
 
       await capture('idle');
+      await tester.scrollUntilVisible(
+        find.text('开始采集'),
+        180,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('开始采集'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('开始采集'));
       await tester.pumpAndSettle();
       expect(FrameTimingProbe.recording.value, isTrue);

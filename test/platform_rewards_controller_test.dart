@@ -8,6 +8,7 @@ import 'package:mesting_music/features/music_platform/domain/platform_rewards.da
 import 'package:mesting_music/features/music_platform/domain/platform_session.dart';
 import 'package:mesting_music/features/music_platform/music_platform_providers.dart';
 import 'package:mesting_music/features/music_platform/platform_rewards_provider.dart';
+import 'package:mesting_music/features/music_platform/retained_kugou_scope.dart';
 
 const _a = PlatformSession(userId: 'A', token: 'fixture-A');
 const _b = PlatformSession(userId: 'B', token: 'fixture-B');
@@ -82,6 +83,7 @@ void main() {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(preferences),
         platformAccountProvider.overrideWith(_Account.new),
+        savedKugouSessionProvider.overrideWith((ref) async => null),
         platformRewardServiceProvider.overrideWithValue(service),
         platformRewardDelayProvider.overrideWithValue(
           delay ??

@@ -178,11 +178,11 @@ void main() {
           );
           expect(find.text('本地黑胶 SVIP 已启用'), findsOneWidget);
           await capture(tester, 'settings-$dark-$compact');
-          await tester.scrollUntilVisible(find.text('GD Studio'), 250);
+          await reveal(tester, find.text('GD Studio'));
           await settle(tester);
           expect(tester.takeException(), isNull);
           await capture(tester, 'settings-sources-$dark-$compact');
-          await tester.scrollUntilVisible(find.text('音源诊断日志'), 250);
+          await reveal(tester, find.text('音源诊断日志'));
           await settle(tester);
           expect(tester.takeException(), isNull);
           await capture(tester, 'settings-cache-$dark-$compact');

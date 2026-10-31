@@ -48,12 +48,16 @@ import 'player_content_transition.dart';
 class BetaNowPlayingPage extends ConsumerStatefulWidget {
   const BetaNowPlayingPage({
     this.lyricsInitially = false,
+    this.queueInitially = false,
     this.togetherInitially = false,
     this.togetherInvitee,
     this.togetherInvitation,
     super.key,
   });
   final bool lyricsInitially;
+  /// Used by the read-only diagnostic runner to enter the same production
+  /// queue surface without synthesizing a tap or changing the audio owner.
+  final bool queueInitially;
   final bool togetherInitially;
   final NeteasePerson? togetherInvitee;
   final String? togetherInvitation;
@@ -63,7 +67,7 @@ class BetaNowPlayingPage extends ConsumerStatefulWidget {
 
 class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
   late bool _lyrics = widget.lyricsInitially;
-  bool _queue = false;
+  late bool _queue = widget.queueInitially;
   double _direction = 1;
   StreamSubscription<String>? _commands;
   bool _routeExitRequested = false;

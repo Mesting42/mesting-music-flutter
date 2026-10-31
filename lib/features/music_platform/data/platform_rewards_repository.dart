@@ -18,10 +18,15 @@ abstract interface class PlatformRewardService {
 /// routes. Never log credentials, replay a timed-out write, or invent a reward.
 /// Source: md3Music a69503b, kugou_provider.dart and kugou_api_client.dart.
 class PlatformRewardsRepository implements PlatformRewardService {
-  PlatformRewardsRepository(this.api, {DateTime Function()? clock})
-    : _clock = clock ?? DateTime.now;
+  PlatformRewardsRepository(
+    this.api, {
+    DateTime Function()? clock,
+    bool Function()? allowMutation,
+  }) : _clock = clock ?? DateTime.now,
+       _allowMutation = allowMutation ?? (() => true);
   final MusicPlatformApi api;
   final DateTime Function() _clock;
+  final bool Function() _allowMutation;
 
   static int? code(Map<String, dynamic> value) =>
       int.tryParse('${value['error_code']}');
@@ -69,7 +74,14 @@ class PlatformRewardsRepository implements PlatformRewardService {
     String path,
     PlatformSession owner, {
     Map<String, String> query = const {},
-  }) => api.post(path, query: query, expectedSession: owner);
+  }) {
+    // An already-started request cannot be recalled, but diagnostics starting
+    // between reward steps must prevent the next upgrade/verification write.
+    if (!_allowMutation()) {
+      throw const MusicPlatformException('流畅度诊断期间暂停奖励领取');
+    }
+    return api.post(path, query: query, expectedSession: owner);
+  }
 
   @override
   Future<RewardOutcome> signIn(
@@ -121,6 +133,9 @@ class PlatformRewardsRepository implements PlatformRewardService {
         );
         if (proof == null || proof.isEmpty) {
           return const RewardOutcome(false, '安全验证未完成，签到已停止');
+        }
+        if (!_allowMutation()) {
+          return const RewardOutcome(false, '流畅度诊断期间暂停安全验证与签到');
         }
         final result = await api.get(
           '/verify/user/info',

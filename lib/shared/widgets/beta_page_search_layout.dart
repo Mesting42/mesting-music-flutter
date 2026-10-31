@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import '../../features/experience/presentation/beta_bottom_bar.dart';
 import 'beta_bottom_search.dart';
+import '../../core/platform/distribution_channel.dart';
+import 'beta_secondary_music_layout.dart';
 import 'beta_glass_action.dart';
 import 'beta_text_editing.dart';
 
@@ -21,13 +23,10 @@ class BetaPageSearchLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (BetaBottomSearchScope.maybeOf(context) != null) {
-      return BetaBottomSearchBinding(
-        controller: controller,
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 136),
-          child: child,
-        ),
-      );
+      return BetaBottomSearchBinding(controller: controller, child: child);
+    }
+    if (DistributionChannel.isBeta) {
+      return BetaSecondaryMusicLayout(search: controller, child: child);
     }
     return ListenableBuilder(
       listenable: controller,

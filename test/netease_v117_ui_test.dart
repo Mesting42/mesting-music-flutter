@@ -19,6 +19,7 @@ import 'package:mesting_music/features/downloads/audio_downloads.dart';
 import 'package:mesting_music/features/downloads/audio_downloads_page.dart';
 import 'package:mesting_music/features/music_platform/data/cloud_library_repository.dart';
 import 'package:mesting_music/features/music_platform/music_platform_providers.dart';
+import 'package:mesting_music/features/music_platform/retained_kugou_scope.dart';
 import 'package:mesting_music/features/music_platform/platform_profile_provider.dart';
 import 'package:mesting_music/features/music_platform/platform_backend_providers.dart';
 import 'package:mesting_music/features/music_platform/netease/netease_api.dart';
@@ -132,6 +133,7 @@ void main() {
           await SharedPreferences.getInstance(),
         ),
         platformAccountProvider.overrideWith(TestAccount.new),
+        savedKugouSessionProvider.overrideWith((ref) async => null),
         if (availability != null) ...[
           neteaseMusicRepositoryProvider.overrideWithValue(music),
           neteaseSourceAvailabilityProvider.overrideWithValue(availability),
@@ -347,6 +349,8 @@ void main() {
     'third-level routes pop one level from either edge and system Back',
     (tester) async {
       final nav = GlobalKey<NavigatorState>();
+      SharedPreferences.setMockInitialValues({});
+      final preferences = await SharedPreferences.getInstance();
       Widget page(String name, [Widget? next]) => PlatformPageFrame(
         title: name,
         child: Center(
@@ -364,6 +368,15 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           navigatorKey: nav,
+          builder: (_, child) => ProviderScope(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(preferences),
+              currentMediaItemProvider.overrideWith(
+                (ref) => Stream.value(null),
+              ),
+            ],
+            child: child!,
+          ),
           home: Builder(
             builder: (context) => Scaffold(
               body: TextButton(

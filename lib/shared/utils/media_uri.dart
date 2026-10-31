@@ -4,6 +4,13 @@ String normalizeArtworkUri(String value) {
   var text = value.trim();
   if (text.startsWith('//')) text = 'https:$text';
   final uri = Uri.tryParse(text);
+  // The official effects CDN currently serves valid PNGs over HTTP but its
+  // HTTPS certificate does not match this hostname. Preserve that exact public
+  // host's supplied scheme; never bypass TLS verification or rewrite it to a
+  // different guessed asset. Android already permits Kugou's media domains.
+  if (uri?.scheme == 'http' && uri!.host == 'mobileservice.bssdl.kugou.com') {
+    return text;
+  }
   if (uri?.scheme == 'http' &&
       (uri!.host.endsWith('.music.126.net') ||
           uri.host.endsWith('.music.163.com') ||

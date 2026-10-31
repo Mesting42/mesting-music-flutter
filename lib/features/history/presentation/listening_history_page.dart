@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/beta_swipe_pages.dart';
 import '../../../shared/widgets/beta_glass_controls.dart';
 import '../../../core/platform/distribution_channel.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -64,7 +65,18 @@ class _ListeningHistoryPageState extends ConsumerState<ListeningHistoryPage>
           Expanded(
             child: TabBarView(
               controller: _tabController,
-              children: const [_RankingList(), _RecentList()],
+              children: [
+                BetaTabScrollRelay(
+                  controller: _tabController,
+                  index: 0,
+                  child: const _RankingList(),
+                ),
+                BetaTabScrollRelay(
+                  controller: _tabController,
+                  index: 1,
+                  child: const _RecentList(),
+                ),
+              ],
             ),
           ),
         ],

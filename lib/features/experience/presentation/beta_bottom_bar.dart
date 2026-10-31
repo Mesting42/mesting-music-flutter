@@ -81,7 +81,13 @@ class BetaMusicBottomBar extends StatelessWidget {
       selectedIndex: selectedIndex,
       onTabSelected: onTabSelected,
       isSearchActive: isSearchActive,
-      bottomAccessoryPlacement: inline
+      // At narrow widths the two transport buttons already consume most of
+      // an inline accessory. Keep the shared glass capsule expanded so large
+      // text never squeezes its controls out of the available row.
+      bottomAccessoryPlacement:
+          inline &&
+              MediaQuery.sizeOf(context).width >= 360 &&
+              MediaQuery.textScalerOf(context).scale(12) <= 18
           ? GlassTabBarAccessoryPlacement.inline
           : GlassTabBarAccessoryPlacement.expanded,
       bottomAccessory: accessory,

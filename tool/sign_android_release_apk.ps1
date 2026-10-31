@@ -28,6 +28,7 @@ if (!$signer) { throw 'Android Build Tools apksigner is required.' }
 & $signer sign --ks $keyFile --ks-key-alias $KeyAlias `
     --ks-pass "env:$StorePassEnv" --key-pass "env:$KeyPassEnv" `
     --v1-signing-enabled false --v2-signing-enabled true --v3-signing-enabled true `
+    --v4-signing-enabled false `
     --out $Output $inputApk
 if ($LASTEXITCODE -ne 0) { throw 'APK signing failed.' }
 $report = (& $signer verify --verbose --print-certs $Output) -join "`n"
@@ -40,4 +41,18 @@ if ($certificate -ne $ExpectedCertificateSha256.ToLowerInvariant()) {
     throw 'Certificate differs from the retained upgrade identity. Do not install this APK.'
 }
 Write-Output "Verified upgrade certificate: $certificate"
-Get-FileHash -LiteralPath $Output -Algorithm SHA256
+# Windows PowerShell launched from a portable PowerShell may inherit a module
+# path without Microsoft.PowerShell.Utility. Hash with .NET directly so an
+# already successful signature is not reported as a failure by that host.
+$musicHash = [Security.Cryptography.SHA256]::Create()
+$musicStream = [IO.File]::OpenRead((Resolve-Path -LiteralPath $Output).Path)
+try {
+    [pscustomobject]@{
+        Algorithm = 'SHA256'
+        Hash = [BitConverter]::ToString($musicHash.ComputeHash($musicStream)).Replace('-', '').ToLowerInvariant()
+        Path = (Resolve-Path -LiteralPath $Output).Path
+    }
+} finally {
+    $musicStream.Dispose()
+    $musicHash.Dispose()
+}

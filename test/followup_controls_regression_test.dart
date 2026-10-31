@@ -33,6 +33,7 @@ import 'package:mesting_music/features/library/library_providers.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'dart:convert';
+import 'support/diagnostics_fixture.dart';
 
 class _Server implements MusicServer {
   @override
@@ -199,6 +200,9 @@ void main() {
               overrides: [
                 sharedPreferencesProvider.overrideWithValue(preferences),
                 platformAccountProvider.overrideWith(_Guest.new),
+                diagnosticControllerProvider.overrideWith(
+                  (ref) async => diagnosticFixture(),
+                ),
               ],
               child: app,
             )
@@ -676,7 +680,11 @@ void main() {
           width: config.$2,
           scale: config.$3,
         );
-        await tester.ensureVisible(find.text('复制诊断报告'));
+        await tester.scrollUntilVisible(
+          find.text('复制诊断报告'),
+          180,
+          scrollable: find.byType(Scrollable).first,
+        );
         await tester.pumpAndSettle();
         final button = find.ancestor(
           of: find.text('复制诊断报告'),

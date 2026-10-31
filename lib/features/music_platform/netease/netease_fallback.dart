@@ -12,6 +12,8 @@ import '../data/music_platform_api.dart';
 import '../domain/platform_audio_quality.dart';
 import '../music_platform_providers.dart';
 import '../platform_backend_providers.dart';
+import '../retained_kugou_scope.dart';
+import 'fallback/netease_kugou_account_source.dart';
 import 'netease_music_repository.dart';
 import 'netease_playback_options.dart';
 import 'fallback/netease_fallback_source.dart';
@@ -321,6 +323,7 @@ class NeteaseFallbackResolver {
     this.sourceTimeout = const Duration(seconds: 10),
     this.groupTimeout = const Duration(seconds: 20),
     this.sourceFactories = const [],
+    this.sessionCurrent,
   });
   final List<NeteaseFallbackSource> sources;
   final http.Client client;
@@ -328,8 +331,15 @@ class NeteaseFallbackResolver {
   final NeteaseFallbackDiagnostics? diagnostics;
   final Duration sourceTimeout, groupTimeout;
   final List<NeteaseSourceFactory> sourceFactories;
+  final bool Function()? sessionCurrent;
   final Map<String, ({Track track, DateTime until})> _cache = {};
+  bool _disposed = false;
   void clearCache() => _cache.clear();
+  void invalidate() {
+    _disposed = true;
+    clearCache();
+  }
+
   Future<Track?> resolve(
     Track original, {
     required bool Function() current,
@@ -356,7 +366,11 @@ class NeteaseFallbackResolver {
     try {
       return await _resolve(
         original,
-        current: () => !cancelled && current(),
+        current: () =>
+            !_disposed &&
+            !cancelled &&
+            (sessionCurrent?.call() ?? true) &&
+            current(),
         requiredQuality: requiredQuality,
         activeSources: [...sources, ...clients.keys]
             .where((source) => onlySource == null || source.label == onlySource)
@@ -495,7 +509,8 @@ class NeteaseFallbackResolver {
             outcome = 'preview_rejected';
             continue;
           }
-          if (requiredQuality != null &&
+          if (source is! AccountKugouFallback &&
+              requiredQuality != null &&
               resolved.playbackQuality.isNotEmpty &&
               resolved.playbackQuality != requiredQuality) {
             outcome = 'requested_quality_unavailable';
@@ -521,8 +536,23 @@ class NeteaseFallbackResolver {
             outcome = media!.reason;
             continue;
           }
-          if (bitrate == 0) bitrate = media!.bitrate;
-          final delivered = resolved.playbackQuality.isNotEmpty
+          if (source is AccountKugouFallback) {
+            // Account adapters may echo the requested tier. Measured MP3
+            // frames and FLAC STREAMINFO, rather than that label, own the badge.
+            bitrate = media!.bitrate > 0
+                ? media!.bitrate
+                : resolved.audioBitrate;
+          } else if (bitrate == 0) {
+            bitrate = media!.bitrate;
+          }
+          final delivered =
+              source is AccountKugouFallback && media!.format == 'flac'
+              ? (media!.hiRes ? 'high' : 'flac')
+              : source is AccountKugouFallback
+              ? (media!.bitrate > 0
+                    ? (media!.bitrate > 220000 ? '320' : '128')
+                    : '')
+              : resolved.playbackQuality.isNotEmpty
               ? resolved.playbackQuality
               : media!.format == 'mp3' && bitrate > 0 && bitrate <= 400000
               ? (bitrate > 220000 ? '320' : '128')
@@ -602,16 +632,22 @@ class NeteaseFallbackResolver {
       }
     }
 
+    Track? accountResult;
+    for (final source in activeSources.whereType<AccountKugouFallback>()) {
+      accountResult = await attempt(source);
+      if (accountResult != null || !current()) break;
+    }
+    if (!current()) return null;
     final newer = activeSources
-        .where((s) => s is! BugpkNeteaseFallback)
+        .where((s) => s is! BugpkNeteaseFallback && s is! AccountKugouFallback)
         .toList();
-    Track? result;
-    if (options.strategy == NeteaseSourceStrategy.ordered) {
+    Track? result = accountResult;
+    if (result == null && options.strategy == NeteaseSourceStrategy.ordered) {
       for (final source in newer) {
         result = await attempt(source);
         if (result != null || !current()) break;
       }
-    } else {
+    } else if (result == null) {
       // At most two metadata/media probes at once. BugPk is a separate final
       // stage, so a high bitrate there cannot override a working new source.
       var cursor = 0;
@@ -667,10 +703,33 @@ final neteaseFallbackResolverProvider = Provider<NeteaseFallbackResolver>((
   ref.onDispose(client.close);
   final server = ref.watch(musicServerProvider);
   final bugpkGate = BugpkRequestGate();
-  return NeteaseFallbackResolver(
+  final account = ref.watch(retainedKugouScopeProvider);
+  final resolver = NeteaseFallbackResolver(
     const [],
     client,
+    sessionCurrent: () =>
+        ref.mounted && identical(ref.read(retainedKugouScopeProvider), account),
     sourceFactories: [
+      if (account != null)
+        NeteaseSourceFactory(
+          (scoped) => AccountKugouFallback(
+            EmbeddedKugouMusicSource(
+              scoped,
+              MusicPlatformApi(
+                server: server,
+                client: scoped,
+                sessionCurrent: () =>
+                    account.current &&
+                    ref.mounted &&
+                    identical(ref.read(retainedKugouScopeProvider), account),
+              )..session = account.owner,
+            ),
+            current: () =>
+                account.current &&
+                ref.mounted &&
+                identical(ref.read(retainedKugouScopeProvider), account),
+          ),
+        ),
       if (options.enabledSources.contains(NeteasePublicSource.kugou))
         NeteaseSourceFactory(
           (scoped) => AnonymousKugouFallback(
@@ -693,6 +752,8 @@ final neteaseFallbackResolverProvider = Provider<NeteaseFallbackResolver>((
     options: options,
     diagnostics: ref.watch(neteaseFallbackDiagnosticsProvider),
   );
+  ref.onDispose(resolver.invalidate);
+  return resolver;
 });
 
 /// A newer explicit selection cancels the previous playback lookup, including

@@ -1,7 +1,7 @@
 param(
     # Public releases retain this internal flavor/package for in-place upgrades.
-    [string]$VersionName = '1.0.23',
-    [ValidateRange(1, 2147483647)][int]$VersionCode = 44,
+    [string]$VersionName = '1.0.24',
+    [ValidateRange(1, 2147483647)][int]$VersionCode = 45,
     [ValidateSet('debug', 'profile', 'release')][string]$Mode = 'release',
     [string]$TargetPlatform = 'android-arm,android-arm64',
     [string]$FlutterSdkRoot = $env:MESTING_BETA_FLUTTER_ROOT
@@ -23,7 +23,7 @@ try {
     if ([version]$sdk.frameworkVersion -lt [version]'3.41.0') {
         throw 'Beta requires Flutter >= 3.41.0. Use -FlutterSdkRoot with the independent Flutter 3.41.9 SDK.'
     }
-    # No deployment, manifest write or formal build is performed by this tool.
+    # Compile locally only; this entry never deploys or writes an online manifest.
     # Channel identity is also enforced from Flutter's generated appFlavor.
     # Flutter 3.41 regenerates the native plugin registrant only when its pub
     # phase is enabled. After tests, --no-pub can leave integration_test in a

@@ -413,7 +413,7 @@ void main() {
     (tester) async {
       final repository = _Repository();
       await mount(tester, repository, width: 320, scale: 1.6);
-      expect(find.text('扫描手机'), findsOneWidget);
+      expect(find.text('扫描手机').hitTestable(), findsOneWidget);
       expect(find.text('导入文件'), findsOneWidget);
       expect(find.text('导入文件夹'), findsOneWidget);
       expect(repository.scans, 0);
@@ -466,25 +466,26 @@ void main() {
         }),
       );
       await mount(tester, repository, dark: true);
-      expect(find.text('夜航'), findsOneWidget);
+      expect(find.text('夜航').hitTestable(), findsOneWidget);
       await capture(tester, 'songs-dark');
       await tester.tap(find.text('文件夹'));
-      await tester.pump(const Duration(milliseconds: 400));
-      expect(find.text('随身音乐'), findsOneWidget);
-      expect(find.text('下载音乐'), findsOneWidget);
-      await capture(tester, 'folders-dark');
-      await tester.tap(find.text('随身音乐'));
       await tester.pump();
-      expect(find.text('夜航'), findsOneWidget);
-      expect(find.text('晨光'), findsNothing);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('随身音乐').hitTestable(), findsOneWidget);
+      expect(find.text('下载音乐').hitTestable(), findsOneWidget);
+      await capture(tester, 'folders-dark');
+      await tester.tap(find.text('随身音乐').hitTestable());
+      await tester.pump();
+      expect(find.text('夜航').hitTestable(), findsOneWidget);
+      expect(find.text('晨光').hitTestable(), findsNothing);
       repository.scanError = const LocalMusicException(
         '请到设置中授予音乐权限',
         code: 'permission_permanently_denied',
       );
-      await tester.tap(find.text('扫描手机'));
+      await tester.tap(find.text('扫描手机').hitTestable());
       await tester.pump();
-      expect(find.text('前往系统设置授权'), findsOneWidget);
-      expect(find.text('夜航'), findsOneWidget);
+      expect(find.text('前往系统设置授权').hitTestable(), findsOneWidget);
+      expect(find.text('夜航').hitTestable(), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -498,29 +499,26 @@ void main() {
         }),
       );
       await mount(tester, repository);
-      await tester.enterText(
-        find.byType(EditableText),
-        '夜航',
-      );
+      await tester.enterText(find.byType(EditableText), '夜航');
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(
         find.descendant(
           of: find.byKey(const ValueKey('local_one')),
-          matching: find.text('夜航'),
+          matching: find.text('夜航').hitTestable(),
         ),
         findsOneWidget,
       );
-      expect(find.text('晨光'), findsNothing);
+      expect(find.text('晨光').hitTestable(), findsNothing);
       await tester.tap(find.text('文件夹'));
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.text('随身音乐'), findsOneWidget);
-      expect(find.text('下载音乐'), findsNothing);
-      await tester.enterText(
-        find.byType(EditableText),
-        '不存在',
-      );
+      expect(find.text('随身音乐').hitTestable(), findsOneWidget);
+      expect(find.text('下载音乐').hitTestable(), findsNothing);
+      await tester.enterText(find.byType(EditableText), '不存在');
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.text('没有找到文件夹'), findsOneWidget);
+      expect(find.text('没有找到文件夹').hitTestable(), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

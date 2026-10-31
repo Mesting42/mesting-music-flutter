@@ -69,6 +69,7 @@ class PersonalProfileFixture {
 
   static Future<PersonalProfileFixture> create({
     MestingAudioHandler? audioHandler,
+    PlatformAccountController Function()? accountFactory,
     List<Override> extraOverrides = const [],
   }) async {
     SharedPreferences.setMockInitialValues({});
@@ -119,7 +120,9 @@ class PersonalProfileFixture {
         if (audioHandler != null)
           audioHandlerProvider.overrideWithValue(audioHandler),
         sharedPreferencesProvider.overrideWithValue(prefs),
-        platformAccountProvider.overrideWith(SyntheticProfileAccount.new),
+        platformAccountProvider.overrideWith(
+          accountFactory ?? SyntheticProfileAccount.new,
+        ),
         neteaseMusicRepositoryProvider.overrideWithValue(music),
         platformProfileProvider.overrideWith(
           (ref) async => const PlatformProfileInfo(

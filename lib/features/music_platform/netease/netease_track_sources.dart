@@ -1,11 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../music_platform_providers.dart';
 
-/// These are existing adapters. No additional Kugou account or API is added.
+/// Explicit adapters include the retained Concept login and anonymous sources.
 /// A manual choice is scoped to this account/session and recording.
 enum NeteaseTrackSource {
   automatic('自动', null),
   official('网易云官方', null),
+  accountKugou('酷狗概念版账号', '酷狗概念版账号'),
   kugou('酷狗公开音源', '酷狗公开音源'),
   kuwo('酷我公开音源', '酷我公开音源'),
   bilibili('B站音频', 'B站音频'),

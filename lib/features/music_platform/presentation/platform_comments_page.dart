@@ -391,6 +391,7 @@ class _PlatformCommentsPageState extends ConsumerState<PlatformCommentsPage> {
       },
     );
     return PlatformPageFrame(
+      musicChrome: false,
       title: widget.thread != null
           ? '评论回复'
           : widget.repository.identity.platform == MusicPlatform.netease

@@ -9,6 +9,7 @@ import '../../../shared/widgets/beta_glass_action.dart';
 import '../../../shared/widgets/beta_bottom_search.dart';
 import '../../../shared/widgets/beta_tab_navigation.dart';
 import '../../../shared/widgets/beta_scroll_chrome.dart';
+import '../../../shared/widgets/beta_swipe_pages.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/performance/frame_timing_probe.dart';
 
@@ -63,7 +64,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
 
   bool _compactScheduled = false;
   bool? _pendingCompact;
-  bool _searching = false, _focused = false;
+  bool _searching = false;
   bool _hasOpenedSearch = false;
   final _backHistory = BetaSearchBackHistory();
   final _pageBackHistory = BetaPageBackHistory();
@@ -104,7 +105,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
     if (!mounted || _pageSearchScheduled) return;
     if (SchedulerBinding.instance.schedulerPhase !=
         SchedulerPhase.persistentCallbacks) {
-      setState(() => _focused = _pageSearch?.focus.hasFocus ?? _focus.hasFocus);
+      setState(() {});
       _scheduleBackHistory();
       return;
     }
@@ -112,7 +113,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _pageSearchScheduled = false;
       if (!mounted) return;
-      setState(() => _focused = _pageSearch?.focus.hasFocus ?? _focus.hasFocus);
+      setState(() {});
       _scheduleBackHistory();
     });
   }
@@ -182,7 +183,6 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
       _closingSearchRoute = false;
       _pageSearchHost.current?.focus.unfocus();
       _pageSearchHost.location = widget.location;
-      _focused = false;
       FrameTimingProbe.markTransition('page_change');
       if (widget.location == '/player') {
         // Reset synchronously before the bar's next paint. A post-frame reset
@@ -257,7 +257,6 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
       _searching = active;
       if (!active) _mini = false;
       if (active) _hasOpenedSearch = true;
-      if (!active) _focused = false;
     });
     _searching ? _searchMotion.forward() : _searchMotion.reverse();
     if (!active) _focus.unfocus();
@@ -313,10 +312,10 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
     _focus.unfocus();
   }
 
-  bool _scroll(ScrollNotification notification) {
+  bool _scroll(ScrollNotification notification, {bool activePage = false}) {
     if (!widget.chromeVisible ||
         _anySearch ||
-        notification.depth != 0 ||
+        (!activePage && notification.depth != 0) ||
         notification.metrics.axis != Axis.vertical) {
       return false;
     }
@@ -390,60 +389,72 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
         resizeToAvoidBottomInset: false,
         body: Material(
           type: MaterialType.transparency,
-          child: NotificationListener<ScrollNotification>(
-            onNotification: _scroll,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: IgnorePointer(
-                    ignoring: _searching,
-                    child: Offstage(
-                      // Keep the source mounted for its scroll state, but
-                      // stop painting once the opaque search page has landed.
-                      offstage: _searching && _searchMotion.isCompleted,
-                      child: ExcludeSemantics(
-                        excluding: _searching,
-                        child: TickerMode(
-                          enabled: !_searching,
-                          child: MestingAdaptiveContentFrame(
-                            child: widget.child,
+          child: NotificationListener<BetaActivePageScrollNotification>(
+            onNotification: (event) {
+              _scroll(event.scroll, activePage: true);
+              return true;
+            },
+            child: NotificationListener<ScrollNotification>(
+              onNotification: _scroll,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      ignoring: _searching,
+                      child: Offstage(
+                        // Keep the source mounted for its scroll state, but
+                        // stop painting once the opaque search page has landed.
+                        offstage: _searching && _searchMotion.isCompleted,
+                        child: ExcludeSemantics(
+                          excluding: _searching,
+                          child: TickerMode(
+                            enabled: !_searching,
+                            child: MestingAdaptiveContentFrame(
+                              child: widget.child,
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                if (_hasOpenedSearch)
-                  Positioned.fill(
-                    child: ExcludeFocus(
-                      excluding: !_searching,
-                      child: Offstage(
-                        offstage: !_searching && _searchMotion.isDismissed,
-                        child: TickerMode(
-                          enabled: !_searchMotion.isDismissed,
-                          child: NotificationListener<ScrollNotification>(
-                            onNotification: (_) => !_searching,
-                            child: SlideTransition(
-                              position: _searchMotion.drive(
-                                Tween<Offset>(
-                                  begin: const Offset(1, 0),
-                                  end: Offset.zero,
-                                ).chain(CurveTween(curve: Curves.easeOutCubic)),
-                              ),
-                              child: RepaintBoundary(
-                                child: ColoredBox(
-                                  key: const ValueKey('beta10-search-surface'),
-                                  color: Theme.of(context).colorScheme.surface,
-                                  child: Padding(
-                                    padding: EdgeInsets.only(
-                                      bottom: inset,
-                                      top: MediaQuery.paddingOf(context).top,
+                  if (_hasOpenedSearch)
+                    Positioned.fill(
+                      child: ExcludeFocus(
+                        excluding: !_searching,
+                        child: Offstage(
+                          offstage: !_searching && _searchMotion.isDismissed,
+                          child: TickerMode(
+                            enabled: !_searchMotion.isDismissed,
+                            child: NotificationListener<ScrollNotification>(
+                              onNotification: (_) => !_searching,
+                              child: SlideTransition(
+                                position: _searchMotion.drive(
+                                  Tween<Offset>(
+                                    begin: const Offset(1, 0),
+                                    end: Offset.zero,
+                                  ).chain(
+                                    CurveTween(curve: Curves.easeOutCubic),
+                                  ),
+                                ),
+                                child: RepaintBoundary(
+                                  child: ColoredBox(
+                                    key: const ValueKey(
+                                      'beta10-search-surface',
                                     ),
-                                    child: BetaEdgeBack(
-                                      onBack: _backSearch,
-                                      child: MusicSearchResultsBody(
-                                        key: _resultsKey,
-                                        onSearch: _submit,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.surface,
+                                    child: Padding(
+                                      padding: EdgeInsets.only(
+                                        bottom: inset,
+                                        top: MediaQuery.paddingOf(context).top,
+                                      ),
+                                      child: BetaEdgeBack(
+                                        onBack: _backSearch,
+                                        child: MusicSearchResultsBody(
+                                          key: _resultsKey,
+                                          onSearch: _submit,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -454,8 +465,8 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -478,7 +489,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
                   accessory: hasTrack
                       ? FloatingPlaybackPill(compact: compact && !searching)
                       : null,
-                  accessoryEnabled: !_focused,
+                  accessoryEnabled: inset == 0,
                   onTabSelected: (index) {
                     appHaptic(context, AppHapticEvent.selection);
                     if (index == selected &&
@@ -514,9 +525,7 @@ class _BetaMusicShellState extends ConsumerState<BetaMusicShell>
                       appHaptic(context, AppHapticEvent.selection);
                       _search(active);
                     },
-                    onSearchFocusChanged: (focused) {
-                      if (mounted) setState(() => _focused = focused);
-                    },
+
                     onChanged:
                         pageSearch?.changed ??
                         (text) => ref

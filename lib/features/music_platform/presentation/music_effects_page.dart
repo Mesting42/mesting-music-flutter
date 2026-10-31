@@ -6,6 +6,7 @@ import '../../../shared/widgets/beta_glass_controls.dart';
 import '../../../shared/widgets/beta_bottom_search.dart';
 import '../../../shared/widgets/beta_page_search_layout.dart';
 import '../../../shared/widgets/beta_glass_scroll_body.dart';
+import '../../../shared/widgets/beta_swipe_pages.dart';
 import '../../../shared/widgets/liquid_glass_sheet.dart';
 import '../../../shared/widgets/music_feature_page.dart';
 import '../../../shared/widgets/artwork_image.dart';
@@ -21,15 +22,84 @@ class MusicEffectsPage extends ConsumerStatefulWidget {
 }
 
 class _MusicEffectsPageState extends ConsumerState<MusicEffectsPage> {
-  final _scroll = ScrollController();
-  late final _bottomSearch = BetaPageSearchController(
+  int _index = 0;
+  late final _search = BetaPageSearchController(
     hintText: '筛选已加载的音效',
     onSubmitted: (_) => setState(() {}),
-    onCleared: () => setState(() {}),
     onChanged: (_) => setState(() {}),
+    onCleared: () => setState(() {}),
   );
-  TextEditingController get _search => _bottomSearch.text;
-  MusicEffectsCatalog _catalog = MusicEffectsCatalog.community;
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (ref.watch(usesNeteaseProvider)) return const MusicEqualizerPage();
+    return BetaPageSearchLayout(
+      controller: _search,
+      child: MusicFeaturePage(
+        title: '音效',
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 12, 22, 16),
+              child: SizedBox(
+                width: double.infinity,
+                child: CupertinoSlidingSegmentedControl<int>(
+                  groupValue: _index,
+                  children: const {
+                    0: Padding(padding: EdgeInsets.all(10), child: Text('社区')),
+                    1: Text('耳机'),
+                    2: Text('明星'),
+                  },
+                  onValueChanged: (index) {
+                    if (index != null) setState(() => _index = index);
+                  },
+                ),
+              ),
+            ),
+            Expanded(
+              child: BetaSwipePages(
+                index: _index,
+                length: 3,
+                onChanged: (index) {
+                  if (index != _index) setState(() => _index = index);
+                },
+                itemBuilder: (context, index) => _EffectsCatalogView(
+                  key: ValueKey(MusicEffectsCatalog.values[index]),
+                  catalog: MusicEffectsCatalog.values[index],
+                  query: _search.text.text,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Each catalogue owns its requests, pagination and scroll position. Switching
+/// tabs never lets a previous catalogue's late response populate another one.
+class _EffectsCatalogView extends ConsumerStatefulWidget {
+  const _EffectsCatalogView({
+    required this.catalog,
+    required this.query,
+    super.key,
+  });
+  final MusicEffectsCatalog catalog;
+  final String query;
+  @override
+  ConsumerState<_EffectsCatalogView> createState() =>
+      _EffectsCatalogViewState();
+}
+
+class _EffectsCatalogViewState extends ConsumerState<_EffectsCatalogView> {
+  final _scroll = ScrollController();
+  MusicEffectsCatalog get _catalog => widget.catalog;
   final List<MusicSoundEffect> _items = [];
   int _generation = 0, _page = 0;
   bool _loading = false, _more = true, _newest = false;
@@ -45,7 +115,6 @@ class _MusicEffectsPageState extends ConsumerState<MusicEffectsPage> {
   void dispose() {
     _generation++;
     _scroll.dispose();
-    _bottomSearch.dispose();
     super.dispose();
   }
 
@@ -157,7 +226,7 @@ class _MusicEffectsPageState extends ConsumerState<MusicEffectsPage> {
     if (ref.watch(usesNeteaseProvider)) return const MusicEqualizerPage();
     final equalizer = ref.watch(musicEqualizerProvider);
     final scheme = Theme.of(context).colorScheme;
-    final query = _search.text.trim().toLowerCase();
+    final query = widget.query.trim().toLowerCase();
     final items = _items
         .where(
           (e) =>
@@ -167,247 +236,209 @@ class _MusicEffectsPageState extends ConsumerState<MusicEffectsPage> {
               ),
         )
         .toList();
-    return BetaPageSearchLayout(
-      controller: _bottomSearch,
-      child: MusicFeaturePage(
-        title: '音效',
-        child: ListenableBuilder(
-          listenable: equalizer,
-          builder: (context, _) => BetaGlassScrollBody(
-            controller: _scroll,
-            padding: const EdgeInsets.fromLTRB(22, 12, 22, 40),
-            children: [
-              CupertinoSlidingSegmentedControl<MusicEffectsCatalog>(
-                groupValue: _catalog,
-                children: const {
-                  MusicEffectsCatalog.community: Padding(
-                    padding: EdgeInsets.all(10),
-                    child: Text('社区'),
-                  ),
-                  MusicEffectsCatalog.earphone: Text('耳机'),
-                  MusicEffectsCatalog.artist: Text('明星'),
-                },
-                onValueChanged: (value) {
-                  if (value == null || value == _catalog) return;
-                  setState(() {
-                    _catalog = value;
-                    _brandId = null;
-                    _brandName = null;
-                  });
-                  _load(reset: true);
-                },
+    return ListenableBuilder(
+      listenable: equalizer,
+      builder: (context, _) => BetaGlassScrollBody(
+        controller: _scroll,
+        padding: const EdgeInsets.fromLTRB(22, 0, 22, 190),
+        children: [
+          if (_catalog == MusicEffectsCatalog.earphone)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: _chooseBrand,
+                child: Text('${_brandName ?? '当前设备匹配'}  ›'),
               ),
-              const SizedBox(height: 18),
-              const SizedBox(height: 14),
-              if (_catalog == MusicEffectsCatalog.earphone)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: CupertinoButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: _chooseBrand,
-                    child: Text('${_brandName ?? '当前设备匹配'}  ›'),
+            ),
+          if (_catalog == MusicEffectsCatalog.community)
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final newest in [false, true])
+                  ChoiceChip(
+                    label: Text(newest ? '最新' : '热门'),
+                    selected: newest == _newest,
+                    onSelected: (_) {
+                      setState(() => _newest = newest);
+                      _load(reset: true);
+                    },
                   ),
-                ),
-              if (_catalog == MusicEffectsCatalog.community)
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    for (final newest in [false, true])
-                      ChoiceChip(
-                        label: Text(newest ? '最新' : '热门'),
-                        selected: newest == _newest,
-                        onSelected: (_) {
-                          setState(() => _newest = newest);
-                          _load(reset: true);
-                        },
-                      ),
-                  ],
-                ),
-              const SizedBox(height: 12),
-              if (equalizer.state.effectName != null)
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: scheme.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        equalizer.state.enabled
-                            ? '当前音效 · ${equalizer.state.effectName}'
-                            : '已保存音效 · ${equalizer.state.effectName}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '均衡预设：${equalizer.state.preset}${equalizer.state.bound && equalizer.state.enabled ? ' · 已生效' : ' · 等待开启或播放'}',
-                        style: TextStyle(
-                          color: scheme.onSurfaceVariant,
-                          fontSize: 13,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: equalizer.clearEffect,
-                        child: const Text('取消音效'),
-                      ),
-                    ],
-                  ),
-                ),
-              const SizedBox(height: 16),
-              Text(
-                '沿用原版的免费音效目录与预设映射。应用时会开启均衡器，并保存对应的本机均衡预设。',
-                style: TextStyle(
-                  color: scheme.onSurfaceVariant,
-                  fontSize: 13,
-                  height: 1.6,
-                ),
+              ],
+            ),
+          const SizedBox(height: 12),
+          if (equalizer.state.effectName != null)
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(20),
               ),
-              if (equalizer.state.message != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Text(
-                    equalizer.state.message!,
-                    style: TextStyle(
-                      color: scheme.onSurfaceVariant,
-                      height: 1.5,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    equalizer.state.enabled
+                        ? '当前音效 · ${equalizer.state.effectName}'
+                        : '已保存音效 · ${equalizer.state.effectName}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
-              const SizedBox(height: 20),
-              for (final effect in items)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 22),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // The catalogue's icon_url/model_icon/logo is the exact
-                      // official per-effect artwork, never inferred from an EQ
-                      // category. The common image boundary sizes decodes and
-                      // retains a bounded persistent cache and failure state.
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: ArtworkImage(
-                          uri: effect.cover,
-                          width: 54,
-                          height: 54,
-                          fit: BoxFit.contain,
-                          retryOnNetworkError: true,
-                          persistentNetworkCacheKey:
-                              'kugou-effect-${effect.id}',
+                  const SizedBox(height: 6),
+                  Text(
+                    '均衡预设：${equalizer.state.preset}${equalizer.state.bound && equalizer.state.enabled ? ' · 已生效' : ' · 等待开启或播放'}',
+                    style: TextStyle(
+                      color: scheme.onSurfaceVariant,
+                      fontSize: 13,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: equalizer.clearEffect,
+                    child: const Text('取消音效'),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 16),
+          Text(
+            '沿用原版的免费音效目录与预设映射。应用时会开启均衡器，并保存对应的本机均衡预设。',
+            style: TextStyle(
+              color: scheme.onSurfaceVariant,
+              fontSize: 13,
+              height: 1.6,
+            ),
+          ),
+          if (equalizer.state.message != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(
+                equalizer.state.message!,
+                style: TextStyle(color: scheme.onSurfaceVariant, height: 1.5),
+              ),
+            ),
+          const SizedBox(height: 20),
+          for (final effect in items)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 22),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // The catalogue's icon_url/model_icon/logo is the exact
+                  // official per-effect artwork, never inferred from an EQ
+                  // category. The common image boundary sizes decodes and
+                  // retains a bounded persistent cache and failure state.
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: ArtworkImage(
+                      uri: effect.cover,
+                      width: 54,
+                      height: 54,
+                      fit: BoxFit.contain,
+                      retryOnNetworkError: true,
+                      persistentNetworkCacheKey: 'kugou-effect-${effect.id}',
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          effect.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              effect.name,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              [
-                                effect.author,
-                                effect.category,
-                              ].where((s) => s.isNotEmpty).join(' · '),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: scheme.onSurfaceVariant,
-                                fontSize: 12,
-                              ),
-                            ),
-                            Text(
-                              '预设：${effect.preset}',
-                              style: TextStyle(
-                                color: scheme.onSurfaceVariant,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
+                        const SizedBox(height: 4),
+                        Text(
+                          [
+                            effect.author,
+                            effect.category,
+                          ].where((s) => s.isNotEmpty).join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: scheme.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Semantics(
-                        container: true,
-                        button: true,
-                        label: '应用${effect.name}音效',
-                        onTap: equalizer.state.binding
+                        Text(
+                          '预设：${effect.preset}',
+                          style: TextStyle(
+                            color: scheme.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Semantics(
+                    container: true,
+                    button: true,
+                    label: '应用${effect.name}音效',
+                    onTap: equalizer.state.binding
+                        ? null
+                        : () => equalizer.selectPreset(
+                            effect.preset,
+                            effectId: effect.id,
+                            effectName: effect.name,
+                          ),
+                    selected:
+                        equalizer.state.enabled &&
+                        equalizer.state.effectId == effect.id,
+                    enabled: !equalizer.state.binding,
+                    excludeSemantics: true,
+                    child: Tooltip(
+                      message: '应用${effect.name}音效',
+                      child: CupertinoButton(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        onPressed: equalizer.state.binding
                             ? null
                             : () => equalizer.selectPreset(
                                 effect.preset,
                                 effectId: effect.id,
                                 effectName: effect.name,
                               ),
-                        selected:
-                            equalizer.state.enabled &&
-                            equalizer.state.effectId == effect.id,
-                        enabled: !equalizer.state.binding,
-                        excludeSemantics: true,
-                        child: Tooltip(
-                          message: '应用${effect.name}音效',
-                          child: CupertinoButton(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            onPressed: equalizer.state.binding
-                                ? null
-                                : () => equalizer.selectPreset(
-                                    effect.preset,
-                                    effectId: effect.id,
-                                    effectName: effect.name,
-                                  ),
-                            child: Icon(
-                              equalizer.state.enabled &&
-                                      equalizer.state.effectId == effect.id
-                                  ? CupertinoIcons.check_mark_circled_solid
-                                  : CupertinoIcons.plus_circle,
-                              size: 27,
-                            ),
-                          ),
+                        child: Icon(
+                          equalizer.state.enabled &&
+                                  equalizer.state.effectId == effect.id
+                              ? CupertinoIcons.check_mark_circled_solid
+                              : CupertinoIcons.plus_circle,
+                          size: 27,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              if (_loading)
-                const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(child: BetaActivityIndicator()),
-                ),
-              if (_error != null)
-                MusicFeatureMessage(
-                  message: _error!,
-                  onRetry: () => _load(reset: _items.isEmpty),
-                ),
-              if (!_loading && _error == null && items.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: Text(
-                    query.isEmpty ? '当前目录暂未返回可用的免费音效。' : '已加载的音效中没有匹配项。',
-                    style: TextStyle(
-                      color: scheme.onSurfaceVariant,
-                      height: 1.6,
                     ),
                   ),
-                ),
-              if (!_loading && _more)
-                TextButton(
-                  onPressed: () => _load(),
-                  child: const Text('加载更多音效'),
-                ),
-            ],
-          ),
-        ),
+                ],
+              ),
+            ),
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: BetaActivityIndicator()),
+            ),
+          if (_error != null)
+            MusicFeatureMessage(
+              message: _error!,
+              onRetry: () => _load(reset: _items.isEmpty),
+            ),
+          if (!_loading && _error == null && items.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Text(
+                query.isEmpty ? '当前目录暂未返回可用的免费音效。' : '已加载的音效中没有匹配项。',
+                style: TextStyle(color: scheme.onSurfaceVariant, height: 1.6),
+              ),
+            ),
+          if (!_loading && _more)
+            TextButton(onPressed: () => _load(), child: const Text('加载更多音效')),
+        ],
       ),
     );
   }

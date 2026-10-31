@@ -10,12 +10,17 @@ import 'embedded_music_server.dart';
 /// Endpoint contracts come from the AGPL upstream; see third_party/md3music.
 /// Pages never construct upstream URLs or handle authentication headers.
 class MusicPlatformApi {
-  MusicPlatformApi({required MusicServer server, required http.Client client})
-    : _server = server,
-      _client = client;
+  MusicPlatformApi({
+    required MusicServer server,
+    required http.Client client,
+    bool Function()? sessionCurrent,
+  }) : _server = server,
+       _client = client,
+       _sessionCurrent = sessionCurrent ?? (() => true);
 
   final MusicServer _server;
   final http.Client _client;
+  final bool Function() _sessionCurrent;
   PlatformSession? session;
   String? _dfid;
   Future<void>? _registration;
@@ -101,6 +106,11 @@ class MusicPlatformApi {
     Map<String, Object?>? body,
     List<int>? binaryBody,
   }) async {
+    // Per-request account sources may outlive their parent provider while an
+    // HTTP future settles. Reject every follow-up, not just the final result.
+    if (!_sessionCurrent()) {
+      throw const MusicPlatformException('账号已变化，请返回后重新操作');
+    }
     // Enforce the boundary even if a future caller passes a malformed path.
     if (!path.startsWith('/') || path.startsWith('//') || path.contains('?')) {
       throw ArgumentError.value(path, 'path', 'Expected an absolute API path');
@@ -110,6 +120,9 @@ class MusicPlatformApi {
       throw StateError('音乐接口必须使用本机回环地址');
     }
     final identity = session;
+    if (!_sessionCurrent()) {
+      throw const MusicPlatformException('账号已变化，请返回后重新操作');
+    }
     if (expectedSession != null &&
         (identity?.userId != expectedSession.userId ||
             identity?.token != expectedSession.token)) {
@@ -171,6 +184,9 @@ class MusicPlatformApi {
               : '音乐平台暂时未能完成请求${code.isEmpty || code == '0' ? '' : '（错误码 $code）'}，请稍后重试',
           code: code,
         );
+      }
+      if (!_sessionCurrent()) {
+        throw const MusicPlatformException('账号已变化，请返回后重新操作');
       }
       if (expectedSession != null &&
           (session?.userId != expectedSession.userId ||

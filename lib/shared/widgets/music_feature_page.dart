@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'beta_glass_controls.dart';
+import 'beta_secondary_music_layout.dart';
 
 /// Secondary music pages inherit the existing neutral surface, readable type
 /// and independent glass navigation. Feature state stays with each caller.
@@ -14,23 +15,26 @@ class MusicFeaturePage extends StatelessWidget {
   final Widget child;
   final List<Widget>? actions;
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: Theme.of(context).colorScheme.surface,
-    appBar: AppBar(
-      leadingWidth: 68,
-      leading: const Center(child: BetaGlassBackButton()),
-      title: Text(
-        title,
-        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+  Widget build(BuildContext context) => BetaSecondaryMusicLayout.wrap(
+    context,
+    Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(
+        leadingWidth: 68,
+        leading: const Center(child: BetaGlassBackButton()),
+        title: Text(
+          title,
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+        ),
+        actions: actions,
       ),
-      actions: actions,
-    ),
-    body: SafeArea(
-      top: false,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 760),
-          child: child,
+      body: SafeArea(
+        top: false,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 760),
+            child: child,
+          ),
         ),
       ),
     ),

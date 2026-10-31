@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/beta_swipe_pages.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -94,9 +95,21 @@ class _SocialConnectionsPageState extends ConsumerState<SocialConnectionsPage>
           Expanded(
             child: TabBarView(
               controller: _tabController,
-              children: const [
-                _ConnectionList(kind: SocialConnectionKind.following),
-                _ConnectionList(kind: SocialConnectionKind.followers),
+              children: [
+                BetaTabScrollRelay(
+                  controller: _tabController,
+                  index: 0,
+                  child: const _ConnectionList(
+                    kind: SocialConnectionKind.following,
+                  ),
+                ),
+                BetaTabScrollRelay(
+                  controller: _tabController,
+                  index: 1,
+                  child: const _ConnectionList(
+                    kind: SocialConnectionKind.followers,
+                  ),
+                ),
               ],
             ),
           ),

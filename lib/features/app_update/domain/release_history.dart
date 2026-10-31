@@ -2,6 +2,14 @@
 /// offline and must never be shown as the notes of an unknown future build.
 /// The distribution service may also supply notes for a newer release.
 const musicReleaseNotes = <String, List<String>>{
+  '1.0.24': [
+    '签到页统一网易云与酷狗标签，使用各自保存的账号，酷狗自动签到支持跨平台生效。',
+    '网易云官方音源不可完整播放时，支持已登录酷狗概念版账号同曲补源及手动选择，按真实返回展示音质。',
+    '下载显示真实字节大小与胶囊进度，解析使用蓝色动态波形，任务与已下载支持左右切换。',
+    '完善音效真实封面、内嵌页面横向切换及公共玻璃底栏，键盘收起后恢复播放胶囊。',
+    '流畅度诊断新增双平台真实页面连续巡检、分段保存、断点续跑与JSON报告导出。',
+    '保留定制Release引擎的Impeller兼容恢复、完整玻璃材质及一起听播放器。',
+  ],
   '1.0.23': [
     '针对已确认的 Adreno Vulkan 渲染线程崩溃增加兼容恢复路径，继续使用 Impeller 与完整玻璃材质。',
     '一起听融入现有播放页，在顶部展示双方头像与会话状态，房间管理集中到面板。',

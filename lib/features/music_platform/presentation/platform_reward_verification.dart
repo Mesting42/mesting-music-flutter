@@ -6,7 +6,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../shared/widgets/beta_glass_popover.dart';
 import '../domain/platform_rewards.dart';
-import '../music_platform_providers.dart';
+import '../retained_kugou_scope.dart';
+import '../../../core/diagnostics/diagnostic_activity.dart';
 
 /// Adapted from md3Music's verify_captcha_dialog.dart (a69503b, AGPL-3.0).
 /// The Tencent SDK supplies the proof. Cancellation, account changes and page
@@ -16,7 +17,7 @@ Future<String?> showPlatformRewardVerification(
   WidgetRef ref,
   RewardVerification challenge,
 ) async {
-  final owner = ref.read(platformAccountProvider).value;
+  final owner = ref.read(retainedKugouSessionProvider);
   if (owner == null) return null;
   BuildContext? dialog;
   Timer? timeout;
@@ -94,9 +95,11 @@ Future<String?> showPlatformRewardVerification(
         timeout ??= Timer(const Duration(minutes: 3), () => finish(null));
         return Consumer(
           builder: (context, ref, _) {
-            ref.listen(platformAccountProvider, (_, next) {
-              if (next.value?.userId != owner.userId ||
-                  next.value?.token != owner.token) {
+            ref.listen(diagnosticActivityProvider, (_, running) {
+              if (running) finish(null);
+            });
+            ref.listen(retainedKugouSessionProvider, (_, next) {
+              if (next?.userId != owner.userId || next?.token != owner.token) {
                 finish(null);
               }
             });

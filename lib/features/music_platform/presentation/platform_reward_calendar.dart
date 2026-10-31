@@ -6,20 +6,17 @@ import '../../../shared/widgets/beta_glass_controls.dart';
 import '../../../shared/widgets/music_notice.dart';
 import '../../../shared/widgets/quiet_pull_to_refresh.dart';
 import '../domain/platform_rewards.dart';
-import '../music_platform_providers.dart';
 import '../platform_rewards_provider.dart';
 import 'platform_reward_verification.dart';
 import 'platform_reward_day.dart';
 import '../../themes/beta_appearance.dart';
-import '../platform_backend_providers.dart';
-import '../netease/netease_features_page.dart';
+import 'unified_reward_page.dart';
 
 /// Findable on My immediately below the unified account presentation.
 class PlatformRewardEntry extends ConsumerWidget {
   const PlatformRewardEntry({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (ref.watch(usesNeteaseProvider)) return const NeteaseAccountPanel();
     final state = ref.watch(platformRewardsProvider);
     final scheme = Theme.of(context).colorScheme;
     return Material(
@@ -50,19 +47,8 @@ class PlatformRewardEntry extends ConsumerWidget {
           color: scheme.onSurfaceVariant,
         ),
         onTap: () {
-          if (ref.read(platformAccountProvider).value == null) {
-            showMusicNotice(
-              context,
-              icon: Icons.info_outline_rounded,
-              title: '此功能需要酷狗账号',
-              message: '请从上方账号入口登录酷狗后使用',
-            );
-            return;
-          }
           Navigator.of(context, rootNavigator: true).push(
-            MaterialPageRoute<void>(
-              builder: (_) => const PlatformRewardCalendar(),
-            ),
+            MaterialPageRoute<void>(builder: (_) => const UnifiedRewardPage()),
           );
         },
       ),
@@ -71,7 +57,8 @@ class PlatformRewardEntry extends ConsumerWidget {
 }
 
 class PlatformRewardCalendar extends ConsumerWidget {
-  const PlatformRewardCalendar({super.key});
+  const PlatformRewardCalendar({this.embedded = false, super.key});
+  final bool embedded;
 
   Future<void> _act(
     BuildContext context,
@@ -89,12 +76,6 @@ class PlatformRewardCalendar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (ref.watch(usesNeteaseProvider)) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('网易云签到')),
-        body: const SafeArea(child: NeteaseAccountPanel()),
-      );
-    }
     final state = ref.watch(platformRewardsProvider);
     final controller = ref.read(platformRewardsProvider.notifier);
     final scheme = Theme.of(context).colorScheme;
@@ -147,23 +128,25 @@ class PlatformRewardCalendar extends ConsumerWidget {
     return Scaffold(
       key: const ValueKey('platform-reward-calendar'),
       backgroundColor: scheme.surface,
-      appBar: AppBar(
-        title: const Text(
-          '签到日历',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-        ),
-        centerTitle: true,
-        backgroundColor: scheme.surface,
-        surfaceTintColor: Colors.transparent,
-      ),
+      appBar: embedded
+          ? null
+          : AppBar(
+              title: const Text(
+                '签到日历',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+              centerTitle: true,
+              backgroundColor: scheme.surface,
+              surfaceTintColor: Colors.transparent,
+            ),
       body: state.ownerId == null
-          ? const Center(child: Text('当前酷狗账号已退出'))
+          ? const Center(child: Text('请先登录酷狗账号；切换音乐平台不会清除已保存的登录'))
           : QuietPullToRefresh(
               enabled: !state.loading && state.action == null,
               onRefresh: controller.refresh,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(22, 20, 22, 40),
+                padding: EdgeInsets.fromLTRB(22, 20, 22, embedded ? 180 : 40),
                 children: [
                   // Material 3 stretch composites the scroll contents into an
                   // isolated ImageFilter pass. Paint the real page surface in

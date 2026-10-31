@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'beta_content_insets.dart';
 
 /// Paint the page surface inside the scrollable's overscroll composition pass.
 /// A Scaffold behind that pass is not available to a glass backdrop sampler.
@@ -30,7 +31,14 @@ class BetaGlassScrollBody extends StatelessWidget {
             key: const ValueKey('glass-scroll-backing-surface'),
             color: Theme.of(context).colorScheme.surface,
             child: Padding(
-              padding: padding,
+              padding: padding
+                  .resolve(Directionality.of(context))
+                  .copyWith(
+                    bottom: BetaContentInsets.bottomOf(
+                      context,
+                      padding.resolve(Directionality.of(context)).bottom,
+                    ),
+                  ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: children,

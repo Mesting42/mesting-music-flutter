@@ -12,6 +12,7 @@ import '../../presentation/platform_feedback.dart';
 import '../../../player/presentation/beta_playback_actions.dart';
 import '../netease_fallback.dart';
 import '../netease_track_sources.dart';
+import '../../retained_kugou_scope.dart';
 
 typedef NeteaseSourceAvailability =
     Future<bool> Function(
@@ -45,6 +46,7 @@ Future<void> showNeteaseTrackSources(
   Track track,
 ) async {
   final owner = ref.read(neteaseMusicRepositoryProvider).credential;
+  final kugou = ref.read(retainedKugouScopeProvider);
   final previous =
       ref.read(neteaseTrackSourcesProvider)[track.id] ??
       NeteaseTrackSource.automatic;
@@ -57,6 +59,7 @@ Future<void> showNeteaseTrackSources(
   );
   if (!context.mounted ||
       choice == null ||
+      !identical(ref.read(retainedKugouScopeProvider), kugou) ||
       ref.read(neteaseMusicRepositoryProvider).credential != owner) {
     return;
   }
@@ -91,14 +94,17 @@ class _NeteaseSourcePickerState extends ConsumerState<NeteaseSourcePicker> {
   final _abort = Completer<void>();
   int _revision = 0;
   late final String? _credential;
+  late final RetainedKugouScope? _kugou;
   bool get _current =>
       mounted &&
       !_abort.isCompleted &&
+      identical(ref.read(retainedKugouScopeProvider), _kugou) &&
       ref.read(neteaseMusicRepositoryProvider).credential == _credential;
   @override
   void initState() {
     super.initState();
     _credential = ref.read(neteaseMusicRepositoryProvider).credential;
+    _kugou = ref.read(retainedKugouScopeProvider);
     Future.microtask(_detect);
   }
 
@@ -142,6 +148,7 @@ class _NeteaseSourcePickerState extends ConsumerState<NeteaseSourcePicker> {
   @override
   Widget build(BuildContext context) {
     ref.watch(neteaseMusicRepositoryProvider);
+    ref.watch(retainedKugouScopeProvider);
     if (!_current) {
       return const Padding(
         padding: EdgeInsets.all(28),

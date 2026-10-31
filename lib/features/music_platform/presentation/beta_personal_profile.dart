@@ -19,18 +19,15 @@ import '../music_platform_providers.dart';
 import '../platform_backend_providers.dart';
 import '../platform_profile_provider.dart';
 import '../netease/netease_library_repository.dart';
-import '../netease/netease_features_page.dart';
 import '../netease/netease_membership_page.dart';
 import '../netease/full/netease_full_page.dart';
 import 'platform_account_page.dart';
 import 'platform_avatar.dart';
 import 'platform_design.dart';
-import 'platform_feedback.dart';
 import 'platform_library_page.dart';
 import 'platform_login_options_page.dart';
 import 'platform_profile_edit_page.dart';
-import 'platform_reward_calendar.dart';
-import '../../../shared/widgets/music_notice.dart';
+import 'unified_reward_page.dart';
 
 /// Personal library composition is independent of the account card used by
 /// Settings. Only real library/profile data is shown; reference statistics are
@@ -43,34 +40,9 @@ class BetaPersonalProfile extends ConsumerStatefulWidget {
 }
 
 class _BetaPersonalProfileState extends ConsumerState<BetaPersonalProfile> {
-  bool _signing = false;
   void _open(Widget page) =>
       Navigator.of(context).push(betaContentRoute<void>(page));
-  Future<void> _sign() async {
-    if (!ref.read(usesNeteaseProvider)) {
-      _open(const PlatformRewardCalendar());
-      return;
-    }
-    if (_signing) return;
-    setState(() => _signing = true);
-    try {
-      final owner = ref.read(platformAccountProvider).value?.ownerId;
-      final message = await ref.read(neteaseFeaturesProvider).signIn();
-      if (mounted &&
-          ref.read(platformAccountProvider).value?.ownerId == owner) {
-        showMusicNotice(
-          context,
-          icon: CupertinoIcons.check_mark_circled,
-          title: message,
-          message: '',
-        );
-      }
-    } catch (e) {
-      if (mounted) showPlatformFailure(context, e);
-    } finally {
-      if (mounted) setState(() => _signing = false);
-    }
-  }
+  Future<void> _sign() async => _open(const UnifiedRewardPage());
 
   Future<void> _account() async {
     final action = await showLiquidGlassBottomSheet<String>(
@@ -142,7 +114,7 @@ class _BetaPersonalProfileState extends ConsumerState<BetaPersonalProfile> {
             child: _PersonalQuickActions(
               signedIn: session != null,
               netease: netease,
-              signing: _signing,
+              signing: false,
               onSign: _sign,
             ),
           ),
@@ -364,7 +336,7 @@ class _PersonalQuickActions extends StatelessWidget {
                     betaContentRoute<void>(
                       netease
                           ? const NeteaseMembershipPage()
-                          : const PlatformRewardCalendar(),
+                          : const UnifiedRewardPage(),
                     ),
                   )
                 : null,
