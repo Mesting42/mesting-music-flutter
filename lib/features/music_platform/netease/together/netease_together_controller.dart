@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/audio/mesting_audio_handler.dart';
 import '../../../../core/audio/playback_providers.dart';
@@ -10,6 +11,7 @@ import '../../platform_backend_providers.dart';
 import '../netease_music_repository.dart';
 import '../messages/netease_messages_repository.dart';
 import '../full/netease_manual_routes.dart';
+import 'together_presence.dart';
 
 /// Kept outside pages so dismissing a sheet/chat cannot stop a room. Watching
 /// the account recreates and disposes the controller on logout/platform switch.
@@ -127,12 +129,31 @@ class NeteaseTogetherController extends ChangeNotifier {
     required this.messages,
     required this.isCurrent,
     this.automaticTimer = true,
+    this.locationGateway = const TogetherLocationGateway(),
   });
   final NeteaseMusicRepository music;
   final NeteaseTogetherPlayer player;
   final NeteaseMessagesRepository messages;
   final bool Function() isCurrent;
   final bool automaticTimer;
+  final TogetherLocationGateway locationGateway;
+  TogetherDistance distance = const TogetherDistance();
+  String? presenceNotice;
+  bool locationEnabled = false, locating = false;
+  Duration? _togetherDuration;
+  final _presenceClock = Stopwatch();
+  DateTime? _presenceFetchedAt;
+  int _locationEpoch = 0;
+  NeteasePerson get self => NeteasePerson(
+    music.api.session?.userId ?? '',
+    music.api.session?.nickname ?? '我',
+    music.api.session?.avatarUrl ?? '',
+  );
+  List<NeteasePerson> get peers =>
+      members.where((p) => p.id.isNotEmpty && p.id != self.id).toList();
+  Duration? get togetherDuration => _togetherDuration == null
+      ? null
+      : _togetherDuration! + _presenceClock.elapsed;
   String? roomId, error, notice;
   List<NeteasePerson> members = [];
   List<Track> sharedTracks = [];
@@ -144,6 +165,136 @@ class NeteaseTogetherController extends ChangeNotifier {
   Future<void> _tail = Future.value();
   bool get current => !_disposed && isCurrent();
   bool get active => roomId != null;
+  void _resetPresence() {
+    _locationEpoch++;
+    distance = const TogetherDistance();
+    locationEnabled = locating = false;
+    presenceNotice = null;
+    _togetherDuration = null;
+    _presenceClock.reset();
+    _presenceClock.stop();
+    _presenceFetchedAt = null;
+  }
+
+  /// A location request never holds the playback mutation queue or suppresses
+  /// heartbeats while the user is choosing a permission. Late fixes are bound
+  /// to both this account and this exact room generation.
+  Future<void> enableLocation() async {
+    if (!current || roomId == null || locating) return;
+    final room = roomId, epoch = ++_locationEpoch;
+    locating = true;
+    presenceNotice = null;
+    _notify();
+    bool valid() => current && roomId == room && epoch == _locationEpoch;
+    try {
+      final fix = await locationGateway.requestFix();
+      if (!valid()) return;
+      final report = await _call('/listentogether/user/gps/report', {
+        'roomId': room,
+        'latitude': fix.latitude,
+        'longitude': fix.longitude,
+        'opened': true,
+        'privacy': true,
+      });
+      if (!valid()) return;
+      if (report['success'] == false ||
+          NeteaseMusicRepository.object(report['data'])['success'] == false) {
+        throw const MusicPlatformException('平台未确认位置共享，请重试');
+      }
+      locationEnabled = true;
+      await _refreshPresence(force: true);
+    } catch (e) {
+      if (valid()) {
+        presenceNotice = e is PlatformException
+            ? e.message ?? '位置暂不可用，请稍后重试'
+            : '位置共享未获确认，请重试';
+      }
+    } finally {
+      if (valid()) {
+        locating = false;
+        _notify();
+      }
+    }
+  }
+
+  Future<void> disableLocation() async {
+    if (!current || roomId == null || locating) return;
+    final room = roomId;
+    ++_locationEpoch;
+    locating = true;
+    _notify();
+    try {
+      final report = await _call('/listentogether/user/gps/report', {
+        'roomId': room,
+        'opened': false,
+        'privacy': true,
+      });
+      if (!current || roomId != room) return;
+      if (report['success'] == false ||
+          NeteaseMusicRepository.object(report['data'])['success'] == false) {
+        throw const MusicPlatformException('平台未确认关闭位置共享');
+      }
+      locationEnabled = false;
+      distance = const TogetherDistance();
+      presenceNotice = '已关闭本次房间的位置共享';
+    } catch (_) {
+      if (current && roomId == room) presenceNotice = '关闭位置共享未获确认，请重试';
+    } finally {
+      if (current && roomId == room) {
+        locating = false;
+        _notify();
+      }
+    }
+  }
+
+  Future<void> _refreshPresence({bool force = false}) async {
+    final room = roomId, peer = peers.firstOrNull;
+    if (!current || room == null || peer == null) return;
+    if (!force &&
+        _presenceFetchedAt != null &&
+        DateTime.now().difference(_presenceFetchedAt!).inSeconds < 30) {
+      return;
+    }
+    _presenceFetchedAt = DateTime.now();
+    bool valid() =>
+        current && roomId == room && peers.any((p) => p.id == peer.id);
+    try {
+      final response = await _call('/listentogether/relation/statistics/get', {
+        'roomId': room,
+        'roomUserIds': [peer.id],
+      });
+      if (!valid()) return;
+      final data = NeteaseMusicRepository.object(response['data']);
+      // Official total/currentConnectionTime fields are seconds, not ms.
+      // Never infer historical time from when this widget happened to mount.
+      final seconds = int.tryParse(
+        '${data['totalConnectionTime'] ?? data['currentConnectionTime']}',
+      );
+      if (seconds != null && seconds >= 0 && seconds < 100 * 366 * 86400) {
+        _togetherDuration = Duration(seconds: seconds);
+        _presenceClock
+          ..reset()
+          ..start();
+      }
+    } catch (_) {
+      /* Presence failure must not stop audio synchronization. */
+    }
+    if (locationEnabled && valid()) {
+      try {
+        final response = await _call('/listentogether/distance/get', {
+          'roomId': room,
+          'otherUserId': peer.id,
+        });
+        if (valid() && locationEnabled) {
+          distance = TogetherDistance.parse(response['data']);
+          presenceNotice = null;
+        }
+      } catch (_) {
+        if (valid()) presenceNotice = '距离暂时无法刷新，仍在同步播放';
+      }
+    }
+  }
+
   void _notify() {
     if (!_disposed) notifyListeners();
   }
@@ -267,6 +418,7 @@ class NeteaseTogetherController extends ChangeNotifier {
     if (!current) return;
     _stop();
     roomId = null;
+    _resetPresence();
     members = [];
     sharedTracks = [];
     notice = '一起听已结束';
@@ -301,17 +453,31 @@ class NeteaseTogetherController extends ChangeNotifier {
     if (data['inRoom'] == false) {
       _stop();
       roomId = null;
+      _resetPresence();
       members = [];
       sharedTracks = [];
       return;
     }
     final room = NeteaseMusicRepository.object(data['roomInfo']);
     final id = '${room['roomId'] ?? ''}';
-    if (id.isNotEmpty) roomId = id;
+    if (id.isNotEmpty) {
+      if (id != roomId) _resetPresence();
+      roomId = id;
+    }
+    final previousPeers = peers.map((p) => p.id).toSet();
     final users = NeteaseMusicRepository.rows(
       room['roomUsers'] ?? data['roomUsers'],
     );
     members = users.map((u) => NeteasePerson.parse(u['user'] ?? u)).toList();
+    final nextPeers = peers.map((p) => p.id).toSet();
+    if (!setEquals(previousPeers, nextPeers)) {
+      distance = const TogetherDistance();
+      _togetherDuration = null;
+      _presenceClock
+        ..stop()
+        ..reset();
+      _presenceFetchedAt = null;
+    }
     if (roomId != null) {
       final check = NeteaseMusicRepository.object(
         (await _call('/listentogether/room/check', {'roomId': roomId}))['data'],
@@ -320,6 +486,8 @@ class NeteaseTogetherController extends ChangeNotifier {
       await _remote(check);
     }
     await _remote({...data, ...room});
+    if (peers.isEmpty || error != null) _presenceClock.stop();
+    await _refreshPresence();
   }
 
   Future<void> _loadQueue() async {
@@ -421,7 +589,10 @@ class NeteaseTogetherController extends ChangeNotifier {
       if (roomId != null && current) await _report('PLAY', heartbeat: true);
       if (current) error = null;
     } catch (_) {
-      if (current) error = '一起听连接暂时中断，正在重连';
+      if (current) {
+        error = '一起听连接暂时中断，正在重连';
+        _presenceClock.stop();
+      }
     } finally {
       _ticking = false;
       _notify();
@@ -483,6 +654,7 @@ class NeteaseTogetherController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _resetPresence();
     _stop();
     super.dispose();
   }

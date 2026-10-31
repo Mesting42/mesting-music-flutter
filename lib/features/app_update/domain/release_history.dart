@@ -2,6 +2,12 @@
 /// offline and must never be shown as the notes of an unknown future build.
 /// The distribution service may also supply notes for a newer release.
 const musicReleaseNotes = <String, List<String>>{
+  '1.0.23': [
+    '针对已确认的 Adreno Vulkan 渲染线程崩溃增加兼容恢复路径，继续使用 Impeller 与完整玻璃材质。',
+    '一起听融入现有播放页，在顶部展示双方头像与会话状态，房间管理集中到面板。',
+    '接入网易云一起听时长与距离接口，按平台真实数据展示，兼容官版房间。',
+    '双方距离由用户主动开启定位后获取，可关闭本次房间的位置共享，不在后台持续定位。',
+  ],
   '1.0.22': [
     '将我的页面拆为独立滚动段，减少离屏玻璃参与绘制，保留原有材质与交互动效。',
     '按显示尺寸解码喜欢封面，并缩小收藏、资料和歌单变化时的界面重建范围。',

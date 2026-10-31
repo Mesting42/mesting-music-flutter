@@ -39,7 +39,13 @@ subprocess.run([
     '-jvm-target', '17', '-classpath', os.pathsep.join(map(str, [stdlib, annotations])),
     '-d', str(out/'classes'),
     str(root/'android/app/src/main/kotlin/com/mesting/mesting_music/NativeCrashTrace.kt'),
+    str(root/'android/app/src/main/kotlin/com/mesting/mesting_music/VulkanCrashSignature.kt'),
     str(root/'tool/NativeCrashTraceTest.kt'),
+    str(root/'tool/VulkanCrashSignatureTest.kt'),
+], check=True, cwd=root)
+subprocess.run([
+    java, '-cp', os.pathsep.join(map(str, [out/'classes', stdlib])),
+    'com.mesting.music.VulkanCrashSignatureTestKt',
 ], check=True, cwd=root)
 subprocess.run([
     java, '-cp', os.pathsep.join(map(str, [out/'classes', stdlib])),

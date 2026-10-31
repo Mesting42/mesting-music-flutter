@@ -8,7 +8,11 @@ import 'player_queue_panel.dart';
 import 'dart:ui';
 import 'dart:async';
 import '../../../shared/models/track.dart';
-import '../../music_platform/netease/full/netease_together_page.dart';
+import '../../music_platform/netease/together/netease_together_panel.dart';
+import '../../music_platform/netease/together/netease_together_player_header.dart';
+import '../../music_platform/netease/messages/netease_messages_repository.dart';
+import '../../music_platform/netease/together/netease_together_controller.dart';
+import '../../themes/music_theme_tokens.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -42,8 +46,17 @@ import 'player_content_transition.dart';
 /// BEHAVIOR: One audio handler; short windows scroll without squeezing controls.
 /// ACCESS: TextScaler, native button targets, reduced motion, semantic actions.
 class BetaNowPlayingPage extends ConsumerStatefulWidget {
-  const BetaNowPlayingPage({this.lyricsInitially = false, super.key});
+  const BetaNowPlayingPage({
+    this.lyricsInitially = false,
+    this.togetherInitially = false,
+    this.togetherInvitee,
+    this.togetherInvitation,
+    super.key,
+  });
   final bool lyricsInitially;
+  final bool togetherInitially;
+  final NeteasePerson? togetherInvitee;
+  final String? togetherInvitation;
   @override
   ConsumerState<BetaNowPlayingPage> createState() => _BetaNowPlayingPageState();
 }
@@ -54,6 +67,15 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
   double _direction = 1;
   StreamSubscription<String>? _commands;
   bool _routeExitRequested = false;
+  NeteaseTogetherController? _togetherController;
+  bool _togetherActive = false;
+  void _roomVisibilityChanged() {
+    final active = _togetherController?.active == true;
+    if (mounted && active != _togetherActive) {
+      setState(() => _togetherActive = active);
+    }
+  }
+
   void _showLyrics(bool show) => setState(() {
     _direction = show ? 1 : -1;
     _lyrics = show;
@@ -64,12 +86,23 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
       return;
     }
     _routeExitRequested = true;
-    context.canPop() ? context.pop() : context.go('/music/recommend');
+    // Together entries can arrive on a local chat/feature Navigator route.
+    // Dismiss that actual route as well as GoRouter-owned player routes.
+    final navigator = Navigator.of(context);
+    navigator.canPop() ? navigator.pop() : context.go('/music/recommend');
   }
 
   @override
   void initState() {
     super.initState();
+    // Only room appearance/disappearance affects the player's height budget;
+    // heartbeats and duration updates remain inside the small room island.
+    ref.listenManual(neteaseTogetherControllerProvider, (_, next) {
+      _togetherController?.removeListener(_roomVisibilityChanged);
+      _togetherController = next;
+      next?.addListener(_roomVisibilityChanged);
+      _roomVisibilityChanged();
+    }, fireImmediately: true);
     _commands = ref.read(audioHandlerProvider).userCommandStream.listen((
       command,
     ) {
@@ -78,11 +111,28 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) ref.read(playerChromeRevealProvider).value = 0;
+      if (mounted && widget.togetherInitially) _openInitialTogether();
     });
+  }
+
+  Future<void> _openInitialTogether() async {
+    final controller = ref.read(neteaseTogetherControllerProvider);
+    await controller?.restore();
+    if (mounted &&
+        (controller?.active != true ||
+            widget.togetherInvitee != null ||
+            widget.togetherInvitation != null)) {
+      await showNeteaseTogetherPanel(
+        context,
+        invitee: widget.togetherInvitee,
+        invitation: widget.togetherInvitation,
+      );
+    }
   }
 
   @override
   void dispose() {
+    _togetherController?.removeListener(_roomVisibilityChanged);
     _commands?.cancel();
     super.dispose();
   }
@@ -114,6 +164,11 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
     final theme = Theme.of(context);
     final darkTheme = theme.copyWith(
       brightness: Brightness.dark,
+      extensions: [
+        for (final extension in theme.extensions.values)
+          if (extension is! MusicThemeTokens) extension,
+        MusicThemeTokens.forBrightness(Brightness.dark),
+      ],
       colorScheme: ColorScheme.fromSeed(
         seedColor: BetaAppearance.blue,
         brightness: Brightness.dark,
@@ -180,10 +235,12 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
                                   Color(0x66000000),
                                   Color(0xE817191D),
                                 ]
-                              : const [
-                                  Color(0x6616191B),
-                                  Color(0x8816191B),
-                                  Color(0xF216191D),
+                              : [
+                                  Color(
+                                    _togetherActive ? 0x9916191B : 0x6616191B,
+                                  ),
+                                  const Color(0x8816191B),
+                                  const Color(0xF216191D),
                                 ],
                           stops: const [0, .58, 1],
                         ),
@@ -196,7 +253,10 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
                         final scaled =
                             (MediaQuery.textScalerOf(context).scale(24) - 24)
                                 .clamp(0.0, 96.0);
-                        final minimum = 700.0 + scaled * 2;
+                        final minimum =
+                            700.0 +
+                            scaled * 2 +
+                            (_togetherActive && !detail ? 140 : 0);
                         final content = Center(
                           child: SizedBox(
                             width: 560,
@@ -279,6 +339,14 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
                                           ),
                                         ),
                                 ),
+                                if (!detail)
+                                  NeteaseTogetherPlayerHeader(
+                                    foreground: classic
+                                        ? const Color(0xFF17191F)
+                                        : Colors.white,
+                                    onManage: () =>
+                                        showNeteaseTogetherPanel(context),
+                                  ),
                                 Expanded(
                                   child: PlayerContentTransition(
                                     direction: _direction,
@@ -454,10 +522,7 @@ class _BetaNowPlayingPageState extends ConsumerState<BetaNowPlayingPage> {
           return;
         }
         if (value == 'netease-together') {
-          await Navigator.of(
-            context,
-            rootNavigator: true,
-          ).push(betaEntryRoute<void>(const NeteaseTogetherPage()));
+          await showNeteaseTogetherPanel(context);
           return;
         }
         final style = PlayerVisualStyle.values.firstWhere(

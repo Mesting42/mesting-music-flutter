@@ -12,6 +12,26 @@ NeteaseRoute? neteaseCompleteContract(String route, Map<String, Object?> q) {
   NeteaseRoute make(String p, Map<String, Object?> d, [bool w = true]) =>
       (path: p, data: d, weapi: w);
   switch (route) {
+    // Interoperable wire fields checked against the official client's room
+    // requests. No upstream implementation or Wi-Fi identifier is copied.
+    case '/listentogether/user/gps/report':
+      return make('/api/listen/together/user/gps/report', {
+        'roomId': get('roomId'),
+        'latitude': get('latitude', 0),
+        'longitude': get('longitude', 0),
+        'opened': '${get('opened', false)}',
+        'privacy': '${get('privacy', true)}',
+      }, false);
+    case '/listentogether/distance/get':
+      return make('/api/listen/together/distance/get', {
+        'roomId': get('roomId'),
+        'otherUserId': get('otherUserId'),
+      }, false);
+    case '/listentogether/relation/statistics/get':
+      return make('/api/listen/together/relation/statistics/get/v2', {
+        'roomId': get('roomId'),
+        'roomUserIds': jsonEncode(_ids(get('roomUserIds'))),
+      }, false);
     case '/login/cellphone':
     case '/login':
     case '/login/qr/key':

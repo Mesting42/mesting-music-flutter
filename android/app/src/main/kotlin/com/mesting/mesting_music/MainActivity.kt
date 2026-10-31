@@ -55,6 +55,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 open class MainActivity : AudioServiceActivity() {
+    private var togetherLocationBridge: TogetherLocationBridge? = null
     private var audioOutputBridge: AudioOutputBridge? = null
     private var mediaVolumeBridge: MediaVolumeBridge? = null
     private var loginSuccessSoundBridge: LoginSuccessSoundBridge? = null
@@ -71,6 +72,8 @@ open class MainActivity : AudioServiceActivity() {
     private var pendingPhoneNumberResult: MethodChannel.Result? = null
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        togetherLocationBridge?.dispose()
+        togetherLocationBridge = null
         appExitDiagnosticsBridge?.dispose()
         appExitDiagnosticsBridge = null
         audioOutputBridge?.dispose()
@@ -99,11 +102,19 @@ open class MainActivity : AudioServiceActivity() {
 
     override fun onResume() {
         super.onResume()
+        togetherLocationBridge?.foreground(true)
         requestHighRefreshRate()
+    }
+
+    override fun onPause() {
+        togetherLocationBridge?.foreground(false)
+        super.onPause()
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        togetherLocationBridge?.dispose()
+        togetherLocationBridge = TogetherLocationBridge(this, flutterEngine.dartExecutor.binaryMessenger)
         localMusicBridge?.dispose()
         localMusicBridge = LocalMusicBridge(this, flutterEngine.dartExecutor.binaryMessenger)
         neteaseCloudFileBridge?.dispose()
@@ -657,6 +668,7 @@ open class MainActivity : AudioServiceActivity() {
         grantResults: IntArray,
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (togetherLocationBridge?.permissions(requestCode) == true) return
         if (localMusicBridge?.onRequestPermissionsResult(requestCode, permissions, grantResults) == true) return
         if (requestCode == PHONE_NUMBER_PERMISSION_REQUEST_CODE) {
             val result = pendingPhoneNumberResult ?: return

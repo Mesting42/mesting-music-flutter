@@ -25,7 +25,7 @@ import 'package:mesting_music/features/music_platform/netease/full/netease_full_
 import 'package:mesting_music/features/music_platform/netease/messages/netease_messages_page.dart';
 import 'package:mesting_music/features/music_platform/netease/messages/netease_messages_repository.dart';
 import 'package:mesting_music/features/music_platform/netease/together/netease_together_controller.dart';
-import 'package:mesting_music/features/music_platform/netease/full/netease_together_page.dart';
+import 'package:mesting_music/features/music_platform/netease/together/netease_together_panel.dart';
 import 'netease_v114_workflows_test.dart' show FakeTogetherPlayer;
 import 'package:mesting_music/features/themes/app_theme.dart';
 import 'package:mesting_music/features/themes/music_theme_preset.dart';
@@ -247,7 +247,7 @@ void main() {
         addTearDown(controller.dispose);
         await mount(
           tester,
-          const NeteaseTogetherPage(invitee: NeteasePerson('8', '音乐朋友')),
+            const NeteaseTogetherPanel(invitee: NeteasePerson('8', '音乐朋友')),
           dark: dark,
           compact: true,
           together: controller,

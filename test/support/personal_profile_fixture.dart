@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,6 +20,8 @@ import 'package:mesting_music/features/music_platform/netease/netease_library_re
 import 'package:mesting_music/features/music_platform/netease/netease_account_overview.dart';
 import 'package:mesting_music/features/music_platform/netease/messages/netease_unread.dart';
 import 'package:mesting_music/shared/models/track.dart';
+import 'package:mesting_music/core/audio/mesting_audio_handler.dart';
+import 'package:mesting_music/core/audio/playback_providers.dart';
 
 const profileFixtureCover =
     'assets/images/theme_playlists/shinchan/cover-01.jpg';
@@ -64,7 +67,10 @@ class PersonalProfileFixture {
     ),
   );
 
-  static Future<PersonalProfileFixture> create() async {
+  static Future<PersonalProfileFixture> create({
+    MestingAudioHandler? audioHandler,
+    List<Override> extraOverrides = const [],
+  }) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     final database = AppDatabase(NativeDatabase.memory());
@@ -110,6 +116,8 @@ class PersonalProfileFixture {
     late PersonalProfileFixture fixture;
     final container = ProviderContainer(
       overrides: [
+        if (audioHandler != null)
+          audioHandlerProvider.overrideWithValue(audioHandler),
         sharedPreferencesProvider.overrideWithValue(prefs),
         platformAccountProvider.overrideWith(SyntheticProfileAccount.new),
         neteaseMusicRepositoryProvider.overrideWithValue(music),
@@ -148,6 +156,7 @@ class PersonalProfileFixture {
           ),
         ),
         neteaseUnreadTotalProvider.overrideWith((ref) => 90),
+        ...extraOverrides,
       ],
     );
     fixture = PersonalProfileFixture._(container, database, library, client);

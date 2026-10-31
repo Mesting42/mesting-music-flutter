@@ -5,7 +5,7 @@ import android.app.ApplicationExitInfo
 import android.content.Context
 import android.os.Build
 
-/** Own-process system history, queried only when local diagnostics are enabled.
+/** Own-process system history for opt-in diagnostics and narrow driver recovery.
  * Native traces pass through a bounded allowlist reader; descriptions, abort
  * messages, command lines and arbitrary trace contents are never exported.
  * A historical exit cannot be assigned to the currently installed build.
